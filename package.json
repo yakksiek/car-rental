@@ -9,9 +9,7 @@
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "ai:rules": "bash scripts/sync-ai-rules.sh",
-    "openspec:init": "bash scripts/init-openspec.sh"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",
