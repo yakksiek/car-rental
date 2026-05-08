@@ -1,108 +1,56 @@
 ---
-import LibBadge from "@/components/ui/LibBadge.astro";
 import Topbar from "@/components/Topbar.astro";
-import pkg from "../../package.json";
-import prettierPkg from "prettier/package.json";
-
-const ver = (v: string) => v.replace(/[\^~]/, "");
-const astroVersion = ver(pkg.dependencies.astro);
-const reactVersion = ver(pkg.dependencies.react);
-const tailwindVersion = ver(pkg.dependencies.tailwindcss);
-const typescriptVersion = ver(pkg.devDependencies.typescript);
-const eslintVersion = ver(pkg.devDependencies.eslint);
-const prettierVersion = prettierPkg.version;
-const supabaseVersion = ver(pkg.dependencies["@supabase/supabase-js"]);
 ---
 
-<div
-  class="relative mx-auto min-h-screen w-full bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 p-4 sm:p-8"
->
-  <Topbar />
+<div class="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-[#0a0e1a] via-[#0f1529] to-[#0a0e1a]">
+  <!-- Cosmic orbs -->
   <div
-    class="relative mx-auto max-w-4xl rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 text-white shadow-2xl backdrop-blur-xl"
+    class="pointer-events-none absolute top-1/4 -left-24 h-[350px] w-[350px] rounded-full bg-purple-500/20 blur-[120px]"
   >
-    <div class="space-y-8">
-      <div class="text-center">
-        <h1
-          class="mb-4 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-6xl font-bold text-transparent drop-shadow-lg"
-        >
-          Witaj w 10xDevs Astro Starter!
-        </h1>
-        <p class="text-xl text-blue-100/90 drop-shadow-md">
-          Ten projekt został zbudowany w oparciu o nowoczesny stack technologiczny:
-        </p>
-      </div>
+  </div>
+  <div
+    class="pointer-events-none absolute top-2/3 -right-16 h-[250px] w-[250px] rounded-full bg-blue-500/15 blur-[100px]"
+  >
+  </div>
+  <div
+    class="pointer-events-none absolute top-0 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-indigo-400/10 blur-[140px]"
+  >
+  </div>
 
-      <div class="mx-auto flex max-w-2xl flex-col gap-6">
-        <div class="rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-lg">
-          <h2
-            class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-semibold text-transparent"
-          >
-            Core
-          </h2>
-          <ul class="space-y-3">
-            <li class="flex items-center space-x-3">
-              <LibBadge label="Astro" version={astroVersion} />
-              <span class="text-blue-100/90">- Metaframework do aplikacji webowych</span>
-            </li>
-            <li class="flex items-center space-x-3">
-              <LibBadge label="React" version={reactVersion} />
-              <span class="text-blue-100/90">- Biblioteka UI do komponentów interaktywnych</span>
-            </li>
-            <li class="flex items-center space-x-3">
-              <LibBadge label="TypeScript" version={typescriptVersion} />
-              <span class="text-blue-100/90">- Typowanie statyczne</span>
-            </li>
-            <li class="flex items-center space-x-3">
-              <LibBadge label="Supabase" version={supabaseVersion} />
-              <span class="text-blue-100/90">- Autentykacja i przechowywanie danych</span>
-            </li>
-          </ul>
-        </div>
+  <!-- Star field -->
+  <div
+    class="pointer-events-none absolute inset-0"
+    style="background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px); background-size: 200px 200px, 150px 150px, 100px 100px; background-position: 0 0, 40px 60px, 80px 30px;"
+  >
+  </div>
 
-        <div class="rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-lg">
-          <h2
-            class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-semibold text-transparent"
-          >
-            Stylowanie
-          </h2>
-          <ul class="space-y-3">
-            <li class="flex items-center space-x-3">
-              <LibBadge label="Tailwind CSS" version={tailwindVersion} />
-              <span class="text-blue-100/90">- Utility-first CSS framework</span>
-            </li>
-          </ul>
-        </div>
+  <div class="relative z-10 p-4 sm:p-8">
+    <Topbar />
 
-        <div class="rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-lg">
-          <h2
-            class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-semibold text-transparent"
-          >
-            Statyczna analiza kodu
-          </h2>
-          <ul class="space-y-3">
-            <li class="flex items-center space-x-3">
-              <LibBadge label="ESLint" version={eslintVersion} />
-              <span class="text-blue-100/90">- Lintowanie kodu</span>
-            </li>
-            <li class="flex items-center space-x-3">
-              <LibBadge label="Prettier" version={prettierVersion} />
-              <span class="text-blue-100/90">- Formatowanie kodu</span>
-            </li>
-            <li class="flex items-center space-x-3">
-              <LibBadge label="Husky i Lint-staged" />
-              <span class="text-blue-100/90">- Automatyczna analiza kodu przed commitowaniem</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <p class="mt-8 text-center text-lg leading-relaxed text-blue-100/90">
-        Starter zawiera wszystko, czego potrzebujesz do rozpoczęcia tworzenia <br class="hidden sm:block" />
-        <span class="bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text font-semibold text-transparent"
-          >nowoczesnych aplikacji webowych!</span
-        >
+    <!-- Hero section -->
+    <div class="mx-auto flex max-w-4xl flex-col items-center justify-center px-4 py-24 text-center sm:py-32 lg:py-40">
+      <h1
+        class="mb-6 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-5xl leading-tight font-bold text-transparent sm:text-6xl lg:text-7xl"
+      >
+        10x Astro Starter
+      </h1>
+      <p class="mb-10 max-w-2xl text-lg text-blue-100/70 sm:text-xl">
+        A production-ready starter with authentication, modern tooling, and a cosmic developer experience.
       </p>
+      <div class="flex flex-col gap-4 sm:flex-row">
+        <a
+          href="/auth/signin"
+          class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-purple-500"
+        >
+          Sign In
+        </a>
+        <a
+          href="/auth/signup"
+          class="inline-flex items-center justify-center rounded-lg border border-white/20 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white/10"
+        >
+          Sign Up
+        </a>
+      </div>
     </div>
   </div>
 </div>

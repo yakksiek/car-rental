@@ -556,22 +556,22 @@ Each phase has its own automated + manual verification. The key automated checks
 
 #### Automated
 
-- [x] 4.1 Build succeeds with Cloudflare adapter
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Wrangler config is valid: `npx wrangler deploy --dry-run`
+- [x] 4.1 Build succeeds with Cloudflare adapter — 4b2db07
+- [x] 4.2 Lint passes: `npm run lint` — 4b2db07
+- [x] 4.3 Wrangler config is valid: `npx wrangler deploy --dry-run` — 4b2db07
 
 #### Manual
 
-- [x] 4.4 Dev server starts on workerd runtime
-- [x] 4.5 Auth flow works end-to-end
-- [x] 4.6 Supabase SSR client connects without errors
+- [x] 4.4 Dev server starts on workerd runtime — 4b2db07
+- [x] 4.5 Auth flow works end-to-end — 4b2db07
+- [x] 4.6 Supabase SSR client connects without errors — 4b2db07
 
 ### Phase 5: CI/CD Workflow
 
 #### Automated
 
-- [ ] 5.1 Workflow file is valid YAML
-- [ ] 5.2 `.github/workflows/ci.yml` exists
+- [x] 5.1 Workflow file is valid YAML
+- [x] 5.2 `.github/workflows/ci.yml` exists
 
 #### Manual
 
