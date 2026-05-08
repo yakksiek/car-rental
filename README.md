@@ -2,15 +2,16 @@
 
 ![](./public/template.png)
 
-A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
+A modern, opinionated starter template for building fast, accessible web applications.
 
 ## Tech Stack
 
-- [Astro](https://astro.build/) v6.1.9 - Modern web framework for building fast, content-focused websites
-- [React](https://react.dev/) v19.2.4 - UI library for building interactive components
-- [TypeScript](https://www.typescriptlang.org/) v5.9.3 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4.2.1 - Utility-first CSS framework
+- [Astro](https://astro.build/) v6 - Modern web framework with server-first rendering
+- [React](https://react.dev/) v19 - UI library for interactive components
+- [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
+- [Tailwind CSS](https://tailwindcss.com/) v4 - Utility-first CSS framework
 - [Supabase](https://supabase.com/) - Authentication and backend-as-a-service
+- [Cloudflare Workers](https://workers.cloudflare.com/) - Edge deployment runtime
 
 ## Prerequisites
 
@@ -34,25 +35,26 @@ npm install
 
 3. Set up Supabase and configure environment variables — see [Supabase Configuration](#supabase-configuration) below.
 
-4. Run the development server:
+4. Create a `.dev.vars` file for local Cloudflare dev secrets:
+
+```bash
+cp .env.example .dev.vars
+```
+
+5. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-5. Build for production:
-
-```bash
-npm run build
-```
-
 ## Available Scripts
 
-- `npm run dev` - Start development server
+- `npm run dev` - Start development server (Cloudflare workerd runtime)
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
+- `npm run lint` - Run ESLint with type-checked rules
+- `npm run lint:fix` - Auto-fix ESLint issues
+- `npm run format` - Run Prettier
 
 ## Project Structure
 
@@ -65,6 +67,7 @@ npm run build
 │ ├── components/ # UI components (Astro & React)
 │ └── assets/ # Static assets
 ├── public/ # Public assets
+├── wrangler.jsonc # Cloudflare Workers config
 ```
 
 ## Supabase Configuration
@@ -93,7 +96,7 @@ npx supabase init
 npx supabase start
 ```
 
-4. Copy the credentials printed by the CLI into your `.env`:
+4. Copy the credentials printed by the CLI into your `.env` and `.dev.vars`:
 
 ```
 SUPABASE_URL=http://127.0.0.1:54321
@@ -112,7 +115,7 @@ No database tables or migrations are required — this project uses Supabase Aut
 
 ### Using a cloud Supabase project instead
 
-If you prefer to use a hosted Supabase project, add these variables to your `.env` file:
+If you prefer to use a hosted Supabase project, add these variables to your `.env` and `.dev.vars` files:
 
 | Variable       | Description                                                |
 | -------------- | ---------------------------------------------------------- |
@@ -145,32 +148,27 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
 
-## AI Development Support
+## Deployment
 
-This project is configured with AI development tools to enhance the development experience, providing guidelines for:
+This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
 
-- Project structure
-- Coding practices
-- Frontend development
-- Styling with Tailwind
-- Accessibility best practices
-- Astro and React guidelines
+1. Build the project:
 
-### Cursor IDE
+```bash
+npm run build
+```
 
-The project includes AI rules in `.cursor/rules/` directory that help Cursor IDE understand the project structure and provide better code suggestions.
+2. Deploy with Wrangler:
 
-### GitHub Copilot
+```bash
+npx wrangler deploy
+```
 
-AI instructions for GitHub Copilot are available in `.github/copilot-instructions.md`
+Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
 
-### Windsurf
+## CI
 
-The `.windsurfrules` file contains AI configuration for Windsurf.
-
-## Contributing
-
-Please follow the AI guidelines and coding practices defined in the AI configuration files when contributing to this project.
+GitHub Actions runs lint + build on every push and PR to `master`. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets in GitHub for the build step.
 
 ## License
 

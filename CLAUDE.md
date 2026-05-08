@@ -4,18 +4,18 @@ This file provides guidance to AI Agent when working with code in this repositor
 
 ## Commands
 
-- `npm run dev` — start dev server on port 3000
-- `npm run build` — production build (SSR via `@astrojs/node` standalone adapter)
+- `npm run dev` — start dev server (Cloudflare workerd runtime)
+- `npm run build` — production build (SSR via `@astrojs/cloudflare`)
 - `npm run preview` — preview production build
-- `npm run lint` — ESLint (flat config, eslint.config.js)
+- `npm run lint` — ESLint with type-checked rules
 - `npm run lint:fix` — auto-fix lint issues
-- `npm run format` — Prettier (includes prettier-plugin-astro)
+- `npm run format` — Prettier (includes prettier-plugin-astro + prettier-plugin-tailwindcss)
 
 Pre-commit hooks: husky + lint-staged runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
 
 ## Architecture
 
-**Astro 5 SSR app** with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui components.
+**Astro 6 SSR app** with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui components. Deployed to Cloudflare Workers.
 
 ### Rendering mode
 
@@ -44,5 +44,11 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All pages a
 ### Environment
 
 - Node.js v22.14.0 (see `.nvmrc`)
-- Env vars: `SUPABASE_URL`, `SUPABASE_KEY` (copy `.env.example` to `.env`)
+- Env vars: `SUPABASE_URL`, `SUPABASE_KEY` (copy `.env.example` to `.env` for Node, or `.dev.vars` for Cloudflare local dev)
 - Local Supabase: `npx supabase start` (requires Docker)
+- Cloudflare local dev: secrets go in `.dev.vars` (gitignored)
+- Deploy: `npx wrangler deploy` (requires Cloudflare account + `wrangler` auth)
+
+## CI
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint + build on every push and PR to master. Requires `SUPABASE_URL` and `SUPABASE_KEY` repository secrets for the build step.
