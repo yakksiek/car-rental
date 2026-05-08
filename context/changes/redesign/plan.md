@@ -213,13 +213,13 @@ Add 2-3 feature cards below the hero section highlighting the starter's key capa
 
 #### Automated
 
-- [x] 2.1 Build succeeds: `npm run build`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 No TypeScript errors: `npx tsc --noEmit`
+- [x] 2.1 Build succeeds: `npm run build` — d7fd78a
+- [x] 2.2 Lint passes: `npm run lint` — d7fd78a
+- [x] 2.3 No TypeScript errors: `npx tsc --noEmit` — d7fd78a
 
 #### Manual
 
-- [x] 2.4 Three feature cards visible below hero with icons, titles, descriptions
-- [x] 2.5 Cards display 3-column on desktop, single column on mobile
-- [x] 2.6 No visual regression on hero section from Phase 1
-- [x] 2.7 Auth flow still works end-to-end
+- [x] 2.4 Three feature cards visible below hero with icons, titles, descriptions — d7fd78a
+- [x] 2.5 Cards display 3-column on desktop, single column on mobile — d7fd78a
+- [x] 2.6 No visual regression on hero section from Phase 1 — d7fd78a
+- [x] 2.7 Auth flow still works end-to-end — d7fd78a
