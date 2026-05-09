@@ -45,7 +45,7 @@ A clean cosmic landing page at `/` with:
 - No custom web fonts (system fonts only)
 - No CSS animations or keyframe effects (static cosmic elements)
 - No Topbar redesign
-- No changes to Layout.astro, auth pages, or dashboard
+- No changes to Layout.astro ~~, auth pages, or dashboard~~ (amended: auth pages + dashboard backgrounds updated to cosmic palette per user request during implementation)
 - No new npm dependencies
 - No changes to the Tailwind theme tokens in global.css
 - No React islands on the homepage (pure Astro component)

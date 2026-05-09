@@ -1,9 +1,9 @@
 ---
 change_id: redesign
 title: Redesign index page with a simple cosmic aesthetic
-status: implemented
+status: impl_reviewed
 created: 2026-05-08
-updated: 2026-05-08
+updated: 2026-05-09
 archived_at: null
 ---
 
