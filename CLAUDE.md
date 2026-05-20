@@ -39,7 +39,10 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 
 ### Key conventions
 
-- **Path alias**: `@/*` maps to `./src/*`.
+- **Import order**: group imports separated by a blank line, each preceded by a comment header:
+  1. `// core` — framework and library imports (react, astro, supabase, zod)
+  2. `// components` — component imports (Astro and React components, UI primitives)
+  3. `// others` — types, hooks, constants, utilities, services
 - **Astro components** for layout/static content; **React components** (`client:*` directives) only when interactivity is needed.
 - **Tailwind classes**: always merge with `cn()` from `@/lib/utils`. Never concatenate class strings manually.
 - **shadcn/ui**: components in `src/components/ui/`, "new-york" style. Add new ones with `npx shadcn@latest add [name]`.
@@ -51,7 +54,6 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 ### Environment
 
 - Node.js v22.14.0 (`.nvmrc`)
-- Env vars: copy `.env.example` to `.env` (Node) or `.dev.vars` (Cloudflare local dev, gitignored)
 - Local Supabase: `npx supabase start` (requires Docker)
 - Deploy: `npx wrangler deploy`
 
