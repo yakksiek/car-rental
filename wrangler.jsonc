@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fleetrent",
+  "account_id": "b2e5f91cf1c4b7f738e355c30242776a",
   "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-05-08",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
