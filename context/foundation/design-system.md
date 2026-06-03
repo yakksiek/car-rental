@@ -76,5 +76,5 @@ Screenshot filenames are numbered to match this table, e.g.
 
 ## Follow-ups
 
-- [ ] **Wire web fonts.** Tokens reference Inter / Instrument Serif / JetBrains Mono but the app doesn't load them yet — currently falls back to system fonts. Add via `@fontsource/*` (recommended for Astro/Cloudflare) or a `<link>` in `Layout.astro` before S-01.
+- [x] **Wire web fonts.** Done — self-hosted via Astro's Fonts API (`fonts` in `astro.config.mjs` + `<Font>` in `Layout.astro`). Inter / Instrument Serif / JetBrains Mono, `latin` + `latin-ext` subsets (Polish diacritics), exposed as `--font-inter` / `--font-instrument-serif` / `--font-jetbrains-mono` and consumed by the `--flota-font-*` tokens.
 - [ ] Decide whether `info` state should differ from `danger` (both alias crimson today — see note in `tokens.css`).
