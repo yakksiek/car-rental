@@ -1,0 +1,143 @@
+/* ============================================================
+   Flota — Design Tokens
+   Single source of truth for the Flota rental UI.
+   Drop into your Astro/Tailwind 4 + shadcn/ui app.
+
+   Layers:
+   1. Primitives  (--flota-*)      raw palette / type / radius / shadow
+   2. Semantic    (shadcn vars)    --background, --primary, --border, …
+   3. Tailwind    (@theme inline)  exposes them as utilities (bg-primary…)
+   ============================================================ */
+
+:root {
+  /* ---- 1. PRIMITIVES ------------------------------------- */
+
+  /* Neutrals (cool grey, navy ink) */
+  --flota-bg:      #F1F3F6;  /* app background — cool light grey */
+  --flota-card:    #FFFFFF;  /* surfaces / cards */
+  --flota-ink:     #0F172A;  /* primary text — deep navy/near-black */
+  --flota-ink-2:   #334155;  /* secondary text */
+  --flota-muted:   #94A3B8;  /* tertiary text / icons */
+  --flota-border:  #E3E7EC;  /* solid hairline (≈ ink @ 8% on bg) */
+  --flota-hair:    rgba(15, 23, 42, 0.08); /* translucent divider */
+  --flota-hair-2:  rgba(15, 23, 42, 0.05); /* faint divider */
+
+  /* Brand — crimson */
+  --flota-accent:      #B43638;
+  --flota-accent-dark: #8E2628;  /* pressed / hover-dark */
+  --flota-accent-soft: #FBE4E1;  /* tint backgrounds */
+  --flota-accent-ink:  #FFFFFF;  /* text/icon on accent */
+
+  /* Status */
+  --flota-success:      #1B9E5A;
+  --flota-success-soft: #E3F5EC;
+  --flota-warning:      #B6790E;
+  --flota-warning-soft: #FBF1DA;
+  --flota-danger:       #B43638;  /* shares the brand crimson */
+  --flota-danger-soft:  #FBE4E1;
+  --flota-neutral:      #64748B;  /* "completed" / inert state */
+  --flota-neutral-soft: #EEF1F5;
+  /* NOTE: the prototype aliases the "active/info" state to the brand
+     crimson. If you need info ≠ danger, introduce a distinct hue here,
+     e.g. --flota-info: #2563EB. */
+
+  /* Typography */
+  --flota-font-sans:  'Inter', -apple-system, system-ui, sans-serif;
+  --flota-font-serif: 'Instrument Serif', 'Cormorant Garamond', 'Times New Roman', serif;
+  --flota-font-mono:  'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Weights (Inter variable; 540/650 are intentional in-betweens) */
+  --flota-fw-regular:  400;
+  --flota-fw-medium:   540;
+  --flota-fw-semibold: 600;
+  --flota-fw-bold:     650;
+  --flota-fw-heavy:    700;
+
+  /* Radius */
+  --flota-radius-sm:   8px;
+  --flota-radius-md:   12px;
+  --flota-radius-lg:   16px;
+  --flota-radius-xl:   20px;
+  --flota-radius-2xl:  28px;   /* sheets / large modals */
+  --flota-radius-pill: 9999px;
+
+  /* Shadows (soft, navy-tinted) */
+  --flota-shadow-1: 0 1px 2px rgba(15,23,42,0.04), 0 2px 6px rgba(15,23,42,0.05);
+  --flota-shadow-2: 0 2px 6px rgba(15,23,42,0.06), 0 12px 30px rgba(15,23,42,0.08);
+  --flota-shadow-3: 0 4px 12px rgba(15,23,42,0.08), 0 24px 60px rgba(15,23,42,0.10);
+  --flota-shadow-accent: 0 10px 28px rgba(180,54,56,0.28), 0 2px 6px rgba(180,54,56,0.15);
+
+  /* Spacing — 4px base scale */
+  --flota-space-1:  4px;
+  --flota-space-2:  8px;
+  --flota-space-3:  12px;
+  --flota-space-4:  16px;
+  --flota-space-5:  20px;
+  --flota-space-6:  24px;
+  --flota-space-7:  28px;
+  --flota-space-8:  32px;
+
+  /* ---- 2. SEMANTIC (shadcn/ui, light theme) -------------- */
+  --background:            var(--flota-bg);
+  --foreground:            var(--flota-ink);
+  --card:                  var(--flota-card);
+  --card-foreground:       var(--flota-ink);
+  --popover:               var(--flota-card);
+  --popover-foreground:    var(--flota-ink);
+  --primary:               var(--flota-accent);
+  --primary-foreground:    var(--flota-accent-ink);
+  --secondary:             var(--flota-neutral-soft);
+  --secondary-foreground:  var(--flota-ink);
+  --muted:                 var(--flota-neutral-soft);
+  --muted-foreground:      var(--flota-muted);
+  --accent:                var(--flota-accent-soft);
+  --accent-foreground:     var(--flota-accent-dark);
+  --destructive:           var(--flota-danger);
+  --destructive-foreground:#FFFFFF;
+  --success:               var(--flota-success);
+  --warning:               var(--flota-warning);
+  --border:                var(--flota-border);
+  --input:                 var(--flota-border);
+  --ring:                  var(--flota-accent);
+  --radius:                var(--flota-radius-md);
+}
+
+/* ---- 3. TAILWIND 4 THEME MAPPING -------------------------
+   Exposes semantic vars as utilities: bg-background, text-foreground,
+   bg-primary, border-border, rounded-lg, font-sans, shadow-card, etc.
+   Remove this block if you configure the theme in tailwind.config.js. */
+@theme inline {
+  --color-background:            var(--background);
+  --color-foreground:            var(--foreground);
+  --color-card:                  var(--card);
+  --color-card-foreground:       var(--card-foreground);
+  --color-popover:               var(--popover);
+  --color-popover-foreground:    var(--popover-foreground);
+  --color-primary:               var(--primary);
+  --color-primary-foreground:    var(--primary-foreground);
+  --color-secondary:             var(--secondary);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-muted:                 var(--muted);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-accent:                var(--accent);
+  --color-accent-foreground:     var(--accent-foreground);
+  --color-destructive:           var(--destructive);
+  --color-success:               var(--success);
+  --color-warning:               var(--warning);
+  --color-border:                var(--border);
+  --color-input:                 var(--input);
+  --color-ring:                  var(--ring);
+
+  --font-sans:  var(--flota-font-sans);
+  --font-serif: var(--flota-font-serif);
+  --font-mono:  var(--flota-font-mono);
+
+  --radius-sm:  var(--flota-radius-sm);
+  --radius-md:  var(--flota-radius-md);
+  --radius-lg:  var(--flota-radius-lg);
+  --radius-xl:  var(--flota-radius-xl);
+
+  --shadow-card:    var(--flota-shadow-1);
+  --shadow-pop:     var(--flota-shadow-2);
+  --shadow-overlay: var(--flota-shadow-3);
+}

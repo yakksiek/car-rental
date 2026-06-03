@@ -3,39 +3,106 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   Flota — Design Tokens (from context/foundation/design/tokens.css)
+   Layers: 1. primitives (--flota-*) → 2. shadcn semantic vars →
+   3. Tailwind @theme utilities. Light theme is the designed surface;
+   .dark below is the inherited shadcn neutral fallback (not yet
+   designed by Flota — revisit if a dark theme is in scope).
+   ============================================================ */
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* ---- 1. PRIMITIVES ------------------------------------- */
+
+  /* Neutrals (cool grey, navy ink) */
+  --flota-bg: #f1f3f6;
+  --flota-card: #ffffff;
+  --flota-ink: #0f172a;
+  --flota-ink-2: #334155;
+  --flota-muted: #94a3b8;
+  --flota-border: #e3e7ec;
+  --flota-hair: rgba(15, 23, 42, 0.08);
+  --flota-hair-2: rgba(15, 23, 42, 0.05);
+
+  /* Brand — crimson */
+  --flota-accent: #b43638;
+  --flota-accent-dark: #8e2628;
+  --flota-accent-soft: #fbe4e1;
+  --flota-accent-ink: #ffffff;
+
+  /* Status */
+  --flota-success: #1b9e5a;
+  --flota-success-soft: #e3f5ec;
+  --flota-warning: #b6790e;
+  --flota-warning-soft: #fbf1da;
+  --flota-danger: #b43638;
+  --flota-danger-soft: #fbe4e1;
+  --flota-neutral: #64748b;
+  --flota-neutral-soft: #eef1f5;
+
+  /* Typography */
+  --flota-font-sans: "Inter", -apple-system, system-ui, sans-serif;
+  --flota-font-serif: "Instrument Serif", "Cormorant Garamond", "Times New Roman", serif;
+  --flota-font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  --flota-fw-regular: 400;
+  --flota-fw-medium: 540;
+  --flota-fw-semibold: 600;
+  --flota-fw-bold: 650;
+  --flota-fw-heavy: 700;
+
+  /* Radius */
+  --flota-radius-sm: 8px;
+  --flota-radius-md: 12px;
+  --flota-radius-lg: 16px;
+  --flota-radius-xl: 20px;
+  --flota-radius-2xl: 28px;
+  --flota-radius-pill: 9999px;
+
+  /* Shadows (soft, navy-tinted) */
+  --flota-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --flota-shadow-2: 0 2px 6px rgba(15, 23, 42, 0.06), 0 12px 30px rgba(15, 23, 42, 0.08);
+  --flota-shadow-3: 0 4px 12px rgba(15, 23, 42, 0.08), 0 24px 60px rgba(15, 23, 42, 0.1);
+  --flota-shadow-accent: 0 10px 28px rgba(180, 54, 56, 0.28), 0 2px 6px rgba(180, 54, 56, 0.15);
+
+  /* ---- 2. SEMANTIC (shadcn/ui, light theme) -------------- */
+  --radius: var(--flota-radius-md);
+  --background: var(--flota-bg);
+  --foreground: var(--flota-ink);
+  --card: var(--flota-card);
+  --card-foreground: var(--flota-ink);
+  --popover: var(--flota-card);
+  --popover-foreground: var(--flota-ink);
+  --primary: var(--flota-accent);
+  --primary-foreground: var(--flota-accent-ink);
+  --secondary: var(--flota-neutral-soft);
+  --secondary-foreground: var(--flota-ink);
+  --muted: var(--flota-neutral-soft);
+  --muted-foreground: var(--flota-muted);
+  --accent: var(--flota-accent-soft);
+  --accent-foreground: var(--flota-accent-dark);
+  --destructive: var(--flota-danger);
+  --destructive-foreground: #ffffff;
+  --success: var(--flota-success);
+  --warning: var(--flota-warning);
+  --border: var(--flota-border);
+  --input: var(--flota-border);
+  --ring: var(--flota-accent);
+
+  /* Chart + sidebar: inherited shadcn neutrals (no Flota equivalent yet) */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--flota-card);
+  --sidebar-foreground: var(--flota-ink);
+  --sidebar-primary: var(--flota-accent);
+  --sidebar-primary-foreground: var(--flota-accent-ink);
+  --sidebar-accent: var(--flota-accent-soft);
+  --sidebar-accent-foreground: var(--flota-accent-dark);
+  --sidebar-border: var(--flota-border);
+  --sidebar-ring: var(--flota-accent);
 }
 
 .dark {
@@ -73,10 +140,14 @@
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Radius scale — explicit Flota steps */
+  --radius-sm: var(--flota-radius-sm);
+  --radius-md: var(--flota-radius-md);
+  --radius-lg: var(--flota-radius-lg);
+  --radius-xl: var(--flota-radius-xl);
+  --radius-2xl: var(--flota-radius-2xl);
+
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -92,6 +163,9 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -108,6 +182,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
+  --font-sans: var(--flota-font-sans);
+  --font-serif: var(--flota-font-serif);
+  --font-mono: var(--flota-font-mono);
+
+  /* Shadows */
+  --shadow-card: var(--flota-shadow-1);
+  --shadow-pop: var(--flota-shadow-2);
+  --shadow-overlay: var(--flota-shadow-3);
+  --shadow-accent: var(--flota-shadow-accent);
 }
 
 @utility bg-cosmic {
