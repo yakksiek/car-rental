@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flota — Design Tokens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F1F3F6; --card: #FFFFFF; --ink: #0F172A; --ink2: #334155; --muted: #94A3B8;
+    --border: #E3E7EC; --accent: #B43638; --accentSoft: #FBE4E1;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Inter', system-ui, sans-serif;
+    --shadow1: 0 1px 2px rgba(15,23,42,0.04), 0 2px 6px rgba(15,23,42,0.05);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 64px 32px 96px; }
+
+  /* Header */
+  .head { margin-bottom: 8px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: 52px; font-weight: 700; letter-spacing: -1.4px; margin: 12px 0 10px; line-height: 1; }
+  .lede { font-size: 16px; color: var(--ink2); max-width: 580px; line-height: 1.5; }
+  .lede code { font-family: var(--mono); font-size: 13px; background: #fff; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+
+  /* Section */
+  section { margin-top: 64px; }
+  .sec-h { display: flex; align-items: baseline; gap: 12px; padding-bottom: 18px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .sec-h h2 { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .sec-h .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  /* Color grid */
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .sub { grid-column: 1 / -1; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink2); margin: 8px 0 -4px; }
+  .swatch { background: var(--card); border-radius: 16px; box-shadow: var(--shadow1); overflow: hidden; }
+  .swatch .chip { height: 76px; border-bottom: 1px solid var(--border); }
+  .swatch .meta { padding: 12px 14px 14px; }
+  .swatch .nm { font-size: 13.5px; font-weight: 650; letter-spacing: -0.2px; }
+  .swatch .vr { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .swatch .hx { font-family: var(--mono); font-size: 11.5px; color: var(--ink2); margin-top: 2px; text-transform: uppercase; }
+
+  /* Type scale */
+  .type-row { display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .type-row:last-child { border-bottom: none; }
+  .type-spec { width: 220px; flex-shrink: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .type-spec b { color: var(--ink2); font-weight: 600; }
+  .type-sample { color: var(--ink); min-width: 0; }
+
+  /* Radius / shadow */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .tile { background: var(--card); border-radius: 16px; box-shadow: var(--shadow1); padding: 18px; }
+  .tile .demo { height: 72px; background: var(--accentSoft); border: 1px solid var(--accent); margin-bottom: 14px; }
+  .tile .nm { font-size: 13px; font-weight: 650; }
+  .tile .vr { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .shadowtile { background: var(--card); border-radius: 16px; padding: 24px; }
+  .shadowtile .demo { height: 72px; background: #fff; border-radius: 12px; margin-bottom: 16px; }
+  .shadowtile .nm { font-size: 13px; font-weight: 650; }
+  .shadowtile .vr { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+  /* Spacing */
+  .space-row { display: flex; align-items: center; gap: 18px; padding: 9px 0; }
+  .space-row .bar { height: 16px; background: var(--accent); border-radius: 3px; }
+  .space-row .lbl { font-family: var(--mono); font-size: 12px; color: var(--ink2); }
+  .space-row .lbl b { color: var(--ink); }
+
+  /* Weights */
+  .weights { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .wt { background: var(--card); border-radius: 16px; box-shadow: var(--shadow1); padding: 18px 16px; }
+  .wt .big { font-size: 34px; letter-spacing: -1px; line-height: 1; }
+  .wt .nm { font-size: 12.5px; font-weight: 600; margin-top: 12px; }
+  .wt .vr { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .note { margin-top: 28px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; font-size: 13.5px; color: var(--ink2); line-height: 1.5; }
+  .note b { color: var(--ink); }
+  .note code { font-family: var(--mono); font-size: 12.5px; background: var(--bg); padding: 2px 6px; border-radius: 5px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Flota · Design System</div>
+      <h1>Design tokens<span style="color: var(--accent)">.</span></h1>
+      <p class="lede">The single source of truth for the rental UI. Values below mirror <code>tokens.css</code> — drop that file into your Tailwind 4 + shadcn app and reference everything through semantic utilities (<code>bg-primary</code>, <code>text-muted-foreground</code>, <code>rounded-lg</code>).</p>
+    </div>
+
+    <!-- COLORS -->
+    <section>
+      <div class="sec-h"><h2>Color</h2><span class="count">19 tokens</span></div>
+      <div class="grid">
+        <div class="sub">Neutrals</div>
+        <div class="swatch"><div class="chip" style="background:#F1F3F6"></div><div class="meta"><div class="nm">Background</div><div class="vr">--flota-bg</div><div class="hx">#F1F3F6</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#FFFFFF"></div><div class="meta"><div class="nm">Card</div><div class="vr">--flota-card</div><div class="hx">#FFFFFF</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#0F172A"></div><div class="meta"><div class="nm">Ink</div><div class="vr">--flota-ink</div><div class="hx">#0F172A</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#334155"></div><div class="meta"><div class="nm">Ink 2</div><div class="vr">--flota-ink-2</div><div class="hx">#334155</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#94A3B8"></div><div class="meta"><div class="nm">Muted</div><div class="vr">--flota-muted</div><div class="hx">#94A3B8</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#E3E7EC"></div><div class="meta"><div class="nm">Border</div><div class="vr">--flota-border</div><div class="hx">#E3E7EC</div></div></div>
+
+        <div class="sub">Brand — crimson</div>
+        <div class="swatch"><div class="chip" style="background:#B43638"></div><div class="meta"><div class="nm">Accent</div><div class="vr">--flota-accent · --primary</div><div class="hx">#B43638</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#8E2628"></div><div class="meta"><div class="nm">Accent dark</div><div class="vr">--flota-accent-dark</div><div class="hx">#8E2628</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#FBE4E1"></div><div class="meta"><div class="nm">Accent soft</div><div class="vr">--flota-accent-soft</div><div class="hx">#FBE4E1</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#FFFFFF"></div><div class="meta"><div class="nm">Accent ink</div><div class="vr">--flota-accent-ink</div><div class="hx">#FFFFFF</div></div></div>
+
+        <div class="sub">Status</div>
+        <div class="swatch"><div class="chip" style="background:#1B9E5A"></div><div class="meta"><div class="nm">Success</div><div class="vr">--flota-success</div><div class="hx">#1B9E5A</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#E3F5EC"></div><div class="meta"><div class="nm">Success soft</div><div class="vr">--flota-success-soft</div><div class="hx">#E3F5EC</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#B6790E"></div><div class="meta"><div class="nm">Warning</div><div class="vr">--flota-warning</div><div class="hx">#B6790E</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#FBF1DA"></div><div class="meta"><div class="nm">Warning soft</div><div class="vr">--flota-warning-soft</div><div class="hx">#FBF1DA</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#B43638"></div><div class="meta"><div class="nm">Danger</div><div class="vr">--flota-danger · --destructive</div><div class="hx">#B43638</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#FBE4E1"></div><div class="meta"><div class="nm">Danger soft</div><div class="vr">--flota-danger-soft</div><div class="hx">#FBE4E1</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#64748B"></div><div class="meta"><div class="nm">Neutral</div><div class="vr">--flota-neutral</div><div class="hx">#64748B</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#EEF1F5"></div><div class="meta"><div class="nm">Neutral soft</div><div class="vr">--flota-neutral-soft</div><div class="hx">#EEF1F5</div></div></div>
+      </div>
+      <div class="note"><b>On status colors:</b> the prototype maps the <i>active / info</i> state to the brand crimson (so "active" reservations read on-brand). If you need <code>info ≠ danger</code> in the app, add a distinct hue — e.g. <code>--flota-info: #2563EB</code> — and remap the relevant badges.</div>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section>
+      <div class="sec-h"><h2>Typography</h2><span class="count">Inter · Instrument Serif · JetBrains Mono</span></div>
+      <div class="type-row">
+        <div class="type-spec"><b>Display</b><br>56px / 700 / -1.2</div>
+        <div class="type-sample" style="font-size:56px;font-weight:700;letter-spacing:-1.2px;line-height:1">Dzień dobry</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>H1 · Page title</b><br>40px / 700 / -1.0</div>
+        <div class="type-sample" style="font-size:40px;font-weight:700;letter-spacing:-1px;line-height:1">Fleet management</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>H2 · Section</b><br>28px / 700 / -0.6</div>
+        <div class="type-sample" style="font-size:28px;font-weight:700;letter-spacing:-0.6px;line-height:1">Popular this week</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>H3 · Card title</b><br>22px / 700 / -0.5</div>
+        <div class="type-sample" style="font-size:22px;font-weight:700;letter-spacing:-0.5px">Pickup → Return comparison</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Title</b><br>17px / 650 / -0.2</div>
+        <div class="type-sample" style="font-size:17px;font-weight:650;letter-spacing:-0.2px">Reservation</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Body</b><br>14px / 540</div>
+        <div class="type-sample" style="font-size:14px;font-weight:540;line-height:1.5">Commercial vehicles, by the day or the month. Browse the fleet, pick your dates and request a booking — no account needed.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Caption</b><br>12px / 540</div>
+        <div class="type-sample" style="font-size:12px;font-weight:540;color:var(--muted)">2024 · WX 4827K · Diesel · Auto</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Overline</b><br>11px / 600 / +0.4 / UPPER</div>
+        <div class="type-sample" style="font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:var(--muted)">Booking details</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Mono</b><br>JetBrains · 12px / 500</div>
+        <div class="type-sample" style="font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.3px">R-2403 · WX 4827K · +1 228 km</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec"><b>Serif (display accent)</b><br>Instrument Serif · italic</div>
+        <div class="type-sample" style="font-family:var(--mono);font-family:'Instrument Serif',serif;font-size:34px;font-style:italic">Flota</div>
+      </div>
+    </section>
+
+    <!-- WEIGHTS -->
+    <section>
+      <div class="sec-h"><h2>Font weight</h2><span class="count">Inter variable</span></div>
+      <div class="weights">
+        <div class="wt"><div class="big" style="font-weight:400">Aa</div><div class="nm">Regular</div><div class="vr">400</div></div>
+        <div class="wt"><div class="big" style="font-weight:540">Aa</div><div class="nm">Medium</div><div class="vr">540</div></div>
+        <div class="wt"><div class="big" style="font-weight:600">Aa</div><div class="nm">Semibold</div><div class="vr">600</div></div>
+        <div class="wt"><div class="big" style="font-weight:650">Aa</div><div class="nm">Bold</div><div class="vr">650</div></div>
+        <div class="wt"><div class="big" style="font-weight:700">Aa</div><div class="nm">Heavy</div><div class="vr">700</div></div>
+      </div>
+    </section>
+
+    <!-- RADIUS -->
+    <section>
+      <div class="sec-h"><h2>Radius</h2><span class="count">6 steps</span></div>
+      <div class="tiles">
+        <div class="tile"><div class="demo" style="border-radius:8px"></div><div class="nm">sm</div><div class="vr">8px</div></div>
+        <div class="tile"><div class="demo" style="border-radius:12px"></div><div class="nm">md · --radius</div><div class="vr">12px</div></div>
+        <div class="tile"><div class="demo" style="border-radius:16px"></div><div class="nm">lg</div><div class="vr">16px</div></div>
+        <div class="tile"><div class="demo" style="border-radius:20px"></div><div class="nm">xl</div><div class="vr">20px</div></div>
+        <div class="tile"><div class="demo" style="border-radius:28px"></div><div class="nm">2xl · sheets</div><div class="vr">28px</div></div>
+        <div class="tile"><div class="demo" style="border-radius:9999px"></div><div class="nm">pill</div><div class="vr">9999px</div></div>
+      </div>
+    </section>
+
+    <!-- SHADOW -->
+    <section>
+      <div class="sec-h"><h2>Elevation</h2><span class="count">3 levels + accent</span></div>
+      <div class="tiles">
+        <div class="shadowtile"><div class="demo" style="box-shadow:0 1px 2px rgba(15,23,42,0.04), 0 2px 6px rgba(15,23,42,0.05)"></div><div class="nm">shadow-1 · cards</div><div class="vr">0 1 2 /.04 · 0 2 6 /.05</div></div>
+        <div class="shadowtile"><div class="demo" style="box-shadow:0 2px 6px rgba(15,23,42,0.06), 0 12px 30px rgba(15,23,42,0.08)"></div><div class="nm">shadow-2 · popovers</div><div class="vr">0 2 6 /.06 · 0 12 30 /.08</div></div>
+        <div class="shadowtile"><div class="demo" style="box-shadow:0 4px 12px rgba(15,23,42,0.08), 0 24px 60px rgba(15,23,42,0.10)"></div><div class="nm">shadow-3 · overlays</div><div class="vr">0 4 12 /.08 · 0 24 60 /.10</div></div>
+        <div class="shadowtile"><div class="demo" style="box-shadow:0 10px 28px rgba(180,54,56,0.28), 0 2px 6px rgba(180,54,56,0.15)"></div><div class="nm">shadow-accent · CTAs</div><div class="vr">crimson glow</div></div>
+      </div>
+    </section>
+
+    <!-- SPACING -->
+    <section>
+      <div class="sec-h"><h2>Spacing</h2><span class="count">4px base</span></div>
+      <div class="space-row"><div class="bar" style="width:4px"></div><div class="lbl"><b>space-1</b> · 4px</div></div>
+      <div class="space-row"><div class="bar" style="width:8px"></div><div class="lbl"><b>space-2</b> · 8px</div></div>
+      <div class="space-row"><div class="bar" style="width:12px"></div><div class="lbl"><b>space-3</b> · 12px</div></div>
+      <div class="space-row"><div class="bar" style="width:16px"></div><div class="lbl"><b>space-4</b> · 16px</div></div>
+      <div class="space-row"><div class="bar" style="width:20px"></div><div class="lbl"><b>space-5</b> · 20px</div></div>
+      <div class="space-row"><div class="bar" style="width:24px"></div><div class="lbl"><b>space-6</b> · 24px</div></div>
+      <div class="space-row"><div class="bar" style="width:28px"></div><div class="lbl"><b>space-7</b> · 28px</div></div>
+      <div class="space-row"><div class="bar" style="width:32px"></div><div class="lbl"><b>space-8</b> · 32px</div></div>
+    </section>
+
+    <div class="note" style="margin-top:48px">
+      <b>Usage</b> — import <code>tokens.css</code> once in your global stylesheet (above Tailwind). Components then read semantic vars: shadcn primitives pick them up automatically; custom layouts use <code>var(--flota-*)</code> or the generated utilities. Switch to a dark theme later by overriding the <b>semantic</b> layer only — primitives stay fixed.
+    </div>
+  </div>
+</body>
+</html>

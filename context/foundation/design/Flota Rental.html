@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flota — Commercial vehicle rental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; font-family: 'Inter', system-ui, sans-serif; background: #e6e9ee; color: #0F172A; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  /* Set font-weight 650 fallback since not standard */
+  @supports (font-variation-settings: normal) {
+    body { font-family: 'Inter', system-ui, sans-serif; }
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="shared.jsx"></script>
+  <script type="text/babel" src="customer-screens.jsx"></script>
+  <script type="text/babel" src="staff-screens.jsx"></script>
+  <script type="text/babel" src="desktop-screens.jsx"></script>
+  <script type="text/babel" src="customer-desktop.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect } = React;
+
+    // Wraps a screen that is out of v1 scope: dims it slightly and stamps a
+    // diagonal corner ribbon so it reads as "not for launch" at any zoom.
+    function V2Wrap({ children, note = 'v2' }) {
+      return (
+        <div style={{ position: 'relative', height: '100%' }}>
+          <div style={{ height: '100%', filter: 'saturate(0.82)' }}>{children}</div>
+          {/* soft scrim + dashed border to de-emphasize */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 40,
+            boxShadow: 'inset 0 0 0 2px rgba(180,54,56,0.5)',
+            background: 'rgba(20,18,22,0.04)',
+          }} />
+          {/* corner ribbon */}
+          <div style={{ position: 'absolute', top: 0, right: 0, width: 132, height: 132, overflow: 'hidden', pointerEvents: 'none', zIndex: 50 }}>
+            <div style={{
+              position: 'absolute', top: 26, right: -42, transform: 'rotate(45deg)',
+              background: '#b43638', color: '#fff7f0',
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+              letterSpacing: 2, textTransform: 'uppercase', padding: '6px 52px',
+              boxShadow: '0 3px 10px rgba(0,0,0,0.28)', textAlign: 'center', lineHeight: 1.1,
+            }}>
+              v2 · {note}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [tw, setTweak] = useTweaks(T);
+      // Push lang change globally so screens re-render
+      useEffect(() => {
+        window.__flotaLang = tw.lang;
+        window.dispatchEvent(new Event('flota-lang'));
+      }, [tw.lang]);
+
+      return (
+        <>
+          <DesignCanvas>
+            <DCSection id="customer" title="Customer · Mobile" subtitle="Browse → reserve → track">
+              <DCArtboard id="home" label="01 · Home" width={390} height={844}>
+                <ScreenHome />
+              </DCArtboard>
+              <DCArtboard id="fleet" label="02 · Fleet listing" width={390} height={844}>
+                <ScreenFleet />
+              </DCArtboard>
+              <DCArtboard id="detail" label="03 · Vehicle detail" width={390} height={844}>
+                <ScreenDetail />
+              </DCArtboard>
+              <DCArtboard id="reserve" label="04 · Reservation form" width={390} height={844}>
+                <ScreenReserve />
+              </DCArtboard>
+              <DCArtboard id="summary" label="05 · Request summary" width={390} height={844}>
+                <ScreenReserveSummary />
+              </DCArtboard>
+              <DCArtboard id="confirm" label="06 · Request received" width={390} height={844}>
+                <ScreenReserveConfirm />
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="customer-desktop" title="Customer · Desktop" subtitle="Marketing site + fleet browser">
+              <DCArtboard id="d-home" label="01 · Landing page" width={1440} height={1320}>
+                <ScreenDesktopHome />
+              </DCArtboard>
+              <DCArtboard id="d-fleet" label="02 · Fleet browse" width={1440} height={1120}>
+                <ScreenDesktopFleet />
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="staff" title="Staff · Mobile" subtitle="Dispatcher in the field">
+              <DCArtboard id="dash" label="07 · Worker dashboard" width={390} height={844}>
+                <ScreenWorkerDash />
+              </DCArtboard>
+              <DCArtboard id="queue" label="08 · Pending requests" width={390} height={844}>
+                <ScreenPendingQueue />
+              </DCArtboard>
+              <DCArtboard id="reqdetail" label="09 · Request detail" width={390} height={844}>
+                <ScreenRequestDetail />
+              </DCArtboard>
+              <DCArtboard id="protocol" label="10 · Pickup protocol · condition" width={390} height={844}>
+                <ScreenPickupProtocol />
+              </DCArtboard>
+              <DCArtboard id="signature" label="11 · Pickup protocol · signature & email" width={390} height={844}>
+                <ScreenPickupSignature />
+              </DCArtboard>
+              <DCArtboard id="return" label="12 · Return protocol · comparison" width={390} height={844}>
+                <ScreenReturnProtocol />
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="v2" title="Deferred · v2" subtitle="Out of v1 scope — depends on customer accounts (PRD §Non-Goals). Kept for reference, not built for launch.">
+              <DCArtboard id="myres" label="My reservations" width={390} height={844}>
+                <V2Wrap note="needs accounts">
+                  <ScreenMyReservations />
+                </V2Wrap>
+              </DCArtboard>
+              <DCPostIt top={120} left={470} rotate={2} width={210}>
+                v1 customers have no login — they reserve via the public site and get protocols by email. This whole screen ships in v2.
+              </DCPostIt>
+            </DCSection>
+
+            <DCSection id="admin" title="Admin · Desktop" subtitle="Fleet operations dashboard">
+              <DCArtboard id="cal" label="13 · Calendar timeline" width={1320} height={820}>
+                <ScreenCalendar />
+              </DCArtboard>
+              <DCArtboard id="fleetmgmt" label="14 · Fleet management" width={1320} height={820}>
+                <ScreenFleetMgmt />
+              </DCArtboard>
+              <DCArtboard id="overdue" label="15 · Overdue returns" width={1320} height={820}>
+                <ScreenOverdue />
+              </DCArtboard>
+              <DCArtboard id="employees" label="16 · Employees" width={1320} height={820}>
+                <ScreenEmployees />
+              </DCArtboard>
+            </DCSection>
+          </DesignCanvas>
+
+          <TweaksPanel title="Tweaks">
+            <TweakSection title="Localization">
+              <TweakRadio
+                label="Language"
+                value={tw.lang}
+                onChange={(v) => setTweak('lang', v)}
+                options={[
+                  { value: 'EN', label: 'English' },
+                  { value: 'PL', label: 'Polski' },
+                ]}
+              />
+            </TweakSection>
+            <TweakSection title="About this exploration">
+              <div style={{ fontSize: 12, color: '#6b6357', lineHeight: 1.5, padding: '4px 2px' }}>
+12 screens across 3 user roles, mapped to roadmap slices S-01–S-08. Newest: return protocol with auto-comparison (S-06) and admin employee management (S-08). The v2-deferred screen is fenced off and ribboned. Vehicle imagery uses geometric silhouettes; swap for real product photography in production.
+              </div>
+            </TweakSection>
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
