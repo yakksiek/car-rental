@@ -41,9 +41,11 @@
   --flota-neutral-soft: #eef1f5;
 
   /* Typography */
-  --flota-font-sans: "Inter", -apple-system, system-ui, sans-serif;
-  --flota-font-serif: "Instrument Serif", "Cormorant Garamond", "Times New Roman", serif;
-  --flota-font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  /* Resolve to Astro-managed, self-hosted families (see astro.config.mjs
+     `fonts` + <Font> in Layout.astro); literal name + system fonts as fallback. */
+  --flota-font-sans: var(--font-inter, "Inter"), -apple-system, system-ui, sans-serif;
+  --flota-font-serif: var(--font-instrument-serif, "Instrument Serif"), "Times New Roman", serif;
+  --flota-font-mono: var(--font-jetbrains-mono, "JetBrains Mono"), "SF Mono", Menlo, monospace;
 
   --flota-fw-regular: 400;
   --flota-fw-medium: 540;
@@ -204,6 +206,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }
