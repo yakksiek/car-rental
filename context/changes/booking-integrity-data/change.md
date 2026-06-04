@@ -1,9 +1,9 @@
 ---
 change_id: booking-integrity-data
 title: Vehicle/reservation data model with hotel-style overlap rule
-status: planned
+status: implementing
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-04
 archived_at: null
 ---
 

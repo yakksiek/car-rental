@@ -264,16 +264,16 @@ Greenfield — no existing data to migrate. The migration is additive and revers
 
 #### Automated
 
-- [ ] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [ ] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [ ] 1.3 Type checking passes: `npx astro check`
-- [ ] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
+- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
+- [x] 1.3 Type checking passes: `npx astro check`
+- [x] 1.4 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.5 RLS enabled + all policies present (verified in Studio/psql)
-- [ ] 1.6 Overlapping confirmed insert rejected; same-day-turnover pair inserts
-- [ ] 1.7 anon can SELECT active vehicles but is denied reservations
+- [x] 1.5 RLS enabled + all policies present (verified in Studio/psql)
+- [x] 1.6 Overlapping confirmed insert rejected; same-day-turnover pair inserts
+- [x] 1.7 anon can SELECT active vehicles but is denied reservations
 
 ### Phase 2: Overlap Predicate & Tests
 
