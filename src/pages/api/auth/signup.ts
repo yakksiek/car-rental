@@ -1,20 +1,12 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@/lib/supabase";
 
-export const POST: APIRoute = async (context) => {
-  const form = await context.request.formData();
-  const email = form.get("email") as string;
-  const password = form.get("password") as string;
-
-  const supabase = createClient(context.request.headers, context.cookies);
-  if (!supabase) {
-    return context.redirect(`/auth/signup?error=${encodeURIComponent("Supabase is not configured")}`);
-  }
-  const { error } = await supabase.auth.signUp({ email, password });
-
-  if (error) {
-    return context.redirect(`/auth/signup?error=${encodeURIComponent(error.message)}`);
-  }
-
-  return context.redirect("/auth/confirm-email");
+// F-02: public self-service signup is closed. v1 has no customer accounts —
+// every account is staff, provisioned by an admin (S-08) or the documented
+// production first-admin runbook. This route is kept as an explicit, documented
+// refusal (defense-in-depth alongside `enable_signup = false` in config.toml)
+// rather than deleted, so a stray POST gets correct UX instead of a raw error.
+export const POST: APIRoute = (context) => {
+  return context.redirect(
+    `/auth/signin?error=${encodeURIComponent("Rejestracja jest zarządzana przez administratora.")}`,
+  );
 };

@@ -119,3 +119,72 @@ insert into reservations (
     'Katarzyna Wójcik', 'katarzyna.wojcik@example.com', '+48600700800',
     '2026-07-12', '2026-07-20', 'pending'
   );
+
+-- ---------------------------------------------------------------------------
+-- staff accounts (F-02) — a role-complete, signable-in system after reset
+-- ---------------------------------------------------------------------------
+--
+-- DEV-ONLY credentials. NEVER reuse these in production — production gets its
+-- first admin via context/changes/employee-admin-roles/runbook-first-admin.md.
+-- Public self-service signup is disabled (config + route), so seeding directly
+-- into auth.users is the only path to a signable-in dev account.
+--
+--   admin@fleetrent.test    / admin123      -> role admin
+--   employee@fleetrent.test / employee123   -> role employee
+--
+-- Each account needs THREE things to sign in via email/password:
+--   1. an auth.users row with a bcrypt-hashed password (crypt + gen_salt('bf'))
+--      and email_confirmed_at set (enable_confirmations is off, but a confirmed
+--      timestamp keeps the row unambiguous);
+--   2. a matching auth.identities row for the 'email' provider (GoTrue requires
+--      it to resolve the identity on login);
+--   3. a public.profiles row granting the app_role (seed runs as the table
+--      owner and bypasses RLS, so the admin-only insert policy does not apply).
+-- Fixed UUIDs keep resets reproducible. The token columns are set to '' (not
+-- null) because GoTrue scans them as non-nullable strings.
+
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) values
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'a0000000-0000-0000-0000-0000000000ad',
+    'authenticated', 'authenticated',
+    'admin@fleetrent.test', crypt('admin123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'e0000000-0000-0000-0000-0000000000e0',
+    'authenticated', 'authenticated',
+    'employee@fleetrent.test', crypt('employee123', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    '', '', '', ''
+  );
+
+insert into auth.identities (
+  provider_id, user_id, identity_data, provider,
+  last_sign_in_at, created_at, updated_at
+) values
+  (
+    'a0000000-0000-0000-0000-0000000000ad',
+    'a0000000-0000-0000-0000-0000000000ad',
+    '{"sub":"a0000000-0000-0000-0000-0000000000ad","email":"admin@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
+  ),
+  (
+    'e0000000-0000-0000-0000-0000000000e0',
+    'e0000000-0000-0000-0000-0000000000e0',
+    '{"sub":"e0000000-0000-0000-0000-0000000000e0","email":"employee@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
+  );
+
+insert into profiles (user_id, role) values
+  ('a0000000-0000-0000-0000-0000000000ad', 'admin'),
+  ('e0000000-0000-0000-0000-0000000000e0', 'employee');

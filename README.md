@@ -142,11 +142,21 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 | Route                 | Description                                                             |
 | --------------------- | ----------------------------------------------------------------------- |
 | `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Email/password sign-up form                                             |
+| `/auth/signup`        | Disabled — shows a "registration is managed by an administrator" notice |
 | `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
 | `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
 
-Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
+Route protection is handled in `src/middleware.ts`, which enforces a declarative
+route→role map from `src/lib/access.ts` (`ROUTE_ROLES`). Add protected paths and
+their minimum role there; `admin` satisfies any `employee`-gated route (fail-closed).
+
+### Staff accounts and roles
+
+Public self-service signup is **disabled** — every account is staff (`employee` or
+`admin`), provisioned deliberately. Locally, `supabase db reset` seeds
+`admin@fleetrent.test` / `employee@fleetrent.test` (dev-only credentials). In
+production, create the first admin with the one-time
+[first-admin runbook](context/changes/employee-admin-roles/runbook-first-admin.md).
 
 ## Deployment
 

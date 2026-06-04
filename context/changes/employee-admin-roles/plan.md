@@ -339,36 +339,36 @@ Additive over F-01: a new enum, table, function, trigger, and policies; no chang
 #### Manual
 
 - [x] 1.5 `profiles` table + RLS + 4 policies, `app_role` enum, and `current_app_role()` exist (verified in Studio/psql) — 7770ff7
-- [ ] 1.6 Non-admin reads only own row; admin reads all — deferred to Phase 3 (needs seeded staff accounts)
+- [x] 1.6 Non-admin reads only own row; admin reads all
 - [x] 1.7 No RLS recursion error on `select * from profiles` — 7770ff7
 
 ### Phase 2: Role Propagation, Middleware Gating & Access Contract
 
 #### Automated
 
-- [x] 2.1 Gating unit tests pass: `npm test`
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Gating unit tests pass: `npm test` — 54c9e2a
+- [x] 2.2 Type checking passes: `npx astro check` — 54c9e2a
+- [x] 2.3 Linting passes: `npm run lint` — 54c9e2a
 
 #### Manual
 
-- [ ] 2.4 Seeded employee: allowed `/dashboard`, denied admin-only route
-- [ ] 2.5 Seeded admin: allowed both
-- [x] 2.6 Role-less authenticated session denied every gated route (fail-closed)
-- [x] 2.7 Unauthenticated access to a gated route redirects to `/auth/signin`
-- [ ] 2.8 `/dashboard` shows the resolved role
+- [x] 2.4 Seeded employee: allowed `/dashboard`, denied admin-only route
+- [x] 2.5 Seeded admin: allowed both
+- [x] 2.6 Role-less authenticated session denied every gated route (fail-closed) — 54c9e2a
+- [x] 2.7 Unauthenticated access to a gated route redirects to `/auth/signin` — 54c9e2a
+- [x] 2.8 `/dashboard` shows the resolved role
 
 ### Phase 3: Signup Lockdown, Dev Seed & Production Bootstrap
 
 #### Automated
 
-- [ ] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
-- [ ] 3.2 Tests still pass: `npm test`
-- [ ] 3.3 Type checking passes: `npx astro check`
-- [ ] 3.4 Linting passes: `npm run lint`
+- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
+- [x] 3.2 Tests still pass: `npm test`
+- [x] 3.3 Type checking passes: `npx astro check`
+- [x] 3.4 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.5 Seeded admin and employee can sign in; roles resolve on `/dashboard`
-- [ ] 3.6 `POST /api/auth/signup` creates no account; `/auth/signup` shows managed-registration notice; no reachable signup link
-- [ ] 3.7 First-admin runbook on a fresh DB produces a working admin
+- [x] 3.5 Seeded admin and employee can sign in; roles resolve on `/dashboard`
+- [x] 3.6 `POST /api/auth/signup` creates no account; `/auth/signup` shows managed-registration notice; no reachable signup link
+- [x] 3.7 First-admin runbook on a fresh DB produces a working admin
