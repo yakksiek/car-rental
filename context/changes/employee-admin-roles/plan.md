@@ -339,7 +339,7 @@ Additive over F-01: a new enum, table, function, trigger, and policies; no chang
 #### Manual
 
 - [x] 1.5 `profiles` table + RLS + 4 policies, `app_role` enum, and `current_app_role()` exist (verified in Studio/psql) — 7770ff7
-- [x] 1.6 Non-admin reads only own row; admin reads all
+- [x] 1.6 Non-admin reads only own row; admin reads all — ce90b5c
 - [x] 1.7 No RLS recursion error on `select * from profiles` — 7770ff7
 
 ### Phase 2: Role Propagation, Middleware Gating & Access Contract
@@ -352,23 +352,23 @@ Additive over F-01: a new enum, table, function, trigger, and policies; no chang
 
 #### Manual
 
-- [x] 2.4 Seeded employee: allowed `/dashboard`, denied admin-only route
-- [x] 2.5 Seeded admin: allowed both
+- [x] 2.4 Seeded employee: allowed `/dashboard`, denied admin-only route — ce90b5c
+- [x] 2.5 Seeded admin: allowed both — ce90b5c
 - [x] 2.6 Role-less authenticated session denied every gated route (fail-closed) — 54c9e2a
 - [x] 2.7 Unauthenticated access to a gated route redirects to `/auth/signin` — 54c9e2a
-- [x] 2.8 `/dashboard` shows the resolved role
+- [x] 2.8 `/dashboard` shows the resolved role — ce90b5c
 
 ### Phase 3: Signup Lockdown, Dev Seed & Production Bootstrap
 
 #### Automated
 
-- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
-- [x] 3.2 Tests still pass: `npm test`
-- [x] 3.3 Type checking passes: `npx astro check`
-- [x] 3.4 Linting passes: `npm run lint`
+- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset` — ce90b5c
+- [x] 3.2 Tests still pass: `npm test` — ce90b5c
+- [x] 3.3 Type checking passes: `npx astro check` — ce90b5c
+- [x] 3.4 Linting passes: `npm run lint` — ce90b5c
 
 #### Manual
 
-- [x] 3.5 Seeded admin and employee can sign in; roles resolve on `/dashboard`
-- [x] 3.6 `POST /api/auth/signup` creates no account; `/auth/signup` shows managed-registration notice; no reachable signup link
-- [x] 3.7 First-admin runbook on a fresh DB produces a working admin
+- [x] 3.5 Seeded admin and employee can sign in; roles resolve on `/dashboard` — ce90b5c
+- [x] 3.6 `POST /api/auth/signup` creates no account; `/auth/signup` shows managed-registration notice; no reachable signup link — ce90b5c
+- [x] 3.7 First-admin runbook on a fresh DB produces a working admin — ce90b5c
