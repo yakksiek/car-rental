@@ -331,31 +331,31 @@ Additive over F-01: a new enum, table, function, trigger, and policies; no chang
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `supabase db reset`
-- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `supabase db reset` — 7770ff7
+- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts` — 7770ff7
+- [x] 1.3 Type checking passes: `npx astro check` — 7770ff7
+- [x] 1.4 Linting passes: `npm run lint` — 7770ff7
 
 #### Manual
 
-- [x] 1.5 `profiles` table + RLS + 4 policies, `app_role` enum, and `current_app_role()` exist (verified in Studio/psql)
+- [x] 1.5 `profiles` table + RLS + 4 policies, `app_role` enum, and `current_app_role()` exist (verified in Studio/psql) — 7770ff7
 - [ ] 1.6 Non-admin reads only own row; admin reads all — deferred to Phase 3 (needs seeded staff accounts)
-- [x] 1.7 No RLS recursion error on `select * from profiles`
+- [x] 1.7 No RLS recursion error on `select * from profiles` — 7770ff7
 
 ### Phase 2: Role Propagation, Middleware Gating & Access Contract
 
 #### Automated
 
-- [ ] 2.1 Gating unit tests pass: `npm test`
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Gating unit tests pass: `npm test`
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
 
 - [ ] 2.4 Seeded employee: allowed `/dashboard`, denied admin-only route
 - [ ] 2.5 Seeded admin: allowed both
-- [ ] 2.6 Role-less authenticated session denied every gated route (fail-closed)
-- [ ] 2.7 Unauthenticated access to a gated route redirects to `/auth/signin`
+- [x] 2.6 Role-less authenticated session denied every gated route (fail-closed)
+- [x] 2.7 Unauthenticated access to a gated route redirects to `/auth/signin`
 - [ ] 2.8 `/dashboard` shows the resolved role
 
 ### Phase 3: Signup Lockdown, Dev Seed & Production Bootstrap
