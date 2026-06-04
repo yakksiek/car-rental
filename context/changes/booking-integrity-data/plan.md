@@ -279,24 +279,24 @@ Greenfield — no existing data to migrate. The migration is additive and revers
 
 #### Automated
 
-- [x] 2.1 Tests pass: `npm test`
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test` — 37cbddb
+- [x] 2.2 Type checking passes: `npx astro check` — 37cbddb
+- [x] 2.3 Linting passes: `npm run lint` — 37cbddb
 
 #### Manual
 
-- [x] 2.4 Predicate verdict matches DB behavior on a hand-checked same-day case
+- [x] 2.4 Predicate verdict matches DB behavior on a hand-checked same-day case — 37cbddb
 
 ### Phase 3: Seed & Verification
 
 #### Automated
 
-- [ ] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
-- [ ] 3.2 Tests still pass: `npm test`
-- [ ] 3.3 Linting passes: `npm run lint`
+- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
+- [x] 3.2 Tests still pass: `npm test`
+- [x] 3.3 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.4 `verify-overlap.sql` fails with an exclusion violation
-- [ ] 3.5 Catalog query returns expected active vehicles across all categories
-- [ ] 3.6 Same-day-turnover pair coexists in `reservations`
+- [x] 3.4 `verify-overlap.sql` fails with an exclusion violation
+- [x] 3.5 Catalog query returns expected active vehicles across all categories
+- [x] 3.6 Same-day-turnover pair coexists in `reservations`
