@@ -264,28 +264,28 @@ Greenfield — no existing data to migrate. The migration is additive and revers
 
 #### Automated
 
-- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset` — b407bf9
+- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts` — b407bf9
+- [x] 1.3 Type checking passes: `npx astro check` — b407bf9
+- [x] 1.4 Linting passes: `npm run lint` — b407bf9
 
 #### Manual
 
-- [x] 1.5 RLS enabled + all policies present (verified in Studio/psql)
-- [x] 1.6 Overlapping confirmed insert rejected; same-day-turnover pair inserts
-- [x] 1.7 anon can SELECT active vehicles but is denied reservations
+- [x] 1.5 RLS enabled + all policies present (verified in Studio/psql) — b407bf9
+- [x] 1.6 Overlapping confirmed insert rejected; same-day-turnover pair inserts — b407bf9
+- [x] 1.7 anon can SELECT active vehicles but is denied reservations — b407bf9
 
 ### Phase 2: Overlap Predicate & Tests
 
 #### Automated
 
-- [ ] 2.1 Tests pass: `npm test`
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test`
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Predicate verdict matches DB behavior on a hand-checked same-day case
+- [x] 2.4 Predicate verdict matches DB behavior on a hand-checked same-day case
 
 ### Phase 3: Seed & Verification
 
