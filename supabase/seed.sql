@@ -129,8 +129,9 @@ insert into reservations (
 -- Public self-service signup is disabled (config + route), so seeding directly
 -- into auth.users is the only path to a signable-in dev account.
 --
---   admin@fleetrent.test    / admin123      -> role admin
---   employee@fleetrent.test / employee123   -> role employee
+--   admin@fleetrent.test    / Fl33tRent-Admin_2026!      -> role admin
+--   employee@fleetrent.test / Fl33tRent-Employee_2026!   -> role employee
+-- (Long/mixed dev-only passwords so Chrome's breached-password check stays quiet.)
 --
 -- Each account needs THREE things to sign in via email/password:
 --   1. an auth.users row with a bcrypt-hashed password (crypt + gen_salt('bf'))
@@ -153,7 +154,7 @@ insert into auth.users (
     '00000000-0000-0000-0000-000000000000',
     'a0000000-0000-0000-0000-0000000000ad',
     'authenticated', 'authenticated',
-    'admin@fleetrent.test', crypt('admin123', gen_salt('bf')),
+    'admin@fleetrent.test', crypt('Fl33tRent-Admin_2026!', gen_salt('bf')),
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     '', '', '', ''
@@ -162,7 +163,7 @@ insert into auth.users (
     '00000000-0000-0000-0000-000000000000',
     'e0000000-0000-0000-0000-0000000000e0',
     'authenticated', 'authenticated',
-    'employee@fleetrent.test', crypt('employee123', gen_salt('bf')),
+    'employee@fleetrent.test', crypt('Fl33tRent-Employee_2026!', gen_salt('bf')),
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     '', '', '', ''
