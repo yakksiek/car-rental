@@ -291,12 +291,12 @@ Greenfield — no existing data to migrate. The migration is additive and revers
 
 #### Automated
 
-- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset`
-- [x] 3.2 Tests still pass: `npm test`
-- [x] 3.3 Linting passes: `npm run lint`
+- [x] 3.1 Full reset applies migration + seed with no errors: `supabase db reset` — 7be00fc
+- [x] 3.2 Tests still pass: `npm test` — 7be00fc
+- [x] 3.3 Linting passes: `npm run lint` — 7be00fc
 
 #### Manual
 
-- [x] 3.4 `verify-overlap.sql` fails with an exclusion violation
-- [x] 3.5 Catalog query returns expected active vehicles across all categories
-- [x] 3.6 Same-day-turnover pair coexists in `reservations`
+- [x] 3.4 `verify-overlap.sql` fails with an exclusion violation — 7be00fc
+- [x] 3.5 Catalog query returns expected active vehicles across all categories — 7be00fc
+- [x] 3.6 Same-day-turnover pair coexists in `reservations` — 7be00fc
