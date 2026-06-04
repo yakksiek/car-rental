@@ -24,6 +24,13 @@ export type ReservationInsert = Database["public"]["Tables"]["reservations"]["In
 export type VehicleCategory = Database["public"]["Enums"]["vehicle_category"];
 export type ReservationStatus = Database["public"]["Enums"]["reservation_status"];
 
+// Role layer (F-02): profiles map auth.users -> app_role. A user with no
+// profiles row resolves to role = null and is denied (fail-closed).
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
+
+export type AppRole = Database["public"]["Enums"]["app_role"];
+
 // Input shape for the pure overlap predicate (src/lib/availability.ts, Phase 2).
 // Bare local calendar dates (ISO `YYYY-MM-DD`); the predicate applies the fixed
 // hotel-style hours (pickup 14:00, return 10:00) to build the comparable window,

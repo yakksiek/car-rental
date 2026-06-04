@@ -34,6 +34,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reservations: {
         Row: {
           created_at: string
@@ -158,9 +179,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_app_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
     }
     Enums: {
+      app_role: "employee" | "admin"
       reservation_status: "pending" | "confirmed" | "rejected" | "cancelled"
       vehicle_category:
         | "cargo_van"
@@ -298,6 +323,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      app_role: ["employee", "admin"],
       reservation_status: ["pending", "confirmed", "rejected", "cancelled"],
       vehicle_category: [
         "cargo_van",
