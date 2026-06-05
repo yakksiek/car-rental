@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 
 // others
-import type { AppRole } from "@/types";
-import { isRoleSufficient, resolveRequiredRole } from "@/lib/access";
+import type { AppRole } from "../types";
+import { isRoleSufficient, resolveRequiredRole } from "./access";
 
 // The access matrix is the most expensive thing in this slice to get wrong:
 // a too-loose gate leaks staff surfaces; a too-tight one locks out legitimate

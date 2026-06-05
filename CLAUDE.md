@@ -43,9 +43,10 @@ Supabase auth is optional — the app runs without credentials (auth features ar
   1. `// core` — framework and library imports (react, astro, supabase, zod)
   2. `// components` — component imports (Astro and React components, UI primitives)
   3. `// others` — types, hooks, constants, utilities, services
+- **Local imports**: use relative paths (`./`, `../`) for files under `src/`. The `@/` alias is **banned** for local files and enforced by ESLint (`no-restricted-imports`). The `@/*` mapping is retained in `tsconfig.json` only so shadcn/ui tooling resolves — after `npx shadcn add`, convert any generated `@/` import to a relative path.
 - **Astro components** for layout/static content; **React components** (`client:*` directives) only when interactivity is needed.
-- **Tailwind classes**: always merge with `cn()` from `@/lib/utils`. Never concatenate class strings manually.
-- **shadcn/ui**: components in `src/components/ui/`, "new-york" style. Add new ones with `npx shadcn@latest add [name]`.
+- **Tailwind classes**: always merge with `cn()` from `src/lib/utils` (relative import). Never concatenate class strings manually.
+- **shadcn/ui**: components in `src/components/ui/`, "new-york" style. Add new ones with `npx shadcn@latest add [name]`, then rewrite the generated `@/` imports to relative paths.
 - **React**: no Next.js directives ("use client"/"use server"). Extract hooks to `src/components/hooks/`.
 - **Services/helpers**: `src/lib/` (or `src/lib/services/` for extracted business logic).
 - **Shared types**: `src/types.ts` (entities, DTOs).

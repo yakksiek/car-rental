@@ -1,5 +1,5 @@
 // others
-import type { AppRole } from "@/types";
+import type { AppRole } from "../types";
 
 // ---------------------------------------------------------------------------
 // Access boundary (F-02) — the pure, I/O-free core of role gating.
