@@ -126,6 +126,8 @@ export type Database = {
           per_extra_km_rate: number
           photos: string[]
           production_year: number | null
+          seats: number | null
+          transmission: Database["public"]["Enums"]["transmission_type"] | null
           updated_at: string
         }
         Insert: {
@@ -148,6 +150,8 @@ export type Database = {
           per_extra_km_rate: number
           photos?: string[]
           production_year?: number | null
+          seats?: number | null
+          transmission?: Database["public"]["Enums"]["transmission_type"] | null
           updated_at?: string
         }
         Update: {
@@ -170,6 +174,8 @@ export type Database = {
           per_extra_km_rate?: number
           photos?: string[]
           production_year?: number | null
+          seats?: number | null
+          transmission?: Database["public"]["Enums"]["transmission_type"] | null
           updated_at?: string
         }
         Relationships: []
@@ -179,6 +185,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      available_vehicles: {
+        Args: { p_pickup: string; p_return: string }
+        Returns: {
+          cargo_height_cm: number | null
+          cargo_length_cm: number | null
+          cargo_width_cm: number | null
+          category: Database["public"]["Enums"]["vehicle_category"]
+          created_at: string
+          daily_rate: number
+          deposit: number
+          fuel_type: string | null
+          id: string
+          is_active: boolean
+          km_limit: number | null
+          make: string | null
+          model: string | null
+          monthly_rate: number
+          name: string
+          payload_capacity_kg: number | null
+          per_extra_km_rate: number
+          photos: string[]
+          production_year: number | null
+          seats: number | null
+          transmission: Database["public"]["Enums"]["transmission_type"] | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vehicles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -187,6 +226,7 @@ export type Database = {
     Enums: {
       app_role: "employee" | "admin"
       reservation_status: "pending" | "confirmed" | "rejected" | "cancelled"
+      transmission_type: "manual" | "automatic"
       vehicle_category:
         | "cargo_van"
         | "passenger_van"
@@ -325,6 +365,7 @@ export const Constants = {
     Enums: {
       app_role: ["employee", "admin"],
       reservation_status: ["pending", "confirmed", "rejected", "cancelled"],
+      transmission_type: ["manual", "automatic"],
       vehicle_category: [
         "cargo_van",
         "passenger_van",

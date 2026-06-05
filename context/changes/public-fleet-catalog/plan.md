@@ -333,16 +333,16 @@ Phase 1's migration is additive (two nullable columns + one enum + one function)
 ### Phase 1: Schema Extension, Availability RPC, Seed & Types
 
 #### Automated
-- [ ] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [ ] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [ ] 1.3 Type checking passes: `npx astro check`
-- [ ] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
+- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
+- [x] 1.3 Type checking passes: `npx astro check`
+- [x] 1.4 Linting passes: `npm run lint`
 
 #### Manual
-- [ ] 1.5 `available_vehicles(...)` returns only active, non-overlapping vehicles with no `reservations` columns
-- [ ] 1.6 Booked vehicle absent for an overlapping range; present for a free range
-- [ ] 1.7 RPC executable with the anon key; direct `reservations` select still denied to anon
-- [ ] 1.8 `vehicles` rows show populated `seats`/`transmission`
+- [x] 1.5 `available_vehicles(...)` returns only active, non-overlapping vehicles with no `reservations` columns
+- [x] 1.6 Booked vehicle absent for an overlapping range; present for a free range
+- [x] 1.7 RPC executable with the anon key; direct `reservations` select still denied to anon
+- [x] 1.8 `vehicles` rows show populated `seats`/`transmission`
 
 ### Phase 2: Domain Layer — Services, Formatting, Filter Parsing
 
