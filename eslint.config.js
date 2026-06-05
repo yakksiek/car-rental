@@ -21,6 +21,20 @@ const baseConfig = tseslint.config({
   },
   rules: {
     "no-console": "warn",
+    // Local (src) files must use relative imports — the @/ alias is banned for
+    // app code. The tsconfig `@/*` mapping is kept only so shadcn/ui tooling
+    // resolves; convert any generated `@/` import to a relative path.
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["@/*"],
+            message: "Use a relative import (./ or ../) for local files — the @/ alias is banned for src files.",
+          },
+        ],
+      },
+    ],
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": [
       "error",

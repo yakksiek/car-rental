@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Mail, Lock, LogIn } from "lucide-react";
-import { FormField } from "@/components/auth/FormField";
-import { PasswordToggle } from "@/components/auth/PasswordToggle";
-import { SubmitButton } from "@/components/auth/SubmitButton";
-import { ServerError } from "@/components/auth/ServerError";
+import { FormField } from "./FormField";
+import { PasswordToggle } from "./PasswordToggle";
+import { SubmitButton } from "./SubmitButton";
+import { ServerError } from "./ServerError";
 
 interface Props {
   serverError?: string | null;

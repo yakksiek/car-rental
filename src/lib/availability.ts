@@ -1,5 +1,5 @@
 // others
-import type { BookingWindow } from "@/types";
+import type { BookingWindow } from "../types";
 
 // Pure, I/O-free mirror of the DB's no-double-booking rule. This is the exact
 // twin of the SQL `EXCLUDE` constraint on `reservations` (migration

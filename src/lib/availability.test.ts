@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 
 // others
-import type { BookingWindow } from "@/types";
-import { bookingWindow, hasConflict, windowsOverlap } from "@/lib/availability";
+import type { BookingWindow } from "../types";
+import { bookingWindow, hasConflict, windowsOverlap } from "./availability";
 
 // Boundary table locking the half-open `[pickup 14:00, return 10:00)` rule —
 // the exact agreement with the SQL `EXCLUDE` constraint. The load-bearing case
