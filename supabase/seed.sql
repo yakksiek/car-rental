@@ -23,7 +23,7 @@ insert into vehicles (
   id, name, category, make, model, production_year, fuel_type,
   payload_capacity_kg, cargo_length_cm, cargo_width_cm, cargo_height_cm,
   photos, daily_rate, monthly_rate, deposit, per_extra_km_rate, km_limit,
-  is_active
+  seats, transmission, is_active
 ) values
   -- cargo_van
   (
@@ -31,14 +31,14 @@ insert into vehicles (
     'Mercedes Sprinter 315 CDI', 'cargo_van', 'Mercedes-Benz', 'Sprinter', 2022, 'diesel',
     1350.00, 440.00, 178.00, 198.00,
     '{}', 249.00, 5900.00, 2000.00, 1.20, 300,
-    true
+    3, 'automatic', true
   ),
   (
     '22222222-2222-2222-2222-222222222222',
     'Renault Master L3H2', 'cargo_van', 'Renault', 'Master', 2021, 'diesel',
     1400.00, 380.00, 176.00, 190.00,
     '{}', 219.00, 5200.00, 1800.00, 1.10, 300,
-    true
+    3, 'manual', true
   ),
   -- passenger_van
   (
@@ -46,7 +46,7 @@ insert into vehicles (
     'Volkswagen Crafter 9-osobowy', 'passenger_van', 'Volkswagen', 'Crafter', 2023, 'diesel',
     900.00, null, null, null,
     '{}', 279.00, 6500.00, 2200.00, 1.30, 350,
-    true
+    9, 'manual', true
   ),
   -- car_transporter
   (
@@ -54,7 +54,7 @@ insert into vehicles (
     'Iveco Daily Autolaweta', 'car_transporter', 'Iveco', 'Daily', 2020, 'diesel',
     2800.00, 600.00, 210.00, null,
     '{}', 349.00, 8200.00, 3000.00, 1.80, 250,
-    true
+    3, 'manual', true
   ),
   -- refrigerated_truck
   (
@@ -62,7 +62,7 @@ insert into vehicles (
     'MAN TGL Chłodnia', 'refrigerated_truck', 'MAN', 'TGL', 2021, 'diesel',
     3500.00, 720.00, 245.00, 260.00,
     '{}', 459.00, 10800.00, 4000.00, 2.10, 200,
-    true
+    3, 'manual', true
   ),
   -- flatbed_truck
   (
@@ -70,7 +70,7 @@ insert into vehicles (
     'Scania P280 Skrzyniowy', 'flatbed_truck', 'Scania', 'P280', 2019, 'diesel',
     8000.00, 760.00, 248.00, null,
     '{}', 529.00, 12500.00, 5000.00, 2.40, 200,
-    true
+    2, 'manual', true
   ),
   -- a second cargo_van that is retired (is_active = false) — proves catalog
   -- filtering later: it must NOT appear in `where is_active = true` queries.
@@ -79,7 +79,7 @@ insert into vehicles (
     'Fiat Ducato (wycofany)', 'cargo_van', 'Fiat', 'Ducato', 2016, 'diesel',
     1200.00, 320.00, 170.00, 185.00,
     '{}', 179.00, 4200.00, 1500.00, 1.00, 300,
-    false
+    3, 'manual', false
   );
 
 -- ---------------------------------------------------------------------------

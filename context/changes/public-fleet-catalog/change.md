@@ -1,7 +1,7 @@
 ---
 change_id: public-fleet-catalog
 title: Public fleet catalog — browse, filter by specs/dates, view vehicle detail card
-status: plan_reviewed
+status: implementing
 created: 2026-06-05
 updated: 2026-06-05
 archived_at: null

@@ -23,6 +23,7 @@ export type ReservationInsert = Database["public"]["Tables"]["reservations"]["In
 
 export type VehicleCategory = Database["public"]["Enums"]["vehicle_category"];
 export type ReservationStatus = Database["public"]["Enums"]["reservation_status"];
+export type Transmission = Database["public"]["Enums"]["transmission_type"];
 
 // Role layer (F-02): profiles map auth.users -> app_role. A user with no
 // profiles row resolves to role = null and is denied (fail-closed).
