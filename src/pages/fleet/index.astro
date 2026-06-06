@@ -1,0 +1,240 @@
+---
+// core
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+
+// components
+import Layout from "../../layouts/Layout.astro";
+import SiteHeader from "../../components/SiteHeader.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import VehicleCard from "../../components/vehicle/VehicleCard.astro";
+import VehicleSilhouette from "../../components/vehicle/VehicleSilhouette.astro";
+import FilterBar from "../../components/vehicle/FilterBar.tsx";
+
+// others
+import type { CatalogSort, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
+import { parseFilters, serializeFilters, validateDateRange } from "../../lib/catalog-filters";
+import { getCategoryCounts, listVehicles, searchAvailableVehicles } from "../../lib/services/vehicles";
+import { categoryLabelPl, formatPayloadKg } from "../../lib/format";
+import { fromIsoDate } from "../../lib/date-iso";
+
+// The filterable catalog. Reads filter state from the URL, validates the date
+// range against the booking rule, and routes to the dated availability RPC
+// (`searchAvailableVehicles`) when a valid range is present, else the undated
+// `listVehicles`. On an invalid range it skips the query and surfaces the inline
+// message. Category tabs are plain anchors that preserve the other filters; the
+// <FilterBar> island commits changes back to the URL. View transitions come from
+// the layout's <ClientRouter />; FilterBar is intentionally NOT persisted so it
+// remounts and re-reads `initial` from the live URL on every navigation.
+
+const supabase = Astro.locals.supabase;
+const filters = parseFilters(Astro.url.searchParams);
+const dateCheck = validateDateRange(filters.pickup, filters.return);
+
+let vehicles: Vehicle[] = [];
+let dateError: string | null = null;
+
+if (!dateCheck.ok) {
+  dateError = dateCheck.error;
+} else if (filters.pickup && filters.return) {
+  vehicles = await searchAvailableVehicles(supabase, filters);
+} else {
+  vehicles = await listVehicles(supabase, filters);
+}
+
+const CATEGORIES: VehicleCategory[] = [
+  "cargo_van",
+  "passenger_van",
+  "car_transporter",
+  "refrigerated_truck",
+  "flatbed_truck",
+];
+
+// Per-type fleet sizes for the tab counts (design screens 02/08: `label · N`).
+const counts = await getCategoryCounts(supabase);
+
+// Tab model: "Wszystkie" (grid icon) + one per category (silhouette icon). The
+// count is the fleet size for that type, independent of the active filters.
+const tabs: { category: VehicleCategory | null; label: string; count: number }[] = [
+  { category: null, label: "Wszystkie", count: counts.total },
+  ...CATEGORIES.map((category) => ({
+    category,
+    label: categoryLabelPl(category),
+    count: counts.byCategory[category],
+  })),
+];
+
+// Tab links preserve the current filters and only swap `category`.
+function tabHref(category: VehicleCategory | null): string {
+  const params = serializeFilters({ ...filters, category });
+  const query = params.toString();
+  return `/fleet${query ? `?${query}` : ""}`;
+}
+
+// Active-filter summary chips: indicate what's applied and let the visitor drop a
+// single filter (link to the listing minus that one) or clear all (→ /fleet).
+const hasActiveFilters =
+  filters.category !== null ||
+  filters.pickup !== null ||
+  filters.return !== null ||
+  filters.minPayload !== null ||
+  filters.sort !== null;
+
+function withoutFilter(patch: Partial<VehicleFilters>): string {
+  const params = serializeFilters({ ...filters, ...patch });
+  const query = params.toString();
+  return `/fleet${query ? `?${query}` : ""}`;
+}
+
+function rangeLabel(pickup: string, returnDate: string): string {
+  const from = fromIsoDate(pickup);
+  const to = fromIsoDate(returnDate);
+  if (!from || !to) {
+    return "";
+  }
+  return `${format(from, "d MMM", { locale: pl })} – ${format(to, "d MMM", { locale: pl })}`;
+}
+
+const SORT_LABELS: Record<CatalogSort, string> = {
+  price_asc: "Cena: rosnąco",
+  price_desc: "Cena: malejąco",
+};
+
+const chipClass =
+  "bg-accent text-accent-foreground hover:bg-accent/70 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-medium transition-colors";
+---
+
+<Layout title="Flota — przeglądaj pojazdy">
+  <SiteHeader active="fleet" />
+
+  <main class="mx-auto max-w-7xl px-5 pb-16 sm:px-8">
+    <!-- Page title -->
+    <div class="pt-8 pb-5 sm:pt-10">
+      <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Flota · Warszawa</p>
+      <h1 class="text-foreground mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
+        {vehicles.length}{" "}
+        <span class="text-muted-foreground font-normal">pojazdów gotowych do wynajmu.</span>
+      </h1>
+    </div>
+
+    <!-- Category tabs: square + horizontal-scroll on mobile (design 02), inline
+         pills with counts on sm+ (design 08). -->
+    <div
+      class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      {
+        tabs.map((tab) => (
+          <a
+            href={tabHref(tab.category)}
+            class:list={[
+              "inline-flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-1 text-center text-[11px] font-semibold transition-colors",
+              "h-20 w-20",
+              "sm:h-11 sm:w-auto sm:flex-row sm:gap-2.5 sm:rounded-full sm:px-4 sm:text-[13px]",
+              filters.category === tab.category
+                ? "border-foreground bg-foreground text-background"
+                : "bg-card text-foreground hover:border-foreground/40 border-[var(--flota-hair)]",
+            ]}
+          >
+            <span class="flex w-8 shrink-0 items-center justify-center">
+              {tab.category === null ? (
+                <svg
+                  class="size-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+              ) : (
+                <VehicleSilhouette category={tab.category} alt={tab.label} class="w-8" />
+              )}
+            </span>
+            <span class="leading-tight">
+              {tab.label}
+              <span class="hidden sm:inline"> · {tab.count}</span>
+            </span>
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- Filter bar -->
+    <div class="pb-4">
+      <FilterBar initial={filters} client:load />
+    </div>
+
+    <!-- Active filters -->
+    {
+      hasActiveFilters && (
+        <div class="flex flex-wrap items-center gap-2 pb-6">
+          <span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Aktywne filtry:</span>
+          {filters.category && (
+            <a href={withoutFilter({ category: null })} class:list={chipClass}>
+              {categoryLabelPl(filters.category)}
+              <span aria-hidden="true" class="text-base leading-none">
+                ×
+              </span>
+            </a>
+          )}
+          {dateCheck.ok && filters.pickup && filters.return && (
+            <a href={withoutFilter({ pickup: null, return: null })} class:list={chipClass}>
+              {rangeLabel(filters.pickup, filters.return)}
+              <span aria-hidden="true" class="text-base leading-none">
+                ×
+              </span>
+            </a>
+          )}
+          {filters.minPayload !== null && (
+            <a href={withoutFilter({ minPayload: null })} class:list={chipClass}>
+              od {formatPayloadKg(filters.minPayload)}
+              <span aria-hidden="true" class="text-base leading-none">
+                ×
+              </span>
+            </a>
+          )}
+          {filters.sort && (
+            <a href={withoutFilter({ sort: null })} class:list={chipClass}>
+              {SORT_LABELS[filters.sort]}
+              <span aria-hidden="true" class="text-base leading-none">
+                ×
+              </span>
+            </a>
+          )}
+          <a href="/fleet" class="text-primary ml-1 text-sm font-semibold hover:underline">
+            Wyczyść wszystko
+          </a>
+        </div>
+      )
+    }
+
+    <!-- Results -->
+    {
+      dateError ? (
+        <div class="bg-card rounded-xl border border-[var(--flota-hair)] p-8 text-center">
+          <p class="text-foreground text-base font-medium">{dateError}</p>
+          <p class="text-muted-foreground mt-1 text-sm">Popraw zakres dat, aby zobaczyć dostępne pojazdy.</p>
+        </div>
+      ) : vehicles.length === 0 ? (
+        <div class="bg-card rounded-xl border border-[var(--flota-hair)] p-8 text-center">
+          <p class="text-foreground text-base font-medium">Brak pojazdów spełniających kryteria</p>
+          <p class="text-muted-foreground mt-1 text-sm">Zmień filtry lub zakres dat, aby zobaczyć więcej.</p>
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {vehicles.map((vehicle) => (
+            <VehicleCard vehicle={vehicle} pickup={filters.pickup} returnDate={filters.return} />
+          ))}
+        </div>
+      )
+    }
+  </main>
+
+  <SiteFooter />
+</Layout>

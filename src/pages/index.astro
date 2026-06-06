@@ -1,8 +1,170 @@
 ---
-import Welcome from "../components/Welcome.astro";
+// components
 import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import VehicleCard from "../components/vehicle/VehicleCard.astro";
+import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
+import HeroSearch from "../components/vehicle/HeroSearch.tsx";
+
+// others
+import type { VehicleCategory, VehicleFilters } from "../types";
+import { listVehicles } from "../lib/services/vehicles";
+import { categoryLabelPl } from "../lib/format";
+
+// Public landing — a marketing entry point adapted from design screens 07/01 with
+// NO account chrome (no greeting, no deposit card; those are logged-in-customer
+// surfaces deferred to v2). Server-rendered: a hero with the <HeroSearch> island
+// (Typ/Daty → `/fleet`), category quick-links into `/fleet?category=…`, and a
+// "Popularne" featured strip (first few active vehicles via `listVehicles`).
+
+const NO_FILTERS: VehicleFilters = {
+  category: null,
+  pickup: null,
+  return: null,
+  minPayload: null,
+  sort: null,
+};
+
+const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
+const featured = vehicles.slice(0, 3);
+
+const CATEGORIES: VehicleCategory[] = [
+  "cargo_van",
+  "passenger_van",
+  "car_transporter",
+  "refrigerated_truck",
+  "flatbed_truck",
+];
 ---
 
-<Layout>
-  <Welcome />
+<Layout title="Flota — wynajem pojazdów użytkowych">
+  <SiteHeader active="home" />
+
+  <!-- Hero -->
+  <section class="mx-auto grid max-w-7xl items-center gap-12 px-5 pt-12 pb-8 sm:px-8 xl:grid-cols-2 xl:pt-20">
+    <div>
+      <p class="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+        <span class="bg-success size-1.5 rounded-full"></span>
+        {vehicles.length} pojazdów dostępnych
+      </p>
+      <h1 class="text-foreground mt-4 font-serif text-6xl leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">
+        Pojazdy<br />użytkowe<span class="text-primary">.</span>
+        <span class="text-muted-foreground mt-2 block text-4xl sm:text-5xl">
+          Na dzień. <span class="text-primary">Na miesiąc.</span>
+        </span>
+      </h1>
+      <p class="mt-6 max-w-md text-lg text-[var(--flota-ink-2)]">
+        Furgony, busy osobowe, lawety, izotermy i plandeki — od warszawskiej firmy z 14-letnim doświadczeniem.
+        Rezerwacja online, bez ukrytych opłat.
+      </p>
+      <div class="mt-8">
+        <HeroSearch client:load />
+      </div>
+      <dl class="mt-10 flex flex-wrap gap-x-9 gap-y-4">
+        {
+          [
+            { n: `${vehicles.length}`, l: "pojazdów" },
+            { n: "14 lat", l: "na rynku" },
+            { n: "24/7", l: "odbiór" },
+          ].map((stat) => (
+            <div>
+              <dt class="text-foreground text-2xl font-bold tracking-tight">{stat.n}</dt>
+              <dd class="text-muted-foreground mt-1 text-xs font-medium">{stat.l}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    {
+      featured[0] && (
+        <div class="hidden xl:block">
+          <VehicleCard vehicle={featured[0]} />
+        </div>
+      )
+    }
+  </section>
+
+  <!-- Category quick-links -->
+  <section id="kategorie" class="mx-auto max-w-7xl px-5 pt-16 pb-8 sm:px-8">
+    <div class="mb-7 flex items-end justify-between gap-4">
+      <div>
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">5 kategorii</p>
+        <h2 class="text-foreground mt-1.5 text-3xl font-bold tracking-tight sm:text-4xl">
+          Wybierz typ pojazdu<span class="text-primary">.</span>
+        </h2>
+      </div>
+      <a
+        href="/fleet"
+        class="text-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+      >
+        Cała flota
+        <svg
+          class="size-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12h14M13 6l6 6-6 6"></path>
+        </svg>
+      </a>
+    </div>
+    <div
+      class="-mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden"
+    >
+      {
+        CATEGORIES.map((category) => (
+          <a
+            href={`/fleet?category=${category}`}
+            class="group bg-card shadow-card hover:shadow-pop flex min-h-[180px] w-44 shrink-0 flex-col justify-between rounded-xl p-5 transition hover:-translate-y-0.5 sm:w-auto"
+          >
+            <div class="text-foreground flex flex-1 items-center justify-center py-3">
+              <VehicleSilhouette category={category} alt={categoryLabelPl(category)} class="max-w-[150px]" />
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-foreground font-semibold tracking-tight">{categoryLabelPl(category)}</span>
+              <svg
+                class="text-muted-foreground group-hover:text-foreground size-4 transition"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Popular -->
+  {
+    featured.length > 0 && (
+      <section class="mx-auto max-w-7xl px-5 pt-8 pb-16 sm:px-8">
+        <div class="mb-6 flex items-end justify-between gap-4">
+          <h2 class="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">Popularne</h2>
+          <a href="/fleet" class="text-primary text-sm font-semibold hover:underline">
+            Wszystkie
+          </a>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {featured.map((vehicle) => (
+            <VehicleCard vehicle={vehicle} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <SiteFooter />
 </Layout>
