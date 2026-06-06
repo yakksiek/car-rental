@@ -5,6 +5,11 @@ import { isRoleSufficient, resolveRequiredRole } from "./lib/access";
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createClient(context.request.headers, context.cookies);
 
+  // Expose the per-request client (may be `null` when unconfigured) so pages and
+  // services reuse it instead of re-creating one. Consumed by the catalog
+  // services (S-01) and the S-02 reservation funnel.
+  context.locals.supabase = supabase;
+
   if (supabase) {
     const {
       data: { user },

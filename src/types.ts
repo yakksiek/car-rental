@@ -40,3 +40,20 @@ export interface BookingWindow {
   pickupDate: string;
   returnDate: string;
 }
+
+// ---------------------------------------------------------------------------
+// Public catalog (S-01) — filter state carried in the URL and read by the
+// fleet listing + filter island. `pickup`/`return` are ISO `YYYY-MM-DD` strings
+// (or null when no range is set); presence of a *valid* range routes the query
+// from `listVehicles` to `searchAvailableVehicles`.
+// ---------------------------------------------------------------------------
+
+export type CatalogSort = "price_asc" | "price_desc";
+
+export interface VehicleFilters {
+  category: VehicleCategory | null;
+  pickup: string | null;
+  return: string | null;
+  minPayload: number | null;
+  sort: CatalogSort | null;
+}
