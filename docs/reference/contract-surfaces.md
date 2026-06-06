@@ -17,3 +17,13 @@ where it lives, and who consumes it.
 | `isRoleSufficient(userRole, required)` | `src/lib/access.ts` | `src/middleware.ts`, `requireRole` |
 | `requireRole(locals, min)` | `src/lib/access.ts` | in-handler guards (e.g. S-08 admin-only mutations) |
 | `AppRole`, `Profile`, `ProfileInsert` type aliases | `src/types.ts` | app code consuming the role contract |
+
+## Public catalog layer (S-01 — `public-fleet-catalog`)
+
+| Name | Location | Consumed by |
+| --- | --- | --- |
+| `App.Locals.supabase` (`SupabaseClient<Database> \| null`) | `src/env.d.ts`, populated in `src/middleware.ts` | catalog services (S-01), S-02+ reservation funnel |
+| `available_vehicles(date, date)` RPC (`SECURITY DEFINER`, PII-safe date-range availability) | `supabase/migrations/*_public_fleet_catalog.sql`, `src/db/database.types.ts` | `searchAvailableVehicles` (S-01), S-02 |
+| `listVehicles` / `searchAvailableVehicles` / `getVehicleById` | `src/lib/services/vehicles.ts` | catalog pages (S-01), S-02 |
+| `VehicleFilters`, `CatalogSort` type aliases | `src/types.ts` | catalog filter UI + services |
+| `parseFilters` / `serializeFilters` / `validateDateRange` | `src/lib/catalog-filters.ts` | fleet listing page + filter island |

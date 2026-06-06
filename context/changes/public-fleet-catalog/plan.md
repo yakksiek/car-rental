@@ -333,26 +333,26 @@ Phase 1's migration is additive (two nullable columns + one enum + one function)
 ### Phase 1: Schema Extension, Availability RPC, Seed & Types
 
 #### Automated
-- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset` — 84b2bad
+- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts` — 84b2bad
+- [x] 1.3 Type checking passes: `npx astro check` — 84b2bad
+- [x] 1.4 Linting passes: `npm run lint` — 84b2bad
 
 #### Manual
-- [x] 1.5 `available_vehicles(...)` returns only active, non-overlapping vehicles with no `reservations` columns
-- [x] 1.6 Booked vehicle absent for an overlapping range; present for a free range
-- [x] 1.7 RPC executable with the anon key; direct `reservations` select still denied to anon
-- [x] 1.8 `vehicles` rows show populated `seats`/`transmission`
+- [x] 1.5 `available_vehicles(...)` returns only active, non-overlapping vehicles with no `reservations` columns — 84b2bad
+- [x] 1.6 Booked vehicle absent for an overlapping range; present for a free range — 84b2bad
+- [x] 1.7 RPC executable with the anon key; direct `reservations` select still denied to anon — 84b2bad
+- [x] 1.8 `vehicles` rows show populated `seats`/`transmission` — 84b2bad
 
 ### Phase 2: Domain Layer — Services, Formatting, Filter Parsing
 
 #### Automated
-- [ ] 2.1 Tests pass: `npm test`
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test`
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
-- [ ] 2.4 Spot-check: `searchAvailableVehicles` omits a booked vehicle; `listVehicles` returns all active
+- [x] 2.4 Spot-check: `searchAvailableVehicles` omits a booked vehicle; `listVehicles` returns all active
 
 ### Phase 3: Public Landing, Fleet Listing & Filter Island
 
