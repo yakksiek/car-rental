@@ -1,0 +1,104 @@
+---
+// components
+import StatusPill from "./StatusPill.astro";
+import VehicleSilhouette from "./VehicleSilhouette.astro";
+import SpecIcon from "./SpecIcon.astro";
+
+// others
+import type { Vehicle } from "../../types";
+import { categoryLabelPl, formatPln, fuelLabelPl, formatPayloadKg, transmissionLabelPl } from "../../lib/format";
+import { vehicleSlug } from "../../lib/slug";
+
+// The repeated catalog card (design screens 02 mobile / 08 desktop): make/model ·
+// year, category, daily rate, a 4-up spec row, the silhouette, a status pill, and
+// a link to the detail route. The whole card is the link; the "Rezerwuj" affordance
+// is a styled span (not a nested button) so it stays a single anchor. Selected
+// dates, when set, ride along in the href so the detail page can forward them into
+// the Reserve CTA.
+
+interface Props {
+  vehicle: Vehicle;
+  pickup?: string | null;
+  returnDate?: string | null;
+}
+
+const { vehicle, pickup, returnDate } = Astro.props;
+
+const title = vehicle.make ?? vehicle.name;
+const subtitle = [vehicle.model, vehicle.production_year].filter(Boolean).join(" · ");
+const slug = vehicleSlug(vehicle.make ?? vehicle.name, vehicle.model ?? "");
+
+const params = pickup && returnDate ? `?pickup=${pickup}&return=${returnDate}` : "";
+const href = `/fleet/${vehicle.id}/${slug}${params}`;
+
+const specs = [
+  { icon: "seats" as const, value: vehicle.seats === null ? "—" : String(vehicle.seats) },
+  { icon: "transmission" as const, value: transmissionLabelPl(vehicle.transmission) },
+  { icon: "fuel" as const, value: fuelLabelPl(vehicle.fuel_type) },
+  { icon: "payload" as const, value: formatPayloadKg(vehicle.payload_capacity_kg) },
+];
+---
+
+<a
+  href={href}
+  class="group bg-card shadow-card hover:shadow-pop flex flex-col rounded-xl p-5 transition hover:-translate-y-0.5"
+>
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <div class="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+        {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabelPl(vehicle.category)}
+      </div>
+      <div class="text-foreground mt-1 truncate text-lg font-bold tracking-tight">{title}</div>
+      {subtitle && <div class="truncate text-sm text-[var(--flota-ink-2)]">{subtitle}</div>}
+    </div>
+    <StatusPill class="shrink-0" />
+  </div>
+
+  <div class="text-foreground flex min-h-[120px] flex-1 items-center justify-center px-2 py-5">
+    <VehicleSilhouette
+      category={vehicle.category}
+      photos={vehicle.photos}
+      alt={`${title} ${vehicle.model ?? ""}`.trim()}
+      class="max-w-[260px]"
+    />
+  </div>
+
+  <div class="grid grid-cols-4 gap-2 border-y border-[var(--flota-hair-2)] py-3">
+    {
+      specs.map((spec) => (
+        <div class="flex flex-col items-center gap-1 text-center">
+          <SpecIcon name={spec.icon} class="text-muted-foreground" />
+          <span class="text-foreground truncate text-[11px] font-medium">{spec.value}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="mt-3.5 flex items-end justify-between gap-3">
+    <div class="min-w-0">
+      <div class="text-foreground text-[22px] leading-none font-bold tracking-tight">
+        {formatPln(vehicle.daily_rate)}<span class="text-muted-foreground text-[13px] font-medium">/dzień</span>
+      </div>
+      <div class="text-muted-foreground mt-1 truncate text-[11px] font-medium">
+        {formatPln(vehicle.monthly_rate)}/mies. · kaucja {formatPln(vehicle.deposit)}
+      </div>
+    </div>
+    <span
+      class="bg-foreground text-background inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold"
+    >
+      Rezerwuj
+      <svg
+        class="size-3.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 12h14M13 6l6 6-6 6"></path>
+      </svg>
+    </span>
+  </div>
+</a>

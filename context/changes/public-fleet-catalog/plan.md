@@ -347,27 +347,27 @@ Phase 1's migration is additive (two nullable columns + one enum + one function)
 ### Phase 2: Domain Layer — Services, Formatting, Filter Parsing
 
 #### Automated
-- [x] 2.1 Tests pass: `npm test`
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test` — f7e3095
+- [x] 2.2 Type checking passes: `npx astro check` — f7e3095
+- [x] 2.3 Linting passes: `npm run lint` — f7e3095
 
 #### Manual
-- [x] 2.4 Spot-check: `searchAvailableVehicles` omits a booked vehicle; `listVehicles` returns all active
+- [x] 2.4 Spot-check: `searchAvailableVehicles` omits a booked vehicle; `listVehicles` returns all active — f7e3095
 
 ### Phase 3: Public Landing, Fleet Listing & Filter Island
 
 #### Automated
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes (no `@/` imports remain): `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes (no `@/` imports remain): `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 Tests still pass: `npm test`
 
 #### Manual
-- [ ] 3.5 `/` renders public landing, no account chrome; category links pre-filter
-- [ ] 3.6 `/fleet` matches screenshots 02/08; category tabs + price sort work
-- [ ] 3.7 Date range filters out booked vehicles; invalid/past dates show inline error
-- [ ] 3.8 Payload filter narrows results; empty state on no match
-- [ ] 3.9 Filter apply = single navigation; smooth view-transition swap (no flash); bar reflects applied URL filters
+- [x] 3.5 `/` renders public landing, no account chrome; category links pre-filter
+- [x] 3.6 `/fleet` matches screenshots 02/08; category tabs + price sort work
+- [x] 3.7 Date range filters out booked vehicles; invalid/past dates show inline error
+- [x] 3.8 Payload filter narrows results; empty state on no match
+- [x] 3.9 Filter apply = single navigation; smooth view-transition swap (no flash); bar reflects applied URL filters
 
 ### Phase 4: Vehicle Detail Page
 

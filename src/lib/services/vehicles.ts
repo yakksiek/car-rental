@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // others
 import type { Database } from "../../db/database.types";
-import type { Vehicle, VehicleFilters } from "../../types";
+import type { Vehicle, VehicleCategory, VehicleFilters } from "../../types";
 
 // The single home for public catalog queries. Two paths return the identical
 // `Vehicle[]` so the UI has one card and one mapper:
@@ -76,6 +76,40 @@ export async function searchAvailableVehicles(
     throw error;
   }
   return data;
+}
+
+export interface CategoryCounts {
+  total: number;
+  byCategory: Record<VehicleCategory, number>;
+}
+
+/**
+ * Count active vehicles overall and per category for the catalog's type tabs
+ * (design screens 02/08 show `label · N`). These are fleet sizes — independent of
+ * the date/payload filters and of the currently-selected category — so the tab
+ * count reads as "how many of this type exist", not "how many match right now".
+ * RLS restricts the rows to `is_active = true`; a `null` client yields zeros.
+ */
+export async function getCategoryCounts(client: CatalogClient | null): Promise<CategoryCounts> {
+  const byCategory: Record<VehicleCategory, number> = {
+    cargo_van: 0,
+    passenger_van: 0,
+    car_transporter: 0,
+    refrigerated_truck: 0,
+    flatbed_truck: 0,
+  };
+  if (!client) {
+    return { total: 0, byCategory };
+  }
+
+  const { data, error } = await client.from("vehicles").select("category");
+  if (error) {
+    throw error;
+  }
+  for (const row of data) {
+    byCategory[row.category] += 1;
+  }
+  return { total: data.length, byCategory };
 }
 
 /**

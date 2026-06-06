@@ -1,0 +1,66 @@
+---
+// components
+import MobileNav from "./MobileNav.tsx";
+
+// others
+import { cn } from "../lib/utils";
+
+// Public navigation for the customer-facing catalog. No account chrome: v1
+// customers are anonymous, so there is no customer login — the staff-only sign-in
+// lives in the footer (<SiteFooter>). Two presentations of the same two
+// destinations:
+//   • Desktop (sm+): logo left, centered Start/Flota pills (design 07/08).
+//   • Mobile (<sm): the centered pills are hidden; a top-right dropdown (<MobileNav>)
+//     handles navigation.
+// Plain anchors; the layout's <ClientRouter /> upgrades them to view transitions.
+
+interface Props {
+  active?: "home" | "fleet";
+}
+
+const { active } = Astro.props;
+
+const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
+  { id: "home", label: "Start", href: "/" },
+  { id: "fleet", label: "Flota", href: "/fleet" },
+];
+---
+
+<header class="bg-card border-b border-[var(--flota-hair-2)]">
+  <div
+    class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-8"
+  >
+    <a href="/" class="flex items-center gap-2.5 justify-self-start">
+      <span
+        class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-[10px] text-lg font-normal"
+      >
+        F
+      </span>
+      <span class="text-foreground text-[17px] font-bold tracking-tight">Flota</span>
+    </a>
+
+    <!-- Desktop nav (centered); hidden on mobile in favour of the dropdown. -->
+    <nav class="bg-background hidden items-center gap-1 justify-self-center rounded-full p-1 sm:flex">
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            class:list={cn(
+              "rounded-full px-4 py-2 text-[13px] transition-colors",
+              active === item.id
+                ? "bg-card text-foreground shadow-card font-semibold"
+                : "hover:text-foreground font-medium text-[var(--flota-ink-2)]",
+            )}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <!-- Mobile dropdown trigger (top-right); hidden on sm+. -->
+    <div class="justify-self-end sm:hidden">
+      <MobileNav active={active} client:idle />
+    </div>
+  </div>
+</header>

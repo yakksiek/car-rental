@@ -1,0 +1,38 @@
+---
+// Public site footer. The login entry point lives here as a discreet
+// "Strefa pracownika" link, not in the customer-facing header: v1 customers are
+// anonymous (the booking funnel needs no account), so `/auth/signin` is a
+// staff-only surface (employee/admin → dispatch/admin).
+
+const year = 2026;
+---
+
+<footer class="bg-card mt-12 border-t border-[var(--flota-hair-2)]">
+  <div class="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <div class="flex items-center gap-2.5">
+      <span
+        class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-[10px] text-lg font-normal"
+      >
+        F
+      </span>
+      <div>
+        <div class="text-foreground font-bold tracking-tight">Flota</div>
+        <div class="text-muted-foreground text-xs">Wynajem pojazdów użytkowych · Warszawa</div>
+      </div>
+    </div>
+
+    <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <a href="/" class="hover:text-foreground text-[var(--flota-ink-2)] transition-colors">Start</a>
+      <a href="/fleet" class="hover:text-foreground text-[var(--flota-ink-2)] transition-colors">Flota</a>
+      <a href="/auth/signin" class="text-muted-foreground hover:text-foreground transition-colors">
+        Strefa pracownika
+      </a>
+    </nav>
+  </div>
+
+  <div class="border-t border-[var(--flota-hair-2)]">
+    <div class="text-muted-foreground mx-auto max-w-7xl px-5 py-4 text-xs sm:px-8">
+      © {year} Flota. Wszystkie prawa zastrzeżone.
+    </div>
+  </div>
+</footer>
