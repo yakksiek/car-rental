@@ -372,13 +372,13 @@ Phase 1's migration is additive (two nullable columns + one enum + one function)
 ### Phase 4: Vehicle Detail Page
 
 #### Automated
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 Tests still pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check` — e9c7947
+- [x] 4.2 Linting passes: `npm run lint` — e9c7947
+- [x] 4.3 Build succeeds: `npm run build` — e9c7947
+- [x] 4.4 Tests still pass: `npm test` — e9c7947
 
 #### Manual
-- [x] 4.5 `/fleet/<id>/<slug>` matches screenshot 03; specs + full pricing render with PLN formatting
-- [x] 4.6 Unknown/inactive id returns 404
-- [x] 4.7 Cards link to correct detail page; selected dates carry into the Reserve CTA
-- [x] 4.8 "Zarezerwuj" navigates to `/reserve?vehicle_id=…&pickup=…&return=…` (404 until S-02, expected)
+- [x] 4.5 `/fleet/<id>/<slug>` matches screenshot 03; specs + full pricing render with PLN formatting — e9c7947
+- [x] 4.6 Unknown/inactive id returns 404 — e9c7947
+- [x] 4.7 Cards link to correct detail page; selected dates carry into the Reserve CTA — e9c7947
+- [x] 4.8 "Zarezerwuj" navigates to `/reserve?vehicle_id=…&pickup=…&return=…` (404 until S-02, expected) — e9c7947
