@@ -20,6 +20,7 @@ whole `design/` folder into context; this index exists so you don't have to.
 | **Live tokens** | `src/styles/global.css` | ✅ applied — the source of truth that ships. Tailwind 4 `@theme` + shadcn vars. |
 | Token source | `context/foundation/design/tokens.css` | Reference copy of the export (3-layer: primitives → shadcn → `@theme`). |
 | Screenshots | `context/foundation/design/screenshots/*.png` | Rendered screens — the cheap visual reference. **Prefer these.** |
+| S-02 flow set | `context/foundation/design/screenshots/s-02-reservation-flow/*.png` | High-fidelity reservation-funnel pass (mobile + desktop). Screenshot-only — see catalog below. |
 | Screen source (JSX) | `context/foundation/design/*-screens*.jsx`, `shared.jsx` | Static React prototype. Reference for exact spacing/structure only — **not** app code; do not import. |
 
 > The Claude Design *canvas chrome* (design-canvas / tweaks-panel / device frames)
@@ -67,6 +68,45 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 
 Screenshot filenames are numbered to match this table, e.g.
 `screenshots/04-customer-mobile-reservation-form.png`.
+
+### S-02 reservation flow — high-fidelity pass
+
+A dedicated, higher-fidelity design pass for the **S-02 public-reservation-request**
+slice (the roadmap north star). Lives in its own subfolder so it stays a coherent
+mobile→desktop set without renumbering the flat catalog above. These **refine** mobile
+rows 04–06 and **add the desktop reservation flow** (no desktop reservation screens exist
+in the flat catalog). **Screenshot-only** — exported as a Claude Design bundle whose
+component code isn't recoverable as JSX, so there is no `*-screens.jsx` source for these.
+
+Folder: `screenshots/s-02-reservation-flow/`
+
+| File | Screen | Device |
+| --- | --- | --- |
+| `mobile-1-vehicle-detail.png` | Vehicle detail → "Check availability" | Customer · mobile (390×844) |
+| `mobile-2-reservation-form.png` | Reservation form + date-range picker (see divergence note below) | Customer · mobile |
+| `mobile-3-request-summary.png` | Review request (booking + customer details) | Customer · mobile |
+| `mobile-4-request-received.png` | Request received confirmation | Customer · mobile |
+| `desktop-1-vehicle-detail-dates.png` | Vehicle detail + booking widget (pickup/return date range, estimated total) | Customer · desktop (1440w) |
+| `desktop-2-your-details.png` | Your details (3-step: Dates → Your details → Confirm; B2B company/VAT optional; terms) | Customer · desktop |
+| `desktop-3-request-received.png` | Request received confirmation | Customer · desktop |
+
+> **Design divergence — the date picker does NOT pre-disable booked dates.** `mobile-2` and
+> `desktop-1` render individual dates struck-out with a *"booked or requested"* legend. The
+> shipped app does **not** do this. The date picker is a plain range calendar
+> (`src/components/ui/calendar.tsx`, `mode="range"`) that disables only past dates — see the
+> live patterns in `HeroSearch.tsx` (screen 07) and `FilterBar.tsx` (screen 08). **Reuse that
+> picker for the S-02 reservation form; do not gray out per-vehicle booked/requested dates.**
+>
+> No-double-booking is real and blocks **both pending and confirmed** reservations — it's just
+> enforced by availability *filtering + conflict checks*, never by disabling calendar cells:
+> 1. **Catalog** — the `available_vehicles` RPC already excludes vehicles that overlap the
+>    chosen range, so a vehicle reached from the filtered catalog is known-free for those dates.
+> 2. **Pre-submit (S-02)** — re-check client-side with `hasConflict` (`src/lib/availability.ts`,
+>    the pure twin of the DB rule) before creating the request.
+> 3. **Backstop** — the DB `EXCLUDE` constraint (migration `20260603155136`) is the atomic guard.
+>
+> Roadmap S-02 *"blocks overlapping dates before submission"* = the pre-submit `hasConflict`
+> check, not a disabled-date calendar. Copy stays Polish-canonical (e.g. *kaucja* = deposit).
 
 ## Notes for implementation
 
