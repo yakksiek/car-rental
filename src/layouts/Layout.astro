@@ -24,6 +24,7 @@ const { title = "Flota — wynajem pojazdów użytkowych" } = Astro.props;
     <Font cssVariable="--font-jetbrains-mono" />
     <ClientRouter />
     <title>{title}</title>
+    <slot name="head" />
   </head>
   <body>
     {

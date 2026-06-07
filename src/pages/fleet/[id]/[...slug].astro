@@ -1,0 +1,66 @@
+---
+// components
+import Layout from "../../../layouts/Layout.astro";
+import SiteHeader from "../../../components/SiteHeader.astro";
+import SiteFooter from "../../../components/SiteFooter.astro";
+import VehicleDetail from "../../../components/vehicle/VehicleDetail.astro";
+
+// others
+import { getVehicleById } from "../../../lib/services/vehicles";
+import { vehicleSlug } from "../../../lib/slug";
+
+// Vehicle detail route (design screen 03). Matches both `/fleet/<id>` and
+// `/fleet/<id>/<slug>` — the optional slug segment is decorative/SEO only and is
+// ignored for resolution (the lookup is by id). A missing OR inactive id yields
+// `null` (RLS hides inactive rows) → an HTTP 404 with a styled not-found body. The
+// visitor's selected date range, if carried in the query string, is forwarded into
+// VehicleDetail's Reserve CTA.
+
+const { id } = Astro.params;
+const supabase = Astro.locals.supabase;
+
+const vehicle = id ? await getVehicleById(supabase, id) : null;
+
+if (!vehicle) {
+  Astro.response.status = 404;
+}
+
+// Forward the selected range (set by catalog cards / filters) into the CTA.
+const pickup = Astro.url.searchParams.get("pickup");
+const returnDate = Astro.url.searchParams.get("return");
+
+// Canonical URL with the name slug (the path the cards link to), independent of
+// whatever slug the visitor arrived with.
+const canonical = vehicle
+  ? new URL(`/fleet/${vehicle.id}/${vehicleSlug(vehicle.make ?? vehicle.name, vehicle.model ?? "")}`, Astro.url)
+  : null;
+
+const title = vehicle
+  ? [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ")
+  : "Nie znaleziono pojazdu";
+---
+
+<Layout title={`${title} — Flota`}>
+  {canonical && <link slot="head" rel="canonical" href={canonical.href} />}
+  <SiteHeader active="fleet" />
+  {
+    vehicle ? (
+      <VehicleDetail vehicle={vehicle} pickup={pickup} returnDate={returnDate} />
+    ) : (
+      <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
+          Ten pojazd nie istnieje lub nie jest już dostępny w naszej flocie.
+        </p>
+        <a
+          href="/fleet"
+          class="bg-foreground text-background mt-7 inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold"
+        >
+          Wróć do floty
+        </a>
+      </main>
+    )
+  }
+  <SiteFooter />
+</Layout>
