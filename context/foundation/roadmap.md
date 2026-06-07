@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-06-07
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -29,7 +29,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 | ID    | Change ID                    | Outcome (user can …)                                                        | Prerequisites | PRD refs                | Status   |
 | ----- | ---------------------------- | --------------------------------------------------------------------------- | ------------- | ----------------------- | -------- |
-| F-01  | booking-integrity-data       | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails      | ready    |
+| F-01  | booking-integrity-data       | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails      | done     |
 | F-02  | employee-admin-roles         | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control          | ready    |
 | S-01  | public-fleet-catalog         | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003   | proposed |
 | S-02  | public-reservation-request   | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005       | proposed |
@@ -78,7 +78,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Sequenced first because the no-double-booking guarantee is the load-bearing integrity rule and the data model is absent — getting the schema + overlap check right here prevents rework across every booking slice. The same-day buffer is subtle: an off-by-one in the overlap window either loses same-day revenue or admits a conflict. Scope is capped to vehicles + reservations + the rule; protocol and employee-role schema are added later (S-05/S-06, F-02), not here.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: Employee/admin role model
 
@@ -232,4 +232,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends entries here — and flips the matching item's `Status` to `done` — when a change whose `Change ID` matches a roadmap item is archived. Do NOT pre-populate.)
+- **F-01: (foundation) the vehicle and reservation data model exists with RLS, the hotel-style availability/overlap rule (return by 10:00, pickup from 14:00; same-day turnover allowed) is implemented and unit-verifiable, and a minimal seed lets the public catalog render. Not user-visible on its own.** — Archived 2026-06-07 → `context/archive/2026-06-03-booking-integrity-data/`. Lesson: —.
