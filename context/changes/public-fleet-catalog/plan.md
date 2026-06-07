@@ -357,28 +357,28 @@ Phase 1's migration is additive (two nullable columns + one enum + one function)
 ### Phase 3: Public Landing, Fleet Listing & Filter Island
 
 #### Automated
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes (no `@/` imports remain): `npm run lint`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 Tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check` — f12dab6
+- [x] 3.2 Linting passes (no `@/` imports remain): `npm run lint` — f12dab6
+- [x] 3.3 Build succeeds: `npm run build` — f12dab6
+- [x] 3.4 Tests still pass: `npm test` — f12dab6
 
 #### Manual
-- [x] 3.5 `/` renders public landing, no account chrome; category links pre-filter
-- [x] 3.6 `/fleet` matches screenshots 02/08; category tabs + price sort work
-- [x] 3.7 Date range filters out booked vehicles; invalid/past dates show inline error
-- [x] 3.8 Payload filter narrows results; empty state on no match
-- [x] 3.9 Filter apply = single navigation; smooth view-transition swap (no flash); bar reflects applied URL filters
+- [x] 3.5 `/` renders public landing, no account chrome; category links pre-filter — f12dab6
+- [x] 3.6 `/fleet` matches screenshots 02/08; category tabs + price sort work — f12dab6
+- [x] 3.7 Date range filters out booked vehicles; invalid/past dates show inline error — f12dab6
+- [x] 3.8 Payload filter narrows results; empty state on no match — f12dab6
+- [x] 3.9 Filter apply = single navigation; smooth view-transition swap (no flash); bar reflects applied URL filters — f12dab6
 
 ### Phase 4: Vehicle Detail Page
 
 #### Automated
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Tests still pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 Tests still pass: `npm test`
 
 #### Manual
-- [ ] 4.5 `/fleet/<id>/<slug>` matches screenshot 03; specs + full pricing render with PLN formatting
-- [ ] 4.6 Unknown/inactive id returns 404
-- [ ] 4.7 Cards link to correct detail page; selected dates carry into the Reserve CTA
-- [ ] 4.8 "Zarezerwuj" navigates to `/reserve?vehicle_id=…&pickup=…&return=…` (404 until S-02, expected)
+- [x] 4.5 `/fleet/<id>/<slug>` matches screenshot 03; specs + full pricing render with PLN formatting
+- [x] 4.6 Unknown/inactive id returns 404
+- [x] 4.7 Cards link to correct detail page; selected dates carry into the Reserve CTA
+- [x] 4.8 "Zarezerwuj" navigates to `/reserve?vehicle_id=…&pickup=…&return=…` (404 until S-02, expected)

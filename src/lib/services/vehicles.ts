@@ -112,12 +112,19 @@ export async function getCategoryCounts(client: CatalogClient | null): Promise<C
   return { total: data.length, byCategory };
 }
 
+// A malformed id is just a vehicle that cannot exist. We reject it before the
+// query because `id` is a `uuid` column: PostgREST sends a non-UUID value to
+// Postgres, which throws `invalid input syntax for type uuid` (a 500) instead of
+// returning no rows. Guarding the shape turns that into the same `null` → 404 path
+// as a missing/inactive vehicle.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Fetch one active vehicle by id, or `null` when missing or inactive (RLS hides
- * inactive rows, so the detail route renders a 404 for both).
+ * Fetch one active vehicle by id, or `null` when the id is malformed, missing, or
+ * inactive (RLS hides inactive rows, so the detail route renders a 404 for all).
  */
 export async function getVehicleById(client: CatalogClient | null, id: string): Promise<Vehicle | null> {
-  if (!client) {
+  if (!client || !UUID_RE.test(id)) {
     return null;
   }
 
