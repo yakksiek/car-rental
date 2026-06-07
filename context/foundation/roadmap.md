@@ -30,7 +30,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | ID    | Change ID                    | Outcome (user can …)                                                        | Prerequisites | PRD refs                | Status   |
 | ----- | ---------------------------- | --------------------------------------------------------------------------- | ------------- | ----------------------- | -------- |
 | F-01  | booking-integrity-data       | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails      | done     |
-| F-02  | employee-admin-roles         | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control          | ready    |
+| F-02  | employee-admin-roles         | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control          | done     |
 | S-01  | public-fleet-catalog         | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003   | proposed |
 | S-02  | public-reservation-request   | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005       | proposed |
 | S-03  | reservation-approval         | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010       | proposed |
@@ -91,7 +91,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Auth is already wired (baseline: partial) but role-less — this adds only the role layer, it does NOT re-scaffold auth. Sequenced early because every employee/admin slice gates on it. Under-scoping the role gate would leak customer personal data (the second guardrail), so the access boundary is the thing to get right; the feature surface stays with the consuming slices.
-- **Status:** ready
+- **Status:** done
 
 ## Slices
 
@@ -233,3 +233,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 - **F-01: (foundation) the vehicle and reservation data model exists with RLS, the hotel-style availability/overlap rule (return by 10:00, pickup from 14:00; same-day turnover allowed) is implemented and unit-verifiable, and a minimal seed lets the public catalog render. Not user-visible on its own.** — Archived 2026-06-07 → `context/archive/2026-06-03-booking-integrity-data/`. Lesson: —.
+- **F-02: (foundation) an employee/admin role is attached to the existing Supabase auth and enforced at the route/middleware level, so authed slices can gate behavior by role without each re-implementing access checks. No user-facing feature.** — Archived 2026-06-07 → `context/archive/2026-06-04-employee-admin-roles/`. Lesson: —.
