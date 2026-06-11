@@ -92,9 +92,14 @@ insert into vehicles (
 -- reservations — exercise the rule both ways (no actual conflict here)
 -- ---------------------------------------------------------------------------
 
+-- reference: zero-padded backfill codes (R-0001…) — base36_encode never emits
+-- leading zeros, so these can never clash with RPC-generated references.
+-- access_token: fixed (not defaulted) so /r/<token> manual checks survive
+-- `supabase db reset` — e.g. /r/cccccccc-0000-0000-0000-000000000003 is the
+-- canonical seeded PENDING status page (S-02).
 insert into reservations (
   id, vehicle_id, customer_name, customer_email, customer_phone,
-  pickup_date, return_date, status
+  pickup_date, return_date, status, reference, access_token
 ) values
   -- Same-day-turnover pair on the Sprinter (vehicle 1111...). The first
   -- reservation returns 2026-07-10 (window ends 07-10 10:00); the second picks
@@ -104,26 +109,30 @@ insert into reservations (
     'aaaaaaaa-0000-0000-0000-000000000001',
     '11111111-1111-1111-1111-111111111111',
     'Jan Kowalski', 'jan.kowalski@example.com', '+48600100200',
-    '2026-07-01', '2026-07-10', 'confirmed'
+    '2026-07-01', '2026-07-10', 'confirmed',
+    'R-0001', 'cccccccc-0000-0000-0000-000000000001'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000002',
     '11111111-1111-1111-1111-111111111111',
     'Anna Nowak', 'anna.nowak@example.com', '+48600300400',
-    '2026-07-10', '2026-07-15', 'confirmed'
+    '2026-07-10', '2026-07-15', 'confirmed',
+    'R-0002', 'cccccccc-0000-0000-0000-000000000002'
   ),
   -- Pending requests on other vehicles (pending is a blocking status too).
   (
     'aaaaaaaa-0000-0000-0000-000000000003',
     '33333333-3333-3333-3333-333333333333',
     'Piotr Wiśniewski', 'piotr.wisniewski@example.com', '+48600500600',
-    '2026-07-05', '2026-07-08', 'pending'
+    '2026-07-05', '2026-07-08', 'pending',
+    'R-0003', 'cccccccc-0000-0000-0000-000000000003'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000004',
     '55555555-5555-5555-5555-555555555555',
     'Katarzyna Wójcik', 'katarzyna.wojcik@example.com', '+48600700800',
-    '2026-07-12', '2026-07-20', 'pending'
+    '2026-07-12', '2026-07-20', 'pending',
+    'R-0004', 'cccccccc-0000-0000-0000-000000000004'
   );
 
 -- ---------------------------------------------------------------------------

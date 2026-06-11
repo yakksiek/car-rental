@@ -57,41 +57,50 @@ export type Database = {
       }
       reservations: {
         Row: {
+          access_token: string
           created_at: string
           customer_email: string
           customer_name: string
           customer_phone: string
           id: string
           pickup_date: string
+          reference: string | null
           reserved_period: unknown
           return_date: string
           status: Database["public"]["Enums"]["reservation_status"]
+          terms_accepted_at: string | null
           updated_at: string
           vehicle_id: string
         }
         Insert: {
+          access_token?: string
           created_at?: string
           customer_email: string
           customer_name: string
           customer_phone: string
           id?: string
           pickup_date: string
+          reference?: string | null
           reserved_period?: unknown
           return_date: string
           status?: Database["public"]["Enums"]["reservation_status"]
+          terms_accepted_at?: string | null
           updated_at?: string
           vehicle_id: string
         }
         Update: {
+          access_token?: string
           created_at?: string
           customer_email?: string
           customer_name?: string
           customer_phone?: string
           id?: string
           pickup_date?: string
+          reference?: string | null
           reserved_period?: unknown
           return_date?: string
           status?: Database["public"]["Enums"]["reservation_status"]
+          terms_accepted_at?: string | null
           updated_at?: string
           vehicle_id?: string
         }
@@ -218,9 +227,43 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      base36_encode: { Args: { p_value: number }; Returns: string }
+      create_reservation_request: {
+        Args: {
+          p_customer_email: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_pickup: string
+          p_return: string
+          p_terms_accepted: boolean
+          p_vehicle_id: string
+        }
+        Returns: {
+          access_token: string
+          reference: string
+          result: string
+        }[]
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_reservation_status: {
+        Args: { p_token: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          pickup_date: string
+          reference: string
+          return_date: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          vehicle_category: Database["public"]["Enums"]["vehicle_category"]
+          vehicle_daily_rate: number
+          vehicle_deposit: number
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_production_year: number
+        }[]
       }
     }
     Enums: {
