@@ -4,8 +4,9 @@ import type { ReservationStatus } from "../types";
 // Pure model for the status page's "CO DALEJ" stepper (S-02). One canonical
 // ordered step list; `stepperFor` marks each step done/current/upcoming for a
 // reservation status. No I/O — this is the model S-03 (confirm/reject) and the
-// later pickup/return slices extend. Polish labels are canonical (design
-// screens 06 / mobile-4 / desktop-3).
+// later pickup/return slices extend. Polish labels + descriptions are canonical
+// (design screens 06 / mobile-4 / desktop-3 give each step a one-line muted
+// explanation under its bold title).
 //
 // The happy path is linear: the request waits for acceptance, the decision
 // arrives by email, then the pickup (a later-slice placeholder, always greyed
@@ -17,41 +18,57 @@ export type StepState = "done" | "current" | "upcoming";
 export interface Step {
   key: "pending" | "decision" | "pickup";
   label: string;
+  description: string;
   state: StepState;
 }
 
-const LABELS = {
-  pending: "Oczekuje na akceptację",
-  decision: "Potwierdzenie e-mailem",
-  pickup: "Odbiór",
-  rejected: "Odrzucone",
-  cancelled: "Anulowane",
+const COPY = {
+  pending: {
+    label: "Oczekuje na akceptację",
+    description: "Pracownik sprawdza Twoje zgłoszenie, zwykle w ciągu kilku godzin.",
+  },
+  decision: {
+    label: "Potwierdzenie e-mailem",
+    description: "Otrzymasz potwierdzenie (lub propozycję innych dat) e-mailem.",
+  },
+  pickup: {
+    label: "Odbiór",
+    description: "Zabierz dowód osobisty i prawo jazdy, aby odebrać pojazd.",
+  },
+  rejected: {
+    label: "Odrzucone",
+    description: "Niestety nie możemy potwierdzić tego terminu. Wyślij zgłoszenie na inne daty.",
+  },
+  cancelled: {
+    label: "Anulowane",
+    description: "Zgłoszenie zostało anulowane.",
+  },
 } as const;
 
-/** Ordered stepper for a reservation status, Polish labels included. */
+/** Ordered stepper for a reservation status, Polish copy included. */
 export function stepperFor(status: ReservationStatus): Step[] {
   switch (status) {
     case "pending":
       return [
-        { key: "pending", label: LABELS.pending, state: "current" },
-        { key: "decision", label: LABELS.decision, state: "upcoming" },
-        { key: "pickup", label: LABELS.pickup, state: "upcoming" },
+        { key: "pending", ...COPY.pending, state: "current" },
+        { key: "decision", ...COPY.decision, state: "upcoming" },
+        { key: "pickup", ...COPY.pickup, state: "upcoming" },
       ];
     case "confirmed":
       return [
-        { key: "pending", label: LABELS.pending, state: "done" },
-        { key: "decision", label: LABELS.decision, state: "done" },
-        { key: "pickup", label: LABELS.pickup, state: "current" },
+        { key: "pending", ...COPY.pending, state: "done" },
+        { key: "decision", ...COPY.decision, state: "done" },
+        { key: "pickup", ...COPY.pickup, state: "current" },
       ];
     case "rejected":
       return [
-        { key: "pending", label: LABELS.pending, state: "done" },
-        { key: "decision", label: LABELS.rejected, state: "current" },
+        { key: "pending", ...COPY.pending, state: "done" },
+        { key: "decision", ...COPY.rejected, state: "current" },
       ];
     case "cancelled":
       return [
-        { key: "pending", label: LABELS.pending, state: "done" },
-        { key: "decision", label: LABELS.cancelled, state: "current" },
+        { key: "pending", ...COPY.pending, state: "done" },
+        { key: "decision", ...COPY.cancelled, state: "current" },
       ];
   }
 }

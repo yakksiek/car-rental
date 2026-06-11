@@ -1,0 +1,118 @@
+---
+// core
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+
+// components
+import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
+
+// others
+import { cn } from "../../lib/utils";
+import { fromIsoDate } from "../../lib/date-iso";
+import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import type { ReservationStatus, ReservationStatusView } from "../../types";
+
+// The status screen's header + booking summary (design screens 06 / mobile-4 /
+// desktop-3): crimson check badge, serif headline, reference chip + status
+// pill, then the vehicle/dates/estimate/deposit card. Driven entirely by the
+// `get_reservation_status` view row — no PII beyond the token holder's own
+// request. The deposit (kaucja) is shown separately, never summed into the
+// estimate.
+
+interface Props {
+  view: ReservationStatusView;
+}
+
+const { view } = Astro.props;
+
+// Status pill, mirroring StatusPill's soft-tint + dot idiom. `pending` is the
+// only status S-02 produces; confirmed/rejected/cancelled arrive with S-03
+// decisions and render on the same page.
+const PILL: Record<ReservationStatus, { label: string; classes: string }> = {
+  pending: { label: "Oczekuje", classes: "bg-warning/10 text-warning" },
+  confirmed: { label: "Potwierdzone", classes: "bg-success/10 text-success" },
+  rejected: { label: "Odrzucone", classes: "bg-destructive/10 text-destructive" },
+  cancelled: { label: "Anulowane", classes: "bg-destructive/10 text-destructive" },
+};
+const pill = PILL[view.status];
+
+// `24 – 27 marca` (same month shows the pickup day only) / `28 marca – 2 kwietnia`.
+function rangePl(from: Date, to: Date): string {
+  const toLabel = format(to, "d MMMM", { locale: pl });
+  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
+  const fromLabel = sameMonth ? format(from, "d", { locale: pl }) : format(from, "d MMMM", { locale: pl });
+  return `${fromLabel} – ${toLabel}`;
+}
+
+const pickup = fromIsoDate(view.pickup_date);
+const returnDate = fromIsoDate(view.return_date);
+const days = rentalDays(view.pickup_date, view.return_date);
+const datesLabel = pickup && returnDate ? `${rangePl(pickup, returnDate)} · ${formatDuration(days)}` : "—";
+
+const title = [view.vehicle_make, view.vehicle_model].filter(Boolean).join(" ");
+
+const rows = [
+  { label: "Dane", value: datesLabel },
+  { label: "Szacunkowa cena", value: formatPln(estimatedTotal(view.vehicle_daily_rate, days)) },
+  { label: "Kaucja", value: formatPln(view.vehicle_deposit) },
+];
+---
+
+<section class="flex flex-col items-center text-center">
+  <span class="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-full">
+    <svg
+      class="size-7"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 13l4 4 10-10"></path>
+    </svg>
+  </span>
+  <h1 class="text-foreground mt-5 font-serif text-4xl tracking-tight">Zgłoszenie przyjęte</h1>
+  <p class="text-muted-foreground mt-2 text-sm">Bez konta — wszystko potwierdzimy e-mailem.</p>
+
+  <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+    <span
+      class="bg-card text-foreground rounded-md border border-[var(--flota-hair-2)] px-2.5 py-1 font-mono text-xs font-medium"
+    >
+      Reference · {view.reference}
+    </span>
+    <span
+      class:list={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide uppercase",
+        pill.classes,
+      )}
+    >
+      <span class="size-1.5 rounded-full bg-current"></span>
+      {pill.label}
+    </span>
+  </div>
+</section>
+
+<div class="bg-card shadow-card mt-7 rounded-xl p-5 text-left">
+  <div class="flex items-center gap-4">
+    <div class="text-foreground w-24 shrink-0">
+      <VehicleSilhouette category={view.vehicle_category} alt={title} />
+    </div>
+    <div class="min-w-0">
+      <p class="text-foreground truncate text-base font-bold tracking-tight">{title}</p>
+      {view.vehicle_production_year && <p class="text-muted-foreground text-sm">{view.vehicle_production_year}</p>}
+    </div>
+  </div>
+
+  <dl class="mt-4 divide-y divide-[var(--flota-hair-2)] border-t border-[var(--flota-hair-2)]">
+    {
+      rows.map((row) => (
+        <div class="flex items-center justify-between gap-3 py-3">
+          <dt class="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{row.label}</dt>
+          <dd class="text-foreground text-sm font-semibold">{row.value}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</div>

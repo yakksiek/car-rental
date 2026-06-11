@@ -360,26 +360,26 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 2: Domain Layer — Service, Schema, Helpers, Email Seam
 
 #### Automated
-- [x] 2.1 Tests pass: `npm test`
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test` — 4e2e365
+- [x] 2.2 Type checking passes: `npx astro check` — 4e2e365
+- [x] 2.3 Linting passes: `npm run lint` — 4e2e365
 
 #### Manual
-- [x] 2.4 Spot-check: `createReservationRequest` → conflict/created; `getReservationStatus` returns seeded reservation by token
-- [x] 2.5 Dev/log email adapter logs a Polish confirmation containing a `/r/<token>` URL
+- [x] 2.4 Spot-check: `createReservationRequest` → conflict/created; `getReservationStatus` returns seeded reservation by token — 4e2e365
+- [x] 2.5 Dev/log email adapter logs a Polish confirmation containing a `/r/<token>` URL — 4e2e365
 
 ### Phase 3: Status Page (`/r/<token>`)
 
 #### Automated
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 Tests still pass: `npm test`
 
 #### Manual
-- [ ] 3.5 `/r/<seeded-token>` matches screens 06 / mobile-4 / desktop-3; PENDING/"Oczekuje"; stepper highlights current step
-- [ ] 3.6 Unknown/malformed token → 404
-- [ ] 3.7 Money + `dni` render correctly (`960 zł`, `2500 zł`, `3 dni`)
+- [x] 3.5 `/r/<seeded-token>` matches screens 06 / mobile-4 / desktop-3; PENDING/"Oczekuje"; stepper highlights current step
+- [x] 3.6 Unknown/malformed token → 404
+- [x] 3.7 Money + `dni` render correctly (`960 zł`, `2500 zł`, `3 dni`)
 
 ### Phase 4: Reservation Funnel (`/reserve` + island + API route)
 
