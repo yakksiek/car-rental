@@ -346,27 +346,27 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 1: Schema Extension & Reservation RPCs
 
 #### Automated
-- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset` — 895fb2d
+- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts` — 895fb2d
+- [x] 1.3 Type checking passes: `npx astro check` — 895fb2d
+- [x] 1.4 Linting passes: `npm run lint` — 895fb2d
 
 #### Manual
-- [x] 1.5 anon `create_reservation_request` for a free range → `created` + reference + token; row is `pending`; anon `reservations` select still denied
-- [x] 1.6 Overlapping range → `result = conflict` (not 500); no second row
-- [x] 1.7 Inactive/unknown vehicle → `result = unavailable`
-- [x] 1.8 `get_reservation_status(<token>)` returns display fields only; unknown token → zero rows
+- [x] 1.5 anon `create_reservation_request` for a free range → `created` + reference + token; row is `pending`; anon `reservations` select still denied — 895fb2d
+- [x] 1.6 Overlapping range → `result = conflict` (not 500); no second row — 895fb2d
+- [x] 1.7 Inactive/unknown vehicle → `result = unavailable` — 895fb2d
+- [x] 1.8 `get_reservation_status(<token>)` returns display fields only; unknown token → zero rows — 895fb2d
 
 ### Phase 2: Domain Layer — Service, Schema, Helpers, Email Seam
 
 #### Automated
-- [ ] 2.1 Tests pass: `npm test`
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Tests pass: `npm test`
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
-- [ ] 2.4 Spot-check: `createReservationRequest` → conflict/created; `getReservationStatus` returns seeded reservation by token
-- [ ] 2.5 Dev/log email adapter logs a Polish confirmation containing a `/r/<token>` URL
+- [x] 2.4 Spot-check: `createReservationRequest` → conflict/created; `getReservationStatus` returns seeded reservation by token
+- [x] 2.5 Dev/log email adapter logs a Polish confirmation containing a `/r/<token>` URL
 
 ### Phase 3: Status Page (`/r/<token>`)
 

@@ -4,11 +4,14 @@ import { describe, expect, it } from "vitest";
 // others
 import {
   categoryLabelPl,
+  estimatedTotal,
   formatCargoDims,
   formatDailyRate,
+  formatDuration,
   formatPayloadKg,
   formatPln,
   fuelLabelPl,
+  rentalDays,
   transmissionLabelPl,
 } from "./format";
 
@@ -69,6 +72,54 @@ describe("formatPayloadKg", () => {
 
   it("returns a dash when absent", () => {
     expect(formatPayloadKg(null)).toBe("—");
+  });
+});
+
+describe("rentalDays", () => {
+  it("computes a same-month span (the screens' canonical 3 dni)", () => {
+    expect(rentalDays("2026-03-24", "2026-03-27")).toBe(3);
+  });
+
+  it("computes a cross-month span", () => {
+    expect(rentalDays("2026-03-30", "2026-04-02")).toBe(3);
+  });
+
+  it("computes a cross-year span", () => {
+    expect(rentalDays("2026-12-30", "2027-01-02")).toBe(3);
+  });
+
+  it("is zero for a same-day range (rejected upstream by validation)", () => {
+    expect(rentalDays("2026-03-24", "2026-03-24")).toBe(0);
+  });
+});
+
+describe("estimatedTotal", () => {
+  it("multiplies a string daily rate (the numeric-as-string quirk)", () => {
+    expect(estimatedTotal("320.00", 3)).toBe(960);
+  });
+
+  it("multiplies a number daily rate", () => {
+    expect(estimatedTotal(249, 4)).toBe(996);
+  });
+
+  it("stays cent-exact for fractional rates", () => {
+    expect(estimatedTotal("1.10", 3)).toBe(3.3);
+  });
+
+  it("falls back to zero for an unparseable rate", () => {
+    expect(estimatedTotal("abc", 3)).toBe(0);
+  });
+});
+
+describe("formatDuration", () => {
+  it("uses the singular for one day", () => {
+    expect(formatDuration(1)).toBe("1 dzień");
+  });
+
+  it("uses dni for everything else", () => {
+    expect(formatDuration(3)).toBe("3 dni");
+    expect(formatDuration(5)).toBe("5 dni");
+    expect(formatDuration(21)).toBe("21 dni");
   });
 });
 

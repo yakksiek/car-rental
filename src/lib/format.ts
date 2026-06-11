@@ -44,6 +44,39 @@ export function formatDailyRate(value: string | number): string {
   return `${formatPln(value)}/doba`;
 }
 
+/** Epoch ms of an ISO `YYYY-MM-DD` date at UTC midnight (calendar math only). */
+function dateValue(isoDate: string): number {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Whole-day rental span, e.g. `rentalDays("2026-03-24", "2026-03-27") -> 3`.
+ * Calendar-day difference (`return − pickup`) — the billing unit the screens
+ * show (`24 – 27 marca · 3 dni`), independent of the 14:00/10:00 hours.
+ */
+export function rentalDays(pickup: string, returnDate: string): number {
+  return Math.round((dateValue(returnDate) - dateValue(pickup)) / MS_PER_DAY);
+}
+
+/**
+ * Estimated rental total: `daily_rate × days`, e.g. `(320, 3) -> 960`.
+ * Defensive about the numeric-as-string quirk; cent-rounded to avoid float
+ * drift. The deposit is shown separately and never summed in.
+ */
+export function estimatedTotal(dailyRate: string | number, days: number): number {
+  return Math.round(toNumber(dailyRate) * days * 100) / 100;
+}
+
+/**
+ * Polish duration label, plural-aware: `1 -> "1 dzień"`, otherwise `"N dni"`.
+ */
+export function formatDuration(days: number): string {
+  return days === 1 ? "1 dzień" : `${days} dni`;
+}
+
 /** Format one cm dimension as metres (`440 -> "4.40"`), or the dash when absent. */
 function formatDimM(cm: string | number | null | undefined): string {
   if (cm === null || cm === undefined || cm === "") {
