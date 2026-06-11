@@ -1,0 +1,94 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import SiteHeader from "../../components/SiteHeader.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import ReservationStatusCard from "../../components/reservation/ReservationStatusCard.astro";
+import StatusStepper from "../../components/reservation/StatusStepper.astro";
+
+// others
+import { getReservationStatus } from "../../lib/services/reservations";
+
+// Tokenized reservation status route (design screens 06 / mobile-4 / desktop-3).
+// One screen, two arrivals: the post-submit "Zgłoszenie przyjęte" landing and the
+// durable status link the confirmation email carries. The `access_token` path
+// segment is the only credential — resolution crosses the RLS boundary through
+// the `get_reservation_status` definer RPC (`reservations` stays anon-denied),
+// and an unknown/malformed token yields `null` → a styled HTTP 404. The URL is
+// a bearer secret, so the page is marked noindex.
+
+const { token } = Astro.params;
+const supabase = Astro.locals.supabase;
+
+const view = token ? await getReservationStatus(supabase, token) : null;
+
+if (!view) {
+  Astro.response.status = 404;
+}
+
+const title = view ? `Zgłoszenie ${view.reference}` : "Nie znaleziono zgłoszenia";
+---
+
+<Layout title={`${title} — Flota`}>
+  <meta slot="head" name="robots" content="noindex" />
+  <SiteHeader />
+  {
+    view ? (
+      <main class="mx-auto max-w-xl px-5 py-10 sm:px-8 sm:py-14">
+        <ReservationStatusCard view={view} />
+        <StatusStepper status={view.status} class="mt-8" />
+        <p class="bg-card shadow-card text-muted-foreground mt-8 flex items-center gap-2.5 rounded-full px-5 py-3 text-sm">
+          <svg
+            class="size-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M3 7l9 6 9-6" />
+          </svg>
+          <span class="truncate">
+            Potwierdzenie wysłaliśmy na <strong class="text-foreground font-semibold">{view.customer_email}</strong>
+          </span>
+        </p>
+        <a
+          href="/fleet"
+          class="bg-foreground text-background mt-8 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full px-6 text-sm font-semibold"
+        >
+          Wróć do floty
+          <svg
+            class="size-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      </main>
+    ) : (
+      <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono zgłoszenia</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
+          To zgłoszenie nie istnieje lub link jest nieprawidłowy. Sprawdź adres z e-maila potwierdzającego.
+        </p>
+        <a
+          href="/fleet"
+          class="bg-foreground text-background mt-7 inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold"
+        >
+          Wróć do floty
+        </a>
+      </main>
+    )
+  }
+  <SiteFooter />
+</Layout>
