@@ -32,6 +32,37 @@ export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
+// ---------------------------------------------------------------------------
+// Public reservation request (S-02) — the funnel's domain contracts. The write
+// and the status read both cross the RLS boundary via SECURITY DEFINER RPCs
+// (`reservations` itself stays anon-denied), so these are RPC-shaped, not
+// table-row-shaped.
+// ---------------------------------------------------------------------------
+
+// Snake_case mirrors the POST body / RPC arguments so the zod-parsed payload
+// flows into the service without a mapping layer. Dates are ISO `YYYY-MM-DD`.
+export interface CreateReservationInput {
+  vehicle_id: string;
+  pickup: string;
+  return: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  terms_accepted: boolean;
+}
+
+// Typed union over the RPC's result tag. `conflict` is the north-star case:
+// the EXCLUDE constraint rejected an overlapping range atomically.
+export type CreateReservationResult =
+  | { status: "created"; reference: string; token: string }
+  | { status: "conflict" }
+  | { status: "unavailable" };
+
+// One row of display fields for the tokenized status page (`/r/<token>`).
+// NOTE: vehicle_daily_rate / vehicle_deposit are numeric(10,2) → string at
+// runtime despite the generated `number` type (see the money note above).
+export type ReservationStatusView = Database["public"]["Functions"]["get_reservation_status"]["Returns"][number];
+
 // Input shape for the pure overlap predicate (src/lib/availability.ts, Phase 2).
 // Bare local calendar dates (ISO `YYYY-MM-DD`); the predicate applies the fixed
 // hotel-style hours (pickup 14:00, return 10:00) to build the comparable window,
