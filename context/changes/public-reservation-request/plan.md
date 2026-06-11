@@ -346,16 +346,16 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 1: Schema Extension & Reservation RPCs
 
 #### Automated
-- [ ] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [ ] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [ ] 1.3 Type checking passes: `npx astro check`
-- [ ] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
+- [x] 1.2 Types regenerate without error: `supabase gen types typescript --local > src/db/database.types.ts`
+- [x] 1.3 Type checking passes: `npx astro check`
+- [x] 1.4 Linting passes: `npm run lint`
 
 #### Manual
-- [ ] 1.5 anon `create_reservation_request` for a free range → `created` + reference + token; row is `pending`; anon `reservations` select still denied
-- [ ] 1.6 Overlapping range → `result = conflict` (not 500); no second row
-- [ ] 1.7 Inactive/unknown vehicle → `result = unavailable`
-- [ ] 1.8 `get_reservation_status(<token>)` returns display fields only; unknown token → zero rows
+- [x] 1.5 anon `create_reservation_request` for a free range → `created` + reference + token; row is `pending`; anon `reservations` select still denied
+- [x] 1.6 Overlapping range → `result = conflict` (not 500); no second row
+- [x] 1.7 Inactive/unknown vehicle → `result = unavailable`
+- [x] 1.8 `get_reservation_status(<token>)` returns display fields only; unknown token → zero rows
 
 ### Phase 2: Domain Layer — Service, Schema, Helpers, Email Seam
 
