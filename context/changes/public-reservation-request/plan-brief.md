@@ -16,18 +16,20 @@ F-01 shipped the `vehicles`/`reservations` schema, the no-double-booking `EXCLUD
 
 ## Key Decisions Made
 
-| Decision | Choice | Why | Source |
-| --- | --- | --- | --- |
-| Public write path | `create_reservation_request` SECURITY DEFINER RPC | Keeps `reservations` anon-denied; mirrors `available_vehicles`; one atomic home for insert + conflict + reference/token | Plan |
-| Overlap block | RPC catches `23P01` (authority) + `available_vehicles` pre-check (UX) | Atomic correctness without reintroducing the check-then-insert race; friendly early message | Plan |
-| Email scope | Build the seam (dev/log adapter + Polish templates), defer the provider | Ships full UX now without blocking on the unchosen provider (speed); S-05 swaps the adapter | Plan |
-| Confirm/reject email | S-02 builds status page + token + helper; **S-03 triggers** | Each email sends where its trigger lives; no speculative S-03 work | Plan |
-| Field set | name/email/phone + `reference` + `access_token` + `terms_accepted_at` (no B2B) | Matches FR-004 + the design's terms checkbox; B2B addable later | Plan |
-| Status access | Tokenized link `/r/<token>` via `get_reservation_status` RPC | Unguessable no-account deep link from email; reservations stays anon-SELECT-denied | Plan |
-| Status page | Live "what happens next" stepper | Matches screen 06; one step model S-03/S-05/S-06 extend | Plan |
-| Funnel shape | One `/reserve` island, multi-step, redirect to `/r/<token>` | "Under 3 min", no full reloads; received page = status page (DRY) | Plan |
-| Abuse guard | Honeypot + Origin/CSRF + zod + required terms | Cheap, no third party/cookies; keeps the pending queue clean | Plan |
-| Testing | Vitest on pure logic (schema, pricing, stepper); RPCs verified manually | Matches the project's Vitest-only convention | Plan |
+
+| Decision             | Choice                                                                         | Why                                                                                                                     | Source |
+| -------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------ |
+| Public write path    | `create_reservation_request` SECURITY DEFINER RPC                              | Keeps `reservations` anon-denied; mirrors `available_vehicles`; one atomic home for insert + conflict + reference/token | Plan   |
+| Overlap block        | RPC catches `23P01` (authority) + `available_vehicles` pre-check (UX)          | Atomic correctness without reintroducing the check-then-insert race; friendly early message                             | Plan   |
+| Email scope          | Build the seam (dev/log adapter + Polish templates), defer the provider        | Ships full UX now without blocking on the unchosen provider (speed); S-05 swaps the adapter                             | Plan   |
+| Confirm/reject email | S-02 builds status page + token + helper; **S-03 triggers**                    | Each email sends where its trigger lives; no speculative S-03 work                                                      | Plan   |
+| Field set            | name/email/phone + `reference` + `access_token` + `terms_accepted_at` (no B2B) | Matches FR-004 + the design's terms checkbox; B2B addable later                                                         | Plan   |
+| Status access        | Tokenized link `/r/<token>` via `get_reservation_status` RPC                   | Unguessable no-account deep link from email; reservations stays anon-SELECT-denied                                      | Plan   |
+| Status page          | Live "what happens next" stepper                                               | Matches screen 06; one step model S-03/S-05/S-06 extend                                                                 | Plan   |
+| Funnel shape         | One `/reserve` island, multi-step, redirect to `/r/<token>`                    | "Under 3 min", no full reloads; received page = status page (DRY)                                                       | Plan   |
+| Abuse guard          | Honeypot + Origin/CSRF + zod + required terms                                  | Cheap, no third party/cookies; keeps the pending queue clean                                                            | Plan   |
+| Testing              | Vitest on pure logic (schema, pricing, stepper); RPCs verified manually        | Matches the project's Vitest-only convention                                                                            | Plan   |
+
 
 ## Scope
 
@@ -41,12 +43,14 @@ Bottom-up, mirroring S-01. Data + two definer RPCs (write, status) → tested do
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
+
+| Phase            | What it delivers                                                                                                             | Key risk                                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | 1. Schema & RPCs | `reference`/`access_token`/`terms_accepted_at` columns; `create_reservation_request` + `get_reservation_status`; types; seed | Definer hygiene (`search_path=''`, schema-qualify); `23P01` mapping must be exception-based, not check-then-insert |
-| 2. Domain layer | reservation service, zod schema (+honeypot), pricing/stepper helpers, email seam; Vitest | Date semantics must agree with `availability.ts`/the constraint |
-| 3. Status page | `/r/[token].astro` + stepper, against the design contract | Stepper step model must stay stable for S-03/S-05/S-06 |
-| 4. Funnel | `/reserve` + `ReservationForm` island + `POST /api/reservations` (CSRF + zod + RPC + email + redirect) | Overlap must surface as 409 not 500 under a true race; no booked-date greying |
+| 2. Domain layer  | reservation service, zod schema (+honeypot), pricing/stepper helpers, email seam; Vitest                                     | Date semantics must agree with `availability.ts`/the constraint                                                    |
+| 3. Status page   | `/r/[token].astro` + stepper, against the design contract                                                                    | Stepper step model must stay stable for S-03/S-05/S-06                                                             |
+| 4. Funnel        | `/reserve` + `ReservationForm` island + `POST /api/reservations` (CSRF + zod + RPC + email + redirect)                       | Overlap must surface as 409 not 500 under a true race; no booked-date greying                                      |
+
 
 **Prerequisites:** F-01 (done), S-01 (the catalog + Reserve CTA). Local Supabase running for RPC verification.
 **Estimated effort:** ~3–4 sessions across 4 phases.
@@ -62,3 +66,4 @@ Bottom-up, mirroring S-01. Data + two definer RPCs (write, status) → tested do
 - A no-account visitor reserves in a few steps and overlapping dates are blocked at submission (pre-check message; `23P01`→409 under a race, never a 500).
 - Submitting lands on `/r/<token>` with a reference + PENDING stepper, and a confirmation email (logged) carries that link; revisiting the link shows current status.
 - `reservations` remains anon-denied; both RPCs are anon-executable and leak no other reservation's data; `npm test` + `astro check` + `lint` + `build` green.
+
