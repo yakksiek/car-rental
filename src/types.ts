@@ -69,6 +69,12 @@ export type CreateReservationResult =
 // runtime despite the generated `number` type (see the money note above).
 export type ReservationStatusView = Database["public"]["Functions"]["get_reservation_status"]["Returns"][number];
 
+// One blocking reservation's date bounds for the per-vehicle busy-ranges RPC
+// (S-02 Phase 6). Date-only `[pickup_date, return_date]` ISO `YYYY-MM-DD`, no
+// PII — the booking calendar greys these out so a visitor never picks a taken
+// range. The EXCLUDE constraint stays the atomic backstop.
+export type VehicleBusyRange = Database["public"]["Functions"]["get_vehicle_busy_ranges"]["Returns"][number];
+
 // Input shape for the pure overlap predicate (src/lib/availability.ts, Phase 2).
 // Bare local calendar dates (ISO `YYYY-MM-DD`); the predicate applies the fixed
 // hotel-style hours (pickup 14:00, return 10:00) to build the comparable window,

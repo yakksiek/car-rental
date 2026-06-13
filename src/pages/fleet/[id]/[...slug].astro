@@ -7,6 +7,7 @@ import VehicleDetail from "../../../components/vehicle/VehicleDetail.astro";
 
 // others
 import { getVehicleById } from "../../../lib/services/vehicles";
+import { getVehicleBusyRanges } from "../../../lib/services/reservations";
 import { vehicleSlug } from "../../../lib/slug";
 
 // Vehicle detail route (design screen 03). Matches both `/fleet/<id>` and
@@ -24,6 +25,12 @@ const vehicle = id ? await getVehicleById(supabase, id) : null;
 if (!vehicle) {
   Astro.response.status = 404;
 }
+
+// Per-vehicle busy ranges (pending + confirmed) for the booking calendar to
+// grey out (Phase 6). The browser can't reach Supabase (server-only creds), so
+// they're SSR'd here and handed to the BookingWidget island. PII-free — date
+// bounds only.
+const busyRanges = vehicle ? await getVehicleBusyRanges(supabase, vehicle.id) : [];
 
 // Forward the selected range (set by catalog cards / filters) into the CTA.
 const pickup = Astro.url.searchParams.get("pickup");
@@ -45,7 +52,7 @@ const title = vehicle
   <SiteHeader active="fleet" />
   {
     vehicle ? (
-      <VehicleDetail vehicle={vehicle} pickup={pickup} returnDate={returnDate} />
+      <VehicleDetail vehicle={vehicle} pickup={pickup} returnDate={returnDate} busyRanges={busyRanges} />
     ) : (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
