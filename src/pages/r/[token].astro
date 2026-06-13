@@ -37,19 +37,14 @@ const title = view ? `Zgłoszenie ${view.reference}` : "Nie znaleziono zgłoszen
       <main class="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
         <ReservationStatusCard view={view} />
         <StatusStepper status={view.status} class="mt-8" />
-        {/* Two actions (design desktop-3): ghost "back" + navy "browse". */}
-        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        {/* Single action — both old buttons went to /fleet, so one CTA suffices.
+            Full-width on mobile, auto-width centered on desktop. */}
+        <div class="mt-8 flex justify-center">
           <a
             href="/fleet"
-            class="border-input text-foreground hover:bg-accent rounded-button inline-flex h-11 items-center justify-center border bg-transparent px-6 text-sm font-semibold transition-colors"
+            class="bg-foreground text-background rounded-button inline-flex h-12 w-full items-center justify-center gap-1.5 px-6 text-sm font-semibold sm:w-auto sm:px-8"
           >
             Wróć do floty
-          </a>
-          <a
-            href="/fleet"
-            class="bg-foreground text-background rounded-button inline-flex h-11 items-center justify-center gap-1.5 px-6 text-sm font-semibold"
-          >
-            Przeglądaj flotę
             <svg
               class="size-3.5"
               viewBox="0 0 24 24"

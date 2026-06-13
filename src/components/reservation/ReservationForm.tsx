@@ -75,6 +75,18 @@ const COPY = {
 
 const STEPS = ["Daty", "Twoje dane", "Podsumowanie"] as const;
 
+// Field ids in visual order — drives "scroll to the first error" on a failed
+// submit (the element id matches each field's `id`/`htmlFor`).
+const FIELD_ORDER = [
+  "customer_name",
+  "customer_phone",
+  "customer_email",
+  "company",
+  "vat_id",
+  "notes",
+  "terms_accepted",
+];
+
 type Step = "details" | "review";
 
 interface SubmitSuccess {
@@ -99,6 +111,24 @@ const arrow = (
     aria-hidden="true"
   >
     <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+);
+
+// Round back-chevron control for the mobile header (design mobile-2/3).
+const CHEVRON_CLASSES =
+  "bg-card shadow-card text-foreground hover:bg-accent inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-colors";
+const chevronIcon = (
+  <svg
+    className="size-[18px]"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M19 12H5M11 18l-6-6 6-6" />
   </svg>
 );
 
@@ -137,6 +167,12 @@ export default function ReservationForm(props: Props) {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
+  // The "Popraw zaznaczone pola." banner is DERIVED from the live field errors,
+  // so it disappears on its own once the last field is fixed (no stale state).
+  // `submitError` holds only the persistent server errors (conflict / generic).
+  const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
+  const formError = submitError ?? (hasFieldErrors ? COPY.fixFields : null);
+
   const days = rentalDays(pickup, returnIso);
   const total = estimatedTotal(vehicle.dailyRate, days);
   const pickupDate = fromIsoDate(pickup);
@@ -160,23 +196,49 @@ export default function ReservationForm(props: Props) {
     };
   }
 
-  /** Mirror the server contract exactly: run the shared zod schema client-side. */
-  function validate(): boolean {
+  /**
+   * Mirror the server contract exactly: run the shared zod schema client-side.
+   * Returns the per-field error map on failure, or `null` when valid.
+   */
+  function validate(): Record<string, string> | null {
     const parsed = reservationRequestSchema.safeParse(buildPayload());
     if (parsed.success) {
       setFieldErrors({});
-      return true;
+      return null;
     }
-    setFieldErrors(firstIssuePerField(parsed.error.issues));
-    return false;
+    const errors = firstIssuePerField(parsed.error.issues);
+    setFieldErrors(errors);
+    return errors;
+  }
+
+  /**
+   * Scroll to (and focus) the first errored field in visual order. Deferred via
+   * a double rAF so the errors — and, on a failed submit from the review step,
+   * the switch back to the fields — have committed to the DOM first.
+   */
+  function scrollToFirstError(errors: Record<string, string>) {
+    const id = FIELD_ORDER.find((field) => errors[field]);
+    if (!id) {
+      return;
+    }
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const el = document.getElementById(id);
+        if (!el) {
+          return;
+        }
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus({ preventScroll: true });
+      }),
+    );
   }
 
   /** Step 2 → 3: validate the fields, then show the review. */
   function handleNext() {
     setSubmitError(null);
-    if (!validate()) {
-      setSubmitError(COPY.fixFields);
-      window.scrollTo({ top: 0 });
+    const errors = validate();
+    if (errors) {
+      scrollToFirstError(errors);
       return;
     }
     setStep("review");
@@ -192,10 +254,10 @@ export default function ReservationForm(props: Props) {
   /** Step 3: submit. The reservation is created and we land on /r/<token>. */
   async function handleSubmit() {
     setSubmitError(null);
-    if (!validate()) {
-      setSubmitError(COPY.fixFields);
+    const errors = validate();
+    if (errors) {
       setStep("details");
-      window.scrollTo({ top: 0 });
+      scrollToFirstError(errors);
       return;
     }
     setSubmitting(true);
@@ -219,10 +281,10 @@ export default function ReservationForm(props: Props) {
         return;
       }
       if (res.status === 400) {
-        setFieldErrors(body.errors ?? {});
-        setSubmitError(COPY.fixFields);
+        const serverErrors = body.errors ?? {};
+        setFieldErrors(serverErrors);
         setStep("details");
-        window.scrollTo({ top: 0 });
+        scrollToFirstError(serverErrors);
         return;
       }
       setSubmitError(COPY.genericError);
@@ -308,52 +370,60 @@ export default function ReservationForm(props: Props) {
 
   return (
     <>
-      {/* Heading + step indicator on one row (design desktop-2): heading left,
-          steps right with space between; stacked on mobile (steps on top). */}
-      <div className="flex flex-col gap-5 py-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-        <div className="order-last lg:order-none">
+      {/* Mobile header — round back chevron + centered title (design mobile-2/3).
+          No step pills on mobile; the chevron is the step navigation: it exits to
+          step 1 (the detail page) from "details", or back to the fields from the
+          "review" sub-step. */}
+      <div className="flex items-center gap-3 py-4 lg:hidden">
+        {step === "details" ? (
+          <a href={backHref} aria-label={COPY.backToVehicle} className={CHEVRON_CLASSES}>
+            {chevronIcon}
+          </a>
+        ) : (
+          <button type="button" onClick={backToDetails} aria-label={COPY.backToDetails} className={CHEVRON_CLASSES}>
+            {chevronIcon}
+          </button>
+        )}
+        <h1 className="text-foreground flex-1 text-center text-xl font-bold tracking-tight">{heading}</h1>
+        <span className="size-10 shrink-0" aria-hidden="true" />
+      </div>
+
+      {/* Desktop heading + step indicator (design desktop-2): heading left, steps
+          right. Indicator is desktop-only — mobile navigates via the chevron. */}
+      <div className="hidden py-6 lg:flex lg:items-center lg:justify-between lg:gap-8">
+        <div>
           <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">{COPY.eyebrow}</p>
           <h1 className="text-foreground mt-1 font-serif text-4xl tracking-tight">{heading}</h1>
           {datesHeadline && <p className="text-muted-foreground mt-2 text-sm">{datesHeadline}</p>}
         </div>
 
-        {/* Step indicator. "Daty" links back to step 1 (detail page); "Twoje
-            dane", once done, links back to the details sub-step. */}
         <ol className="flex shrink-0 items-center gap-2">
           {STEPS.map((label, i) => {
             const state = stepState(i);
-            const node = (
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
-                  state === "done" && "bg-success text-white",
-                  state === "current" && "bg-foreground text-background",
-                  state === "upcoming" && "bg-card text-muted-foreground border border-[var(--flota-hair-2)]",
-                )}
-              >
-                {state === "done" ? <CheckIcon className="size-3.5" /> : i + 1}
-              </span>
-            );
-            const text = (
-              <span
-                className={cn(
-                  "text-sm font-semibold",
-                  state === "upcoming" ? "text-muted-foreground" : "text-foreground",
-                  state === "current" && "font-bold",
-                )}
-              >
-                {label}
-              </span>
-            );
             return (
               <li key={label} className="flex items-center gap-2">
-                {i > 0 && <span className="w-5 border-t border-[var(--flota-hair-2)] sm:w-8" />}
+                {i > 0 && <span className="w-8 border-t border-[var(--flota-hair-2)]" />}
                 {/* Purely visual — navigation is handled by the explicit
                     "Wróć do…" buttons and "Zmień" links. */}
-                <div className="flex items-center gap-2">
-                  {node}
-                  <span className={cn("hidden sm:inline", state === "current" && "inline")}>{text}</span>
-                </div>
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                    state === "done" && "bg-success text-white",
+                    state === "current" && "bg-foreground text-background",
+                    state === "upcoming" && "bg-card text-muted-foreground border border-[var(--flota-hair-2)]",
+                  )}
+                >
+                  {state === "done" ? <CheckIcon className="size-3.5" /> : i + 1}
+                </span>
+                <span
+                  className={cn(
+                    "text-sm font-semibold",
+                    state === "upcoming" ? "text-muted-foreground" : "text-foreground",
+                    state === "current" && "font-bold",
+                  )}
+                >
+                  {label}
+                </span>
               </li>
             );
           })}
@@ -478,9 +548,9 @@ export default function ReservationForm(props: Props) {
                 )}
               </div>
 
-              {submitError && (
+              {formError && (
                 <p className="bg-destructive/10 text-destructive mt-5 rounded-xl px-4 py-3 text-sm font-medium">
-                  {submitError}
+                  {formError}
                 </p>
               )}
 
@@ -546,9 +616,9 @@ export default function ReservationForm(props: Props) {
                 ))}
               </dl>
 
-              {submitError && (
+              {formError && (
                 <p className="bg-destructive/10 text-destructive mt-5 rounded-xl px-4 py-3 text-sm font-medium">
-                  {submitError}
+                  {formError}
                 </p>
               )}
 
@@ -576,22 +646,31 @@ export default function ReservationForm(props: Props) {
         </div>
       </div>
 
-      {/* Mobile/tablet sticky CTA bar (crimson). Advances (Dalej) on step 2,
-          submits (Wyślij zgłoszenie) on step 3. */}
-      <div className="bg-primary text-primary-foreground fixed inset-x-0 bottom-0 z-10 lg:hidden">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold tracking-wide uppercase opacity-80">{COPY.estimate}</div>
-            <div className="text-xl font-bold tracking-tight">{formatPln(total)}</div>
-            <div className="truncate text-xs opacity-80">
-              {formatDuration(days)} × {formatPln(vehicle.dailyRate)} · + kaucja {formatPln(vehicle.deposit)}
+      {/* Mobile/tablet sticky CTA (design mobile-2/3): a crimson estimate band
+          stacked above a full-width crimson CTA — not a band with a side button.
+          Advances (Dalej) on step 2, submits (Wyślij zgłoszenie) on step 3. */}
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--flota-hair-2)] bg-[var(--flota-bg)]/92 backdrop-blur lg:hidden">
+        <div className="mx-auto max-w-2xl px-5 pt-4 pb-4 sm:px-8">
+          <div className="bg-primary text-primary-foreground rounded-button flex items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
+              <div className="mt-0.5 font-bold tracking-tight">
+                <span className="text-[2.5rem] leading-none">{formatPln(total).replace(/\s*zł$/, "")}</span>
+                <span className="ml-1 text-lg">zł</span>
+              </div>
+            </div>
+            <div className="shrink-0 text-right text-xs leading-snug opacity-80">
+              <div>
+                {formatDuration(days)} × {formatPln(vehicle.dailyRate)}
+              </div>
+              <div>+ kaucja {formatPln(vehicle.deposit)}</div>
             </div>
           </div>
           <button
             type="button"
             onClick={onPrimary}
             disabled={submitting}
-            className="bg-background text-foreground rounded-button flex h-12 shrink-0 items-center justify-center gap-2 px-5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-60"
+            className="bg-primary text-primary-foreground rounded-button mt-2 flex h-13 w-full items-center justify-center gap-2 px-6 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)] disabled:opacity-60"
           >
             {primaryLabel}
             {arrow}
