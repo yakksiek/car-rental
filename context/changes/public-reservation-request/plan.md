@@ -371,23 +371,23 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 3: Status Page (`/r/<token>`)
 
 #### Automated
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 Tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check` — 154bd34
+- [x] 3.2 Linting passes: `npm run lint` — 154bd34
+- [x] 3.3 Build succeeds: `npm run build` — 154bd34
+- [x] 3.4 Tests still pass: `npm test` — 154bd34
 
 #### Manual
-- [x] 3.5 `/r/<seeded-token>` matches screens 06 / mobile-4 / desktop-3; PENDING/"Oczekuje"; stepper highlights current step
-- [x] 3.6 Unknown/malformed token → 404
-- [x] 3.7 Money + `dni` render correctly (`960 zł`, `2500 zł`, `3 dni`)
+- [x] 3.5 `/r/<seeded-token>` matches screens 06 / mobile-4 / desktop-3; PENDING/"Oczekuje"; stepper highlights current step — 154bd34
+- [x] 3.6 Unknown/malformed token → 404 — 154bd34
+- [x] 3.7 Money + `dni` render correctly (`960 zł`, `2500 zł`, `3 dni`) — 154bd34
 
 ### Phase 4: Reservation Funnel (`/reserve` + island + API route)
 
 #### Automated
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes (no `@/` imports remain): `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Tests still pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes (no `@/` imports remain): `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 Tests still pass: `npm test`
 
 #### Manual
 - [ ] 4.5 "Zarezerwuj" → `/reserve?vehicle_id=…&pickup=…&return=…`; vehicle + carried dates shown; bad/inactive id 404s
