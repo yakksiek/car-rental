@@ -58,11 +58,13 @@ export type Database = {
       reservations: {
         Row: {
           access_token: string
+          company: string | null
           created_at: string
           customer_email: string
           customer_name: string
           customer_phone: string
           id: string
+          notes: string | null
           pickup_date: string
           reference: string | null
           reserved_period: unknown
@@ -70,15 +72,18 @@ export type Database = {
           status: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at: string | null
           updated_at: string
+          vat_id: string | null
           vehicle_id: string
         }
         Insert: {
           access_token?: string
+          company?: string | null
           created_at?: string
           customer_email: string
           customer_name: string
           customer_phone: string
           id?: string
+          notes?: string | null
           pickup_date: string
           reference?: string | null
           reserved_period?: unknown
@@ -86,15 +91,18 @@ export type Database = {
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
           updated_at?: string
+          vat_id?: string | null
           vehicle_id: string
         }
         Update: {
           access_token?: string
+          company?: string | null
           created_at?: string
           customer_email?: string
           customer_name?: string
           customer_phone?: string
           id?: string
+          notes?: string | null
           pickup_date?: string
           reference?: string | null
           reserved_period?: unknown
@@ -102,6 +110,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
           updated_at?: string
+          vat_id?: string | null
           vehicle_id?: string
         }
         Relationships: [
@@ -230,12 +239,15 @@ export type Database = {
       base36_encode: { Args: { p_value: number }; Returns: string }
       create_reservation_request: {
         Args: {
+          p_company?: string
           p_customer_email: string
           p_customer_name: string
           p_customer_phone: string
+          p_notes?: string
           p_pickup: string
           p_return: string
           p_terms_accepted: boolean
+          p_vat_id?: string
           p_vehicle_id: string
         }
         Returns: {

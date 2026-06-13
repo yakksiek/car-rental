@@ -49,6 +49,12 @@ export interface CreateReservationInput {
   customer_email: string;
   customer_phone: string;
   terms_accepted: boolean;
+  // Optional B2B fields (S-02 Phase 5): captured on the form, stored for later
+  // invoicing (company/VAT) and surfaced to staff in S-03 (notes). Empty when
+  // a private customer skips them.
+  company?: string;
+  vat_id?: string;
+  notes?: string;
 }
 
 // Typed union over the RPC's result tag. `conflict` is the north-star case:

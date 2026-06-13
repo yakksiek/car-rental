@@ -90,4 +90,22 @@ describe("reservationRequestSchema", () => {
   it("rejects a malformed date before the range rule runs", () => {
     expect(messagesOf({ ...VALID, pickup: "24-03-2099" })).toContain("Nieprawidłowy format daty.");
   });
+
+  it("accepts optional B2B fields when present", () => {
+    const result = reservationRequestSchema.safeParse({
+      ...VALID,
+      company: "Trans-Bud Sp. z o.o.",
+      vat_id: "000-000-00-00",
+      notes: "Dodatkowy kierowca.",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty/omitted B2B fields (they are optional)", () => {
+    expect(reservationRequestSchema.safeParse({ ...VALID, company: "", vat_id: "", notes: "" }).success).toBe(true);
+  });
+
+  it("rejects an over-long B2B field", () => {
+    expect(messagesOf({ ...VALID, vat_id: "x".repeat(33) })).toContain("NIP jest za długi.");
+  });
 });

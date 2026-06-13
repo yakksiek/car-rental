@@ -153,7 +153,7 @@ export default function FilterBar({ initial }: Props) {
             </SelectContent>
           </Select>
 
-          <Button onClick={handleApply} className="h-10 rounded-full px-5 font-semibold">
+          <Button onClick={handleApply} className="rounded-button h-10 px-5 font-semibold">
             Zastosuj
           </Button>
         </div>

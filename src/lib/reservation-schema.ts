@@ -20,7 +20,16 @@ const MSG = {
   phone: "Podaj poprawny numer telefonu.",
   terms: "Zaakceptuj regulamin wynajmu.",
   honeypot: "Nieprawidłowe zgłoszenie.",
+  company: "Nazwa firmy jest za długa.",
+  vatId: "NIP jest za długi.",
+  notes: "Uwagi są za długie.",
 } as const;
+
+// Optional B2B field caps (Phase 5). Generous — these only guard against abuse,
+// not format; a private customer leaves them empty.
+const COMPANY_MAX = 200;
+const VAT_ID_MAX = 32;
+const NOTES_MAX = 1000;
 
 // PL-friendly phone: optional +prefix, then digits with optional spaces/dashes/
 // parentheses, 9–15 digits total (covers `600100200`, `+48 600 100 200`, …).
@@ -50,6 +59,11 @@ export const reservationRequestSchema = z
         return digits >= PHONE_DIGITS_MIN && digits <= PHONE_DIGITS_MAX;
       }, MSG.phone),
     terms_accepted: z.literal(true, MSG.terms),
+    // Optional B2B fields (Phase 5, desktop-2). Empty/omitted is valid; only an
+    // over-long value is rejected. The service normalizes blanks to null.
+    company: z.string().trim().max(COMPANY_MAX, MSG.company).optional(),
+    vat_id: z.string().trim().max(VAT_ID_MAX, MSG.vatId).optional(),
+    notes: z.string().trim().max(NOTES_MAX, MSG.notes).optional(),
     // Honeypot: a visually-hidden field real users never fill. Non-empty means
     // a bot; the API route short-circuits it to a benign success before this
     // schema runs, so a rejection here is defense-in-depth only.

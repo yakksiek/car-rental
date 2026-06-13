@@ -143,7 +143,7 @@ export default function HeroSearch({ category = null }: Props) {
         <button
           type="button"
           onClick={handleSearch}
-          className="bg-foreground text-background inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold transition hover:opacity-90"
+          className="bg-foreground text-background rounded-button inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 text-sm font-semibold transition hover:opacity-90"
         >
           <SearchIcon className="size-4" />
           Szukaj
