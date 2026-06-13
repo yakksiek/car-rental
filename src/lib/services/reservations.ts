@@ -3,7 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // others
 import type { Database } from "../../db/database.types";
-import type { CreateReservationInput, CreateReservationResult, ReservationStatusView } from "../../types";
+import type {
+  CreateReservationInput,
+  CreateReservationResult,
+  ReservationStatusView,
+  VehicleBusyRange,
+} from "../../types";
 
 // The single home for reservation data access (S-02). `reservations` is
 // anon-denied by design, so every call here crosses the RLS boundary through a
@@ -111,4 +116,27 @@ export async function isVehicleAvailable(
     throw error;
   }
   return data.length > 0;
+}
+
+/**
+ * Fetch the date bounds of a vehicle's blocking reservations (pending +
+ * confirmed) via the PII-safe `get_vehicle_busy_ranges` definer RPC. The
+ * booking calendar SSRs these in and greys the taken dates so a visitor never
+ * picks an unavailable range (S-02 Phase 6). Returns `[]` for a `null`/
+ * misconfigured client or a malformed id — the calendar simply greys nothing
+ * and the EXCLUDE constraint remains the backstop.
+ */
+export async function getVehicleBusyRanges(
+  client: ReservationClient | null,
+  vehicleId: string,
+): Promise<VehicleBusyRange[]> {
+  if (!client || !UUID_RE.test(vehicleId)) {
+    return [];
+  }
+
+  const { data, error } = await client.rpc("get_vehicle_busy_ranges", { p_vehicle_id: vehicleId });
+  if (error) {
+    throw error;
+  }
+  return data;
 }

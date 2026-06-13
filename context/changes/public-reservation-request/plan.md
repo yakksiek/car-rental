@@ -48,7 +48,7 @@ A visitor with no account can:
 - **No B2B fields (Company / VAT-NIP / Notes)** — the desktop "your details" optionals are dropped per the field-set decision (FR-004 names name/email/phone). The columns can be added later without rework.
 - **No registration plate, no branch/location** — the design's `WX 4827K` and `Warszawa · Mokotów` are fleet/location data absent from the schema; dropped (plate is S-04 territory; v1 is single-location). The summary shows make/model · year only.
 - **No Daily/Monthly pricing toggle** — ship the **Daily** estimate only (`daily_rate × dni`). The Monthly mode (which would need a months/duration model) is deferred; the toggle is omitted, not faked.
-- **No disabled/greyed booked dates in the calendar** — plain range picker, past dates disabled only (per the resolved design divergence). Availability is enforced by the RPC pre-check + the constraint. **(Phase 4 scope only — superseded by Phase 6, which greys per-vehicle pending+confirmed dates.)**
+- ~~**No disabled/greyed booked dates in the calendar** — plain range picker, past dates disabled only (per the resolved design divergence). Availability is enforced by the RPC pre-check + the constraint.~~ **Superseded by Phase 6:** the per-vehicle booking calendar now greys pending+confirmed dates (`get_vehicle_busy_ranges` SSR'd into `BookingWidget`); the EXCLUDE constraint stays the atomic backstop.
 - **No customer account, login, or "my reservations" list** — screen 15 is v2 (PRD §Non-Goals). Status is reachable only by the tokenized link.
 - **No payments / cost engine** — "no payment now"; the estimate is indicative. Out of v1.
 - **No alternative-date proposal flow** — the stepper copy mentions "or alternative dates," but proposing them is an employee action (S-03), not built here.
@@ -572,14 +572,14 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 6: Availability Transparency
 
 #### Automated
-- [ ] 6.1 Migration applies + types regenerate: `supabase db reset` + gen types
-- [ ] 6.2 Type checking passes: `npx astro check`
-- [ ] 6.3 Linting passes: `npm run lint`
-- [ ] 6.4 Build succeeds: `npm run build`
-- [ ] 6.5 Tests still pass: `npm test`
+- [x] 6.1 Migration applies + types regenerate: `supabase db reset` + gen types
+- [x] 6.2 Type checking passes: `npx astro check`
+- [x] 6.3 Linting passes: `npm run lint`
+- [x] 6.4 Build succeeds: `npm run build`
+- [x] 6.5 Tests still pass: `npm test`
 
 #### Manual
-- [ ] 6.6 Per-vehicle calendar greys pending + confirmed dates (confirmed always, pending as a hold); greyed range unselectable
-- [ ] 6.7 `get_vehicle_busy_ranges` is anon-executable, returns date ranges only (no PII); anon `reservations` select still denied
-- [ ] 6.8 Free range still submits; `EXCLUDE` still rejects a forced overlap (greying is UX sugar)
-- [ ] 6.9 design-system S-02 note + "What We're NOT Doing" line updated to reflect greying
+- [x] 6.6 Per-vehicle calendar greys pending + confirmed dates (confirmed always, pending as a hold); greyed range unselectable
+- [x] 6.7 `get_vehicle_busy_ranges` is anon-executable, returns date ranges only (no PII); anon `reservations` select still denied
+- [x] 6.8 Free range still submits; `EXCLUDE` still rejects a forced overlap (greying is UX sugar)
+- [x] 6.9 design-system S-02 note + "What We're NOT Doing" line updated to reflect greying

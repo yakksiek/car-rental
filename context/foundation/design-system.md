@@ -83,30 +83,36 @@ Folder: `screenshots/s-02-reservation-flow/`
 | File | Screen | Device |
 | --- | --- | --- |
 | `mobile-1-vehicle-detail.png` | Vehicle detail → "Check availability" | Customer · mobile (390×844) |
-| `mobile-2-reservation-form.png` | Reservation form + date-range picker (see divergence note below) | Customer · mobile |
+| `mobile-2-reservation-form.png` | Reservation form + date-range picker (see date-picker note below) | Customer · mobile |
 | `mobile-3-request-summary.png` | Review request (booking + customer details) | Customer · mobile |
 | `mobile-4-request-received.png` | Request received confirmation | Customer · mobile |
 | `desktop-1-vehicle-detail-dates.png` | Vehicle detail + booking widget (pickup/return date range, estimated total) | Customer · desktop (1440w) |
 | `desktop-2-your-details.png` | Your details (3-step: Dates → Your details → Confirm; B2B company/VAT optional; terms) | Customer · desktop |
 | `desktop-3-request-received.png` | Request received confirmation | Customer · desktop |
 
-> **Design divergence — the date picker does NOT pre-disable booked dates.** `mobile-2` and
-> `desktop-1` render individual dates struck-out with a *"booked or requested"* legend. The
-> shipped app does **not** do this. The date picker is a plain range calendar
-> (`src/components/ui/calendar.tsx`, `mode="range"`) that disables only past dates — see the
-> live patterns in `HeroSearch.tsx` (screen 07) and `FilterBar.tsx` (screen 08). **Reuse that
-> picker for the S-02 reservation form; do not gray out per-vehicle booked/requested dates.**
+> **Date picker — the per-vehicle booking calendar greys out booked dates.** `mobile-2` and
+> `desktop-1` render individual dates struck-out with a *"booked or requested"* legend, and the
+> shipped app now does this on the **per-vehicle** booking widget (`BookingWidget.tsx`): the
+> range calendar (`src/components/ui/calendar.tsx`, `mode="range"`) disables past dates **and**
+> the vehicle's taken dates — both **pending and confirmed** — Booking.com style, so a visitor
+> never picks an unavailable range.
 >
-> No-double-booking is real and blocks **both pending and confirmed** reservations — it's just
-> enforced by availability *filtering + conflict checks*, never by disabling calendar cells:
-> 1. **Catalog** — the `available_vehicles` RPC already excludes vehicles that overlap the
->    chosen range, so a vehicle reached from the filtered catalog is known-free for those dates.
-> 2. **Pre-submit (S-02)** — re-check client-side with `hasConflict` (`src/lib/availability.ts`,
->    the pure twin of the DB rule) before creating the request.
+> *(History: S-02 originally shipped a plain past-dates-only picker — the "no greying" divergence.
+> The product owner reversed that call in **Phase 6: Availability Transparency**, which is what the
+> per-vehicle greying above reflects. The catalog hero/filter calendars — `HeroSearch.tsx` (screen
+> 07), `FilterBar.tsx` (screen 08) — are unaffected: they search across the fleet via
+> `available_vehicles`, not per-vehicle, so they stay past-dates-only.)*
+>
+> No-double-booking is enforced at three points (greying is UX sugar, not the authority):
+> 1. **Catalog** — the `available_vehicles` RPC excludes vehicles that overlap the chosen range,
+>    so a vehicle reached from the filtered catalog is known-free for those dates.
+> 2. **Per-vehicle calendar (S-02, Phase 6)** — `get_vehicle_busy_ranges` (PII-safe definer RPC)
+>    is SSR'd in and greys the taken dates; a greyed range can't be selected. A pre-submit
+>    `available_vehicles` re-check still runs before the request is created.
 > 3. **Backstop** — the DB `EXCLUDE` constraint (migration `20260603155136`) is the atomic guard.
 >
-> Roadmap S-02 *"blocks overlapping dates before submission"* = the pre-submit `hasConflict`
-> check, not a disabled-date calendar. Copy stays Polish-canonical (e.g. *kaucja* = deposit).
+> Roadmap S-02 *"blocks overlapping dates before submission"* = greyed unavailable dates + the
+> pre-submit re-check + the constraint. Copy stays Polish-canonical (e.g. *kaucja* = deposit).
 
 ## Notes for implementation
 

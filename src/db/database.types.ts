@@ -278,6 +278,13 @@ export type Database = {
           vehicle_production_year: number
         }[]
       }
+      get_vehicle_busy_ranges: {
+        Args: { p_vehicle_id: string }
+        Returns: {
+          pickup_date: string
+          return_date: string
+        }[]
+      }
     }
     Enums: {
       app_role: "employee" | "admin"

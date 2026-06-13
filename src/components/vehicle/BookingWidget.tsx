@@ -3,12 +3,13 @@ import * as React from "react";
 import { navigate } from "astro:transitions/client";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import type { DateRange } from "react-day-picker";
+import type { DateRange, Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
 
 // others
+import type { VehicleBusyRange } from "../../types";
 import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
@@ -17,11 +18,11 @@ import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib
 // (design desktop-1). A sticky right-column card on desktop, an inline block +
 // sticky bottom bar on mobile. The visitor confirms a date range here; the
 // "Zarezerwuj" action carries the vehicle id + chosen dates to /reserve, which
-// resumes at step 2 ("Twoje dane"). The calendar is the plain range picker —
-// past dates disabled, booked dates NOT greyed (per the resolved design
-// divergence; per-vehicle greying is the Phase-6 product change). Pricing,
-// estimate, and date semantics reuse the same helpers the funnel and the
-// EXCLUDE constraint agree on, so steps cannot diverge.
+// resumes at step 2 ("Twoje dane"). The calendar greys out past dates AND the
+// vehicle's already-taken dates (pending + confirmed), Booking.com style, so a
+// visitor never picks an unavailable range (Phase 6). Pricing, estimate, and
+// date semantics reuse the same helpers the funnel and the EXCLUDE constraint
+// agree on, so steps cannot diverge; the constraint stays the atomic backstop.
 
 interface Props {
   vehicleId: string;
@@ -31,6 +32,8 @@ interface Props {
   deposit: string | number;
   initialPickup?: string | null;
   initialReturn?: string | null;
+  /** Pending + confirmed date bounds to grey out in the calendar (Phase 6). */
+  busyRanges?: VehicleBusyRange[];
 }
 
 const COPY = {
@@ -68,6 +71,7 @@ export default function BookingWidget({
   deposit,
   initialPickup = null,
   initialReturn = null,
+  busyRanges = [],
 }: Props) {
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initialPickup);
@@ -75,6 +79,25 @@ export default function BookingWidget({
     return from || to ? { from, to } : undefined;
   });
   const [error, setError] = React.useState<string | null>(null);
+
+  // Disabled-day matchers: past dates plus every taken range. Each busy range is
+  // greyed INCLUSIVE of both bounds (`[pickup_date, return_date]`) — the days
+  // strictly inside are fully occupied, and the two changeover days are each
+  // free only for half a day (return morning / pickup afternoon), which a
+  // whole-day cell can't express, so we grey them conservatively rather than
+  // ever offer a date the EXCLUDE constraint would reject. `excludeDisabled`
+  // resets the selection if a chosen range would span any greyed day.
+  const disabledDays = React.useMemo<Matcher[]>(() => {
+    const matchers: Matcher[] = [{ before: new Date(new Date().setHours(0, 0, 0, 0)) }];
+    for (const busy of busyRanges) {
+      const from = fromIsoDate(busy.pickup_date);
+      const to = fromIsoDate(busy.return_date);
+      if (from && to) {
+        matchers.push({ from, to });
+      }
+    }
+    return matchers;
+  }, [busyRanges]);
 
   const pickupIso = range?.from ? toIsoDate(range.from) : null;
   const returnIso = range?.to ? toIsoDate(range.to) : null;
@@ -137,10 +160,10 @@ export default function BookingWidget({
         ))}
       </div>
 
-      {/* Calendar — plain range picker; past disabled, NO booked-date greying.
-          Capped to a centered max-width so the desktop column can't stretch it
-          into loose wide cells, and on a transparent ground so it reads as part
-          of the card rather than a grey block. */}
+      {/* Calendar — range picker; past dates AND the vehicle's taken dates greyed
+          (Phase 6). Capped to a centered max-width so the desktop column can't
+          stretch it into loose wide cells, and on a transparent ground so it
+          reads as part of the card rather than a grey block. */}
       <div className="mx-auto mt-3 w-full max-w-[300px]">
         <Calendar
           mode="range"
@@ -150,7 +173,8 @@ export default function BookingWidget({
             setError(null);
           }}
           numberOfMonths={1}
-          disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+          disabled={disabledDays}
+          excludeDisabled
           locale={pl}
           formatters={{
             formatCaption: (date) => format(date, "LLLL yyyy", { locale: pl }).toUpperCase(),

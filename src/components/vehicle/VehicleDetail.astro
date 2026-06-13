@@ -7,7 +7,7 @@ import SpecIcon from "./SpecIcon.astro";
 import BookingWidget from "./BookingWidget.tsx";
 
 // others
-import type { Vehicle } from "../../types";
+import type { Vehicle, VehicleBusyRange } from "../../types";
 import { categoryLabelPl, fuelLabelPl, formatPayloadKg, formatCargoDims, transmissionLabelPl } from "../../lib/format";
 
 // The vehicle detail page — also step 1 ("Daty") of the reservation flow
@@ -23,9 +23,11 @@ interface Props {
   vehicle: Vehicle;
   pickup?: string | null;
   returnDate?: string | null;
+  /** Pending + confirmed date bounds the booking calendar greys out (Phase 6). */
+  busyRanges?: VehicleBusyRange[];
 }
 
-const { vehicle, pickup, returnDate } = Astro.props;
+const { vehicle, pickup, returnDate, busyRanges = [] } = Astro.props;
 
 const title = [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ");
 
@@ -169,6 +171,7 @@ const trust = [
         deposit={vehicle.deposit}
         initialPickup={pickup}
         initialReturn={returnDate}
+        busyRanges={busyRanges}
       />
     </div>
   </div>
