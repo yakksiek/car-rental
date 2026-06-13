@@ -48,7 +48,7 @@ A visitor with no account can:
 - **No B2B fields (Company / VAT-NIP / Notes)** — the desktop "your details" optionals are dropped per the field-set decision (FR-004 names name/email/phone). The columns can be added later without rework.
 - **No registration plate, no branch/location** — the design's `WX 4827K` and `Warszawa · Mokotów` are fleet/location data absent from the schema; dropped (plate is S-04 territory; v1 is single-location). The summary shows make/model · year only.
 - **No Daily/Monthly pricing toggle** — ship the **Daily** estimate only (`daily_rate × dni`). The Monthly mode (which would need a months/duration model) is deferred; the toggle is omitted, not faked.
-- **No disabled/greyed booked dates in the calendar** — plain range picker, past dates disabled only (per the resolved design divergence). Availability is enforced by the RPC pre-check + the constraint.
+- **No disabled/greyed booked dates in the calendar** — plain range picker, past dates disabled only (per the resolved design divergence). Availability is enforced by the RPC pre-check + the constraint. **(Phase 4 scope only — superseded by Phase 6, which greys per-vehicle pending+confirmed dates.)**
 - **No customer account, login, or "my reservations" list** — screen 15 is v2 (PRD §Non-Goals). Status is reachable only by the tokenized link.
 - **No payments / cost engine** — "no payment now"; the estimate is indicative. Out of v1.
 - **No alternative-date proposal flow** — the stepper copy mentions "or alternative dates," but proposing them is an employee action (S-03), not built here.
@@ -370,6 +370,8 @@ Confirm serif-vs-sans title (D19).
 Daily/Monthly toggle (D22), plate/branch data (D6 — needs schema/data), reference format
 `R-YYMM-NNNN` (D20 — RPC). The mobile sticky CTA (D21) is covered by items 1/3.
 
+> **Availability greying lives in Phase 6**, not here — Phase 5 is visual fidelity only.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -385,6 +387,70 @@ Daily/Monthly toggle (D22), plate/branch data (D6 — needs schema/data), refere
 
 **Implementation Note**: Do not start Phase 5 until Phase 4's functional manual checks (4.5, 4.8,
 4.9, 4.10) are confirmed and the Option A/B flow decision is made.
+
+---
+
+## Phase 6: Availability Transparency (grey out unavailable dates)
+
+### Overview
+
+**Decision (product owner):** reverse the "no greying" design call. Today a customer picks dates
+blindly and only learns at submit that the vehicle is taken (the conflict is caught by the pre-check
++ `EXCLUDE` constraint, so double-booking is impossible — but the UX is "guess again"). Instead, the
+per-vehicle calendar should **grey out the dates already taken**, Booking.com style, so the customer
+never picks an unavailable range. This is a behavioral/product change (not a design-fidelity D-item),
+independent of Phase 5, and it **overrides** the design-system S-02 divergence note ("do NOT grey
+booked dates") and this plan's "What We're NOT Doing" line.
+
+### Changes Required:
+
+#### 1. PII-safe busy-ranges RPC
+
+**File**: new `supabase/migrations/*_vehicle_busy_ranges.sql`; regen `src/db/database.types.ts`.
+**Contract**: `get_vehicle_busy_ranges(p_vehicle_id uuid)` returns **only** `[pickup_date,
+return_date]` rows for that vehicle's `pending` + `confirmed` reservations — no names, no reference,
+no PII. `language sql stable security definer set search_path = ''`; schema-qualified; `grant
+execute … to anon, authenticated`. Mirrors the `available_vehicles` definer-RPC hygiene.
+
+#### 2. Calendar greys the busy ranges
+
+**Files**: the per-vehicle date picker (Phase-5 step-1 booking widget / `ReservationForm.tsx`) +
+its host page. The browser can't call Supabase (server-only creds), so **SSR the busy ranges into
+the page on load** (per-vehicle, known then) and pass them to the island. The calendar disables
+those ranges via react-day-picker's `disabled` matcher, alongside the existing past-date disabling.
+Reuse `bookingWindow` semantics so greyed cells match the `EXCLUDE` window exactly.
+
+#### 3. Pending vs confirmed
+
+**Confirmed** dates greyed always; **pending** greyed as a hold. The `EXCLUDE` constraint stays as
+the atomic backstop. Catalog hero/filter calendars are unaffected (they search across vehicles via
+`available_vehicles`, not per-vehicle).
+
+#### 4. Docs reversal
+
+Update the design-system S-02 divergence note and this plan's "What We're NOT Doing: No
+disabled/greyed booked dates" line — both superseded by this phase.
+
+**Out of scope (future):** pending-hold **expiry** (auto-release pending dates after N hours) so an
+abandoned request doesn't falsely lock a vehicle. Note it; don't build it here.
+
+### Success Criteria:
+
+#### Automated Verification:
+- Migration applies + types regenerate: `supabase db reset`, `supabase gen types`.
+- `npx astro check`, `npm run lint`, `npm run build`, `npm test` all green.
+
+#### Manual Verification:
+- The per-vehicle calendar greys the vehicle's pending + confirmed dates (confirmed always, pending
+  as a hold); a greyed range cannot be selected.
+- `get_vehicle_busy_ranges` is anon-executable and returns date ranges only — no PII; a direct anon
+  `select` on `reservations` is still denied.
+- A free range still submits; the `EXCLUDE` constraint still rejects a forced overlap (greying is
+  UX sugar, not the authority).
+
+**Implementation Note**: Phase 6 is independent of Phase 5 and can ship on its own; it depends only
+on the Phase-1 schema. If Phase 5 Option A lands first, the calendar host is the detail-page booking
+widget; otherwise it's `/reserve`.
 
 ---
 
@@ -502,3 +568,18 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 - [ ] 5.9 Request-received matches desktop-3 (green badge, 3 cards, summary, 2 buttons) (D14–D19)
 - [ ] 5.10 Mobile form CTA matches mobile-2 (full-width action, no truncation) (D21)
 - [ ] 5.11 Optional items triaged (toggle/plate/branch/ref-format) — done or explicitly deferred
+
+### Phase 6: Availability Transparency
+
+#### Automated
+- [ ] 6.1 Migration applies + types regenerate: `supabase db reset` + gen types
+- [ ] 6.2 Type checking passes: `npx astro check`
+- [ ] 6.3 Linting passes: `npm run lint`
+- [ ] 6.4 Build succeeds: `npm run build`
+- [ ] 6.5 Tests still pass: `npm test`
+
+#### Manual
+- [ ] 6.6 Per-vehicle calendar greys pending + confirmed dates (confirmed always, pending as a hold); greyed range unselectable
+- [ ] 6.7 `get_vehicle_busy_ranges` is anon-executable, returns date ranges only (no PII); anon `reservations` select still denied
+- [ ] 6.8 Free range still submits; `EXCLUDE` still rejects a forced overlap (greying is UX sugar)
+- [ ] 6.9 design-system S-02 note + "What We're NOT Doing" line updated to reflect greying
