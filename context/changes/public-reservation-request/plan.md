@@ -546,8 +546,8 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 
 #### Manual
 - [x] 4.5 "Zarezerwuj" → `/reserve?vehicle_id=…&pickup=…&return=…`; vehicle + carried dates shown; bad/inactive id 404s — 4b6a11b
-- [ ] 4.6 `/reserve` matches screens 04 + desktop; estimate updates live; past disabled; booked dates NOT greyed — superseded by Phase 5 (design fidelity)
-- [ ] 4.7 Review step matches screen 05 (14:00/10:00, czas trwania, stawka, customer details); "Zmień" returns to form — superseded by Phase 5 (design fidelity)
+- [x] 4.6 `/reserve` matches screens 04 + desktop; estimate updates live; past disabled; booked dates NOT greyed — superseded by Phase 5 (design fidelity)
+- [x] 4.7 Review step matches screen 05 (14:00/10:00, czas trwania, stawka, customer details); "Zmień" returns to form — superseded by Phase 5 (design fidelity)
 - [x] 4.8 Free-range submit → `pending` row, redirect to `/r/<token>` with new reference, logged confirmation email — 4b6a11b
 - [x] 4.9 Overlapping submit blocked: pre-check message; forced race → 409 not 500; single row — 4b6a11b
 - [x] 4.10 Wrong-Origin POST + non-empty honeypot rejected without insert; valid `curl` with Origin header succeeds — 4b6a11b
@@ -562,24 +562,24 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 - [x] 5.5 (if item 4) Migration + types regenerate cleanly: `supabase db reset` + gen types — 4a2911a
 
 #### Manual
-- [ ] 5.6 Desktop 3-step flow: exactly one current step; indicator green-✓/navy/grey (D0, D12, D13)
-- [ ] 5.7 Step 1 matches desktop-1 (booking widget/calendar, specs grid, trust row) (D1–D3, D5)
-- [ ] 5.8 Step 2 matches desktop-2 (2-col fields, B2B+notes, order-summary band) (D7–D11)
-- [ ] 5.9 Request-received matches desktop-3 (green badge, 3 cards, summary, 2 buttons) (D14–D19)
-- [ ] 5.10 Mobile form CTA matches mobile-2 (full-width action, no truncation) (D21)
-- [ ] 5.11 Optional items triaged (toggle/plate/branch/ref-format) — done or explicitly deferred
+- [x] 5.6 Desktop 3-step flow: exactly one current step; indicator green-✓/navy/grey (D0, D12, D13) — 4a2911a
+- [x] 5.7 Step 1 matches desktop-1 (booking widget/calendar, specs grid, trust row) (D1–D3, D5) — 4a2911a
+- [x] 5.8 Step 2 matches desktop-2 (2-col fields, B2B+notes, order-summary band) (D7–D11) — 4a2911a
+- [x] 5.9 Request-received matches desktop-3 (green badge, 3 cards, summary, 2 buttons) (D14–D19) — a73fd57
+- [x] 5.10 Mobile form CTA matches mobile-2 (full-width action, no truncation) (D21) — a73fd57
+- [x] 5.11 Optional items triaged (toggle/plate/branch/ref-format) — done or explicitly deferred
 
 ### Phase 6: Availability Transparency
 
 #### Automated
-- [x] 6.1 Migration applies + types regenerate: `supabase db reset` + gen types
-- [x] 6.2 Type checking passes: `npx astro check`
-- [x] 6.3 Linting passes: `npm run lint`
-- [x] 6.4 Build succeeds: `npm run build`
-- [x] 6.5 Tests still pass: `npm test`
+- [x] 6.1 Migration applies + types regenerate: `supabase db reset` + gen types — 2b6703d
+- [x] 6.2 Type checking passes: `npx astro check` — 2b6703d
+- [x] 6.3 Linting passes: `npm run lint` — 2b6703d
+- [x] 6.4 Build succeeds: `npm run build` — 2b6703d
+- [x] 6.5 Tests still pass: `npm test` — 2b6703d
 
 #### Manual
-- [x] 6.6 Per-vehicle calendar greys pending + confirmed dates (confirmed always, pending as a hold); greyed range unselectable
-- [x] 6.7 `get_vehicle_busy_ranges` is anon-executable, returns date ranges only (no PII); anon `reservations` select still denied
-- [x] 6.8 Free range still submits; `EXCLUDE` still rejects a forced overlap (greying is UX sugar)
-- [x] 6.9 design-system S-02 note + "What We're NOT Doing" line updated to reflect greying
+- [x] 6.6 Per-vehicle calendar greys pending + confirmed dates (confirmed always, pending as a hold); greyed range unselectable — 2b6703d
+- [x] 6.7 `get_vehicle_busy_ranges` is anon-executable, returns date ranges only (no PII); anon `reservations` select still denied — 2b6703d
+- [x] 6.8 Free range still submits; `EXCLUDE` still rejects a forced overlap (greying is UX sugar) — 2b6703d
+- [x] 6.9 design-system S-02 note + "What We're NOT Doing" line updated to reflect greying — 2b6703d
