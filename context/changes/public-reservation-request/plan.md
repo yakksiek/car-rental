@@ -297,6 +297,95 @@ The interactive funnel: `/reserve` SSR-renders the chosen vehicle and hosts the 
 
 **Implementation Note**: After this phase and all automated verification passes, pause for final manual confirmation.
 
+> **Design fidelity deferred to Phase 5.** Phase 4 delivers the *functional* funnel; the design-fidelity manual rows (4.6 / 4.7, "matches screens …") are superseded by **Phase 5: Design Alignment**, which closes the layout/structure/style gaps (D0–D24) found during manual review. Phase 4 stays as built.
+
+---
+
+## Phase 5: Design Alignment (funnel ↔ S-02 hi-fi)
+
+### Overview
+
+Phase 4 shipped a working funnel; manual review against the S-02 hi-fi design
+(`s-02-reservation-flow/desktop-1..3`, `mobile-2..4`) found 25 layout/structure/style gaps
+(D0–D24, catalogued in the change folder). This phase aligns the funnel to the design: a true
+3-step desktop wizard, the design's step-indicator styling, the "Your details" 2-column layout
+with an order summary, optional B2B fields, and a redesigned request-received screen. Two items
+reopen earlier slices — B2B fields touch the Phase-1 schema/RPC, and the step-1 booking widget
+touches the S-01 vehicle-detail page.
+
+**Flow decision (resolve before starting):**
+- **Option A (recommended, design-faithful):** the **vehicle-detail page becomes step 1 "Daty"** —
+  add a right-column booking widget (pickup/return, calendar, breakdown, Estimated total,
+  "Zarezerwuj"). `/reserve` reduces to **step 2 "Twoje dane"** (no calendar) + **step 3 review**.
+  Touches `VehicleDetail.astro` (S-01).
+- **Option B (contained):** keep `/reserve` as the funnel; make it a real 3-step (vehicle+calendar
+  → details → review). Doesn't touch S-01, but re-shows the vehicle/specs the user just left.
+
+### Changes Required:
+
+#### 1. Flow → true 3-step wizard (D0, D1, D13)
+
+**Files**: `src/components/vehicle/VehicleDetail.astro` + `src/pages/fleet/[id]/[...slug].astro`
+(Option A step 1), `src/pages/reserve.astro`, `src/components/reservation/ReservationForm.tsx`.
+
+**Intent**: exactly one current step at a time; calendar lives on step 1 only; the indicator
+appears from step 2. Reuse `src/components/ui/calendar.tsx`, `validateDateRange`, `estimatedTotal`.
+
+#### 2. Step-indicator restyle (D12)
+
+**File**: `src/components/reservation/ReservationForm.tsx`. done = **green circle + ✓**, current =
+**navy-filled** number, upcoming = grey. (Replaces the crimson done/current.)
+
+#### 3. "Your details" layout + order-summary sidebar (D8, D9, D10, D11, D23)
+
+**File**: `src/components/reservation/ReservationForm.tsx`. 2-col field grid (name|phone, email
+full-width, company|vat, notes full-width); eyebrow "REQUEST THIS VEHICLE" + serif "Twoje dane."
+header; "‹ Wróć do pojazdu" + "Wyślij zgłoszenie →" buttons; right ORDER SUMMARY card with vehicle
+thumb, Pickup/Return(/Branch) rows, `stawka × dni`, Deposit, and a **navy "Szacunkowa cena" band**.
+
+#### 4. B2B + notes fields (D7) — schema + RPC
+
+**Files**: new `supabase/migrations/*_reservation_b2b_fields.sql` (add `company text`, `vat_id text`,
+`notes text` to `reservations`; extend `create_reservation_request` params), regen
+`src/db/database.types.ts`, extend `src/lib/reservation-schema.ts` + `src/types.ts`, add optional
+UI inputs. Company/VAT captured but unused downstream for now; notes surfaced to staff later (S-03).
+
+#### 5. Detail-page specs grid + trust row + reassurance copy (D2, D3, D5)
+
+**File**: `src/components/vehicle/VehicleDetail.astro`. 3-col specs grid with icons; "Pay at
+pick-up / Fully insured / 24·7" feature row; "Bez konta · darmowa anulacja do 24h przed odbiorem"
+under the CTA.
+
+#### 6. Request-received redesign (D14–D19)
+
+**Files**: `src/pages/r/[token].astro`, `src/components/reservation/ReservationStatusCard.astro`,
+`src/components/reservation/StatusStepper.astro`, `src/lib/reservation-status.ts`. Green check
+badge; reference in crimson mono **above** the title; **three horizontal "Co dalej" cards**
+(clock/chat/key, number top-right) replacing the vertical stepper; horizontal summary card (price
+right, "Potwierdzenie wysłano na …"); two buttons ("Wróć do floty" + navy "Przeglądaj flotę →").
+Confirm serif-vs-sans title (D19).
+
+#### 7. Optional scope (triage before starting; default: defer)
+
+Daily/Monthly toggle (D22), plate/branch data (D6 — needs schema/data), reference format
+`R-YYMM-NNNN` (D20 — RPC). The mobile sticky CTA (D21) is covered by items 1/3.
+
+### Success Criteria:
+
+#### Automated Verification:
+- `npx astro check`, `npm run lint`, `npm run build`, `npm test` all green.
+- If item 4 lands: `supabase db reset` applies cleanly; `supabase gen types` regenerates; the
+  `create_reservation_request` RPC still returns `created` / `conflict` / `unavailable`.
+
+#### Manual Verification:
+- Desktop step 1/2/3 + request-received each match the design closely; **exactly one current step**.
+- Step indicator uses green-✓ / navy-current / grey-upcoming.
+- Optional company/VAT/notes accept and persist; empty stays valid.
+- Mobile form CTA matches `mobile-2` (full-width action under the estimate band; no truncation).
+
+**Implementation Note**: Do not start Phase 5 until Phase 4's functional manual checks (4.5, 4.8,
+4.9, 4.10) are confirmed and the Option A/B flow decision is made.
+
 ---
 
 ## Testing Strategy
@@ -396,3 +485,20 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 - [ ] 4.8 Free-range submit → `pending` row, redirect to `/r/<token>` with new reference, logged confirmation email
 - [ ] 4.9 Overlapping submit blocked: pre-check message; forced race → 409 not 500; single row
 - [ ] 4.10 Wrong-Origin POST + non-empty honeypot rejected without insert; valid `curl` with Origin header succeeds
+
+### Phase 5: Design Alignment
+
+#### Automated
+- [ ] 5.1 Type checking passes: `npx astro check`
+- [ ] 5.2 Linting passes: `npm run lint`
+- [ ] 5.3 Build succeeds: `npm run build`
+- [ ] 5.4 Tests still pass: `npm test`
+- [ ] 5.5 (if item 4) Migration + types regenerate cleanly: `supabase db reset` + gen types
+
+#### Manual
+- [ ] 5.6 Desktop 3-step flow: exactly one current step; indicator green-✓/navy/grey (D0, D12, D13)
+- [ ] 5.7 Step 1 matches desktop-1 (booking widget/calendar, specs grid, trust row) (D1–D3, D5)
+- [ ] 5.8 Step 2 matches desktop-2 (2-col fields, B2B+notes, order-summary band) (D7–D11)
+- [ ] 5.9 Request-received matches desktop-3 (green badge, 3 cards, summary, 2 buttons) (D14–D19)
+- [ ] 5.10 Mobile form CTA matches mobile-2 (full-width action, no truncation) (D21)
+- [ ] 5.11 Optional items triaged (toggle/plate/branch/ref-format) — done or explicitly deferred
