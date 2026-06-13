@@ -539,18 +539,18 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 4: Reservation Funnel (`/reserve` + island + API route)
 
 #### Automated
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes (no `@/` imports remain): `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 Tests still pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check` — 4b6a11b
+- [x] 4.2 Linting passes (no `@/` imports remain): `npm run lint` — 4b6a11b
+- [x] 4.3 Build succeeds: `npm run build` — 4b6a11b
+- [x] 4.4 Tests still pass: `npm test` — 4b6a11b
 
 #### Manual
-- [ ] 4.5 "Zarezerwuj" → `/reserve?vehicle_id=…&pickup=…&return=…`; vehicle + carried dates shown; bad/inactive id 404s
-- [ ] 4.6 `/reserve` matches screens 04 + desktop; estimate updates live; past disabled; booked dates NOT greyed
-- [ ] 4.7 Review step matches screen 05 (14:00/10:00, czas trwania, stawka, customer details); "Zmień" returns to form
-- [ ] 4.8 Free-range submit → `pending` row, redirect to `/r/<token>` with new reference, logged confirmation email
-- [ ] 4.9 Overlapping submit blocked: pre-check message; forced race → 409 not 500; single row
-- [ ] 4.10 Wrong-Origin POST + non-empty honeypot rejected without insert; valid `curl` with Origin header succeeds
+- [x] 4.5 "Zarezerwuj" → `/reserve?vehicle_id=…&pickup=…&return=…`; vehicle + carried dates shown; bad/inactive id 404s — 4b6a11b
+- [ ] 4.6 `/reserve` matches screens 04 + desktop; estimate updates live; past disabled; booked dates NOT greyed — superseded by Phase 5 (design fidelity)
+- [ ] 4.7 Review step matches screen 05 (14:00/10:00, czas trwania, stawka, customer details); "Zmień" returns to form — superseded by Phase 5 (design fidelity)
+- [x] 4.8 Free-range submit → `pending` row, redirect to `/r/<token>` with new reference, logged confirmation email — 4b6a11b
+- [x] 4.9 Overlapping submit blocked: pre-check message; forced race → 409 not 500; single row — 4b6a11b
+- [x] 4.10 Wrong-Origin POST + non-empty honeypot rejected without insert; valid `curl` with Origin header succeeds — 4b6a11b
 
 ### Phase 5: Design Alignment
 
