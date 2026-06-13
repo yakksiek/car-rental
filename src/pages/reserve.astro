@@ -1,0 +1,93 @@
+---
+// components
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
+import ReservationForm from "../components/reservation/ReservationForm.tsx";
+
+// others
+import { validateDateRange } from "../lib/catalog-filters";
+import { getVehicleById } from "../lib/services/vehicles";
+
+// The reservation funnel entry (design screens 04 / mobile-2 + desktop set) —
+// the destination of the catalog's "Zarezerwuj" CTA. SSR resolves the chosen
+// vehicle (missing/inactive/malformed id → styled 404, RLS hides inactive rows)
+// and hosts the ReservationForm island, seeding it with the carried date range
+// when the query string holds a valid one (an invalid range degrades to an
+// empty picker, never an error page). The funnel page is transactional and
+// per-vehicle — noindex, like the status page.
+
+const supabase = Astro.locals.supabase;
+const vehicleId = Astro.url.searchParams.get("vehicle_id");
+
+const vehicle = vehicleId ? await getVehicleById(supabase, vehicleId) : null;
+
+if (!vehicle) {
+  Astro.response.status = 404;
+}
+
+// Carry the pre-selected range only when complete and valid under the booking
+// rule — the island re-validates anyway, but a bad URL should not pre-fill it.
+const rawPickup = Astro.url.searchParams.get("pickup");
+const rawReturn = Astro.url.searchParams.get("return");
+const carryDates = Boolean(rawPickup && rawReturn && validateDateRange(rawPickup, rawReturn).ok);
+
+// Back to the vehicle detail, keeping the carried range so its CTA stays pre-filled.
+const backParams = new URLSearchParams();
+if (carryDates && rawPickup && rawReturn) {
+  backParams.set("pickup", rawPickup);
+  backParams.set("return", rawReturn);
+}
+const backQuery = backParams.toString();
+const backHref = vehicle ? `/fleet/${vehicle.id}${backQuery ? `?${backQuery}` : ""}` : "/fleet";
+
+const title = vehicle ? [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ") : null;
+---
+
+<Layout title="Rezerwacja — Flota">
+  <meta slot="head" name="robots" content="noindex" />
+  <SiteHeader />
+  {
+    vehicle ? (
+      <main class="mx-auto max-w-2xl px-5 pb-6 sm:px-8 lg:max-w-5xl">
+        {/* The step-aware header (back chevron + "Rezerwacja") lives inside the
+            island so the chevron can walk back one step on review; the chosen
+            vehicle card is slotted in as server-rendered content. */}
+        <ReservationForm
+          client:load
+          vehicle={{ id: vehicle.id, dailyRate: vehicle.daily_rate, deposit: vehicle.deposit }}
+          backHref={backHref}
+          initialPickup={carryDates ? rawPickup : null}
+          initialReturn={carryDates ? rawReturn : null}
+        >
+          {/* Chosen vehicle (no plate — make/model · year only) */}
+          <div class="bg-card shadow-card mb-6 flex items-center gap-4 rounded-2xl p-5 lg:max-w-[calc(100%-400px)]">
+            <div class="text-foreground w-24 shrink-0">
+              <VehicleSilhouette category={vehicle.category} alt={title ?? ""} />
+            </div>
+            <div class="min-w-0">
+              <p class="text-foreground truncate text-base font-bold tracking-tight">{title}</p>
+              {vehicle.production_year && <p class="text-muted-foreground text-sm">{vehicle.production_year}</p>}
+            </div>
+          </div>
+        </ReservationForm>
+      </main>
+    ) : (
+      <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
+          Ten pojazd nie istnieje lub nie jest już dostępny w naszej flocie.
+        </p>
+        <a
+          href="/fleet"
+          class="bg-foreground text-background mt-7 inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold"
+        >
+          Wróć do floty
+        </a>
+      </main>
+    )
+  }
+  <SiteFooter />
+</Layout>
