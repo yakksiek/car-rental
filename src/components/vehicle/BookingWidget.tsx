@@ -9,7 +9,6 @@ import type { DateRange } from "react-day-picker";
 import { Calendar } from "../ui/calendar";
 
 // others
-import { cn } from "../../lib/utils";
 import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
@@ -201,24 +200,35 @@ export default function BookingWidget({
         {COPY.reassurance}
       </p>
 
-      {/* Mobile/tablet sticky CTA bar (the calendar is far up the page). */}
-      <div className="bg-primary text-primary-foreground fixed inset-x-0 bottom-0 z-10 lg:hidden">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold tracking-wide uppercase opacity-80">{COPY.estimate}</div>
-            <div className="text-xl font-bold tracking-tight">{hasEstimate ? formatPln(total) : "—"}</div>
-            <div className="truncate text-xs opacity-80">
-              {hasEstimate ? `${formatDuration(days)} × ${formatPln(dailyRate)} · ` : ""}+ kaucja {formatPln(deposit)}
+      {/* Mobile/tablet sticky CTA (matches funnel step 2/3): a crimson estimate
+          band stacked above a full-width crimson CTA. The calendar is far up the
+          page, so this is the persistent action. */}
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--flota-hair-2)] bg-[var(--flota-bg)]/92 backdrop-blur lg:hidden">
+        <div className="mx-auto max-w-3xl px-5 pt-4 pb-4 sm:px-8">
+          <div className="bg-primary text-primary-foreground rounded-button flex items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
+              <div className="mt-0.5 font-bold tracking-tight">
+                <span className="text-[2.5rem] leading-none">
+                  {hasEstimate ? formatPln(total).replace(/\s*zł$/, "") : "—"}
+                </span>
+                {hasEstimate && <span className="ml-1 text-lg">zł</span>}
+              </div>
+            </div>
+            <div className="shrink-0 text-right text-xs leading-snug opacity-80">
+              {hasEstimate && (
+                <div>
+                  {formatDuration(days)} × {formatPln(dailyRate)}
+                </div>
+              )}
+              <div>+ kaucja {formatPln(deposit)}</div>
             </div>
           </div>
           <button
             type="button"
             onClick={handleReserve}
             disabled={!hasEstimate}
-            className={cn(
-              "bg-background text-foreground rounded-button flex h-12 shrink-0 items-center justify-center gap-2 px-5 text-sm font-semibold transition hover:opacity-90",
-              !hasEstimate && "opacity-50",
-            )}
+            className="bg-primary text-primary-foreground rounded-button mt-2 flex h-13 w-full items-center justify-center gap-2 px-6 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)] disabled:opacity-50"
           >
             {COPY.cta}
             {arrow}

@@ -555,11 +555,11 @@ Phase 1's migration is additive (three columns + one unique constraint + two fun
 ### Phase 5: Design Alignment
 
 #### Automated
-- [x] 5.1 Type checking passes: `npx astro check`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Build succeeds: `npm run build`
-- [x] 5.4 Tests still pass: `npm test`
-- [x] 5.5 (if item 4) Migration + types regenerate cleanly: `supabase db reset` + gen types
+- [x] 5.1 Type checking passes: `npx astro check` — 4a2911a
+- [x] 5.2 Linting passes: `npm run lint` — 4a2911a
+- [x] 5.3 Build succeeds: `npm run build` — 4a2911a
+- [x] 5.4 Tests still pass: `npm test` — 4a2911a
+- [x] 5.5 (if item 4) Migration + types regenerate cleanly: `supabase db reset` + gen types — 4a2911a
 
 #### Manual
 - [ ] 5.6 Desktop 3-step flow: exactly one current step; indicator green-✓/navy/grey (D0, D12, D13)

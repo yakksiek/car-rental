@@ -4,12 +4,15 @@ import { cn } from "../../lib/utils";
 import { stepperFor, type StepState } from "../../lib/reservation-status";
 import type { ReservationStatus } from "../../types";
 
-// The "CO DALEJ" section (design desktop-3 / mobile-4): three horizontal cards,
-// each with a topic icon (top-left) and a step number (top-right), then a bold
-// title + one-line description. Driven by the Phase-2 step model (`stepperFor`).
-// The number badge carries the state — done = green check, current = navy
-// filled, upcoming = grey outline. Astro-only; a status change arrives via a
-// fresh page load.
+// The "CO DALEJ" section. Two layouts driven by the same Phase-2 step model
+// (`stepperFor`):
+//   • Mobile (< lg, design mobile-4): a vertical stepper — numbered circles
+//     joined by a connecting line, title + description to the right.
+//   • Desktop (lg+, design desktop-3): three horizontal cards, each a topic
+//     icon + step number, title + description.
+// The number badge carries the state in both — done = green check, current =
+// navy filled, upcoming = grey outline. Astro-only; a status change arrives via
+// a fresh page load.
 
 interface Props {
   status: ReservationStatus;
@@ -20,7 +23,7 @@ const { status, class: className } = Astro.props;
 
 const steps = stepperFor(status);
 
-// Number-badge styling per state.
+// Number-badge styling per state (shared by both layouts).
 const BADGE: Record<StepState, string> = {
   done: "bg-success text-white",
   current: "bg-foreground text-background",
@@ -30,7 +33,56 @@ const BADGE: Record<StepState, string> = {
 
 <section class:list={cn(className)}>
   <h2 class="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">Co dalej</h2>
-  <ol class:list={cn("mt-4 grid grid-cols-1 gap-3", steps.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+
+  <!-- Mobile: vertical stepper (design mobile-4). -->
+  <ol class="mt-4 lg:hidden">
+    {
+      steps.map((step, i) => (
+        <li class="flex gap-3.5">
+          <div class="flex flex-col items-center">
+            <span
+              class:list={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                BADGE[step.state],
+              )}
+            >
+              {step.state === "done" ? (
+                <svg
+                  class="size-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 13l4 4 10-10" />
+                </svg>
+              ) : (
+                i + 1
+              )}
+            </span>
+            {i < steps.length - 1 && <span class="my-1.5 w-px flex-1 bg-[var(--flota-hair-2)]" />}
+          </div>
+          <div class:list={cn("min-w-0 pt-0.5", i < steps.length - 1 && "pb-6")}>
+            <p
+              class:list={cn(
+                "text-sm leading-tight font-semibold",
+                step.state === "upcoming" ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
+              {step.label}
+            </p>
+            <p class="text-muted-foreground mt-1 text-sm leading-snug">{step.description}</p>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+
+  <!-- Desktop: horizontal cards (design desktop-3). -->
+  <ol class:list={cn("mt-4 hidden gap-3 lg:grid", steps.length >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
     {
       steps.map((step, i) => (
         <li
