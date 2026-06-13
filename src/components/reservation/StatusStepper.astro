@@ -4,12 +4,12 @@ import { cn } from "../../lib/utils";
 import { stepperFor, type StepState } from "../../lib/reservation-status";
 import type { ReservationStatus } from "../../types";
 
-// The "CO DALEJ" stepper (design screens 06 / mobile-4 / desktop-3). Pure
-// presentation over the Phase-2 step model (`stepperFor`): each step is a bold
-// title plus a one-line muted description; the current step is the crimson
-// numbered node, done steps show a check, upcoming steps are hollow and greyed.
-// Sits directly on the page background (no card), per the design. Astro-only —
-// a status change arrives via a fresh page load.
+// The "CO DALEJ" section (design desktop-3 / mobile-4): three horizontal cards,
+// each with a topic icon (top-left) and a step number (top-right), then a bold
+// title + one-line description. Driven by the Phase-2 step model (`stepperFor`).
+// The number badge carries the state — done = green check, current = navy
+// filled, upcoming = grey outline. Astro-only; a status change arrives via a
+// fresh page load.
 
 interface Props {
   status: ReservationStatus;
@@ -20,29 +20,62 @@ const { status, class: className } = Astro.props;
 
 const steps = stepperFor(status);
 
-const NODE_CLASSES: Record<StepState, string> = {
-  done: "bg-foreground text-background",
-  current: "bg-primary text-primary-foreground",
-  upcoming: "border border-[var(--flota-hair-2)] bg-card text-muted-foreground",
+// Number-badge styling per state.
+const BADGE: Record<StepState, string> = {
+  done: "bg-success text-white",
+  current: "bg-foreground text-background",
+  upcoming: "bg-background text-muted-foreground border border-[var(--flota-hair-2)]",
 };
 ---
 
 <section class:list={cn(className)}>
   <h2 class="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">Co dalej</h2>
-  <ol class="mt-4">
+  <ol class:list={cn("mt-4 grid grid-cols-1 gap-3", steps.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
     {
       steps.map((step, i) => (
-        <li class="flex gap-3.5">
-          <div class="flex flex-col items-center">
+        <li
+          class:list={cn(
+            "bg-card shadow-card rounded-2xl p-5",
+            step.state === "current" && "ring-foreground/10 ring-1",
+          )}
+        >
+          <div class="flex items-start justify-between">
+            <span class="bg-background text-foreground flex size-9 items-center justify-center rounded-full">
+              <svg
+                class="size-[18px]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                {step.icon === "clock" && (
+                  <>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </>
+                )}
+                {step.icon === "chat" && <path d="M4 5h16v11H8l-4 4z" />}
+                {step.icon === "key" && (
+                  <>
+                    <circle cx="8" cy="8" r="4" />
+                    <path d="M11 11l8 8M16 16l2-2M19 19l2-2" />
+                  </>
+                )}
+                {step.icon === "x" && <path d="M6 6l12 12M18 6L6 18" />}
+              </svg>
+            </span>
             <span
               class:list={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold",
-                NODE_CLASSES[step.state],
+                "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
+                BADGE[step.state],
               )}
             >
               {step.state === "done" ? (
                 <svg
-                  class="size-4"
+                  class="size-3.5"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -57,19 +90,16 @@ const NODE_CLASSES: Record<StepState, string> = {
                 i + 1
               )}
             </span>
-            {i < steps.length - 1 && <span class="my-1.5 w-px flex-1 bg-[var(--flota-hair-2)]" />}
           </div>
-          <div class:list={cn("min-w-0 pt-1.5", i < steps.length - 1 && "pb-7")}>
-            <p
-              class:list={cn(
-                "text-sm leading-tight font-semibold",
-                step.state === "upcoming" ? "text-muted-foreground" : "text-foreground",
-              )}
-            >
-              {step.label}
-            </p>
-            <p class="text-muted-foreground mt-1 text-sm leading-snug">{step.description}</p>
-          </div>
+          <p
+            class:list={cn(
+              "mt-3 text-sm font-semibold tracking-tight",
+              step.state === "upcoming" ? "text-muted-foreground" : "text-foreground",
+            )}
+          >
+            {step.label}
+          </p>
+          <p class="text-muted-foreground mt-1 text-sm leading-snug">{step.description}</p>
         </li>
       ))
     }

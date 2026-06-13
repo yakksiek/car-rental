@@ -10,68 +10,79 @@ import ReservationForm from "../components/reservation/ReservationForm.tsx";
 import { validateDateRange } from "../lib/catalog-filters";
 import { getVehicleById } from "../lib/services/vehicles";
 
-// The reservation funnel entry (design screens 04 / mobile-2 + desktop set) —
-// the destination of the catalog's "Zarezerwuj" CTA. SSR resolves the chosen
-// vehicle (missing/inactive/malformed id → styled 404, RLS hides inactive rows)
-// and hosts the ReservationForm island, seeding it with the carried date range
-// when the query string holds a valid one (an invalid range degrades to an
-// empty picker, never an error page). The funnel page is transactional and
-// per-vehicle — noindex, like the status page.
+// Reservation flow step 2 — "Twoje dane" (design desktop-2 / mobile-3). The
+// date range is chosen at step 1 on the vehicle detail page (the BookingWidget),
+// so this page REQUIRES a valid carried range: SSR resolves the vehicle
+// (missing/inactive/malformed id → styled 404) and, when the range is absent or
+// invalid, shows a "pick your dates" prompt linking back to step 1. Otherwise it
+// hosts the ReservationForm island (customer fields + order summary), which
+// submits to POST /api/reservations and redirects to /r/<token> (step 3). The
+// funnel is transactional and per-vehicle — noindex, like the status page.
 
 const supabase = Astro.locals.supabase;
 const vehicleId = Astro.url.searchParams.get("vehicle_id");
 
 const vehicle = vehicleId ? await getVehicleById(supabase, vehicleId) : null;
 
+const rawPickup = Astro.url.searchParams.get("pickup");
+const rawReturn = Astro.url.searchParams.get("return");
+const datesOk = Boolean(rawPickup && rawReturn && validateDateRange(rawPickup, rawReturn).ok);
+
+// Dates live on step 1 now. A real vehicle reached without a valid range
+// (manual URL, stale link) gets a prompt back to step 1 rather than a broken
+// form; a missing/inactive vehicle is a 404.
+const needsDates = Boolean(vehicle) && !datesOk;
 if (!vehicle) {
   Astro.response.status = 404;
 }
 
-// Carry the pre-selected range only when complete and valid under the booking
-// rule — the island re-validates anyway, but a bad URL should not pre-fill it.
-const rawPickup = Astro.url.searchParams.get("pickup");
-const rawReturn = Astro.url.searchParams.get("return");
-const carryDates = Boolean(rawPickup && rawReturn && validateDateRange(rawPickup, rawReturn).ok);
-
-// Back to the vehicle detail, keeping the carried range so its CTA stays pre-filled.
-const backParams = new URLSearchParams();
-if (carryDates && rawPickup && rawReturn) {
-  backParams.set("pickup", rawPickup);
-  backParams.set("return", rawReturn);
-}
-const backQuery = backParams.toString();
-const backHref = vehicle ? `/fleet/${vehicle.id}${backQuery ? `?${backQuery}` : ""}` : "/fleet";
-
 const title = vehicle ? [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ") : null;
+
+// Back to step 1 (the detail page) with the chosen range so the picker stays
+// pre-filled (or just the vehicle when there's no valid range to carry).
+const backHref = vehicle
+  ? datesOk
+    ? `/fleet/${vehicle.id}?pickup=${rawPickup}&return=${rawReturn}`
+    : `/fleet/${vehicle.id}`
+  : "/fleet";
 ---
 
-<Layout title="Rezerwacja — Flota">
+<Layout title="Twoje dane — Flota">
   <meta slot="head" name="robots" content="noindex" />
   <SiteHeader />
   {
-    vehicle ? (
-      <main class="mx-auto max-w-2xl px-5 pb-6 sm:px-8 lg:max-w-5xl">
-        {/* The step-aware header (back chevron + "Rezerwacja") lives inside the
-            island so the chevron can walk back one step on review; the chosen
-            vehicle card is slotted in as server-rendered content. */}
+    vehicle && datesOk ? (
+      <main class="lg:max-w-app mx-auto max-w-2xl px-5 pb-40 sm:px-8 lg:pb-16">
         <ReservationForm
           client:load
-          vehicle={{ id: vehicle.id, dailyRate: vehicle.daily_rate, deposit: vehicle.deposit }}
+          vehicle={{
+            id: vehicle.id,
+            label: title ?? "",
+            year: vehicle.production_year,
+            dailyRate: vehicle.daily_rate,
+            deposit: vehicle.deposit,
+          }}
+          pickup={rawPickup ?? ""}
+          return={rawReturn ?? ""}
           backHref={backHref}
-          initialPickup={carryDates ? rawPickup : null}
-          initialReturn={carryDates ? rawReturn : null}
         >
-          {/* Chosen vehicle (no plate — make/model · year only) */}
-          <div class="bg-card shadow-card mb-6 flex items-center gap-4 rounded-2xl p-5 lg:max-w-[calc(100%-400px)]">
-            <div class="text-foreground w-24 shrink-0">
-              <VehicleSilhouette category={vehicle.category} alt={title ?? ""} />
-            </div>
-            <div class="min-w-0">
-              <p class="text-foreground truncate text-base font-bold tracking-tight">{title}</p>
-              {vehicle.production_year && <p class="text-muted-foreground text-sm">{vehicle.production_year}</p>}
-            </div>
-          </div>
+          {/* Server-rendered silhouette for the order-summary thumbnail. */}
+          <VehicleSilhouette category={vehicle.category} alt={title ?? ""} />
         </ReservationForm>
+      </main>
+    ) : needsDates ? (
+      <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Krok 1 · Daty</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Najpierw wybierz daty</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
+          Aby zarezerwować ten pojazd, wybierz termin odbioru i zwrotu na stronie pojazdu.
+        </p>
+        <a
+          href={backHref}
+          class="bg-primary text-primary-foreground rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold transition-colors hover:bg-[var(--flota-accent-dark)]"
+        >
+          Wybierz daty
+        </a>
       </main>
     ) : (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
@@ -82,7 +93,7 @@ const title = vehicle ? [vehicle.make ?? vehicle.name, vehicle.model].filter(Boo
         </p>
         <a
           href="/fleet"
-          class="bg-foreground text-background mt-7 inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold"
+          class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
         >
           Wróć do floty
         </a>

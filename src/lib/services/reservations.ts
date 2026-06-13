@@ -44,6 +44,9 @@ export async function createReservationRequest(
     p_customer_email: input.customer_email,
     p_customer_phone: input.customer_phone,
     p_terms_accepted: input.terms_accepted,
+    p_company: input.company,
+    p_vat_id: input.vat_id,
+    p_notes: input.notes,
   });
   if (error) {
     throw error;

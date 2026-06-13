@@ -15,10 +15,15 @@ import type { ReservationStatus } from "../types";
 
 export type StepState = "done" | "current" | "upcoming";
 
+// Icon key for the horizontal "Co dalej" cards (design desktop-3 / mobile-4):
+// awaiting → clock, email decision → chat, pickup → key, terminal → x.
+export type StepIcon = "clock" | "chat" | "key" | "x";
+
 export interface Step {
   key: "pending" | "decision" | "pickup";
   label: string;
   description: string;
+  icon: StepIcon;
   state: StepState;
 }
 
@@ -26,22 +31,27 @@ const COPY = {
   pending: {
     label: "Oczekuje na akceptację",
     description: "Pracownik sprawdza Twoje zgłoszenie, zwykle w ciągu kilku godzin.",
+    icon: "clock",
   },
   decision: {
     label: "Potwierdzenie e-mailem",
     description: "Otrzymasz potwierdzenie (lub propozycję innych dat) e-mailem.",
+    icon: "chat",
   },
   pickup: {
     label: "Odbiór",
     description: "Zabierz dowód osobisty i prawo jazdy, aby odebrać pojazd.",
+    icon: "key",
   },
   rejected: {
     label: "Odrzucone",
     description: "Niestety nie możemy potwierdzić tego terminu. Wyślij zgłoszenie na inne daty.",
+    icon: "x",
   },
   cancelled: {
     label: "Anulowane",
     description: "Zgłoszenie zostało anulowane.",
+    icon: "x",
   },
 } as const;
 
