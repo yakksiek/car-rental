@@ -29,9 +29,10 @@ export default defineConfig({
       name: "Instrument Serif",
       cssVariable: "--font-instrument-serif",
       weights: [400],
-      styles: ["normal", "italic"],
+      styles: ["normal"],
       subsets: ["latin", "latin-ext"],
       fallbacks: ["Georgia", "serif"],
+      display: "optional",
     },
     {
       provider: fontProviders.google(),
