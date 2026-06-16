@@ -207,6 +207,20 @@
   background-image: linear-gradient(to bottom, #0a0e1a, #0f1529, #0a0e1a);
 }
 
+/* Changeover-day half-cells (S-02a): the per-vehicle booking calendar marks a
+   booking's two changeover days half-available with a diagonal grey. Applied via
+   react-day-picker `modifiersClassNames` to the day gridcell, so the gradient
+   sits behind the ghost day button and the selected-range background wins. The
+   135deg split greys the half that's occupied. */
+@utility cell-pickup-only {
+  /* return day of an existing booking: morning taken → grey the upper-left */
+  background-image: linear-gradient(135deg, var(--muted) 0 50%, transparent 50%);
+}
+@utility cell-return-only {
+  /* pickup day of an existing booking: afternoon taken → grey the lower-right */
+  background-image: linear-gradient(135deg, transparent 0 50%, var(--muted) 50%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -136,19 +136,30 @@ export function dayAvailabilityMap(busy: VehicleBusyRange[]): Map<string, DayAva
 }
 
 /**
- * Validity of a candidate `[pickup, returnDate]` range under the half-day rules:
- *   1. the start day's afternoon is free (a new pickup fits),
- *   2. the end day's morning is free (a new return fits),
- *   3. every strictly-interior day is fully free.
- * This is the `onSelect` veto's authority — `excludeDisabled` only auto-rejects
- * ranges that *span* a fully-`blocked` day, missing half-day boundary cases.
+ * Why a candidate range fails the half-day rules — discriminates which boundary
+ * collided so the UI can show a specific hint instead of a generic one:
+ *   - `pickupTaken` — the start (pickup) day's afternoon is already taken,
+ *   - `returnTaken` — the end (return) day's morning is already taken,
+ *   - `spansBooked` — a strictly-interior day is occupied in either half.
  */
-export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, returnDate: string): boolean {
+export type RangeConflict = "pickupTaken" | "returnTaken" | "spansBooked";
+
+export type RangeBookableResult = { ok: true } | { ok: false; reason: RangeConflict };
+
+/**
+ * Evaluate a candidate `[pickup, returnDate]` range against the half-day rules
+ * (1: start pm free, 2: end am free, 3: interior fully free), reporting the
+ * first rule that fails. This is the `onSelect` veto's authority — `excludeDisabled`
+ * only auto-rejects ranges that *span* a fully-`blocked` day, missing the half-day
+ * boundary cases. Rules are checked in order, so a range that violates more than
+ * one reports `pickupTaken` first.
+ */
+export function checkRangeBookable(busy: VehicleBusyRange[], pickup: string, returnDate: string): RangeBookableResult {
   if (pmTaken(pickup, busy)) {
-    return false; // rule 1: start day's afternoon already taken
+    return { ok: false, reason: "pickupTaken" }; // rule 1: start day's afternoon already taken
   }
   if (amTaken(returnDate, busy)) {
-    return false; // rule 2: end day's morning already taken
+    return { ok: false, reason: "returnTaken" }; // rule 2: end day's morning already taken
   }
   // rule 3: no interior day may be occupied in either half.
   for (const day of eachDayInclusive(pickup, returnDate)) {
@@ -156,8 +167,13 @@ export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, return
       continue; // endpoints handled by rules 1 & 2
     }
     if (amTaken(day, busy) || pmTaken(day, busy)) {
-      return false;
+      return { ok: false, reason: "spansBooked" };
     }
   }
-  return true;
+  return { ok: true };
+}
+
+/** Boolean shorthand for {@link checkRangeBookable} — true iff the range is bookable. */
+export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, returnDate: string): boolean {
+  return checkRangeBookable(busy, pickup, returnDate).ok;
 }
