@@ -1,7 +1,7 @@
 ---
 change_id: changeover-day-availability
 title: Changeover-day half-availability on the per-vehicle booking calendar
-status: implementing
+status: implemented
 created: 2026-06-16
 updated: 2026-06-16
 archived_at: null

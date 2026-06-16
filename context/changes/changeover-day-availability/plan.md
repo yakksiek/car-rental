@@ -310,14 +310,14 @@ None — no schema, RPC, or type changes.
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build passes: `npm run build`
-- [x] 3.4 Full test suite green: `npm run test`
+- [x] 3.1 Type checking passes: `npx astro check` — 74b81b5
+- [x] 3.2 Linting passes: `npm run lint` — 74b81b5
+- [x] 3.3 Build passes: `npm run build` — 74b81b5
+- [x] 3.4 Full test suite green: `npm run test` — 74b81b5
 
 #### Manual
 
-- [x] 3.5 Desktop: changeover days render correct diagonal halves; legend matches cell treatment
-- [x] 3.6 Real mobile device (~390px): diagonal split perceivable and half-cell tappable (fallback indicator added if illegible)
-- [x] 3.7 Selected range renders correctly over a changeover cell (selected state wins)
-- [x] 3.8 Legend copy is Polish-canonical and matches design-system tone
+- [x] 3.5 Desktop: changeover days render correct diagonal halves; legend matches cell treatment — 74b81b5
+- [x] 3.6 Real mobile device (~390px): diagonal split perceivable and half-cell tappable (fallback indicator added if illegible) — 74b81b5
+- [x] 3.7 Selected range renders correctly over a changeover cell (selected state wins) — 74b81b5
+- [x] 3.8 Legend copy is Polish-canonical and matches design-system tone — 74b81b5
