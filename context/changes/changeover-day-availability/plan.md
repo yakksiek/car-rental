@@ -295,16 +295,16 @@ None — no schema, RPC, or type changes.
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 2.4 Back-to-back range meeting an existing booking on a changeover day is selectable and carries through to `/reserve`
-- [ ] 2.5 Invalid completed range resets to the clicked day and shows the Polish hint
-- [ ] 2.6 Keyboard nav onto a changeover day announces the start-only/end-only `aria-label`
-- [ ] 2.7 Fully-booked interior days and past days remain unselectable (no regression)
+- [x] 2.4 Back-to-back range meeting an existing booking on a changeover day is selectable and carries through to `/reserve`
+- [x] 2.5 Invalid completed range resets to the clicked day and shows the Polish hint
+- [x] 2.6 Keyboard nav onto a changeover day announces the start-only/end-only `aria-label`
+- [x] 2.7 Fully-booked interior days and past days remain unselectable (no regression)
 
 ### Phase 3: Half-cell visuals + legend + mobile verification
 
