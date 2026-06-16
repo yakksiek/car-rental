@@ -123,8 +123,11 @@ export async function isVehicleAvailable(
  * confirmed) via the PII-safe `get_vehicle_busy_ranges` definer RPC. The
  * booking calendar SSRs these in and greys the taken dates so a visitor never
  * picks an unavailable range (S-02 Phase 6). Returns `[]` for a `null`/
- * misconfigured client or a malformed id — the calendar simply greys nothing
- * and the EXCLUDE constraint remains the backstop.
+ * misconfigured client, a malformed id, OR an RPC error — the greying is
+ * advisory UX sugar, so its failure must never 500 the (otherwise working)
+ * detail page; the calendar simply greys nothing and the EXCLUDE constraint
+ * remains the atomic backstop. (Unlike the write/status reads, which ARE the
+ * point of their page and so propagate errors.)
  */
 export async function getVehicleBusyRanges(
   client: ReservationClient | null,
@@ -136,7 +139,9 @@ export async function getVehicleBusyRanges(
 
   const { data, error } = await client.rpc("get_vehicle_busy_ranges", { p_vehicle_id: vehicleId });
   if (error) {
-    throw error;
+    // eslint-disable-next-line no-console
+    console.error("[getVehicleBusyRanges] RPC failed; calendar greys nothing this load:", error);
+    return [];
   }
   return data;
 }
