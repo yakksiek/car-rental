@@ -418,7 +418,13 @@ execute … to anon, authenticated`. Mirrors the `available_vehicles` definer-RP
 its host page. The browser can't call Supabase (server-only creds), so **SSR the busy ranges into
 the page on load** (per-vehicle, known then) and pass them to the island. The calendar disables
 those ranges via react-day-picker's `disabled` matcher, alongside the existing past-date disabling.
-Reuse `bookingWindow` semantics so greyed cells match the `EXCLUDE` window exactly.
+Grey each busy range **inclusive of both bounds** (`{from: pickup_date, to: return_date}`):
+intentionally *stricter* than the half-open `EXCLUDE` window — a whole-day calendar cell can't
+express a half-day changeover (return 10:00 / pickup 14:00), so the two changeover days are greyed
+conservatively rather than ever offer a date the constraint might reject. **Tradeoff (accepted):**
+this over-blocks the changeover days the half-open window would allow, so the calendar is stricter
+than `available_vehicles` for back-to-back rentals. The half-available-changeover refinement that
+closes this gap is tracked as roadmap **S-02a** (`changeover-day-availability`).
 
 #### 3. Pending vs confirmed
 

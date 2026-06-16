@@ -1,9 +1,9 @@
 ---
 change_id: public-reservation-request
 title: Public reservation request with no account; overlaps blocked on submit
-status: implemented
+status: impl_reviewed
 created: 2026-06-07
-updated: 2026-06-13
+updated: 2026-06-16
 archived_at: null
 ---
 

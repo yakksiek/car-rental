@@ -120,6 +120,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** This is the validation milestone — the overlap block must fire before submission, not as a post-hoc rejection, per the success criterion. The client-side date picker must agree with the server-side overlap rule or customers see phantom availability and a confusing late rejection.
 - **Status:** proposed
 
+### S-02a: Changeover-day half-availability (calendar refinement)
+
+- **Outcome:** On the per-vehicle booking calendar, a booked range's **changeover days** are shown half-available instead of fully greyed — the booking's pickup day stays selectable as a new **return**, and its return day stays selectable as a new **pickup** — so back-to-back rentals (return 10:00, next pickup 14:00) can be booked from the UI, matching what the half-open `EXCLUDE` window already permits.
+- **Change ID:** changeover-day-availability
+- **PRD refs:** FR-014 (refinement; advances the parked nice-to-have)
+- **Prerequisites:** S-02
+- **Parallel with:** S-03, S-04, S-07, S-08
+- **Blockers:** —
+- **Unknowns:**
+  - Half-cell affordance + a11y: react-day-picker can't natively mark a day "valid only as range end," so selection rules ride a custom `onSelect` veto + custom modifiers; the half-grey cell needs a legend and keyboard/SR semantics. Owner: user. Block: no.
+- **Risk:** Refinement of S-02 Phase 6 (which shipped per-vehicle greying, conservatively inclusive of both changeover days). The model is correct but interaction-heavy and ships without a UI test runner — mitigate by extracting the per-day half-state computation (`busyRanges → dayStates`) as a pure, Vitest-tested helper; that's where the edge cases live (adjacent bookings sharing a day, single-day gaps). Win: the calendar then matches `available_vehicles` + the `EXCLUDE` constraint exactly, closing the calendar↔catalog asymmetry noted in the S-02 Phase-6 review.
+- **Status:** proposed
+
 ### S-03: Reservation approval
 
 - **Outcome:** A logged-in employee can view all pending reservation requests and accept or reject each one; accepting confirms the booking against the overlap rule.
@@ -201,6 +214,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-02       | employee-admin-roles         | Employee/admin role model on existing auth                | yes                   | Parallel with F-01 |
 | S-01       | public-fleet-catalog         | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01 |
 | S-02       | public-reservation-request   | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01 |
+| S-02a      | changeover-day-availability   | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability` |
 | S-03       | reservation-approval         | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02 |
 | S-04       | fleet-management             | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable |
 | S-05       | issue-protocol               | Issue handover protocol + photos/signature + email        | no                    | Needs F-02, S-03; sets up storage + email |
@@ -216,7 +230,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Parked
 
-- **FR-014: real-time availability shown to visitors while picking dates (nice-to-have).** Why parked: explicitly nice-to-have, and main_goal `speed` parks non-essentials; the core guarantee (no double bookings) is still enforced at submission via FR-005, so this is an enhancement to defer.
+- **FR-014: real-time availability shown to visitors while picking dates (nice-to-have).** Why parked: explicitly nice-to-have, and main_goal `speed` parks non-essentials; the core guarantee (no double bookings) is still enforced at submission via FR-005, so this is an enhancement to defer. **Update:** S-02 Phase 6 advanced this — the per-vehicle booking calendar now greys booked dates. The remaining half-day changeover refinement is promoted to slice **S-02a** (no longer parked).
 - **No online payment processing.** Why parked: PRD §Non-Goals — payment at pickup; keeps financial complexity out of v1.
 - **No customer accounts or portal.** Why parked: PRD §Non-Goals — customers interact via the public site and receive protocols by email; deferred to v2.
 - **No notifications beyond protocol delivery.** Why parked: PRD §Non-Goals — only the auto-emailed protocol after issue/return.
