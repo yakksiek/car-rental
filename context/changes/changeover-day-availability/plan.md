@@ -118,7 +118,7 @@ export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, return
 **Intent**: Extend the existing test file with the 8-case matrix that pins the edge behavior (this is the load-bearing safety net — no UI test runner).
 
 **Contract**: Vitest cases —
-1. Single booking `16→20` ⇒ `16` `pickupOnly`, `17-19` `blocked`, `20` `returnOnly`.
+1. Single booking `16→20` ⇒ `16` (pickup day) `returnOnly`, `17-19` `blocked`, `20` (return day) `pickupOnly`.
 2. Adjacent bookings sharing a day (`07-01→07-10`, `07-10→07-15`) ⇒ `07-10` `blocked`.
 3. One-day gap between two bookings ⇒ gap day resolves from both sides.
 4. New range *ending* on a `pickupOnly` day ⇒ `isRangeBookable` false (rule 2).
@@ -283,13 +283,13 @@ None — no schema, RPC, or type changes.
 
 #### Automated
 
-- [x] 1.1 Unit tests pass: `npm run test`
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Linting passes: `npm run lint`
+- [x] 1.1 Unit tests pass: `npm run test` — a4f7554
+- [x] 1.2 Type checking passes: `npx astro check` — a4f7554
+- [x] 1.3 Linting passes: `npm run lint` — a4f7554
 
 #### Manual
 
-- [x] 1.4 The 8 matrix cases read as a faithful encoding of the half-state model (spot-check cases 2 and 6)
+- [x] 1.4 The 8 matrix cases read as a faithful encoding of the half-state model (spot-check cases 2 and 6) — a4f7554
 
 ### Phase 2: BookingWidget selection behavior
 
