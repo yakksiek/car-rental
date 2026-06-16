@@ -295,29 +295,29 @@ None — no schema, RPC, or type changes.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check` — 23bc50e
+- [x] 2.2 Linting passes: `npm run lint` — 23bc50e
+- [x] 2.3 Build passes: `npm run build` — 23bc50e
 
 #### Manual
 
-- [x] 2.4 Back-to-back range meeting an existing booking on a changeover day is selectable and carries through to `/reserve`
-- [x] 2.5 Invalid completed range resets to the clicked day and shows the Polish hint
-- [x] 2.6 Keyboard nav onto a changeover day announces the start-only/end-only `aria-label`
-- [x] 2.7 Fully-booked interior days and past days remain unselectable (no regression)
+- [x] 2.4 Back-to-back range meeting an existing booking on a changeover day is selectable and carries through to `/reserve` — 23bc50e
+- [x] 2.5 Invalid completed range resets to the clicked day and shows the Polish hint — 23bc50e
+- [x] 2.6 Keyboard nav onto a changeover day announces the start-only/end-only `aria-label` — 23bc50e
+- [x] 2.7 Fully-booked interior days and past days remain unselectable (no regression) — 23bc50e
 
 ### Phase 3: Half-cell visuals + legend + mobile verification
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Full test suite green: `npm run test`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
+- [x] 3.4 Full test suite green: `npm run test`
 
 #### Manual
 
-- [ ] 3.5 Desktop: changeover days render correct diagonal halves; legend matches cell treatment
-- [ ] 3.6 Real mobile device (~390px): diagonal split perceivable and half-cell tappable (fallback indicator added if illegible)
-- [ ] 3.7 Selected range renders correctly over a changeover cell (selected state wins)
-- [ ] 3.8 Legend copy is Polish-canonical and matches design-system tone
+- [x] 3.5 Desktop: changeover days render correct diagonal halves; legend matches cell treatment
+- [x] 3.6 Real mobile device (~390px): diagonal split perceivable and half-cell tappable (fallback indicator added if illegible)
+- [x] 3.7 Selected range renders correctly over a changeover cell (selected state wins)
+- [x] 3.8 Legend copy is Polish-canonical and matches design-system tone

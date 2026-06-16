@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 
 // others
 import type { BookingWindow, VehicleBusyRange } from "../types";
-import { bookingWindow, dayAvailabilityMap, hasConflict, isRangeBookable, windowsOverlap } from "./availability";
+import {
+  bookingWindow,
+  checkRangeBookable,
+  dayAvailabilityMap,
+  hasConflict,
+  isRangeBookable,
+  windowsOverlap,
+} from "./availability";
 
 // Boundary table locking the half-open `[pickup 14:00, return 10:00)` rule —
 // the exact agreement with the SQL `EXCLUDE` constraint. The load-bearing case
@@ -175,5 +182,33 @@ describe("isRangeBookable", () => {
 
   it("case 8: any well-ordered range is bookable against empty busy", () => {
     expect(isRangeBookable([], "2026-08-01", "2026-08-10")).toBe(true);
+  });
+});
+
+describe("checkRangeBookable (conflict reason)", () => {
+  // 16 returnOnly (pickup day), 17-19 blocked, 20 pickupOnly (return day).
+  const single = [r("2026-08-16", "2026-08-20")];
+
+  it("reports pickupTaken when the start day's afternoon is occupied (rule 1)", () => {
+    expect(checkRangeBookable(single, "2026-08-16", "2026-08-24")).toEqual({ ok: false, reason: "pickupTaken" });
+  });
+
+  it("reports returnTaken when the end day's morning is occupied (rule 2)", () => {
+    expect(checkRangeBookable(single, "2026-08-12", "2026-08-20")).toEqual({ ok: false, reason: "returnTaken" });
+  });
+
+  it("reports spansBooked when an interior day is occupied (rule 3)", () => {
+    const overnight = [r("2026-08-10", "2026-08-11")];
+    expect(checkRangeBookable(overnight, "2026-08-08", "2026-08-13")).toEqual({ ok: false, reason: "spansBooked" });
+  });
+
+  it("checks rules in order: a range failing both endpoints reports pickupTaken first", () => {
+    // 16→20 starts on the returnOnly day (pm taken ⇒ rule 1) AND ends on the
+    // pickupOnly day (am taken ⇒ rule 2); rule 1 short-circuits first.
+    expect(checkRangeBookable(single, "2026-08-16", "2026-08-20")).toEqual({ ok: false, reason: "pickupTaken" });
+  });
+
+  it("returns ok for a valid turnover range", () => {
+    expect(checkRangeBookable(single, "2026-08-20", "2026-08-24")).toEqual({ ok: true });
   });
 });

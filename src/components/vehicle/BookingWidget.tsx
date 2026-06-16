@@ -10,10 +10,11 @@ import { Calendar } from "../ui/calendar";
 
 // others
 import type { VehicleBusyRange } from "../../types";
-import { dayAvailabilityMap, isRangeBookable } from "../../lib/availability";
+import { checkRangeBookable, dayAvailabilityMap, type RangeConflict } from "../../lib/availability";
 import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { cn } from "../../lib/utils";
 
 // Step 1 of the reservation flow ("Daty") — lives on the vehicle detail page
 // (design desktop-1). A sticky right-column card on desktop, an inline block +
@@ -48,14 +49,28 @@ const COPY = {
   estimate: "Szacunkowa cena",
   cta: "Zarezerwuj",
   reassurance: "Bez konta · darmowa anulacja do 24h przed odbiorem",
-  // Shown when a completed range starts/ends on — or crosses — the occupied half
-  // of a changeover day (the `isRangeBookable` veto). Polish-canonical tone.
-  changeoverHint: "Wybrany termin nachodzi na dzień przekazania pojazdu. Wybierz inny zakres.",
+  // Shown when a completed range collides with a booking on a changeover day (the
+  // `checkRangeBookable` veto), keyed to which boundary failed so the hint is
+  // specific rather than generic. Polish-canonical tone.
+  changeoverPickupTaken: "Wybrany dzień odbioru jest niedostępny. Wybierz inny termin.",
+  changeoverReturnTaken: "Wybrany dzień zwrotu jest niedostępny. Wybierz inny termin.",
+  changeoverSpansBooked: "Wybrany termin jest niedostępny. Wybierz inne daty.",
   // Per-day aria-label suffixes for the two half-available changeover states, so
   // SR/keyboard users get the start-only/end-only signal the half-cell can't convey.
   pickupOnlyLabel: "dostępny tylko jako dzień odbioru",
   returnOnlyLabel: "dostępny tylko jako dzień zwrotu",
+  // Legend decoding the calendar's grey treatments for sighted users.
+  legendBlocked: "niedostępny",
+  legendPickupOnly: "tylko odbiór",
+  legendReturnOnly: "tylko zwrot",
 } as const;
+
+// Maps each range-conflict reason to its inline hint (see `checkRangeBookable`).
+const CHANGEOVER_HINT: Record<RangeConflict, string> = {
+  pickupTaken: COPY.changeoverPickupTaken,
+  returnTaken: COPY.changeoverReturnTaken,
+  spansBooked: COPY.changeoverSpansBooked,
+};
 
 const arrow = (
   <svg
@@ -113,12 +128,15 @@ export default function BookingWidget({
     return matchers;
   }, [availability]);
 
-  // The two half-available changeover states, as `Date[]` modifier sets. These
-  // drive the per-day aria-label (Phase 2) and the diagonal half-cell visual
-  // (Phase 3); selectability is governed by the `onSelect` veto, not by these.
-  const changeoverModifiers = React.useMemo(() => {
+  // Per-day modifier sets driving the calendar's visuals: the two half-available
+  // changeover states (diagonal half-grey + aria-label) plus `blocked` (a solid
+  // grey fill so fully-booked days read as "niedostępny" and match the legend
+  // swatch — distinct from merely-past days, which stay faded). Selectability is
+  // governed by `disabled` + the `onSelect` veto, not by these.
+  const dayModifiers = React.useMemo(() => {
     const pickupOnly: Date[] = [];
     const returnOnly: Date[] = [];
+    const blocked: Date[] = [];
     for (const [iso, state] of availability) {
       const date = fromIsoDate(iso);
       if (!date) {
@@ -128,9 +146,11 @@ export default function BookingWidget({
         pickupOnly.push(date);
       } else if (state === "returnOnly") {
         returnOnly.push(date);
+      } else if (state === "blocked") {
+        blocked.push(date);
       }
     }
-    return { pickupOnly, returnOnly };
+    return { pickupOnly, returnOnly, blocked };
   }, [availability]);
 
   const pickupIso = range?.from ? toIsoDate(range.from) : null;
@@ -212,9 +232,10 @@ export default function BookingWidget({
             if (next?.from && next.to) {
               const nextPickup = toIsoDate(next.from);
               const nextReturn = toIsoDate(next.to);
-              if (!isRangeBookable(busyRanges, nextPickup, nextReturn)) {
+              const result = checkRangeBookable(busyRanges, nextPickup, nextReturn);
+              if (!result.ok) {
                 setRange({ from: triggerDate });
-                setError(COPY.changeoverHint);
+                setError(CHANGEOVER_HINT[result.reason]);
                 return;
               }
             }
@@ -223,7 +244,17 @@ export default function BookingWidget({
           }}
           numberOfMonths={1}
           disabled={disabledDays}
-          modifiers={changeoverModifiers}
+          modifiers={dayModifiers}
+          modifiersClassNames={{
+            // Diagonal half-grey per changeover state (utilities in global.css);
+            // `blocked` is a solid grey fill matching the legend swatch. Applied
+            // to the day gridcell, behind the selected-range background. The
+            // `opacity-100!` overrides the shared `disabled` fade so a booked day
+            // reads as solidly unavailable rather than like a faded past day.
+            pickupOnly: "cell-pickup-only",
+            returnOnly: "cell-return-only",
+            blocked: "rounded-md bg-[var(--muted)] opacity-100!",
+          }}
           excludeDisabled
           locale={pl}
           formatters={{
@@ -250,6 +281,27 @@ export default function BookingWidget({
           }}
         />
       </div>
+
+      {/* Legend — decodes the grey treatments. Only shown when the vehicle has
+          changeover/blocked days to explain (an empty map ⇒ nothing to decode).
+          The half-cell swatches reuse the same gradient utilities as the cells. */}
+      {availability.size > 0 && (
+        <ul className="text-muted-foreground mx-auto mt-3 flex max-w-[300px] flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] font-medium">
+          {[
+            { label: COPY.legendBlocked, swatch: "bg-[var(--muted)]" },
+            { label: COPY.legendPickupOnly, swatch: "cell-pickup-only" },
+            { label: COPY.legendReturnOnly, swatch: "cell-return-only" },
+          ].map((item) => (
+            <li key={item.label} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className={cn("size-3 rounded-[3px] border border-[var(--flota-hair-2)]", item.swatch)}
+              />
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="mt-2 border-t border-[var(--flota-hair-2)]">{breakdownRows}</div>
 
