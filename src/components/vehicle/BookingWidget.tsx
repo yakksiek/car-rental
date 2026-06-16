@@ -3,13 +3,14 @@ import * as React from "react";
 import { navigate } from "astro:transitions/client";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import type { DateRange, Matcher } from "react-day-picker";
+import { labelDayButton, type DateRange, type Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
 
 // others
 import type { VehicleBusyRange } from "../../types";
+import { dayAvailabilityMap, isRangeBookable } from "../../lib/availability";
 import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
@@ -47,6 +48,13 @@ const COPY = {
   estimate: "Szacunkowa cena",
   cta: "Zarezerwuj",
   reassurance: "Bez konta · darmowa anulacja do 24h przed odbiorem",
+  // Shown when a completed range starts/ends on — or crosses — the occupied half
+  // of a changeover day (the `isRangeBookable` veto). Polish-canonical tone.
+  changeoverHint: "Wybrany termin nachodzi na dzień przekazania pojazdu. Wybierz inny zakres.",
+  // Per-day aria-label suffixes for the two half-available changeover states, so
+  // SR/keyboard users get the start-only/end-only signal the half-cell can't convey.
+  pickupOnlyLabel: "dostępny tylko jako dzień odbioru",
+  returnOnlyLabel: "dostępny tylko jako dzień zwrotu",
 } as const;
 
 const arrow = (
@@ -80,24 +88,50 @@ export default function BookingWidget({
   });
   const [error, setError] = React.useState<string | null>(null);
 
-  // Disabled-day matchers: past dates plus every taken range. Each busy range is
-  // greyed INCLUSIVE of both bounds (`[pickup_date, return_date]`) — the days
-  // strictly inside are fully occupied, and the two changeover days are each
-  // free only for half a day (return morning / pickup afternoon), which a
-  // whole-day cell can't express, so we grey them conservatively rather than
-  // ever offer a date the EXCLUDE constraint would reject. `excludeDisabled`
-  // resets the selection if a chosen range would span any greyed day.
+  // Per-day half-state map (S-02a): the half-open `[pickup 14:00, return 10:00)`
+  // window leaves each booking's two changeover days half-free, so we no longer
+  // grey ranges inclusive of both bounds. `dayAvailabilityMap` resolves every
+  // changeover/interior day to `blocked` | `pickupOnly` | `returnOnly` (absent ⇒
+  // free) from the SAME hours as the EXCLUDE constraint, so the calendar can't
+  // drift from the DB authority.
+  const availability = React.useMemo(() => dayAvailabilityMap(busyRanges), [busyRanges]);
+
+  // Disabled-day matchers: past dates plus only the FULLY-blocked days (interiors
+  // and shared return+pickup days). `excludeDisabled` resets any range that spans
+  // one of these. The two half-states are NOT disabled — they ride `modifiers`
+  // (for the cell visual + aria) and the `onSelect` veto below instead.
   const disabledDays = React.useMemo<Matcher[]>(() => {
     const matchers: Matcher[] = [{ before: new Date(new Date().setHours(0, 0, 0, 0)) }];
-    for (const busy of busyRanges) {
-      const from = fromIsoDate(busy.pickup_date);
-      const to = fromIsoDate(busy.return_date);
-      if (from && to) {
-        matchers.push({ from, to });
+    for (const [iso, state] of availability) {
+      if (state === "blocked") {
+        const date = fromIsoDate(iso);
+        if (date) {
+          matchers.push(date);
+        }
       }
     }
     return matchers;
-  }, [busyRanges]);
+  }, [availability]);
+
+  // The two half-available changeover states, as `Date[]` modifier sets. These
+  // drive the per-day aria-label (Phase 2) and the diagonal half-cell visual
+  // (Phase 3); selectability is governed by the `onSelect` veto, not by these.
+  const changeoverModifiers = React.useMemo(() => {
+    const pickupOnly: Date[] = [];
+    const returnOnly: Date[] = [];
+    for (const [iso, state] of availability) {
+      const date = fromIsoDate(iso);
+      if (!date) {
+        continue;
+      }
+      if (state === "pickupOnly") {
+        pickupOnly.push(date);
+      } else if (state === "returnOnly") {
+        returnOnly.push(date);
+      }
+    }
+    return { pickupOnly, returnOnly };
+  }, [availability]);
 
   const pickupIso = range?.from ? toIsoDate(range.from) : null;
   const returnIso = range?.to ? toIsoDate(range.to) : null;
@@ -168,16 +202,46 @@ export default function BookingWidget({
         <Calendar
           mode="range"
           selected={range}
-          onSelect={(next) => {
+          onSelect={(next, triggerDate) => {
+            // react-day-picker normalizes `from`/`to` to date order, so a complete
+            // range always has from ≤ to. `excludeDisabled` already rejects ranges
+            // that span a `blocked` day, but a range that ends on a `pickupOnly`
+            // day, starts on a `returnOnly` day, or crosses a half-day in its
+            // interior passes that filter — so veto it here against the same
+            // half-day rules the DB enforces, resetting to the just-clicked day.
+            if (next?.from && next.to) {
+              const nextPickup = toIsoDate(next.from);
+              const nextReturn = toIsoDate(next.to);
+              if (!isRangeBookable(busyRanges, nextPickup, nextReturn)) {
+                setRange({ from: triggerDate });
+                setError(COPY.changeoverHint);
+                return;
+              }
+            }
             setRange(next);
             setError(null);
           }}
           numberOfMonths={1}
           disabled={disabledDays}
+          modifiers={changeoverModifiers}
           excludeDisabled
           locale={pl}
           formatters={{
             formatCaption: (date) => format(date, "LLLL yyyy", { locale: pl }).toUpperCase(),
+          }}
+          labels={{
+            // Append the start-only/end-only rule to each changeover day's
+            // aria-label; wrap the library default so today/selected markers stay.
+            labelDayButton: (date, modifiers, options, dateLib) => {
+              const base = labelDayButton(date, modifiers, options, dateLib);
+              if (modifiers.pickupOnly) {
+                return `${base}, ${COPY.pickupOnlyLabel}`;
+              }
+              if (modifiers.returnOnly) {
+                return `${base}, ${COPY.returnOnlyLabel}`;
+              }
+              return base;
+            },
           }}
           className="w-full bg-transparent p-0 [--cell-size:--spacing(9)]"
           classNames={{
