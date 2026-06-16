@@ -283,13 +283,13 @@ None — no schema, RPC, or type changes.
 
 #### Automated
 
-- [ ] 1.1 Unit tests pass: `npm run test`
-- [ ] 1.2 Type checking passes: `npx astro check`
-- [ ] 1.3 Linting passes: `npm run lint`
+- [x] 1.1 Unit tests pass: `npm run test`
+- [x] 1.2 Type checking passes: `npx astro check`
+- [x] 1.3 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.4 The 8 matrix cases read as a faithful encoding of the half-state model (spot-check cases 2 and 6)
+- [x] 1.4 The 8 matrix cases read as a faithful encoding of the half-state model (spot-check cases 2 and 6)
 
 ### Phase 2: BookingWidget selection behavior
 
