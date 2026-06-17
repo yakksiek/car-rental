@@ -1,5 +1,5 @@
 // others
-import type { Transmission, VehicleCategory } from "../types";
+import type { RejectionReason, Transmission, VehicleCategory } from "../types";
 
 // Pure, I/O-free presentation helpers for the public catalog. Two quirks they
 // own so call sites don't have to:
@@ -154,4 +154,18 @@ export function fuelLabelPl(fuel: string | null | undefined): string {
   }
   const key = fuel.trim().toLowerCase();
   return FUEL_LABELS_PL[key] ?? fuel.charAt(0).toUpperCase() + fuel.slice(1);
+}
+
+// Canonical Polish labels for the four canned rejection reasons (S-03). Single
+// source for the reject-reason sheet (Phase 4) and the rejection email (Phase 3).
+const REJECTION_REASON_LABELS_PL: Record<RejectionReason, string> = {
+  dates_unavailable: "Daty już niedostępne",
+  no_category: "Brak wymaganej kategorii",
+  vehicle_withdrawn: "Pojazd wycofany",
+  other: "Inny",
+};
+
+/** Polish label for a rejection-reason enum value. */
+export function rejectionReasonLabelPl(reason: RejectionReason): string {
+  return REJECTION_REASON_LABELS_PL[reason];
 }

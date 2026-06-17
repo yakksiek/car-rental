@@ -526,30 +526,30 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check` — b94d431
+- [x] 2.2 Linting passes: `npm run lint` — b94d431
+- [x] 2.3 Build passes: `npm run build` — b94d431
 
 #### Manual
 
-- [x] 2.4 PATCH confirm returns 200, row confirmed, `/r/<token>` shows Confirmed
-- [x] 2.5 PATCH reject (with reason) returns 200, reason stored; reject without reason returns 400
-- [x] 2.6 Repeat decision returns 409 `already_decided`
-- [x] 2.7 Non-employee 403; cross-origin 403
+- [x] 2.4 PATCH confirm returns 200, row confirmed, `/r/<token>` shows Confirmed — b94d431
+- [x] 2.5 PATCH reject (with reason) returns 200, reason stored; reject without reason returns 400 — b94d431
+- [x] 2.6 Repeat decision returns 409 `already_decided` — b94d431
+- [x] 2.7 Non-employee 403; cross-origin 403 — b94d431
 
 ### Phase 3: Confirm / reject notification emails
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Unit tests pass (if template helpers covered): `npm test`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Unit tests pass (if template helpers covered): `npm test`
 
 #### Manual
 
-- [ ] 3.4 Accept logs a composed Polish confirmation email with correct fields + `/r/<token>` link
-- [ ] 3.5 Reject logs a composed Polish rejection email referencing the reason
-- [ ] 3.6 A forced send error still returns 200 with status changed (best-effort)
+- [x] 3.4 Accept logs a composed Polish confirmation email with correct fields + `/r/<token>` link
+- [x] 3.5 Reject logs a composed Polish rejection email referencing the reason
+- [x] 3.6 A forced send error still returns 200 with status changed (best-effort)
 
 ### Phase 4: Mobile approval UI
 
