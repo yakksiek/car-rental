@@ -555,32 +555,32 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check` — b2c3e47
+- [x] 4.2 Linting passes: `npm run lint` — b2c3e47
+- [x] 4.3 Build passes: `npm run build` — b2c3e47
 
 #### Manual
 
-- [x] 4.4 `/dashboard/reservations` shows pending requests (screen 10); empty state when none
-- [x] 4.5 `Sprawdź` opens detail (screen 11) with dates/customer/pricing; no license/plate
-- [x] 4.6 Accept → overlay → card removed → `/r/<token>` Confirmed
-- [x] 4.7 Reject → reason sheet (`Inny` reveals note) → overlay → `/r/<token>` Rejected
-- [x] 4.8 Already-handled request shows friendly re-sync
-- [x] 4.9 Layout/copy match design tokens and canonical Polish
+- [x] 4.4 `/dashboard/reservations` shows pending requests (screen 10); empty state when none — b2c3e47
+- [x] 4.5 `Sprawdź` opens detail (screen 11) with dates/customer/pricing; no license/plate — b2c3e47
+- [x] 4.6 Accept → overlay → card removed → `/r/<token>` Confirmed — b2c3e47
+- [x] 4.7 Reject → reason sheet (`Inny` reveals note) → overlay → `/r/<token>` Rejected — b2c3e47
+- [x] 4.8 Already-handled request shows friendly re-sync — b2c3e47
+- [x] 4.9 Layout/copy match design tokens and canonical Polish — b2c3e47
 
 ### Phase 5: Desktop layout (master-detail)
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npx astro check`
-- [ ] 5.2 Linting passes: `npm run lint`
-- [ ] 5.3 Build passes: `npm run build`
+- [x] 5.1 Type checking passes: `npx astro check`
+- [x] 5.2 Linting passes: `npm run lint`
+- [x] 5.3 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 5.4 Desktop queue + detail match the provided desktop designs
-- [ ] 5.5 Mobile layout unchanged at small breakpoints
-- [ ] 5.6 Accept/reject + already-handled flows work across breakpoints
+- [x] 5.4 Desktop queue + detail match the provided desktop designs
+- [x] 5.5 Mobile layout unchanged at small breakpoints
+- [x] 5.6 Accept/reject + already-handled flows work across breakpoints
 
 ### Phase 6: Calendar data layer + library setup
 
