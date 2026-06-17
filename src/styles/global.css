@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 ignores node_modules; point it at @ilamy/calendar's dist so the
+   library's token-based utility classes are generated (S-03 Phase 6). The
+   package ships no CSS (verified at install: no dist/index.css) — it styles
+   purely via the shadcn tokens defined below. */
+@source "../../node_modules/@ilamy/calendar/dist";
+
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // others
 import type { Database } from "../../db/database.types";
 import type {
+  CalendarReservation,
   CreateReservationInput,
   CreateReservationResult,
   DecideReservationResult,
@@ -190,6 +191,32 @@ export async function decideReservation(
     default:
       throw new Error(`decide_reservation returned an unexpected result: ${JSON.stringify(data)}`);
   }
+}
+
+/**
+ * List the pending + confirmed reservations overlapping `[rangeStart, rangeEnd]`
+ * for the resource-timeline calendar, via the role-gated
+ * `list_reservations_for_calendar` definer RPC. Returns `[]` for a `null` client.
+ * The RPC only ever returns `pending`/`confirmed` rows, so the cast narrows the
+ * generated enum status to the calendar's two-value union.
+ */
+export async function listReservationsForCalendar(
+  client: ReservationClient | null,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<CalendarReservation[]> {
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client.rpc("list_reservations_for_calendar", {
+    p_start: rangeStart,
+    p_end: rangeEnd,
+  });
+  if (error) {
+    throw error;
+  }
+  return data as CalendarReservation[];
 }
 
 /**

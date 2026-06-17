@@ -572,29 +572,29 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx astro check`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Build passes: `npm run build`
+- [x] 5.1 Type checking passes: `npx astro check` — 6c9b2da
+- [x] 5.2 Linting passes: `npm run lint` — 6c9b2da
+- [x] 5.3 Build passes: `npm run build` — 6c9b2da
 
 #### Manual
 
-- [x] 5.4 Desktop queue + detail match the provided desktop designs
-- [x] 5.5 Mobile layout unchanged at small breakpoints
-- [x] 5.6 Accept/reject + already-handled flows work across breakpoints
+- [x] 5.4 Desktop queue + detail match the provided desktop designs — 6c9b2da
+- [x] 5.5 Mobile layout unchanged at small breakpoints — 6c9b2da
+- [x] 5.6 Accept/reject + already-handled flows work across breakpoints — 6c9b2da
 
 ### Phase 6: Calendar data layer + library setup
 
 #### Automated
 
-- [ ] 6.1 Dependencies install and build passes: `npm install` + `npm run build`
-- [ ] 6.2 Type checking passes: `npx astro check`
-- [ ] 6.3 Linting passes: `npm run lint`
-- [ ] 6.4 Mapping unit tests pass: `npm test`
+- [x] 6.1 Dependencies install and build passes: `npm install` + `npm run build`
+- [x] 6.2 Type checking passes: `npx astro check`
+- [x] 6.3 Linting passes: `npm run lint`
+- [x] 6.4 Mapping unit tests pass: `npm test`
 
 #### Manual
 
-- [ ] 6.5 `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window
-- [ ] 6.6 `dist/index.css` presence checked and the CSS decision recorded
+- [x] 6.5 `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window
+- [x] 6.6 `dist/index.css` presence checked and the CSS decision recorded (absent — rely on shadcn tokens + @source)
 
 ### Phase 7: Reservation calendar UI
 
