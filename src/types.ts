@@ -108,6 +108,22 @@ export type DecideReservationResult =
   | { status: "unauthorized" }
   | { status: "invalid_reason" };
 
+// One reservation bar for the resource-timeline calendar (S-03 Phase 6): the
+// fields needed to plot it (no PII beyond the customer name shown on the bar).
+// Read through the role-gated `list_reservations_for_calendar` definer RPC;
+// status is always `pending`/`confirmed` (the RPC filters the rest out).
+export interface CalendarReservation {
+  id: string;
+  reference: string;
+  status: "pending" | "confirmed";
+  customer_name: string;
+  vehicle_id: string;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  pickup_date: string;
+  return_date: string;
+}
+
 // Input shape for the pure overlap predicate (src/lib/availability.ts, Phase 2).
 // Bare local calendar dates (ISO `YYYY-MM-DD`); the predicate applies the fixed
 // hotel-style hours (pickup 14:00, return 10:00) to build the comparable window,

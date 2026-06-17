@@ -335,6 +335,20 @@ export type Database = {
           vehicle_production_year: number
         }[]
       }
+      list_reservations_for_calendar: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          customer_name: string
+          id: string
+          pickup_date: string
+          reference: string
+          return_date: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+        }[]
+      }
     }
     Enums: {
       app_role: "employee" | "admin"
