@@ -2,16 +2,18 @@
 import * as React from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowRight, Check, ChevronLeft, Mail, Phone, Truck, User, X } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Mail, Phone, Truck, User } from "lucide-react";
 
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { ReasonSheet, ResultOverlay } from "./ReservationDecision";
 
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { PendingReservation, RejectionReason } from "../../types";
 
 // The employee approval island (S-03 Phase 4 mobile; Phase 5 layers desktop).
@@ -54,13 +56,6 @@ const COPY = {
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
 } as const;
 
-const REASONS: { value: RejectionReason; label: string }[] = [
-  { value: "dates_unavailable", label: "Daty już niedostępne" },
-  { value: "no_category", label: "Brak wymaganej kategorii" },
-  { value: "vehicle_withdrawn", label: "Pojazd wycofany" },
-  { value: "other", label: "Inny" },
-];
-
 // ── pure display helpers ────────────────────────────────────────────────────
 
 function formatDayShort(iso: string): string {
@@ -91,43 +86,6 @@ function submittedAgo(createdAt: string): string {
 function vehicleName(r: PendingReservation): string {
   const label = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ");
   return label === "" ? "Pojazd" : label;
-}
-
-// ── decision plumbing (extracted to useReservationDecision in Phase 7) ───────
-
-type DecisionOutcome = { status: "confirmed" | "rejected" } | { status: "already_decided" } | { status: "error" };
-
-async function postDecision(
-  id: string,
-  decision: "confirm" | "reject",
-  reason?: RejectionReason,
-  note?: string,
-): Promise<DecisionOutcome> {
-  const payload: { decision: "confirm" | "reject"; reason?: RejectionReason; note?: string } = { decision };
-  if (reason) {
-    payload.reason = reason;
-  }
-  const trimmedNote = note?.trim();
-  if (trimmedNote) {
-    payload.note = trimmedNote;
-  }
-  try {
-    const res = await fetch(`/api/reservations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (res.status === 200) {
-      const body = (await res.json()) as { status: "confirmed" | "rejected" };
-      return { status: body.status };
-    }
-    if (res.status === 409) {
-      return { status: "already_decided" };
-    }
-    return { status: "error" };
-  } catch {
-    return { status: "error" };
-  }
 }
 
 // ── subcomponents ────────────────────────────────────────────────────────────
@@ -436,118 +394,6 @@ export function RequestDetail({
   );
 }
 
-export function ReasonSheet({
-  busy,
-  onConfirm,
-  onClose,
-}: {
-  busy: boolean;
-  onConfirm: (reason: RejectionReason, note: string) => void;
-  onClose: () => void;
-}) {
-  const [reason, setReason] = React.useState<RejectionReason>(REASONS[0].value);
-  const [note, setNote] = React.useState("");
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
-      >
-        <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
-        <div className="text-foreground text-xl font-bold tracking-tight">{COPY.reasonTitle}</div>
-        <div className="mt-4 flex flex-col gap-2">
-          {REASONS.map((r) => (
-            <button
-              key={r.value}
-              type="button"
-              onClick={() => {
-                setReason(r.value);
-              }}
-              className={cn(
-                "text-foreground flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm font-[540]",
-                reason === r.value ? "border-foreground bg-background" : "border-border bg-card",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-[18px] shrink-0 items-center justify-center rounded-full border-2",
-                  reason === r.value ? "border-foreground bg-foreground" : "border-border",
-                )}
-              >
-                {reason === r.value && <span className="bg-background size-1.5 rounded-full" />}
-              </span>
-              {r.label}
-            </button>
-          ))}
-        </div>
-
-        {reason === "other" && (
-          <div className="mt-3">
-            <label className="text-muted-foreground text-[11px] font-semibold" htmlFor="reject-note">
-              {COPY.noteLabel}
-            </label>
-            <textarea
-              id="reject-note"
-              value={note}
-              onChange={(e) => {
-                setNote(e.target.value);
-              }}
-              placeholder={COPY.notePlaceholder}
-              maxLength={500}
-              rows={3}
-              className="border-border bg-card text-foreground focus-visible:ring-ring mt-1 w-full resize-none rounded-xl border px-3.5 py-2.5 text-sm outline-none focus-visible:ring-2"
-            />
-          </div>
-        )}
-
-        <Button
-          variant="destructive"
-          className="mt-5 h-12 w-full"
-          disabled={busy}
-          onClick={() => {
-            onConfirm(reason, note);
-          }}
-        >
-          {COPY.confirmReject}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export function ResultOverlay({ status, onDone }: { status: "confirmed" | "rejected"; onDone: () => void }) {
-  const confirmed = status === "confirmed";
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center">
-      <div className="bg-card shadow-overlay w-full rounded-t-[28px] p-7 pb-8 md:max-w-sm md:rounded-2xl">
-        <div
-          className={cn(
-            "mx-auto mb-4 flex size-16 items-center justify-center rounded-full",
-            confirmed ? "bg-[var(--flota-success-soft)]" : "bg-[var(--flota-danger-soft)]",
-          )}
-        >
-          {confirmed ? <Check className="text-success size-8" /> : <X className="text-destructive size-8" />}
-        </div>
-        <div className="text-foreground text-center text-[22px] font-bold tracking-tight">
-          {confirmed ? COPY.confirmedTitle : COPY.rejectedTitle}
-        </div>
-        <div className="text-muted-foreground mx-auto mt-2 max-w-[280px] text-center text-[13px] leading-relaxed">
-          {COPY.notifiedSub}
-        </div>
-        <Button className="bg-foreground text-background hover:bg-foreground/90 mt-6 h-12 w-full" onClick={onDone}>
-          {COPY.done}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 // ── main island ──────────────────────────────────────────────────────────────
 
 export default function PendingQueue({ reservations: initial }: { reservations: PendingReservation[] }) {
@@ -559,8 +405,9 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   // Tracked explicitly because on desktop the decided row may be the fallback
   // selection (selectedId still null).
   const [decidedId, setDecidedId] = React.useState<string | null>(null);
-  const [busy, setBusy] = React.useState(false);
   const [banner, setBanner] = React.useState<string | null>(null);
+  // The one decision mechanism, shared with the calendar.
+  const { busy, decide: runDecision } = useReservationDecision();
 
   const selected = reservations.find((r) => r.id === selectedId) ?? null;
 
@@ -569,10 +416,8 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   }
 
   async function decide(id: string, decision: "confirm" | "reject", reason?: RejectionReason, note?: string) {
-    setBusy(true);
     setBanner(null);
-    const outcome = await postDecision(id, decision, reason, note);
-    setBusy(false);
+    const outcome = await runDecision(id, decision, reason, note);
     setReasonForId(null);
 
     if (outcome.status === "confirmed" || outcome.status === "rejected") {

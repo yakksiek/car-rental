@@ -1,0 +1,46 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import ReservationCalendar from "../../components/dashboard/ReservationCalendar";
+
+// others
+import { listReservationsForCalendar } from "../../lib/services/reservations";
+import { listVehicles } from "../../lib/services/vehicles";
+import { vehiclesToResources } from "../../lib/calendar/map";
+
+// Reservation calendar (S-03 Phase 7). Employee-gated by the middleware. SSR the
+// initial window's vehicles (resource rows) + reservations, then mount the
+// client:only island (the lib never SSRs in workerd). The island refetches on
+// navigation via GET /api/reservations/calendar.
+const { supabase } = Astro.locals;
+
+const now = new Date();
+const windowStart = new Date(now);
+windowStart.setDate(windowStart.getDate() - 31);
+const windowEnd = new Date(now);
+windowEnd.setDate(windowEnd.getDate() + 62);
+const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+// Active vehicles only (listVehicles already restricts to is_active). See the
+// plan's Migration Notes on the S-04 listVehicles coupling.
+const vehicles = await listVehicles(supabase, {
+  category: null,
+  pickup: null,
+  return: null,
+  minPayload: null,
+  sort: null,
+});
+const resources = vehiclesToResources(vehicles);
+const reservations = await listReservationsForCalendar(supabase, isoDate(windowStart), isoDate(windowEnd));
+---
+
+<Layout title="Kalendarz — Flota">
+  <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8">
+    <header class="mb-4 px-1">
+      <a href="/dashboard" class="text-muted-foreground hover:text-foreground text-sm font-medium">← Pulpit</a>
+      <h1 class="text-foreground mt-2 text-2xl font-bold tracking-tight">Kalendarz</h1>
+      <p class="text-muted-foreground mt-1 text-sm">Oś czasu rezerwacji według pojazdów</p>
+    </header>
+    <ReservationCalendar client:only="react" resources={resources} reservations={reservations} />
+  </main>
+</Layout>

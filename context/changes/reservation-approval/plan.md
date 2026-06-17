@@ -586,31 +586,31 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 6.1 Dependencies install and build passes: `npm install` + `npm run build`
-- [x] 6.2 Type checking passes: `npx astro check`
-- [x] 6.3 Linting passes: `npm run lint`
-- [x] 6.4 Mapping unit tests pass: `npm test`
+- [x] 6.1 Dependencies install and build passes: `npm install` + `npm run build` — 374a192
+- [x] 6.2 Type checking passes: `npx astro check` — 374a192
+- [x] 6.3 Linting passes: `npm run lint` — 374a192
+- [x] 6.4 Mapping unit tests pass: `npm test` — 374a192
 
 #### Manual
 
-- [x] 6.5 `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window
-- [x] 6.6 `dist/index.css` presence checked and the CSS decision recorded (absent — rely on shadcn tokens + @source)
+- [x] 6.5 `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window — 374a192
+- [x] 6.6 `dist/index.css` presence checked and the CSS decision recorded (absent — rely on shadcn tokens + @source) — 374a192
 
 ### Phase 7: Reservation calendar UI
 
 #### Automated
 
-- [ ] 7.1 Type checking passes: `npx astro check`
-- [ ] 7.2 Linting passes: `npm run lint`
-- [ ] 7.3 Build passes: `npm run build`
-- [ ] 7.4 Unit tests still green (mapping + extracted pure logic): `npm test`
+- [x] 7.1 Type checking passes: `npx astro check`
+- [x] 7.2 Linting passes: `npm run lint`
+- [x] 7.3 Build passes: `npm run build`
+- [x] 7.4 Unit tests still green (mapping + extracted pure logic): `npm test`
 
 #### Manual
 
-- [ ] 7.5 `/dashboard/calendar` shows vehicles as rows + pending/confirmed bars at 14:00→10:00 (screens 16/22)
-- [ ] 7.6 Clicking a pending bar opens accept/reject; accept recolors→confirmed + email; reject removes — same as queue
-- [ ] 7.7 Clicking a confirmed bar shows a read-only detail (no actions)
-- [ ] 7.8 Week/month navigation refetches + re-plots; mobile timeline scrolls + Month toggle works
-- [ ] 7.9 No drag/resize, no empty-slot create; legend shows only pending/confirmed
-- [ ] 7.10 Queue (Phases 4/5) unchanged after the decision-flow extraction
-- [ ] 7.11 Non-employee 403'd from `/dashboard/calendar` and `GET /api/reservations/calendar`
+- [x] 7.5 `/dashboard/calendar` shows vehicles as rows + pending/confirmed bars at 14:00→10:00 (screens 16/22)
+- [x] 7.6 Clicking a pending bar opens accept/reject; accept recolors→confirmed + email; reject removes — same as queue
+- [x] 7.7 Clicking a confirmed bar shows a read-only detail (no actions)
+- [x] 7.8 Week/month navigation refetches + re-plots; mobile timeline scrolls + Month toggle works
+- [x] 7.9 No drag/resize, no empty-slot create; legend shows only pending/confirmed
+- [x] 7.10 Queue (Phases 4/5) unchanged after the decision-flow extraction
+- [x] 7.11 Non-employee 403'd from `/dashboard/calendar` and `GET /api/reservations/calendar`
