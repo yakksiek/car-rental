@@ -1,7 +1,7 @@
 ---
 change_id: reservation-approval
 title: Employee accept/reject of pending reservation requests
-status: implementing
+status: implemented
 created: 2026-06-17
 updated: 2026-06-17
 archived_at: null
