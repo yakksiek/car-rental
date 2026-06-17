@@ -4,7 +4,10 @@ import { z } from "zod";
 
 // others
 import { isRoleSufficient } from "../../../lib/access";
+import { sendEmail } from "../../../lib/email";
+import { reservationConfirmedEmail, reservationRejectedEmail } from "../../../lib/email/templates";
 import { decideReservation } from "../../../lib/services/reservations";
+import type { DecisionEmailPayload } from "../../../types";
 
 // The employee decision endpoint (S-03). Mirrors the S-02 reservation route's
 // defenses, adapted for an authenticated mutation:
@@ -42,6 +45,56 @@ const decisionSchema = z
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+/** Display label for the vehicle, e.g. `"Mercedes-Benz Sprinter (2022)"`. */
+function vehicleLabel(email: DecisionEmailPayload): string {
+  return [
+    [email.vehicle_make, email.vehicle_model].filter(Boolean).join(" "),
+    email.vehicle_production_year ? `(${email.vehicle_production_year})` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
+ * Compose and send the confirm/reject email through the dev-log seam. Best-effort:
+ * swallows any error so a send failure never rolls back the committed decision.
+ */
+async function notifyCustomer(
+  status: "confirmed" | "rejected",
+  email: DecisionEmailPayload,
+  reason: (typeof REJECTION_REASONS)[number] | undefined,
+  note: string | undefined,
+  origin: string,
+): Promise<void> {
+  try {
+    const statusUrl = new URL(`/r/${email.access_token}`, origin).href;
+    const content =
+      status === "confirmed"
+        ? reservationConfirmedEmail({
+            reference: email.reference,
+            statusUrl,
+            vehicle: vehicleLabel(email),
+            pickup: email.pickup_date,
+            return: email.return_date,
+            dailyRate: email.vehicle_daily_rate,
+            deposit: email.vehicle_deposit,
+          })
+        : reservationRejectedEmail({
+            reference: email.reference,
+            statusUrl,
+            vehicle: vehicleLabel(email),
+            // A committed reject always carried a valid reason through the zod
+            // gate; default defensively so the template never receives undefined.
+            reason: reason ?? "other",
+            note,
+          });
+    await sendEmail({ to: email.customer_email, ...content });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("[api/reservations/[id]] decision email failed (request still succeeds):", error);
+  }
 }
 
 /** First zod message per top-level field — the island mirrors this shape. */
@@ -92,7 +145,9 @@ export const PATCH: APIRoute = async (context) => {
   switch (result.status) {
     case "confirmed":
     case "rejected":
-      // (e) Phase 3 composes + sends the notification email here.
+      // (e) Best-effort notification. The decision is already committed, so a
+      // send failure is logged and never fails the request (S-02 pattern).
+      await notifyCustomer(result.status, result.email, reason, note, context.url.origin);
       return json(200, { status: result.status });
     case "already_decided":
       return json(409, { error: MSG.alreadyDecided, reason: "already_decided" });
