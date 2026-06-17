@@ -28,6 +28,9 @@ export const ROUTE_ROLES: { prefix: string; role: AppRole }[] = [
   // Staff management (S-08) — admin only. Most-specific, must precede /dashboard
   // in specificity (it does: longer prefix wins regardless of array order).
   { prefix: "/dashboard/staff", role: "admin" },
+  // Pending-request queue (S-03) — employee. The /dashboard rule already covers
+  // it; this explicit entry documents intent.
+  { prefix: "/dashboard/reservations", role: "employee" },
   // Authenticated staff area — any role with a profile.
   { prefix: "/dashboard", role: "employee" },
 ];

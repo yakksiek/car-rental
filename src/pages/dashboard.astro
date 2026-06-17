@@ -1,30 +1,68 @@
 ---
+// components
 import Layout from "../layouts/Layout.astro";
 
-const { user, role } = Astro.locals;
+// others
+import { listPendingReservations } from "../lib/services/reservations";
+
+const { user, role, supabase } = Astro.locals;
+
+// Cheap pending count for the queue entry card (mirrors the desktop "Need a
+// decision" panel intent; the full mini-list lands with the desktop pass).
+const pending = await listPendingReservations(supabase);
+const pendingCount = pending.length;
 ---
 
-<Layout title="Dashboard">
-  <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
-    <div class="rounded-2xl border border-white/10 bg-white/10 p-8 text-center text-white backdrop-blur-xl">
-      <h1 class="mb-4 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Dashboard
-      </h1>
-      <p class="text-blue-100/80">
-        Welcome, <span class="font-semibold text-white">{user?.email}</span>
-      </p>
-      <p class="mt-2 text-sm text-blue-100/70">
-        Role: <span class="font-semibold text-white">{role ?? "—"}</span>
-      </p>
-      <p class="mt-2 text-sm text-blue-100/50">This page is only for authenticated users.</p>
-      <form method="POST" action="/api/auth/signout" class="mt-6">
+<Layout title="Pulpit — Flota">
+  <main class="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">
+    <header class="mb-6 flex items-start justify-between gap-4 px-1">
+      <div>
+        <h1 class="text-foreground text-2xl font-bold tracking-tight">Pulpit</h1>
+        <p class="text-muted-foreground mt-1 text-sm">
+          {user?.email}{role ? ` · ${role}` : ""}
+        </p>
+      </div>
+      <form method="POST" action="/api/auth/signout">
         <button
           type="submit"
-          class="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
+          class="border-border bg-card text-foreground shadow-card hover:bg-background rounded-[14px] border px-4 py-2 text-sm font-medium"
         >
-          Sign out
+          Wyloguj
         </button>
       </form>
+    </header>
+
+    <div class="flex flex-col gap-3">
+      <a
+        href="/dashboard/reservations"
+        class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+      >
+        <div>
+          <div class="text-foreground text-base font-[650] tracking-tight">Oczekujące wnioski</div>
+          <div class="text-muted-foreground mt-0.5 text-sm">Zatwierdź lub odrzuć zgłoszenia rezerwacji</div>
+        </div>
+        <div class="flex items-center gap-3">
+          {
+            pendingCount > 0 && (
+              <span class="text-warning flex min-w-7 items-center justify-center rounded-full bg-[var(--flota-warning-soft)] px-2 py-0.5 text-sm font-bold">
+                {pendingCount}
+              </span>
+            )
+          }
+          <span class="text-muted-foreground" aria-hidden="true">→</span>
+        </div>
+      </a>
+
+      <a
+        href="/dashboard/calendar"
+        class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+      >
+        <div>
+          <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
+          <div class="text-muted-foreground mt-0.5 text-sm">Oś czasu rezerwacji według pojazdów</div>
+        </div>
+        <span class="text-muted-foreground" aria-hidden="true">→</span>
+      </a>
     </div>
-  </div>
+  </main>
 </Layout>
