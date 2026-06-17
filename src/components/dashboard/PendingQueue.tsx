@@ -204,6 +204,50 @@ function QueueCard({
   );
 }
 
+// Compact desktop master-list card: click selects (detail renders in the right
+// panel). No action buttons — the detail panel carries the decision controls.
+function MasterCard({
+  reservation,
+  selected,
+  onSelect,
+}: {
+  reservation: PendingReservation;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const days = rentalDays(reservation.pickup_date, reservation.return_date);
+  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        cardClass,
+        "w-full p-4 text-left transition-colors",
+        selected ? "ring-foreground ring-2" : "hover:bg-background",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-muted-foreground font-mono text-[11px] font-semibold">{reservation.reference}</span>
+        <span className="text-muted-foreground text-[11px]">{submittedAgo(reservation.created_at)}</span>
+      </div>
+      <div className="text-foreground mt-1 truncate text-[15px] font-[650] tracking-tight">
+        {reservation.customer_name}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Truck className="text-foreground size-5 shrink-0" strokeWidth={1.5} />
+          <span className="text-muted-foreground truncate text-xs">
+            {vehicleName(reservation)} · {formatRange(reservation.pickup_date, reservation.return_date)}
+          </span>
+        </div>
+        <span className="text-foreground shrink-0 text-sm font-bold tracking-tight">{total}</span>
+      </div>
+    </button>
+  );
+}
+
 function InfoRow({
   icon,
   label,
@@ -396,29 +440,26 @@ export function ReasonSheet({
   busy,
   onConfirm,
   onClose,
-  asModal,
 }: {
   busy: boolean;
   onConfirm: (reason: RejectionReason, note: string) => void;
   onClose: () => void;
-  asModal?: boolean;
 }) {
   const [reason, setReason] = React.useState<RejectionReason>(REASONS[0].value);
   const [note, setNote] = React.useState("");
 
   return (
     <div
-      className="absolute inset-0 z-50 flex bg-[rgba(20,18,22,0.55)] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center"
       onClick={onClose}
-      style={{ alignItems: asModal ? "center" : "flex-end", justifyContent: "center" }}
     >
       <div
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className={cn("bg-card shadow-overlay w-full p-6 pb-8", asModal ? "max-w-md rounded-2xl" : "rounded-t-[28px]")}
+        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
       >
-        {!asModal && <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full" />}
+        <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
         <div className="text-foreground text-xl font-bold tracking-tight">{COPY.reasonTitle}</div>
         <div className="mt-4 flex flex-col gap-2">
           {REASONS.map((r) => (
@@ -480,24 +521,11 @@ export function ReasonSheet({
   );
 }
 
-export function ResultOverlay({
-  status,
-  onDone,
-  asModal,
-}: {
-  status: "confirmed" | "rejected";
-  onDone: () => void;
-  asModal?: boolean;
-}) {
+export function ResultOverlay({ status, onDone }: { status: "confirmed" | "rejected"; onDone: () => void }) {
   const confirmed = status === "confirmed";
   return (
-    <div
-      className="absolute inset-0 z-50 flex bg-[rgba(20,18,22,0.55)] backdrop-blur-sm"
-      style={{ alignItems: asModal ? "center" : "flex-end", justifyContent: "center" }}
-    >
-      <div
-        className={cn("bg-card shadow-overlay w-full p-7 pb-8", asModal ? "max-w-sm rounded-2xl" : "rounded-t-[28px]")}
-      >
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center">
+      <div className="bg-card shadow-overlay w-full rounded-t-[28px] p-7 pb-8 md:max-w-sm md:rounded-2xl">
         <div
           className={cn(
             "mx-auto mb-4 flex size-16 items-center justify-center rounded-full",
@@ -527,6 +555,10 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
+  // The id whose decision produced the current result overlay — removed on "Gotowe".
+  // Tracked explicitly because on desktop the decided row may be the fallback
+  // selection (selectedId still null).
+  const [decidedId, setDecidedId] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [banner, setBanner] = React.useState<string | null>(null);
 
@@ -544,13 +576,16 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
     setReasonForId(null);
 
     if (outcome.status === "confirmed" || outcome.status === "rejected") {
+      setDecidedId(id);
       setResult(outcome.status);
       return;
     }
     if (outcome.status === "already_decided") {
       // The friendly re-sync: drop the stale card and return to the queue.
       removeFromQueue(id);
-      setSelectedId(null);
+      if (selectedId === id) {
+        setSelectedId(null);
+      }
       setBanner(COPY.alreadyHandled);
       return;
     }
@@ -558,14 +593,28 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   }
 
   function onResultDone() {
-    if (selectedId) {
-      removeFromQueue(selectedId);
+    if (decidedId) {
+      removeFromQueue(decidedId);
+      if (selectedId === decidedId) {
+        // Mobile returns to the queue; desktop advances to the next pending row.
+        setSelectedId(null);
+      }
     }
+    setDecidedId(null);
     setResult(null);
-    setSelectedId(null);
   }
 
   const count = reservations.length;
+  // Desktop master-detail keeps a request selected on the right at all times;
+  // fall back to the first pending one (and advance to the next after a decision).
+  const desktopSelected = selected ?? reservations.at(0) ?? null;
+
+  const emptyState = (
+    <div className={cn(cardClass, "flex flex-col items-center justify-center px-6 py-16 text-center")}>
+      <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
+      <div className="text-muted-foreground mt-1 text-sm">{COPY.emptyHint}</div>
+    </div>
+  );
 
   return (
     <div className="relative min-h-[60vh]">
@@ -581,45 +630,75 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
         </div>
       )}
 
-      {/* Detail (mobile: replaces the queue) */}
-      {selected ? (
-        <div className="mt-4 md:hidden">
-          <RequestDetail
-            reservation={selected}
-            busy={busy}
-            onApprove={() => decide(selected.id, "confirm")}
-            onReject={() => {
-              setReasonForId(selected.id);
-            }}
-            onBack={() => {
-              setSelectedId(null);
-            }}
-          />
-        </div>
-      ) : null}
-
-      {/* Queue */}
-      <div className={cn("mt-4 flex flex-col gap-3", selected && "hidden md:flex")}>
-        {count === 0 ? (
-          <div className={cn(cardClass, "flex flex-col items-center justify-center px-6 py-16 text-center")}>
-            <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
-            <div className="text-muted-foreground mt-1 text-sm">{COPY.emptyHint}</div>
-          </div>
-        ) : (
-          reservations.map((r) => (
-            <QueueCard
-              key={r.id}
-              reservation={r}
-              selected={r.id === selectedId}
+      {/* ── Mobile: queue → detail navigation ───────────────────────────── */}
+      <div className="md:hidden">
+        {selected ? (
+          <div className="mt-4">
+            <RequestDetail
+              reservation={selected}
               busy={busy}
-              onReview={() => {
-                setSelectedId(r.id);
-              }}
+              onApprove={() => decide(selected.id, "confirm")}
               onReject={() => {
-                setReasonForId(r.id);
+                setReasonForId(selected.id);
+              }}
+              onBack={() => {
+                setSelectedId(null);
               }}
             />
-          ))
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3">
+            {count === 0
+              ? emptyState
+              : reservations.map((r) => (
+                  <QueueCard
+                    key={r.id}
+                    reservation={r}
+                    busy={busy}
+                    onReview={() => {
+                      setSelectedId(r.id);
+                    }}
+                    onReject={() => {
+                      setReasonForId(r.id);
+                    }}
+                  />
+                ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Desktop: master list + detail panel side by side ────────────── */}
+      <div className="mt-4 hidden md:grid md:grid-cols-[360px_1fr] md:gap-6">
+        {count === 0 ? (
+          <div className="md:col-span-2">{emptyState}</div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3">
+              {reservations.map((r) => (
+                <MasterCard
+                  key={r.id}
+                  reservation={r}
+                  selected={r.id === desktopSelected?.id}
+                  onSelect={() => {
+                    setSelectedId(r.id);
+                  }}
+                />
+              ))}
+            </div>
+            <div>
+              {desktopSelected && (
+                <RequestDetail
+                  reservation={desktopSelected}
+                  busy={busy}
+                  withBackButton={false}
+                  onApprove={() => decide(desktopSelected.id, "confirm")}
+                  onReject={() => {
+                    setReasonForId(desktopSelected.id);
+                  }}
+                />
+              )}
+            </div>
+          </>
         )}
       </div>
 
