@@ -483,7 +483,9 @@ Low volume (a single operator's pending queue). The queue is one indexed-status 
 
 ## Migration Notes
 
-One additive migration (`rejection_reason`/`rejection_note` columns + `decide_reservation` RPC + RLS tightening). The RLS change removes blanket authenticated write policies; this is safe because the only write path is the definer RPC. If S-04 (fleet-management) is built in a parallel worktree, both add separate timestamped migrations (no content conflict) but the generated `src/db/database.types.ts` must be regenerated once both are applied.
+One additive migration (`rejection_reason`/`rejection_note` columns + `decide_reservation` RPC + RLS tightening). The RLS change removes blanket authenticated write policies; this is safe because the only write path is the definer RPC. If S-04 (fleet-management) is built in a parallel worktree, both add separate timestamped migrations (no content conflict) but the generated `src/db/database.types.ts` must be regenerated once both are applied. Give the two migrations **distinct, sequential `YYYYMMDDHHmmss` prefixes** — order between them is functionally irrelevant (different tables), but identical/overlapping timestamps confuse the migration list.
+
+**Cross-slice dependency on `listVehicles` (Phase 7 calendar).** Phase 7's calendar page reads vehicle rows via `listVehicles` (`src/lib/services/vehicles.ts`) — a function **S-04 concurrently modifies**: S-04 broadens `vehicles_select_authenticated` to `using (true)` (staff see retired vehicles) and compensates by adding an explicit `.eq('is_active', true)` inside `listVehicles`. The calendar wants active-only vehicles, so the patched behavior is correct for us — but it is only correct if **S-04's RLS broadening and its `listVehicles` patch land together** (they are coupled in S-04 Phase 2). If S-04's RLS change ever merged without that patch, this calendar would start showing retired vehicles as rows. No S-03 code change is needed; flagged so the coupling is not accidentally broken at merge time.
 
 ## References
 

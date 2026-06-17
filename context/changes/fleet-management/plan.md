@@ -326,7 +326,8 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 - `src/pages/dashboard.astro` — both add an entry card. Additive; resolve by keeping both cards.
 - `src/types.ts` — both add DTO/result types. Additive.
 - `src/db/database.types.ts` — both regenerate after their migration. **Regenerate once after both migrations are applied** to avoid a stale/partial types file; never hand-merge this generated file.
-- `src/lib/services/*.ts` — different files (`vehicles.ts` vs `reservations.ts`); `vehicles.ts` is S-04-only.
+- `src/lib/services/*.ts` — different files (`vehicles.ts` vs `reservations.ts`); `vehicles.ts` is S-04-only. **Note:** S-03's Phase 7 calendar also reads `listVehicles` for its vehicle rows, so the `listVehicles` `.eq('is_active', true)` patch (Phase 2) is not purely a public-catalog concern — keep it **coupled to the RLS broadening in the same migration/PR** so S-03's calendar never starts rendering retired vehicles.
+- **Migration timestamps** — give the S-03 and S-04 migrations distinct, sequential `YYYYMMDDHHmmss` prefixes; order between them is functionally irrelevant (different tables), but overlapping timestamps confuse the migration list.
 - **No** `src/lib/access.ts` change in S-04 (`/dashboard` already gates `employee`) — one fewer conflict than S-03.
 
 ## References
