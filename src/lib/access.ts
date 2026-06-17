@@ -31,6 +31,8 @@ export const ROUTE_ROLES: { prefix: string; role: AppRole }[] = [
   // Pending-request queue (S-03) — employee. The /dashboard rule already covers
   // it; this explicit entry documents intent.
   { prefix: "/dashboard/reservations", role: "employee" },
+  // Reservation calendar (S-03) — employee. Likewise covered by /dashboard.
+  { prefix: "/dashboard/calendar", role: "employee" },
   // Authenticated staff area — any role with a profile.
   { prefix: "/dashboard", role: "employee" },
 ];
