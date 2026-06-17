@@ -67,6 +67,8 @@ export type Database = {
           notes: string | null
           pickup_date: string
           reference: string | null
+          rejection_note: string | null
+          rejection_reason: string | null
           reserved_period: unknown
           return_date: string
           status: Database["public"]["Enums"]["reservation_status"]
@@ -86,6 +88,8 @@ export type Database = {
           notes?: string | null
           pickup_date: string
           reference?: string | null
+          rejection_note?: string | null
+          rejection_reason?: string | null
           reserved_period?: unknown
           return_date: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -105,6 +109,8 @@ export type Database = {
           notes?: string | null
           pickup_date?: string
           reference?: string | null
+          rejection_note?: string | null
+          rejection_reason?: string | null
           reserved_period?: unknown
           return_date?: string
           status?: Database["public"]["Enums"]["reservation_status"]
@@ -259,6 +265,28 @@ export type Database = {
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      decide_reservation: {
+        Args: {
+          p_decision: string
+          p_id: string
+          p_note?: string
+          p_reason?: string
+        }
+        Returns: {
+          access_token: string
+          customer_email: string
+          customer_name: string
+          pickup_date: string
+          reference: string
+          result: string
+          return_date: string
+          vehicle_daily_rate: number
+          vehicle_deposit: number
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_production_year: number
+        }[]
       }
       get_reservation_status: {
         Args: { p_token: string }
