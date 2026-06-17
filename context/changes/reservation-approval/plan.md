@@ -510,17 +510,17 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly: `supabase db reset`
-- [ ] 1.2 Generated types in sync: `npx supabase gen types typescript --local`
-- [ ] 1.3 Type checking passes: `npx astro check`
-- [ ] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `supabase db reset`
+- [x] 1.2 Generated types in sync: `npx supabase gen types typescript --local`
+- [x] 1.3 Type checking passes: `npx astro check`
+- [x] 1.4 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.5 `decide_reservation` flips a pending row to confirmed/rejected and returns the customer payload (SQL)
-- [ ] 1.6 Repeat decision on the same row returns `already_decided`
-- [ ] 1.7 Non-employee role returns `unauthorized`
-- [ ] 1.8 Direct authenticated `update reservations` is denied by RLS
+- [x] 1.5 `decide_reservation` flips a pending row to confirmed/rejected and returns the customer payload (SQL)
+- [x] 1.6 Repeat decision on the same row returns `already_decided`
+- [x] 1.7 Non-employee role returns `unauthorized`
+- [x] 1.8 Direct authenticated `update reservations` is denied by RLS
 
 ### Phase 2: Service + decision API
 
