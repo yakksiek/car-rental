@@ -12,7 +12,7 @@ S-02 shipped the public funnel and deliberately left the rails for this slice: t
 
 ## Desired End State
 
-An employee opens `/dashboard/reservations`, sees the pending queue, and accepts or rejects each request — from the card or a detail view — with rejections capturing a canned reason. A result overlay confirms the action, the request leaves the queue, the customer's `/r/<token>` page reflects the new status, and a Polish confirm/reject email is composed (delivered for real once S-05 wires a provider).
+An employee opens `/dashboard/reservations`, sees the pending queue, and accepts or rejects each request — from the card or a detail view — with rejections capturing a canned reason. A result overlay confirms the action, the request leaves the queue, the customer's `/r/<token>` page reflects the new status, and a Polish confirm/reject email is composed (delivered for real once S-05 wires a provider). An employee can also open `/dashboard/calendar` — a **resource-timeline calendar** (vehicles as rows, pending + confirmed bookings as bars at the real 14:00→10:00 window) on mobile and desktop — and click a pending bar to run the same accept/reject flow.
 
 ## Key Decisions Made
 
@@ -27,12 +27,16 @@ An employee opens `/dashboard/reservations`, sees the pending queue, and accepts
 | UI scope | Core flow: queue + detail + reason sheet + full result overlay | Gives real decision context, faithful to the drawn design | Plan |
 | Queue scope | Pending only | Tightest scope; "inbox zero" model | Plan |
 | Desktop layout | Master-detail (list + detail side-by-side) | Desktop designs provided 2026-06-17; differs from mobile's queue→detail navigation | Plan |
+| Calendar library | `@ilamy/calendar` (`IlamyResourceCalendar`) | React 19 + Tailwind 4 + shadcn/ui native, MIT, native `onCellClick`/resource rows; researched via exa + Context7 | Research |
+| Calendar interactivity | Read-only + event-click decision | Clicking a pending bar reuses the accept/reject flow; no drag/resize; **no empty-slot manual create** (deferred, not in roadmap) | Plan (user) |
+| Calendar statuses | `pending` + `confirmed` only, 2-item legend | Only these exist in the enum; Active/Overdue/Completed are S-05/06/07; no `Filtry` chrome | Plan (user) |
+| Calendar render | `client:only="react"` island | Admin-only + interactive → never SSRs in Cloudflare `workerd` | Plan |
 
 ## Scope
 
-**In scope:** decision RPC + reason columns + RLS tightening; list-pending + decide service; `PATCH /api/reservations/[id]`; confirm/reject email templates; mobile approval UI (queue → detail → reason sheet → result overlay).
+**In scope:** decision RPC + reason columns + RLS tightening; list-pending + decide service; `PATCH /api/reservations/[id]`; confirm/reject email templates; mobile + desktop approval UI (queue → detail → reason sheet → result overlay); **a `/dashboard/calendar` resource-timeline calendar** (vehicles as rows, pending+confirmed bars) with pending-event clicks reusing the decision flow, plus the supporting range read, pure mapping helpers, and a refetch endpoint.
 
-**Out of scope:** cancelling confirmed bookings; real email delivery / provider wiring (S-05); alternative-date proposals; license/plate/location fields; general reservations admin / undo; English copy.
+**Out of scope:** cancelling confirmed bookings; real email delivery / provider wiring (S-05); alternative-date proposals; license/plate/location fields; general reservations admin / undo; **click-empty-slot manual reservation creation** (deferred future work); calendar drag/resize rescheduling; calendar status-filter chips / future-state legend; English copy.
 
 ## Architecture / Approach
 
@@ -47,18 +51,23 @@ Bottom-up, mirroring S-02. The write crosses RLS only through `decide_reservatio
 | 3. Emails | Confirm/reject Polish templates + best-effort send | Copy register; never fail the request on send |
 | 4. Mobile UI | Queue → detail → reason sheet → result overlay, wired | Faithful rebuild against live tokens, not prototype JSX |
 | 5. Desktop layout | Responsive desktop master-detail (list + detail) | Master-detail differs from mobile; reuse same logic |
+| 6. Calendar data + setup | `@ilamy/calendar` wired; range read + pure, tested mapping helpers (no UI) | Tailwind v4 `@source` + dayjs plugin wiring; `dist/index.css` presence varies by version |
+| 7. Calendar UI | `/dashboard/calendar` resource timeline; pending-click reuses decision flow | Extracting Phase 4's decision flow into shared components without regressing the queue |
 
-**Prerequisites:** F-02 (done) and S-02 (shipped in code, despite stale roadmap status). Desktop designs are in hand (`21-staff-desktop-requests.jpg`, `20-staff-desktop-dashboard.jpg`) and distilled into the Phase 5 contract.
-**Estimated effort:** ~3–4 sessions across 5 phases (Phases 1–3 are small and back-end; Phase 4 is the bulk; Phase 5 is layout-only).
+**Prerequisites:** F-02 (done) and S-02 (shipped in code, despite stale roadmap status). Desktop designs are in hand (`21-staff-desktop-requests.jpg`, `20-staff-desktop-dashboard.jpg`) and distilled into the Phase 5 contract; calendar designs in hand (`16-admin-desktop-calendar.png`, `22-admin-mobile-calendar.jpg`) for Phases 6–7. Calendar library researched (`calendar-component-research.md` + `ilamy-calendar-reference.md`).
+**Estimated effort:** ~5–6 sessions across 7 phases (Phases 1–3 small/back-end; Phase 4 the bulk; Phase 5 layout-only; Phase 6 small/back-end + tests; Phase 7 the calendar island + decision-flow extraction).
 
 ## Open Risks & Assumptions
 
 - **No real email until S-05.** Confirm/reject emails are composed to the dev log, not delivered. Must be communicated.
 - **Desktop is master-detail, not the mobile flow.** Phase 5 builds list + detail side-by-side at `md`+; the components must be structured (in Phase 4) so the same island state drives both breakpoints.
 - **Parallel-worktree caution (if building alongside S-04):** shared-merge surfaces are `src/lib/access.ts`, `src/pages/dashboard.astro`, `src/types.ts`, and the generated `src/db/database.types.ts` (regenerate after both migrations apply).
+- **`@ilamy/calendar` is young (single-maintainer, 2025).** Accepted for stack fit; fallback is `react-big-calendar` (see `calendar-component-research.md`). The published-build CSS story varies by version — verify `dist/index.css` at install (Phase 6).
+- **Phase 7 refactors Phase 4 components.** The decision detail/sheet/overlay move into shared `ReservationDecision` + `useReservationDecision`; the queue must be re-verified unchanged. Sequence Phase 7 after Phase 4 (ideally after 5).
 
 ## Success Criteria (Summary)
 
 - An employee can accept/reject a pending request and the customer's `/r/<token>` page reflects it; rejections store a reason.
 - A second decision on the same request is safely blocked with a friendly re-sync (no overwrite).
 - Confirm/reject emails are composed in Polish via the dev-log seam; the request never fails on a send error.
+- An employee sees pending + confirmed bookings on `/dashboard/calendar` (vehicles as rows, mobile + desktop) and can accept/reject a pending booking directly from the calendar with the same outcome as the queue.

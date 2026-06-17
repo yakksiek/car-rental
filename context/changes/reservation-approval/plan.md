@@ -28,6 +28,7 @@ A logged-in employee can:
 3. On **reject**, pick a canned reason (`Daty już niedostępne` / `Brak wymaganej kategorii` / `Pojazd wycofany` / `Inny`) in a bottom sheet; `Inny` accepts a short free-text note. The reason is stored.
 4. See a **full result overlay** on success (`Rezerwacja potwierdzona` / `Wniosek odrzucony`, "Klient powiadomiony e-mailem"), after which the decided request leaves the pending queue.
 5. Be safely blocked if the request was already decided (by another employee or a stale tab): the action returns "already handled" and the queue re-syncs — no silent overwrite.
+6. Open `/dashboard/calendar` and see a **resource-timeline calendar** (vehicles as rows, `pending` + `confirmed` reservations as bars positioned at the real 14:00→10:00 window) on both mobile (horizontally-scrollable timeline + Month toggle) and desktop — matching screens 16/22. Clicking a **pending** bar opens the same accept/reject flow as the queue (one decision mechanism); clicking a **confirmed** bar shows a read-only detail.
 
 The customer's `/r/<token>` page now shows `Confirmed`/`Rejected`, and a Polish confirm/reject email is composed through the dev-log seam (real delivery arrives with S-05).
 
@@ -50,12 +51,15 @@ The customer's `/r/<token>` page now shows `Confirmed`/`Rejected`, and a Polish 
 - **No driver-license / plate / location fields** — absent from the schema; the detail screen shows only data we have.
 - **No general reservations admin view** — the queue is pending-only. Reviewing/altering past decisions (and any "undo") is out of scope.
 - **No "recently decided" list or undo** — once decided, a request leaves the queue; the record is visible only on the customer's `/r/<token>` page.
+- **No click-empty-slot manual reservation creation** (Phases 6–7) — the calendar's `+`/empty-cell create affordance is **deferred future work**, not in the roadmap. `onCellClick` is disabled; the `+` button is omitted. (Researched in `calendar-component-research.md`; explicitly parked by the user.)
+- **No drag/resize rescheduling on the calendar** — `reserved_period` is generated from the dates and there is no reschedule write path; the calendar is read-only except for the accept/reject decision. `disableDragAndDrop` is set.
+- **No status filter chips / future-state legend on the calendar** — only `pending` + `confirmed` render, with a two-item legend. The mockup's `Filtry` control and the `Active`/`Overdue`/`Completed` states (S-05/06/07) are out of scope.
 - **No UI/E2E runner** — Vitest covers the new pure logic; the UI is verified manually.
 - **No English copy** — Polish is canonical.
 
 ## Implementation Approach
 
-Bottom-up, mirroring S-02's proven shape. Phase 1 lays the data layer: the `rejection_reason`/`rejection_note` columns, the `decide_reservation` definer RPC (role check + pending-guard + atomic flip + email payload return), and the RLS tightening, then regenerates types. Phase 2 wraps the read (list pending) and the write (decide) in the reservation service and exposes the decision through `PATCH /api/reservations/[id]`, with the already-decided path mapped to a friendly 409. Phase 3 adds the two Polish email templates and wires the best-effort send into the endpoint. Phase 4 builds the mobile approval UI — the `/dashboard/reservations` page, the queue/detail/reason-sheet/result-overlay island — against the live tokens and canonical copy, wired to the endpoint. Phase 5 layers the desktop layout once the design assets land. Each phase is independently verifiable; Phases 1–3 carry the whole behavior and can be verified via SQL + curl before any UI exists.
+Bottom-up, mirroring S-02's proven shape. Phase 1 lays the data layer: the `rejection_reason`/`rejection_note` columns, the `decide_reservation` definer RPC (role check + pending-guard + atomic flip + email payload return), and the RLS tightening, then regenerates types. Phase 2 wraps the read (list pending) and the write (decide) in the reservation service and exposes the decision through `PATCH /api/reservations/[id]`, with the already-decided path mapped to a friendly 409. Phase 3 adds the two Polish email templates and wires the best-effort send into the endpoint. Phase 4 builds the mobile approval UI — the `/dashboard/reservations` page, the queue/detail/reason-sheet/result-overlay island — against the live tokens and canonical copy, wired to the endpoint. Phase 5 layers the desktop layout once the design assets land. Phases 6–7 then add the reservation **calendar** surface: Phase 6 stands up the `@ilamy/calendar` dependency, a range read (`listReservationsForCalendar`), and pure, Vitest-tested mapping helpers (no UI); Phase 7 builds the `/dashboard/calendar` resource-timeline island and makes pending-event clicks reuse the decision flow (extracted from Phase 4 into a shared `ReservationDecision` + `useReservationDecision`). Each phase is independently verifiable; Phases 1–3 carry the whole decision behavior and can be verified via SQL + curl before any UI exists, and Phase 6 is verifiable via tests before the calendar island exists.
 
 ## Critical Implementation Details
 
@@ -316,12 +320,150 @@ Source: `context/foundation/design/screenshots/21-staff-desktop-requests.jpg` (p
 
 ---
 
+## Phase 6: Calendar data layer + library setup
+
+### Overview
+
+Stand up the reservation calendar's data and dependencies **without any UI**: install and wire `@ilamy/calendar`, add the range read that returns the bookings to plot, and the pure mapping helpers that turn reservations into calendar events and vehicles into resource rows. All of it is verifiable via type-check, build, and Vitest before the island exists. (Library selection + verified API surface: `calendar-component-research.md`, `ilamy-calendar-reference.md`.)
+
+### Changes Required:
+
+#### 1. Install and wire the calendar library
+
+**File**: `package.json`, `src/styles/global.css`, `src/lib/calendar/dayjs.ts`
+
+**Intent**: Add `@ilamy/calendar` and its peers, make Tailwind v4 generate its classes, and extend dayjs with the plugins the library requires.
+
+**Contract**:
+- Add deps `@ilamy/calendar` + `tailwindcss-animate` (peers `react`/`react-dom`/`tailwindcss@4` already present; requires React 19 + Tailwind 4 — both satisfied). After install, **check whether `node_modules/@ilamy/calendar/dist/index.css` exists**: if present, import it once in the island; if absent (the published "no-CSS, shadcn-token" build), rely on the existing shadcn tokens. Record the outcome. See `ilamy-calendar-reference.md` (CSS-import discrepancy note).
+- Tailwind v4 ignores `node_modules`: add `@source "../../node_modules/@ilamy/calendar/dist";` to `src/styles/global.css` (adjust relative depth to the file's location) so the library's utilities are generated.
+- `src/lib/calendar/dayjs.ts` extends dayjs with `utc`, `timezone`, `isSameOrAfter`, `isSameOrBefore` and is imported by the calendar island. Convert any `@/` import shadcn/ilamy tooling emits to a relative path (project rule).
+
+#### 2. Calendar range read
+
+**File**: `src/lib/services/reservations.ts`, `src/types.ts`
+
+**Intent**: Read the bookings to plot — `pending` + `confirmed` reservations overlapping a visible window, joined with the vehicle display fields.
+
+**Contract**:
+- `listReservationsForCalendar(client, rangeStart: string, rangeEnd: string): Promise<CalendarReservation[]>` — selects reservations with `status in ('pending','confirmed')` whose `[pickup_date, return_date]` overlaps `[rangeStart, rangeEnd]`, joined to `vehicles` (`make`, `model`); returns `[]` when client is null. Reads through the per-request authenticated client (the existing `reservations_select_authenticated` policy already allows employees).
+- `CalendarReservation` in `src/types.ts`: `{ id, reference, status: 'pending' | 'confirmed', customer_name, vehicle_id, vehicle_make, vehicle_model, pickup_date, return_date }`. (Additive shared-merge surface with S-04 — low collision risk.)
+
+#### 3. Pure mapping helpers (Vitest-covered)
+
+**File**: `src/lib/calendar/map.ts` (+ `src/lib/calendar/map.test.ts`)
+
+**Intent**: Convert domain rows into the library's `CalendarEvent[]` / `Resource[]` shapes — the edge-case-bearing logic, isolated as pure functions so it is testable without a UI runner (matches the slice's Vitest-for-pure-logic stance).
+
+**Contract**:
+- `reservationsToEvents(rows: CalendarReservation[]): CalendarEvent[]` — `start = pickup_date @ 14:00`, `end = return_date @ 10:00` (mirroring `reserved_period`), `resourceId = vehicle_id`, `title = customer_name`, `id`/`uid` from the reservation id, and a status→color mapping (pending → amber token, confirmed → green token). Times constructed in `Europe/Warsaw`.
+- `vehiclesToResources(vehicles: Vehicle[]): Resource[]` — `id = vehicle.id`, `title = "<make> <model>"`. Active-only filtering happens at the call site via `listVehicles`.
+- Tests: the 14:00/10:00 boundary; a same-day turnover (one vehicle's return 10:00 vs the next pickup 14:00 on the same date — no false overlap); status→color mapping; empty input → `[]`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Dependencies install and build passes: `npm install` + `npm run build`
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Mapping unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window (SQL / scratch SSR call).
+- The `dist/index.css` presence is checked and the CSS decision recorded in the change notes.
+
+**Implementation Note**: After automated verification passes, pause for manual confirmation before proceeding to Phase 7.
+
+---
+
+## Phase 7: Reservation calendar UI
+
+### Overview
+
+Build the `/dashboard/calendar` resource-timeline (vehicles as rows, reservations as bars) as a `client:only="react"` island, and make clicking a **pending** bar open the same accept/reject flow the queue uses — by extracting Phase 4's decision detail / reason sheet / result overlay into shared components driven by a `useReservationDecision` hook. Depends on Phases 1–4 (decision endpoint + components) and Phase 6 (data + mapping).
+
+### Changes Required:
+
+#### 1. Extract the shared decision flow
+
+**File**: `src/components/dashboard/PendingQueue.tsx` → `src/components/dashboard/ReservationDecision.tsx` + `src/components/hooks/useReservationDecision.ts`
+
+**Intent**: Make the accept/reject detail + reason sheet + result overlay reusable by both the queue and the calendar, with one PATCH-calling hook as the single decision mechanism.
+
+**Contract**: Lift the detail view, reason bottom-sheet, and result overlay out of `PendingQueue` into a presentational `ReservationDecision` (takes a reservation + outcome callbacks). Extract the PATCH-calling logic (confirm/reject, 200/409 handling, already-handled re-sync) into `useReservationDecision`. `PendingQueue` (Phases 4/5) is refactored to consume both — **no behavior change** to the queue; its existing manual verification must still pass.
+
+#### 2. Calendar route registration
+
+**File**: `src/lib/access.ts`
+
+**Intent**: Employee-gate the calendar page.
+
+**Contract**: Add `{ prefix: "/dashboard/calendar", role: "employee" }` to `ROUTE_ROLES` (the `/dashboard` rule already covers it; the explicit entry documents intent).
+
+#### 3. Calendar page
+
+**File**: `src/pages/dashboard/calendar.astro`
+
+**Intent**: SSR the initial window's resources + events and mount the island.
+
+**Contract**: Read `Astro.locals.{supabase,user,role}`; call `listVehicles` (active filter) + `listReservationsForCalendar` for an initial window (current month ± a buffer); map via the Phase 6 helpers and pass `resources` + `events` to the island inside `Layout`. Polish page title `Kalendarz`.
+
+#### 4. Calendar island
+
+**File**: `src/components/dashboard/ReservationCalendar.tsx`
+
+**Intent**: Render the resource timeline and route pending-event clicks into the shared decision flow.
+
+**Contract**: `client:only="react"` island (no SSR in `workerd`). Renders `IlamyResourceCalendar` with `resources`, `events`, `initialView="week"`, `firstDayOfWeek="monday"`, `locale="pl"`, `timezone="Europe/Warsaw"`, `disableDragAndDrop`, `disableCellClick` (manual-add deferred), and a Polish `translations` object. `onEventClick`: a `pending` reservation opens `ReservationDecision` via `useReservationDecision`; a `confirmed` reservation opens a read-only detail (no actions). On a successful decision, update the event in place (confirmed → recolor; rejected → remove). `onDateChange(date, range)` refetches via the Phase-7 GET endpoint and re-maps. A two-item status **legend** (pending = amber, confirmed = green) renders below the calendar; `+` and `Filtry` are omitted. Mobile: the resource timeline is horizontally scrollable with a Month toggle (ilamy responsive), matching screen 22; desktop matches screen 16. Build with `cn()` + shadcn tokens.
+
+#### 5. Calendar range refetch endpoint
+
+**File**: `src/pages/api/reservations/calendar.ts`
+
+**Intent**: Let the island reload events when the visible window changes, without a full page navigation.
+
+**Contract**: `GET` handler, role-gated to `employee` via `context.locals.role` / `isRoleSufficient` (403 otherwise); zod-validated `start`/`end` ISO-date query params (400 on bad input); returns `listReservationsForCalendar(...)` mapped to events as JSON. Reuses the Phase 6 service + mapper; no new data path. (GET read — no `Origin` check needed.)
+
+#### 6. Nav + dashboard link
+
+**File**: `src/pages/dashboard.astro` (+ the staff nav location)
+
+**Intent**: Surface the `Kalendarz` entry the design shows in the sidebar/bottom-tab.
+
+**Contract**: Add a link to `/dashboard/calendar` (the `Kalendarz` / `Calendar` nav item). Additive shared-merge surface with Phase 4 / S-04.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests still green (mapping + any extracted pure logic): `npm test`
+
+#### Manual Verification:
+
+- `/dashboard/calendar` shows vehicles as rows and pending+confirmed reservations as bars in the correct slots (14:00→10:00), matching screens 16 (desktop) + 22 (mobile).
+- Clicking a **pending** bar opens the accept/reject flow; accepting recolors it to confirmed and composes the email; rejecting removes it — identical outcome to the queue.
+- Clicking a **confirmed** bar shows a read-only detail (no actions).
+- Navigating weeks/months refetches and re-plots; the mobile timeline scrolls horizontally and the Month toggle works.
+- No drag/resize; no empty-slot create affordance; the legend shows only pending/confirmed.
+- The **queue (Phases 4/5) is unchanged** after the decision-flow extraction — its accept/reject/already-handled checks still pass.
+- A non-employee is 403'd from `/dashboard/calendar` and from `GET /api/reservations/calendar`.
+
+**Implementation Note**: After automated verification passes, pause for manual confirmation. Build against screens 16/22 and the design tokens; do not re-open the images beyond plan time.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests (Vitest, pure functions):
 
 - Transition validity / reason validation helper (valid reasons, `other` requires note, terminal states rejected).
 - Any pure copy/format helper added for the email templates.
+- Calendar mapping helpers (`reservationsToEvents` 14:00/10:00 boundary + same-day turnover + status→color; `vehiclesToResources`).
 
 ### Integration Tests:
 
@@ -354,6 +496,9 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 - Access control: `src/lib/access.ts`, `src/middleware.ts`
 - Design (mobile): `context/foundation/design-system.md`, `context/foundation/design/staff-screens.jsx:558-851`, screenshots `09/10/11-staff-mobile-*`
 - Design (desktop, distilled in Phase 5): `context/foundation/design/screenshots/21-staff-desktop-requests.jpg` (master-detail approval), `20-staff-desktop-dashboard.jpg` (dashboard "Need a decision" panel)
+- Design (calendar, Phases 6–7): `context/foundation/design/screenshots/16-admin-desktop-calendar.png` (resource-timeline desktop), `22-admin-mobile-calendar.jpg` (mobile timeline + Month toggle)
+- Calendar library: selection rationale `context/changes/reservation-approval/calendar-component-research.md`; verified `@ilamy/calendar` API surface + setup `context/changes/reservation-approval/ilamy-calendar-reference.md`
+- Data layer (calendar read): `supabase/migrations/20260603155136_booking_integrity_data.sql` (`pickup_date`/`return_date`/`reserved_period`); vehicles service `src/lib/services/vehicles.ts` (`listVehicles`)
 
 ## Progress
 
@@ -421,7 +566,7 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 - [ ] 4.8 Already-handled request shows friendly re-sync
 - [ ] 4.9 Layout/copy match design tokens and canonical Polish
 
-### Phase 5: Desktop layout (blocked on design assets)
+### Phase 5: Desktop layout (master-detail)
 
 #### Automated
 
@@ -434,3 +579,36 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 - [ ] 5.4 Desktop queue + detail match the provided desktop designs
 - [ ] 5.5 Mobile layout unchanged at small breakpoints
 - [ ] 5.6 Accept/reject + already-handled flows work across breakpoints
+
+### Phase 6: Calendar data layer + library setup
+
+#### Automated
+
+- [ ] 6.1 Dependencies install and build passes: `npm install` + `npm run build`
+- [ ] 6.2 Type checking passes: `npx astro check`
+- [ ] 6.3 Linting passes: `npm run lint`
+- [ ] 6.4 Mapping unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 6.5 `listReservationsForCalendar` returns pending+confirmed rows with vehicle fields for a known window
+- [ ] 6.6 `dist/index.css` presence checked and the CSS decision recorded
+
+### Phase 7: Reservation calendar UI
+
+#### Automated
+
+- [ ] 7.1 Type checking passes: `npx astro check`
+- [ ] 7.2 Linting passes: `npm run lint`
+- [ ] 7.3 Build passes: `npm run build`
+- [ ] 7.4 Unit tests still green (mapping + extracted pure logic): `npm test`
+
+#### Manual
+
+- [ ] 7.5 `/dashboard/calendar` shows vehicles as rows + pending/confirmed bars at 14:00→10:00 (screens 16/22)
+- [ ] 7.6 Clicking a pending bar opens accept/reject; accept recolors→confirmed + email; reject removes — same as queue
+- [ ] 7.7 Clicking a confirmed bar shows a read-only detail (no actions)
+- [ ] 7.8 Week/month navigation refetches + re-plots; mobile timeline scrolls + Month toggle works
+- [ ] 7.9 No drag/resize, no empty-slot create; legend shows only pending/confirmed
+- [ ] 7.10 Queue (Phases 4/5) unchanged after the decision-flow extraction
+- [ ] 7.11 Non-employee 403'd from `/dashboard/calendar` and `GET /api/reservations/calendar`
