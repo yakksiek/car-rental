@@ -65,9 +65,18 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 | 17 | Fleet management | Admin · desktop | S-04 | `desktop-screens.jsx` |
 | 18 | Overdue returns | Admin · desktop | S-07 | `desktop-screens.jsx` |
 | 19 | Employees | Admin · desktop | S-08 | `desktop-screens.jsx` |
+| 20 | Worker dashboard | Staff · desktop | S-03 / S-07 | — (jpg export only) |
+| 21 | Pending requests | Staff · desktop | S-03 | — (jpg export only) |
+| 22 | Calendar · agenda | Admin · mobile | S-03 / S-07 | — (jpg export only) |
+| 23 | Fleet management | Admin · mobile | **S-04** | — (jpg export only) |
+| 24 | Overdue returns | Admin · mobile | S-07 | — (jpg export only) |
+| 25 | Employees | Admin · mobile | S-08 | — (jpg export only) |
 
 Screenshot filenames are numbered to match this table, e.g.
 `screenshots/04-customer-mobile-reservation-form.png`.
+Rows 20–25 are later `.jpg` exports (no recoverable JSX source); the **Admin · mobile**
+set (22–25) is the "full back-office on a phone" pass — screen **23** is the S-04 fleet
+management mobile design.
 
 ### S-02 reservation flow — high-fidelity pass
 
