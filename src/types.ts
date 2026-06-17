@@ -75,6 +75,39 @@ export type ReservationStatusView = Database["public"]["Functions"]["get_reserva
 // range. The EXCLUDE constraint stays the atomic backstop.
 export type VehicleBusyRange = Database["public"]["Functions"]["get_vehicle_busy_ranges"]["Returns"][number];
 
+// ---------------------------------------------------------------------------
+// Reservation approval (S-03) — the employee decision contracts. Like the S-02
+// reads, the queue read and the decision write both cross the RLS boundary via
+// SECURITY DEFINER RPCs (`list_pending_reservations`, `decide_reservation`), so
+// these are RPC-shaped. NOTE: vehicle_daily_rate / vehicle_deposit are
+// numeric(10,2) → string at runtime despite the generated `number` type.
+// ---------------------------------------------------------------------------
+
+// One row of the employee pending queue: customer + B2B fields + vehicle summary
+// + dates + reference + created_at, newest first.
+export type PendingReservation = Database["public"]["Functions"]["list_pending_reservations"]["Returns"][number];
+
+// The four canned rejection reasons (mirrors the DB CHECK on rejection_reason).
+// `other` accepts a short free-text note.
+export type RejectionReason = "dates_unavailable" | "no_category" | "vehicle_withdrawn" | "other";
+
+// The decision RPC's success payload (every returned field except the `result`
+// tag) — the customer + vehicle fields the notification email needs.
+export type DecisionEmailPayload = Omit<
+  Database["public"]["Functions"]["decide_reservation"]["Returns"][number],
+  "result"
+>;
+
+// Typed union over `decide_reservation`'s result tag, mirroring
+// CreateReservationResult's tagged-union style. A committed decision carries the
+// email payload; every other tag is an outcome the endpoint maps to a status code.
+export type DecideReservationResult =
+  | { status: "confirmed" | "rejected"; email: DecisionEmailPayload }
+  | { status: "already_decided" }
+  | { status: "not_found" }
+  | { status: "unauthorized" }
+  | { status: "invalid_reason" };
+
 // Input shape for the pure overlap predicate (src/lib/availability.ts, Phase 2).
 // Bare local calendar dates (ISO `YYYY-MM-DD`); the predicate applies the fixed
 // hotel-style hours (pickup 14:00, return 10:00) to build the comparable window,

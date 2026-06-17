@@ -313,6 +313,28 @@ export type Database = {
           return_date: string
         }[]
       }
+      list_pending_reservations: {
+        Args: never
+        Returns: {
+          company: string
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string
+          pickup_date: string
+          reference: string
+          return_date: string
+          vat_id: string
+          vehicle_daily_rate: number
+          vehicle_deposit: number
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_production_year: number
+        }[]
+      }
     }
     Enums: {
       app_role: "employee" | "admin"
