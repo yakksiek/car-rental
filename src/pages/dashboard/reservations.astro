@@ -1,0 +1,24 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import PendingQueue from "../../components/dashboard/PendingQueue";
+
+// others
+import { listPendingReservations } from "../../lib/services/reservations";
+
+// Employee pending-request queue (S-03). The /dashboard/reservations route is
+// gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
+// pending list through the role-gated definer RPC and mounts the decision island.
+const { supabase } = Astro.locals;
+const reservations = await listPendingReservations(supabase);
+---
+
+<Layout title="Oczekujące wnioski — Flota">
+  <main class="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">
+    <header class="mb-2 px-1">
+      <a href="/dashboard" class="text-muted-foreground hover:text-foreground text-sm font-medium">← Pulpit</a>
+      <h1 class="text-foreground mt-2 text-2xl font-bold tracking-tight">Oczekujące wnioski</h1>
+    </header>
+    <PendingQueue client:load reservations={reservations} />
+  </main>
+</Layout>

@@ -541,32 +541,32 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Unit tests pass (if template helpers covered): `npm test`
+- [x] 3.1 Type checking passes: `npx astro check` — afb9740
+- [x] 3.2 Linting passes: `npm run lint` — afb9740
+- [x] 3.3 Unit tests pass (if template helpers covered): `npm test` — afb9740
 
 #### Manual
 
-- [x] 3.4 Accept logs a composed Polish confirmation email with correct fields + `/r/<token>` link
-- [x] 3.5 Reject logs a composed Polish rejection email referencing the reason
-- [x] 3.6 A forced send error still returns 200 with status changed (best-effort)
+- [x] 3.4 Accept logs a composed Polish confirmation email with correct fields + `/r/<token>` link — afb9740
+- [x] 3.5 Reject logs a composed Polish rejection email referencing the reason — afb9740
+- [x] 3.6 A forced send error still returns 200 with status changed (best-effort) — afb9740
 
 ### Phase 4: Mobile approval UI
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 4.4 `/dashboard/reservations` shows pending requests (screen 10); empty state when none
-- [ ] 4.5 `Sprawdź` opens detail (screen 11) with dates/customer/pricing; no license/plate
-- [ ] 4.6 Accept → overlay → card removed → `/r/<token>` Confirmed
-- [ ] 4.7 Reject → reason sheet (`Inny` reveals note) → overlay → `/r/<token>` Rejected
-- [ ] 4.8 Already-handled request shows friendly re-sync
-- [ ] 4.9 Layout/copy match design tokens and canonical Polish
+- [x] 4.4 `/dashboard/reservations` shows pending requests (screen 10); empty state when none
+- [x] 4.5 `Sprawdź` opens detail (screen 11) with dates/customer/pricing; no license/plate
+- [x] 4.6 Accept → overlay → card removed → `/r/<token>` Confirmed
+- [x] 4.7 Reject → reason sheet (`Inny` reveals note) → overlay → `/r/<token>` Rejected
+- [x] 4.8 Already-handled request shows friendly re-sync
+- [x] 4.9 Layout/copy match design tokens and canonical Polish
 
 ### Phase 5: Desktop layout (master-detail)
 
