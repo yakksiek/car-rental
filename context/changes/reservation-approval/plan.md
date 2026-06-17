@@ -510,32 +510,32 @@ One additive migration (`rejection_reason`/`rejection_note` columns + `decide_re
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `supabase db reset`
-- [x] 1.2 Generated types in sync: `npx supabase gen types typescript --local`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `supabase db reset` — e25c5ba
+- [x] 1.2 Generated types in sync: `npx supabase gen types typescript --local` — e25c5ba
+- [x] 1.3 Type checking passes: `npx astro check` — e25c5ba
+- [x] 1.4 Linting passes: `npm run lint` — e25c5ba
 
 #### Manual
 
-- [x] 1.5 `decide_reservation` flips a pending row to confirmed/rejected and returns the customer payload (SQL)
-- [x] 1.6 Repeat decision on the same row returns `already_decided`
-- [x] 1.7 Non-employee role returns `unauthorized`
-- [x] 1.8 Direct authenticated `update reservations` is denied by RLS
+- [x] 1.5 `decide_reservation` flips a pending row to confirmed/rejected and returns the customer payload (SQL) — e25c5ba
+- [x] 1.6 Repeat decision on the same row returns `already_decided` — e25c5ba
+- [x] 1.7 Non-employee role returns `unauthorized` — e25c5ba
+- [x] 1.8 Direct authenticated `update reservations` is denied by RLS — e25c5ba
 
 ### Phase 2: Service + decision API
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 2.4 PATCH confirm returns 200, row confirmed, `/r/<token>` shows Confirmed
-- [ ] 2.5 PATCH reject (with reason) returns 200, reason stored; reject without reason returns 400
-- [ ] 2.6 Repeat decision returns 409 `already_decided`
-- [ ] 2.7 Non-employee 403; cross-origin 403
+- [x] 2.4 PATCH confirm returns 200, row confirmed, `/r/<token>` shows Confirmed
+- [x] 2.5 PATCH reject (with reason) returns 200, reason stored; reject without reason returns 400
+- [x] 2.6 Repeat decision returns 409 `already_decided`
+- [x] 2.7 Non-employee 403; cross-origin 403
 
 ### Phase 3: Confirm / reject notification emails
 

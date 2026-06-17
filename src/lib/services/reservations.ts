@@ -6,6 +6,9 @@ import type { Database } from "../../db/database.types";
 import type {
   CreateReservationInput,
   CreateReservationResult,
+  DecideReservationResult,
+  PendingReservation,
+  RejectionReason,
   ReservationStatusView,
   VehicleBusyRange,
 } from "../../types";
@@ -116,6 +119,77 @@ export async function isVehicleAvailable(
     throw error;
   }
   return data.length > 0;
+}
+
+/**
+ * List the employee pending queue via the `list_pending_reservations` definer
+ * RPC — every pending request joined with its vehicle's display fields, newest
+ * first. The RPC itself gates on the caller's app_role (a non-staff caller gets
+ * zero rows), so this is safe to call with any authenticated client. Returns
+ * `[]` for a `null` client (Supabase unconfigured).
+ */
+export async function listPendingReservations(client: ReservationClient | null): Promise<PendingReservation[]> {
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client.rpc("list_pending_reservations");
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Apply an employee decision to a pending reservation via the `decide_reservation`
+ * definer RPC. The RPC is the single transition authority: it gates on role,
+ * locks + re-reads the row's status, and either flips it (confirm/reject) or
+ * returns a typed non-success tag. We translate its `result` into the
+ * `DecideReservationResult` union the endpoint maps to status codes.
+ *
+ * A `null` client (or malformed id) degrades to `unauthorized` — the caller
+ * cannot mutate anything, which the endpoint surfaces as a 403.
+ */
+export async function decideReservation(
+  client: ReservationClient | null,
+  id: string,
+  decision: "confirm" | "reject",
+  reason?: RejectionReason,
+  note?: string,
+): Promise<DecideReservationResult> {
+  if (!client || !UUID_RE.test(id)) {
+    return { status: "unauthorized" };
+  }
+
+  const { data, error } = await client.rpc("decide_reservation", {
+    p_id: id,
+    p_decision: decision,
+    p_reason: reason ?? undefined,
+    p_note: note ?? undefined,
+  });
+  if (error) {
+    throw error;
+  }
+
+  // The RPC always returns exactly one row with a result tag.
+  const row = data.at(0);
+  switch (row?.result) {
+    case "confirmed":
+    case "rejected": {
+      const { result, ...email } = row;
+      return { status: result, email };
+    }
+    case "already_decided":
+      return { status: "already_decided" };
+    case "not_found":
+      return { status: "not_found" };
+    case "unauthorized":
+      return { status: "unauthorized" };
+    case "invalid_reason":
+      return { status: "invalid_reason" };
+    default:
+      throw new Error(`decide_reservation returned an unexpected result: ${JSON.stringify(data)}`);
+  }
 }
 
 /**
