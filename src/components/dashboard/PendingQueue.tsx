@@ -40,6 +40,7 @@ const COPY = {
   return: "Zwrot",
   datesHeld: "Daty zarezerwowane",
   datesHeldNote: "Zablokowane dla innych klientów na czas oczekiwania — odrzucenie je zwalnia.",
+  openCalendar: "Zobacz w kalendarzu",
   customer: "Klient",
   name: "Imię i nazwisko",
   email: "Email",
@@ -250,10 +251,13 @@ export function RequestDetail({
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
   const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
 
+  const pad = Math.max(1, Math.round(days * 0.4));
+  const heldSidePct = (pad / (days + 2 * pad)) * 100;
+
   return (
     <div className={cn("flex flex-col", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-1 pb-3">
+      {/* Mobile header — centered, with the list→detail back affordance */}
+      <div className="flex items-center justify-between gap-2 px-1 pb-3 md:hidden">
         {withBackButton ? (
           <button
             type="button"
@@ -277,54 +281,102 @@ export function RequestDetail({
         <span className="size-9" />
       </div>
 
+      {/* Desktop header — left-aligned reference + PENDING + name, with a
+          prominent right-aligned total (L7). */}
+      <div className="hidden items-start justify-between gap-4 px-1 pb-4 md:flex">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <span className="text-muted-foreground font-mono text-xs font-semibold">{reservation.reference}</span>
+            {!readOnly && <Badge className="text-warning bg-[var(--flota-warning-soft)]">PENDING</Badge>}
+          </div>
+          <h2 className="text-foreground mt-2 truncate text-[26px] font-bold tracking-tight">
+            {reservation.customer_name}
+          </h2>
+          <div className="text-muted-foreground mt-1 text-[13px]">
+            {COPY.submitted} · {submittedAgo(reservation.created_at)}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="text-foreground text-[26px] font-bold tracking-tight">{total}</div>
+          <div className="text-muted-foreground mt-1 text-xs">
+            {formatDuration(days)} · + kaucja {formatPln(reservation.vehicle_deposit)}
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3">
-        {/* Vehicle */}
-        <div className={cn(cardClass, "flex items-center gap-3.5 p-4")}>
-          <div className="bg-background text-foreground flex h-[60px] w-24 shrink-0 items-center justify-center rounded-xl">
-            <Truck className="size-10" strokeWidth={1.4} />
+        {/* Vehicle + dates sit 2-up at md+ (L7), stacked on mobile */}
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* Vehicle */}
+          <div className={cn(cardClass, "flex items-center gap-3.5 p-4")}>
+            <div className="bg-background text-foreground flex h-[60px] w-24 shrink-0 items-center justify-center rounded-xl">
+              <Truck className="size-10" strokeWidth={1.4} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-foreground text-[15px] font-[650] tracking-tight">{vehicleName(reservation)}</div>
+              {reservation.vehicle_production_year ? (
+                <div className="text-muted-foreground mt-0.5 text-xs">
+                  Rocznik {reservation.vehicle_production_year}
+                </div>
+              ) : null}
+              <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)]">
+                {formatPln(reservation.vehicle_daily_rate)}/doba
+              </div>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-foreground text-[15px] font-[650] tracking-tight">{vehicleName(reservation)}</div>
-            {reservation.vehicle_production_year ? (
-              <div className="text-muted-foreground mt-0.5 text-xs">Rocznik {reservation.vehicle_production_year}</div>
-            ) : null}
-            <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)]">
-              {formatPln(reservation.vehicle_daily_rate)}/doba
+
+          {/* Dates */}
+          <div className={cn(cardClass, "p-4")}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
+                  {COPY.pickup}
+                </div>
+                <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
+                  {formatDayShort(reservation.pickup_date)} · 14:00
+                </div>
+              </div>
+              <ArrowRight className="text-muted-foreground size-[18px]" />
+              <div className="text-right">
+                <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
+                  {COPY.return}
+                </div>
+                <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
+                  {formatDayShort(reservation.return_date)} · 10:00
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Dates */}
-        <div className={cn(cardClass, "p-4")}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
-                {COPY.pickup}
-              </div>
-              <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
-                {formatDayShort(reservation.pickup_date)} · 14:00
-              </div>
+        {/* Dates held — a mini timeline of the held window that links through to
+            the full calendar (L5). The vehicle's other bookings (green confirmed
+            blocks) need the per-vehicle busy ranges and are a follow-up. */}
+        <a href="/dashboard/calendar" className={cn(cardClass, "hover:bg-background block p-4 transition-colors")}>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="bg-warning size-2 rounded-[3px]" />
+              <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">{COPY.datesHeld}</span>
             </div>
-            <ArrowRight className="text-muted-foreground size-[18px]" />
-            <div className="text-right">
-              <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
-                {COPY.return}
-              </div>
-              <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
-                {formatDayShort(reservation.return_date)} · 10:00
-              </div>
+            <span className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium">
+              {COPY.openCalendar}
+              <ArrowRight className="size-3" />
+            </span>
+          </div>
+          <div className="bg-background relative h-7 overflow-hidden rounded-md">
+            <div
+              className="border-warning bg-warning/15 absolute inset-y-0 flex items-center rounded-[5px] border-l-2 px-2"
+              style={{ left: `${heldSidePct}%`, right: `${heldSidePct}%` }}
+            >
+              <span className="text-warning truncate font-mono text-[10.5px] font-bold">{reservation.reference}</span>
             </div>
           </div>
-        </div>
-
-        {/* Dates held */}
-        <div className={cn(cardClass, "p-4")}>
-          <div className="mb-1 flex items-center gap-2">
-            <span className="bg-warning size-2 rounded-[3px]" />
-            <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">{COPY.datesHeld}</span>
+          <div className="text-muted-foreground mt-1.5 flex justify-between text-[10.5px]">
+            <span>{formatDayShort(reservation.pickup_date)}</span>
+            <span>{formatDayShort(reservation.return_date)}</span>
           </div>
-          <div className="text-xs leading-relaxed text-[var(--flota-ink-2)]">{COPY.datesHeldNote}</div>
-        </div>
+          <div className="mt-2.5 text-xs leading-relaxed text-[var(--flota-ink-2)]">{COPY.datesHeldNote}</div>
+        </a>
 
         {/* Customer */}
         <div className="text-muted-foreground mx-1 mt-1 text-[13px] font-bold tracking-wide uppercase">
