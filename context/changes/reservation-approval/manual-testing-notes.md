@@ -116,6 +116,47 @@ on the dev server 2026-06-18.
 > it (via `getVehicleBusyRanges`) is an optional future enhancement, not an open
 > issue — the held block is the intended visualization.
 
+## 🔐 Auth / sign-in follow-ups (post-context-clear pickup)
+
+Noticed during manual testing 2026-06-18 — outside the S-03 layout scope (this is
+the auth foundation, still unpolished), captured here so it's picked up later.
+
+### A1 — Post-login doesn't land staff on the dashboard
+- **Observed:** after a successful sign-in you land on `/` (the **public**
+  marketing landing / catalog), not `/dashboard`. You then have to navigate to the
+  staff area manually.
+- **Cause:** `src/pages/api/auth/signin.ts` ends with `context.redirect("/")`. And
+  `src/middleware.ts` bounces unauthenticated users from a protected route to
+  `/auth/signin` **without remembering the intended destination**.
+- **Fix (two parts):**
+  1. Redirect sign-in to `/dashboard` instead of `/` (one line in `signin.ts`).
+  2. (Better) Preserve the target: middleware appends `?redirect=<pathname>` when
+     bouncing to `/auth/signin`; `signin.ts` validates it's a safe internal path
+     (starts with `/`, not `//`) and honors it, defaulting to `/dashboard`.
+- **Files:** `src/pages/api/auth/signin.ts`, `src/middleware.ts`.
+
+### A2 — Sign-in page is the generic placeholder, not the designed staff login
+- **Observed:** `/auth/signin` is still the scaffold (`bg-cosmic` gradient, English
+  "Sign in", blue/purple) — not the "Strefa pracownika" staff login from the design.
+- **Design reference (DesignSync project `352d78a6-84fd-49a2-8b38-2fe289691fc3`):**
+  `staff-login.jsx` —
+  - `ScreenStaffLoginMobile`: dark ink **brand band** up top (faded cargo
+    silhouette, `← Powrót do flota.pl`, Flota mark + `Strefa pracownika` kicker),
+    white form below, footer "Problem z logowaniem? · Skontaktuj się z administratorem".
+  - `ScreenStaffLoginDesktop`: a centered **440px modal card** over a blurred
+    dispatch-workspace backdrop + dark scrim; Flota mark + `Strefa pracownika`,
+    the form, footer help line.
+  - `LoginForm`: title + sub, email field (mail icon, `imie@flota.pl`), password
+    field (lock icon, show/hide eye), "Nie wylogowuj mnie" checkbox +
+    "Nie pamiętasz hasła?", dark ink submit "Zaloguj się →", green-shield
+    "Połączenie szyfrowane · tylko personel" line.
+  - **Copy** lives in `shared.jsx` → `STR.PL.login` (zone/title/sub/email/password/
+    remember/forgot/submit/help/helpLink/secure/back).
+- **Files:** `src/pages/auth/signin.astro`, `src/components/auth/SignInForm.tsx`.
+- **Scope note:** bigger than A1 — a full re-skin. The `forgot`/`remember`/social
+  bits in the design may not all be wired (password reset is its own flow); build
+  to current auth capability, leave inert affordances out.
+
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
 This Claude Code build has the **`DesignSync`** tool + `/design-sync` skill (Claude
