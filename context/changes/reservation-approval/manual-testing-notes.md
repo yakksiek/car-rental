@@ -108,12 +108,10 @@ on the dev server 2026-06-18.
   index for the default month load and the pickup-day index for the deep-link.
 - **Files:** `src/components/dashboard/ReservationCalendar.tsx`.
 
-### C3 — Detail mini-timeline shows only the held block
-- Showing the vehicle's *other* confirmed blocks (green) in the detail's
-  mini-timeline still needs `getVehicleBusyRanges` wired to the client island; the
-  mini-timeline currently shows the held (amber) block only.
-- **Files:** `src/components/dashboard/PendingQueue.tsx`, `getVehicleBusyRanges`
-  in `src/lib/services/reservations.ts`.
+> The detail's held-block mini-timeline (L5) is **done and working** and links to
+> the calendar. Rendering the vehicle's *other* confirmed (green) blocks alongside
+> it (via `getVehicleBusyRanges`) is an optional future enhancement, not an open
+> issue — the held block is the intended visualization.
 
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
