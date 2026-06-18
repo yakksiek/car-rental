@@ -228,12 +228,12 @@
 }
 
 /* Reservation calendar — today's column marker (S-03 follow-up L10). @ilamy
-   tags today's day-number element `id="day-number-today"` but applies no visible
-   highlight in the resource timeline header. Render it as a filled crimson pill
-   (the same treatment the library's month view uses for today), so today's column
-   stands out in the day-resolution timeline. The `#id` selector outranks the
-   library's `.w-full`/`.truncate` utilities, so no `!important` is needed. */
-#day-number-today {
+   tags today's day-number element `data-testid="day-number-today"` but applies no
+   visible highlight in the resource timeline header. Render it as a filled crimson
+   pill (the same treatment the library's month view uses for today), so today's
+   column stands out in the day-resolution timeline. The attribute selector
+   outranks the library's `.w-full`/`.truncate` utilities, so no `!important`. */
+[data-testid="day-number-today"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
