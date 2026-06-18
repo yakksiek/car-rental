@@ -191,6 +191,34 @@ export default function ReservationCalendar({
     [resources, focusVehicleId],
   );
 
+  // On a focus deep-link the week's 7 day columns overflow a narrow viewport and
+  // open scrolled to Monday, so a booking later in the week sits off-screen.
+  // Once the grid has rendered, scroll the pickup day's column into view. @ilamy
+  // tags each day-number element `day-number-<D>` (or `day-number-today`); we
+  // poll briefly because the resource grid mounts after this effect first runs.
+  React.useEffect(() => {
+    if (!initialDate) {
+      return;
+    }
+    const day = Number(initialDate.slice(8, 10));
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const id = initialDate === todayIso ? "day-number-today" : `day-number-${day}`;
+
+    let tries = 0;
+    const timer = setInterval(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ inline: "center", block: "nearest" });
+        clearInterval(timer);
+      } else if (++tries > 20) {
+        clearInterval(timer);
+      }
+    }, 80);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [initialDate]);
+
   async function refetch(range: { start: unknown; end: unknown }) {
     try {
       const params = new URLSearchParams({
