@@ -67,12 +67,18 @@ Dispatch hero, Pickups/Returns/Overdue tiles, and Today's Schedule need pickup
 
 **L5 calendar focus — done (Phase 5):** "Zobacz w kalendarzu" now deep-links to
 `/dashboard/calendar?view=week&date=<pickup>&vehicle=<id>`; the page anchors the
-SSR data window on that date, opens in week view on the booking, and tints the
+SSR data window on that date, opens in week view on that week, and tints the
 vehicle's row. **Re-test:** click it from a request whose dates are off the
-default month — the calendar should land on the booking instead of today.
-Remaining L5 follow-up: showing the vehicle's *other* confirmed blocks (green) in
-the detail's mini-timeline still needs `getVehicleBusyRanges` wired to the client
-island; the mini-timeline shows the held block only.
+default month — the calendar lands on the booking's week with the vehicle row
+highlighted.
+Remaining L5 follow-ups (open — owner to take later):
+- **Horizontal auto-scroll** so a mid/late-week pickup is visible without manual
+  scroll on a narrow viewport. An attempt (scroll the `data-testid="day-number-<D>"`
+  column into view) didn't land reliably and was **removed**; revisit by driving
+  `scrollLeft` on the `[data-testid="horizontal-grid-scroll"]` container directly.
+- Showing the vehicle's *other* confirmed blocks (green) in the detail's
+  mini-timeline still needs `getVehicleBusyRanges` wired to the client island; the
+  mini-timeline shows the held block only.
 
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
