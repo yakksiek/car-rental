@@ -1,10 +1,11 @@
 ---
 // components
 import Layout from "../../layouts/Layout.astro";
+import StaffShell from "../../components/shell/StaffShell.astro";
 import ReservationCalendar from "../../components/dashboard/ReservationCalendar";
 
 // others
-import { listReservationsForCalendar } from "../../lib/services/reservations";
+import { listPendingReservations, listReservationsForCalendar } from "../../lib/services/reservations";
 import { listVehicles } from "../../lib/services/vehicles";
 import { vehiclesToResources } from "../../lib/calendar/map";
 
@@ -12,7 +13,8 @@ import { vehiclesToResources } from "../../lib/calendar/map";
 // initial window's vehicles (resource rows) + reservations, then mount the
 // client:only island (the lib never SSRs in workerd). The island refetches on
 // navigation via GET /api/reservations/calendar.
-const { supabase } = Astro.locals;
+const { user, role, supabase } = Astro.locals;
+const pendingCount = (await listPendingReservations(supabase)).length;
 
 const now = new Date();
 const windowStart = new Date(now);
@@ -35,12 +37,21 @@ const reservations = await listReservationsForCalendar(supabase, isoDate(windowS
 ---
 
 <Layout title="Kalendarz — Flota">
-  <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8">
-    <header class="mb-4 px-1">
-      <a href="/dashboard" class="text-muted-foreground hover:text-foreground text-sm font-medium">← Pulpit</a>
-      <h1 class="text-foreground mt-2 text-2xl font-bold tracking-tight">Kalendarz</h1>
-      <p class="text-muted-foreground mt-1 text-sm">Oś czasu rezerwacji według pojazdów</p>
-    </header>
-    <ReservationCalendar client:only="react" resources={resources} reservations={reservations} />
-  </main>
+  <StaffShell
+    active="cal"
+    title="Kalendarz"
+    subtitle="Oś czasu rezerwacji według pojazdów"
+    user={user}
+    role={role}
+    pendingCount={pendingCount}
+  >
+    <main class="mx-auto w-full max-w-6xl px-4 py-6">
+      {/* Mobile centered header (the desktop topbar carries this at md+) */}
+      <header class="mb-4 text-center md:hidden">
+        <h1 class="text-foreground text-xl font-bold tracking-tight">Kalendarz</h1>
+        <p class="text-muted-foreground mt-1 text-sm">Oś czasu rezerwacji według pojazdów</p>
+      </header>
+      <ReservationCalendar client:only="react" resources={resources} reservations={reservations} />
+    </main>
+  </StaffShell>
 </Layout>

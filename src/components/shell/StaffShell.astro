@@ -1,0 +1,145 @@
+---
+// components
+import NavIcon from "./NavIcon.astro";
+
+// others
+import type { AppRole } from "../../types";
+import { staffIdentity } from "../../lib/staff-identity";
+
+// Shared staff app-shell (S-03 follow-up L1/L2/L6): a single responsive nav —
+// a left sidebar with a user chip at md+, a floating dark tab bar below md —
+// wrapping every staff page so the queue and calendar are reachable without
+// bouncing through /dashboard. Source: design `staff-desktop.jsx` StaffShell +
+// `shared.jsx` TabBar. Future tabs (Flota S-04, Profil S-08, Po terminie S-07)
+// are intentionally omitted until those slices land.
+
+interface Props {
+  active: "dash" | "requests" | "cal";
+  title: string;
+  subtitle?: string;
+  pendingCount?: number;
+  user: { email?: string } | null;
+  role: AppRole | null;
+}
+
+const { active, title, subtitle, pendingCount = 0, user, role } = Astro.props;
+const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+
+type IconName = "home" | "list" | "calendar";
+const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
+  { id: "dash", href: "/dashboard", label: "Pulpit", icon: "home" },
+  { id: "requests", href: "/dashboard/reservations", label: "Wnioski", icon: "list", badge: pendingCount },
+  { id: "cal", href: "/dashboard/calendar", label: "Kalendarz", icon: "calendar" },
+];
+---
+
+<div class="bg-background flex min-h-screen">
+  {/* ── Sidebar (md+) ─────────────────────────────────────────────── */}
+  <aside
+    class="border-border bg-card sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col border-r px-3.5 py-6 md:flex"
+  >
+    <a href="/dashboard" class="flex items-center gap-2.5 px-2.5 pb-5">
+      <span
+        class="bg-primary text-primary-foreground flex size-[34px] items-center justify-center rounded-[10px] font-serif text-[22px] leading-none"
+        >F</span
+      >
+      <span class="leading-none">
+        <span class="text-foreground block text-[15px] font-bold tracking-tight">Flota</span>
+        <span class="text-muted-foreground mt-1 block text-[10px] font-semibold tracking-wider uppercase"
+          >{roleLabel}</span
+        >
+      </span>
+    </a>
+
+    <div class="text-muted-foreground px-2.5 pt-3 pb-1.5 text-[10px] font-bold tracking-wider uppercase">Operacje</div>
+    <nav class="flex flex-col gap-0.5">
+      {
+        NAV.map((n) => (
+          <a
+            href={n.href}
+            aria-current={active === n.id ? "page" : undefined}
+            class:list={[
+              "flex items-center gap-2.5 rounded-[10px] px-2.5 py-2.5 text-[13px] tracking-tight transition-colors",
+              active === n.id
+                ? "bg-foreground text-background font-[650]"
+                : "text-foreground hover:bg-background font-[540]",
+            ]}
+          >
+            <NavIcon glyph={n.icon} size={16} />
+            <span>{n.label}</span>
+            {n.id === "requests" && (n.badge ?? 0) > 0 && (
+              <span
+                class:list={[
+                  "ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold",
+                  active === n.id ? "text-background bg-white/20" : "text-warning bg-[var(--flota-warning-soft)]",
+                ]}
+              >
+                {n.badge}
+              </span>
+            )}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="mt-auto">
+      <div class="bg-background flex items-center gap-2.5 rounded-2xl p-3">
+        <span
+          class="bg-foreground text-background flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
+        >
+          {initials}
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="text-foreground block truncate text-[12px] font-[650] tracking-tight">{displayName}</span>
+          <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · Warszawa</span>
+        </span>
+      </div>
+      <form method="POST" action="/api/auth/signout" class="mt-2">
+        <button
+          type="submit"
+          class="text-muted-foreground hover:text-foreground hover:bg-background w-full rounded-[10px] py-2 text-center text-xs font-medium transition-colors"
+        >
+          Wyloguj
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  {/* ── Content column ────────────────────────────────────────────── */}
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
+      <div>
+        <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+        {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+      </div>
+    </header>
+    <div class="pb-28 md:pb-0">
+      <slot />
+    </div>
+  </div>
+
+  {/* ── Floating tab bar (below md) ───────────────────────────────── */}
+  <nav
+    class="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-1 rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] md:hidden"
+  >
+    {
+      NAV.map((n) => (
+        <a
+          href={n.href}
+          aria-current={active === n.id ? "page" : undefined}
+          aria-label={n.label}
+          class:list={[
+            "relative flex h-10 items-center gap-1.5 rounded-full text-[13px] font-semibold transition-all",
+            active === n.id ? "bg-white px-3.5 text-[#0A0A0F]" : "px-3 text-white/70",
+          ]}
+        >
+          <NavIcon glyph={n.icon} size={18} />
+          {active === n.id && <span>{n.label}</span>}
+          {n.id === "requests" && (n.badge ?? 0) > 0 && active !== n.id && (
+            <span class="bg-warning absolute top-1 right-1.5 size-2 rounded-full ring-2 ring-[#0A0A0F]" />
+          )}
+        </a>
+      ))
+    }
+  </nav>
+</div>
