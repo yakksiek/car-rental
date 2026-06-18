@@ -52,10 +52,21 @@ Worked the backlog in three committed phases (branch `feature/reservation-approv
   and Vehicle/Pickup 2-up; mobile centered header preserved. Dates-held card shows
   a mini timeline of the held window + links to `/dashboard/calendar`.
 
-**Deferred (decisions stand):** L3 dispatch dashboard → S-07. L5 "other confirmed
-blocks (green) on the same vehicle" + focusing the calendar on that vehicle/window
-→ needs `getVehicleBusyRanges` wired to the client island (a follow-up); the
-mini-timeline currently shows the held block only.
+- **Phase 4 — dashboard "Wymaga decyzji" mini-list (in-scope L3):** new
+  `src/components/dashboard/NeedDecisionPanel.tsx` replaces the Pulpit pending
+  launcher card with the design's "Need a decision" panel — pending requests as
+  quick-action cards with inline Odrzuć/Zatwierdź + "Otwórz →" to the full queue,
+  reusing the shared decision mechanism (`useReservationDecision` + ReasonSheet +
+  ResultOverlay). **Re-test:** decide from the dashboard (accept/reject/reason/
+  already-handled re-sync), overflow "Zobacz wszystkie", empty state.
+
+**Deferred (decisions stand):** L3 dispatch *dashboard chrome* → S-07 — greeting/
+Dispatch hero, Pickups/Returns/Overdue tiles, and Today's Schedule need pickup
+(S-05) / return (S-06) / overdue (S-07) data that doesn't exist yet. Only the
+"Need a decision" mini-list was in S-03 scope and is now built (Phase 4). L5
+"other confirmed blocks (green) on the same vehicle" + focusing the calendar on
+that vehicle/window → needs `getVehicleBusyRanges` wired to the client island (a
+follow-up); the mini-timeline currently shows the held block only.
 
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
