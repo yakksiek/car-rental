@@ -121,6 +121,47 @@ on the dev server 2026-06-18.
 Noticed during manual testing 2026-06-18 — outside the S-03 layout scope (this is
 the auth foundation, still unpolished), captured here so it's picked up later.
 
+### ✅ DONE + VERIFIED 2026-06-18 (A1 + A2 + loading states) — `npm run test`/`lint`/`build` clean
+
+**Owner confirmed sign-in is done and tested.** Login lands staff on `/dashboard`
+(or the preserved deep-link), the staff login is re-skinned, and both login and
+logout now show loading feedback.
+
+- **A1 — post-login destination + redirect preservation.** New
+  `src/lib/safe-redirect.ts` (`safeRedirectPath`, default `/dashboard`, open-redirect
+  guarded: rejects absolute/protocol-relative/`/auth/*` targets; unit-tested in
+  `safe-redirect.test.ts`). `middleware.ts` now appends `?redirect=<pathname+search>`
+  when bouncing an unauthenticated user; `signin.ts` reads the posted `redirect`
+  field, validates it, lands the user there on success, and carries it back on
+  failure. `signin.astro` reads the `redirect` query param → hidden form field.
+  **Re-test:** hit `/dashboard/calendar?view=week&date=…` signed-out → after login
+  you land back on that exact page; a plain login lands on `/dashboard` (not `/`).
+- **A2 — staff login re-skin ("Strefa pracownika").** `signin.astro` rebuilt:
+  mobile = dark ink brand band (cargo silhouette, `← Powrót do flota.pl`, Flota mark
+  + `Strefa pracownika` kicker) over a white form sheet with the footer help line;
+  desktop = centered 440px modal card over a blurred dispatch backdrop + dark scrim.
+  `SignInForm.tsx` + the four auth atoms (`FormField`/`PasswordToggle`/`SubmitButton`/
+  `ServerError`) restyled to the light staff theme, PL copy, dark-ink submit with
+  arrow, green-shield "Połączenie szyfrowane · tylko personel" line. **Inert
+  affordances deliberately omitted** (remember-me, forgot-password) — no backing
+  flow yet. **Re-test:** view `/auth/signin` on mobile + desktop widths; show/hide
+  password; invalid creds surface the PL error in the new styling.
+- **Loading states (follow-up).** The form posts to a URL (native navigation),
+  not a React form-action, so `useFormStatus` never reported pending → no spinner.
+  `SubmitButton` now takes an explicit `pending` prop; `SignInForm` sets
+  `submitting` on a valid submit (spinner + "Logowanie..." + disabled while the
+  browser round-trips). Logout (sidebar form in `StaffShell.astro`) had no
+  affordance — added a view-transition-safe `<script>` (binds on
+  `astro:page-load`) that disables the button and swaps its label to
+  "Wylogowywanie…" on submit. `Topbar.astro` also has a signout form but is dead
+  code (imported nowhere) — left untouched.
+- **Dev gotcha (not a code bug):** adding imports to the signin island makes
+  Vite's dep optimizer re-bundle, so an already-running dev server serves stale
+  hashed chunk URLs → `Failed to fetch dynamically imported module … astro-….js`
+  (404) → the React island can't hydrate and the SSR'd form flashes then blanks.
+  Fix is environmental: `rm -rf node_modules/.vite && npm run dev`. Verified a
+  clean load renders the full form (h1 + 3 inputs) with no errors.
+
 ### A1 — Post-login doesn't land staff on the dashboard
 - **Observed:** after a successful sign-in you land on `/` (the **public**
   marketing landing / catalog), not `/dashboard`. You then have to navigate to the

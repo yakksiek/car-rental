@@ -35,7 +35,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const required = resolveRequiredRole(context.url.pathname);
   if (required) {
     if (!context.locals.user) {
-      return context.redirect("/auth/signin");
+      // Remember where the user was headed so sign-in can return them there
+      // (A1). `safeRedirectPath` re-validates this on the way back out, so a
+      // tampered value can only ever resolve to an internal path.
+      const dest = context.url.pathname + context.url.search;
+      return context.redirect(`/auth/signin?redirect=${encodeURIComponent(dest)}`);
     }
     if (!isRoleSufficient(context.locals.role, required)) {
       return new Response("Forbidden", { status: 403 });

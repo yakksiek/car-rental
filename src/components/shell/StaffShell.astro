@@ -94,10 +94,10 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · Warszawa</span>
         </span>
       </div>
-      <form method="POST" action="/api/auth/signout" class="mt-2">
+      <form method="POST" action="/api/auth/signout" class="mt-2" data-signout>
         <button
           type="submit"
-          class="text-muted-foreground hover:text-foreground hover:bg-background w-full rounded-[10px] py-2 text-center text-xs font-medium transition-colors"
+          class="text-muted-foreground hover:text-foreground hover:bg-background w-full rounded-[10px] py-2 text-center text-xs font-medium transition-colors disabled:opacity-60"
         >
           Wyloguj
         </button>
@@ -143,3 +143,23 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     }
   </nav>
 </div>
+
+<script>
+  // Sign-out has no React island, so wire a tiny submit handler that disables
+  // the button and swaps its label while the native POST → redirect round-trips
+  // (otherwise the click gives no feedback). Re-binds after view-transition
+  // navigations; guarded so a button is wired only once.
+  function bindSignout() {
+    document.querySelectorAll<HTMLFormElement>("form[data-signout]").forEach((form) => {
+      if (form.dataset.bound) return;
+      form.dataset.bound = "1";
+      form.addEventListener("submit", () => {
+        const btn = form.querySelector<HTMLButtonElement>("button[type='submit']");
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = "Wylogowywanie…";
+      });
+    });
+  }
+  document.addEventListener("astro:page-load", bindSignout);
+</script>

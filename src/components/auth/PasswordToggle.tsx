@@ -5,13 +5,15 @@ interface PasswordToggleProps {
   onToggle: () => void;
 }
 
+// Trailing eye toggle inside the light staff FormField row (flex child, not
+// absolutely positioned).
 export function PasswordToggle({ visible, onToggle }: PasswordToggleProps) {
   return (
     <button
       type="button"
       onClick={onToggle}
-      className="absolute top-1/2 right-3 -translate-y-1/2 text-white/40 transition-colors hover:text-white/70"
-      aria-label={visible ? "Hide password" : "Show password"}
+      className="text-muted-foreground hover:text-foreground flex shrink-0 items-center transition-colors"
+      aria-label={visible ? "Ukryj hasło" : "Pokaż hasło"}
     >
       {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
     </button>
