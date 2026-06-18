@@ -21,12 +21,12 @@ whole `design/` folder into context; this index exists so you don't have to.
 | Token source | `context/foundation/design/tokens.css` | Reference copy of the export (3-layer: primitives → shadcn → `@theme`). |
 | Screenshots | `context/foundation/design/screenshots/*.png` | Rendered screens — the cheap visual reference. **Prefer these.** |
 | S-02 flow set | `context/foundation/design/screenshots/s-02-reservation-flow/*.png` | High-fidelity reservation-funnel pass (mobile + desktop). Screenshot-only — see catalog below. |
-| Screen source (JSX) | `context/foundation/design/*-screens*.jsx`, `shared.jsx` | Static React prototype. Reference for exact spacing/structure only — **not** app code; do not import. |
+| Screen source (JSX) | **Live** — Claude Design project `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`, https://claude.ai/design/p/352d78a6-84fd-49a2-8b38-2fe289691fc3) | The prototype JSX (`*-screens.jsx`, `staff-desktop.jsx`, `admin-mobile.jsx`, `shared.jsx`) was **removed from the repo** (2026-06-18) in favour of the live project. Pull on demand with the `DesignSync` tool (`get_file --project 352d78a6-… --path <file>`) or `/design-sync`. Reference for spacing/structure only — **not** app code; do not import. |
 
-> The Claude Design *canvas chrome* (design-canvas / tweaks-panel / device frames)
-> was removed after rendering — it was tooling, not design. `Flota Rental.html`
-> remains but no longer renders standalone (it referenced that chrome); the
-> screenshots are the canonical visual record.
+> The composed HTML exports (`Flota Rental.html`, `Design tokens.html`) and the
+> prototype JSX were **removed from the repo** (2026-06-18) — they live in the
+> Claude Design project (`352d78a6-…`, pull via `DesignSync`). The **screenshots**
+> (`screenshots/`) and `tokens.css` remain in-repo as the canonical offline reference.
 
 ## Tokens at a glance
 
@@ -43,6 +43,11 @@ Full definitions live in `src/styles/global.css`. Highlights:
 ## Screen catalog → roadmap slices
 
 Screens map to `context/foundation/roadmap.md` items. When planning a slice, open the matching screenshot(s).
+
+> The **Source file** column names the prototype JSX. Those `.jsx` files were removed
+> from the repo (2026-06-18); they now live in the Claude Design project
+> `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`). Pull a file with
+> `DesignSync get_file --project 352d78a6-… --path <name>`. Screenshots remain in-repo.
 
 | # | Screen | Role / device | Slice | Source file |
 | --- | --- | --- | --- | --- |
@@ -127,7 +132,7 @@ Folder: `screenshots/s-02-reservation-flow/`
 
 - **Polish-first copy.** Prototype screens render Polish UI strings (the export has an EN/PL toggle; v1 ships Polish per PRD). Treat PL as canonical, EN as reference.
 - **Vehicle imagery** uses geometric silhouettes in the prototype — swap for real product photography in production.
-- **Screens are prototype JSX, not components.** Use them for layout/spacing/structure intent; rebuild as Astro/React + shadcn against the live tokens. Do not import from `design/`.
+- **Screens are prototype JSX, not components.** Use them for layout/spacing/structure intent; rebuild as Astro/React + shadcn against the live tokens. Do not import from `design/`. The JSX now lives in the live Claude Design project (pull via `DesignSync`/`/design-sync`), not in-repo; screenshots remain the cheap visual reference.
 
 ## Follow-ups
 
