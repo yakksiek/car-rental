@@ -2,6 +2,7 @@
 // components
 import Layout from "../layouts/Layout.astro";
 import StaffShell from "../components/shell/StaffShell.astro";
+import NeedDecisionPanel from "../components/dashboard/NeedDecisionPanel";
 
 // others
 import { listPendingReservations } from "../lib/services/reservations";
@@ -9,8 +10,8 @@ import { staffIdentity } from "../lib/staff-identity";
 
 const { user, role, supabase } = Astro.locals;
 
-// Cheap pending count for the queue entry card + shell badge (mirrors the desktop
-// "Need a decision" panel intent; the full mini-list lands with S-07).
+// The pending queue feeds both the shell badge and the dashboard "Wymaga decyzji"
+// mini-list (L3) — the in-scope slice of the design's dispatch dashboard.
 const pending = await listPendingReservations(supabase);
 const pendingCount = pending.length;
 
@@ -54,26 +55,12 @@ const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.
         </span>
       </header>
 
-      <div class="flex flex-col gap-3">
-        <a
-          href="/dashboard/reservations"
-          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
-        >
-          <div>
-            <div class="text-foreground text-base font-[650] tracking-tight">Oczekujące wnioski</div>
-            <div class="text-muted-foreground mt-0.5 text-sm">Zatwierdź lub odrzuć zgłoszenia rezerwacji</div>
-          </div>
-          <div class="flex items-center gap-3">
-            {
-              pendingCount > 0 && (
-                <span class="text-warning flex min-w-7 items-center justify-center rounded-full bg-[var(--flota-warning-soft)] px-2 py-0.5 text-sm font-bold">
-                  {pendingCount}
-                </span>
-              )
-            }
-            <span class="text-muted-foreground" aria-hidden="true">→</span>
-          </div>
-        </a>
+      <div class="flex flex-col gap-6">
+        {
+          /* In-scope L3 slice: the pending queue surfaced as a quick-action
+            mini-list with inline decide + an "Otwórz →" link to the full queue. */
+        }
+        <NeedDecisionPanel client:load reservations={pending} />
 
         <a
           href="/dashboard/calendar"
