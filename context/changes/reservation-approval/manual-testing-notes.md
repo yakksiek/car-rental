@@ -48,6 +48,8 @@ Worked the backlog in three committed phases (branch `feature/reservation-approv
   (crimson pill) in `global.css` — **works in week view only** (month-view gap, see
   "Open calendar follow-ups" below). **Re-test:** week view shows day columns (no
   scroll); no `+ New`; bar-click decide/read-only still works.
+  **✅ Verified 2026-06-18: bar-click decide (pending→accept/reject) + confirmed
+  read-only working.**
 - **Phase 3 — detail polish (L7, partial L5):** desktop `RequestDetail` header is
   now left-aligned (reference + PENDING + big name) with a prominent right total
   and Vehicle/Pickup 2-up; mobile centered header preserved. Dates-held card shows
@@ -60,6 +62,7 @@ Worked the backlog in three committed phases (branch `feature/reservation-approv
   reusing the shared decision mechanism (`useReservationDecision` + ReasonSheet +
   ResultOverlay). **Re-test:** decide from the dashboard (accept/reject/reason/
   already-handled re-sync), overflow "Zobacz wszystkie", empty state.
+  **✅ Verified 2026-06-18: dashboard decide flow working.**
 
 **Deferred (decisions stand):** L3 dispatch *dashboard chrome* → S-07 — greeting/
 Dispatch hero, Pickups/Returns/Overdue tiles, and Today's Schedule need pickup
