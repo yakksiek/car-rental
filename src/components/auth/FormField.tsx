@@ -2,9 +2,6 @@ import type { ReactNode } from "react";
 import { CircleAlert } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-const inputBase =
-  "w-full rounded-lg bg-white/10 border px-3 py-2 pl-10 text-white placeholder-white/40 focus:outline-none focus:ring-2 transition-colors";
-
 interface FormFieldProps {
   id: string;
   name?: string;
@@ -13,12 +10,16 @@ interface FormFieldProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  autoComplete?: string;
   error?: string;
   hint?: ReactNode;
   icon: ReactNode;
   endContent?: ReactNode;
 }
 
+// Light "boxed" field for the staff sign-in (Strefa pracownika). One bordered
+// row: leading icon, input, optional trailing control (e.g. the password eye).
+// Matches the design's LoginField (staff-login.jsx).
 export function FormField({
   id,
   name,
@@ -27,18 +28,24 @@ export function FormField({
   value,
   onChange,
   placeholder,
+  autoComplete,
   error,
   hint,
   icon,
   endContent,
 }: FormFieldProps) {
   return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-sm text-blue-100/80">
+    <label className="block">
+      <span className="mb-[7px] block text-[11.5px] font-[650] tracking-[0.2px] text-[var(--flota-ink-2)]">
         {label}
-      </label>
-      <div className="relative">
-        <span className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/40">{icon}</span>
+      </span>
+      <div
+        className={cn(
+          "bg-background flex h-[50px] items-center gap-2.5 rounded-xl border px-3.5 transition-colors focus-within:ring-2",
+          error ? "border-destructive/60 focus-within:ring-destructive/40" : "border-border focus-within:ring-ring/30",
+        )}
+      >
+        <span className="text-muted-foreground flex shrink-0 items-center">{icon}</span>
         <input
           id={id}
           name={name ?? id}
@@ -48,21 +55,19 @@ export function FormField({
             onChange(e.target.value);
           }}
           placeholder={placeholder}
-          className={cn(
-            inputBase,
-            error ? "border-red-400/60 focus:ring-red-400" : "border-white/20 focus:ring-purple-400",
-          )}
+          autoComplete={autoComplete}
+          className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 border-none bg-transparent text-[14.5px] font-medium outline-none"
         />
         {endContent}
       </div>
       {error ? (
-        <p className="mt-1 flex items-center gap-1 text-xs text-red-300">
+        <p className="text-destructive mt-1.5 flex items-center gap-1 text-xs">
           <CircleAlert className="size-3" />
           {error}
         </p>
       ) : (
         hint
       )}
-    </div>
+    </label>
   );
 }
