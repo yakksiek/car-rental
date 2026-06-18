@@ -44,9 +44,10 @@ Worked the backlog in three committed phases (branch `feature/reservation-approv
 - **Phase 2 — calendar (L8, L9, L10):** `initialView="month"`,
   `weekViewGranularity="daily"` (7 day columns, no hour grid), a custom
   `headerComponent` (prev/Dziś/next + Miesiąc/Tydzień switch) that omits `+ New`
-  and the Dzień/Rok views. Today's column marked via `#day-number-today` (crimson
-  pill) in `global.css`. **Re-test:** week view shows day columns (no scroll);
-  no `+ New`; today highlighted; bar-click decide/read-only still works.
+  and the Dzień/Rok views. Today's column marked via `[data-testid="day-number-today"]`
+  (crimson pill) in `global.css` — **works in week view only** (month-view gap, see
+  "Open calendar follow-ups" below). **Re-test:** week view shows day columns (no
+  scroll); no `+ New`; bar-click decide/read-only still works.
 - **Phase 3 — detail polish (L7, partial L5):** desktop `RequestDetail` header is
   now left-aligned (reference + PENDING + big name) with a prominent right total
   and Vehicle/Pickup 2-up; mobile centered header preserved. Dates-held card shows
@@ -71,14 +72,48 @@ SSR data window on that date, opens in week view on that week, and tints the
 vehicle's row. **Re-test:** click it from a request whose dates are off the
 default month — the calendar lands on the booking's week with the vehicle row
 highlighted.
-Remaining L5 follow-ups (open — owner to take later):
-- **Horizontal auto-scroll** so a mid/late-week pickup is visible without manual
-  scroll on a narrow viewport. An attempt (scroll the `data-testid="day-number-<D>"`
-  column into view) didn't land reliably and was **removed**; revisit by driving
-  `scrollLeft` on the `[data-testid="horizontal-grid-scroll"]` container directly.
+## 🚧 Open calendar follow-ups (revisit AFTER the rest of testing)
+
+Two related, still-open calendar items the owner wants to return to. Both confirmed
+on the dev server 2026-06-18.
+
+### C1 — Month view never marks today; opens at day 1 (not centered on today)
+- **Observed:** in **Miesiąc** (month) view the timeline opens scrolled to the 1st
+  of the month, so today is off-screen until you scroll right; and once you scroll
+  to it, **today's date is NOT highlighted** (plain `18 Thu`, no crimson pill).
+  In **Tydzień** (week) view today *is* marked (crimson pill) — that part works.
+- **Root cause (from `@ilamy/calendar` dist):** there are two different day-header
+  renderers. The **week/daily** header uses a shared pill component that adds
+  `bg-primary text-primary-foreground` + `data-testid="day-number-today"` on today
+  → our `[data-testid="day-number-today"]` CSS (and the lib's own styling) marks it.
+  The **month** header renders each day cell as a plain `format("D")` / `format("ddd")`
+  stack with **no `bg-primary` and no `day-number-*` test id** → nothing to target,
+  so neither the library nor our CSS marks today there.
+- **Why it's hard:** the lib exposes `renderEvent` / `renderResource` / `renderHour`
+  / `headerComponent` but **no per-day column-header render prop**, and the month
+  day cell has no stable hook (only generic utility classes). Options to weigh:
+  (a) upstream/upgrade the lib for a day-header marker; (b) compute today's column
+  index and overlay our own marker; (c) accept week-view-only today marking.
+- **Files:** `src/components/dashboard/ReservationCalendar.tsx`, `src/styles/global.css`.
+
+### C2 — No horizontal scroll-to-target on load (month→today, deep-link→pickup)
+- **Observed:** the day-resolution timeline always opens scrolled to the left
+  (1st of month / Monday of week). On a narrow viewport the relevant column —
+  today (default month) or the pickup day (L5 deep-link) — sits off-screen.
+- **Status:** an attempt to `scrollIntoView` the `data-testid="day-number-<D>"`
+  column didn't land reliably and was **removed** (commit reverts it).
+- **Consolidated fix (one mechanism covers both):** once the grid mounts, drive
+  `scrollLeft` on the `[data-testid="horizontal-grid-scroll"]` container to
+  `dayIndex × columnWidth` (measure a column from the header cells). Use today's
+  index for the default month load and the pickup-day index for the deep-link.
+- **Files:** `src/components/dashboard/ReservationCalendar.tsx`.
+
+### C3 — Detail mini-timeline shows only the held block
 - Showing the vehicle's *other* confirmed blocks (green) in the detail's
   mini-timeline still needs `getVehicleBusyRanges` wired to the client island; the
-  mini-timeline shows the held block only.
+  mini-timeline currently shows the held (amber) block only.
+- **Files:** `src/components/dashboard/PendingQueue.tsx`, `getVehicleBusyRanges`
+  in `src/lib/services/reservations.ts`.
 
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
