@@ -1,7 +1,8 @@
 // core
 import * as React from "react";
-import { IlamyResourceCalendar, defaultTranslations } from "@ilamy/calendar";
-import type { CalendarEvent, Resource, Translations } from "@ilamy/calendar";
+import { IlamyResourceCalendar, defaultTranslations, useIlamyCalendarContext } from "@ilamy/calendar";
+import type { CalendarEvent, CalendarView, Resource, Translations } from "@ilamy/calendar";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // components
 import { CalendarDecision } from "./ReservationDecision";
@@ -14,10 +15,17 @@ import type { CalendarReservation } from "../../types";
 
 // The resource-timeline calendar island (S-03 Phase 7). Rendered client:only
 // (the lib never SSRs in workerd). Vehicles are resource rows; pending+confirmed
-// reservations are bars at the 14:00→10:00 window. Clicking a pending bar opens
-// the shared accept/reject flow (CalendarDecision → useReservationDecision); a
-// confirmed bar opens a read-only detail. Read-only otherwise: no drag/resize,
-// no empty-slot create.
+// reservations are day-spanning bars. Clicking a pending bar opens the shared
+// accept/reject flow (CalendarDecision → useReservationDecision); a confirmed bar
+// opens a read-only detail. Read-only otherwise: no drag/resize, no empty-slot
+// create.
+//
+// Layout follow-up (manual-testing notes L8/L9): rental granularity is one day, so
+// the week view runs at `weekViewGranularity="daily"` (7 day columns, no hour grid)
+// and month is the default. A custom `headerComponent` replaces the library
+// toolbar to (a) omit the `+ New` create button (L9) and (b) restrict the view
+// switcher to Miesiąc / Tydzień (no hour-grid Dzień, no Rok). The precise
+// 14:00→10:00 times live in the request detail, not the calendar bar.
 
 const TRANSLATIONS: Translations = {
   ...defaultTranslations,
@@ -52,6 +60,105 @@ function isoDate(value: unknown): string {
     return candidate.toISOString().slice(0, 10);
   }
   return "";
+}
+
+// Polish month names — nominative for the month-view title, genitive for the
+// week-view range. Self-contained so the label never depends on the dayjs locale
+// bundle being loaded in workerd.
+const PL_MONTHS_NOM = [
+  "styczeń",
+  "luty",
+  "marzec",
+  "kwiecień",
+  "maj",
+  "czerwiec",
+  "lipiec",
+  "sierpień",
+  "wrzesień",
+  "październik",
+  "listopad",
+  "grudzień",
+];
+const PL_MONTHS_GEN = [
+  "stycznia",
+  "lutego",
+  "marca",
+  "kwietnia",
+  "maja",
+  "czerwca",
+  "lipca",
+  "sierpnia",
+  "września",
+  "października",
+  "listopada",
+  "grudnia",
+];
+
+const VIEW_OPTIONS: { id: CalendarView; label: string }[] = [
+  { id: "month", label: "Miesiąc" },
+  { id: "week", label: "Tydzień" },
+];
+
+// Replaces the library toolbar: prev / Dziś / next + period label on the left, a
+// Miesiąc/Tydzień segmented switch on the right. No `+ New`, no export, no
+// hour-grid Dzień / Rok. Rendered inside the calendar provider, so it can drive
+// navigation through the public context hook.
+function CalendarHeader() {
+  const { currentDate, view, setView, nextPeriod, prevPeriod, today } = useIlamyCalendarContext();
+
+  let label: string;
+  if (view === "week") {
+    const start = currentDate.subtract((currentDate.day() + 6) % 7, "day"); // Monday
+    const end = start.add(6, "day");
+    label =
+      start.month() === end.month()
+        ? `${start.date()}–${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`
+        : `${start.date()} ${PL_MONTHS_GEN[start.month()]} – ${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`;
+  } else {
+    label = `${PL_MONTHS_NOM[currentDate.month()]} ${currentDate.year()}`;
+  }
+
+  const navButton = "text-foreground hover:bg-background flex size-9 items-center justify-center rounded-full";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
+      <div className="flex items-center gap-1">
+        <button type="button" onClick={prevPeriod} aria-label="Poprzedni okres" className={navButton}>
+          <ChevronLeft className="size-[18px]" />
+        </button>
+        <button
+          type="button"
+          onClick={today}
+          className="border-border text-foreground hover:bg-background rounded-full border px-3.5 py-1.5 text-sm font-medium"
+        >
+          Dziś
+        </button>
+        <button type="button" onClick={nextPeriod} aria-label="Następny okres" className={navButton}>
+          <ChevronRight className="size-[18px]" />
+        </button>
+        <span className="text-foreground ml-1.5 text-base font-bold tracking-tight capitalize">{label}</span>
+      </div>
+
+      <div className="bg-background flex rounded-full p-1">
+        {VIEW_OPTIONS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => {
+              setView(v.id);
+            }}
+            aria-pressed={view === v.id}
+            className={cn(
+              "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
+              view === v.id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function ReservationCalendar({
@@ -104,13 +211,15 @@ export default function ReservationCalendar({
         <IlamyResourceCalendar
           resources={resources}
           events={events}
-          initialView="week"
+          initialView="month"
+          weekViewGranularity="daily"
           firstDayOfWeek="monday"
           locale="pl"
           timezone="Europe/Warsaw"
           disableDragAndDrop
           disableCellClick
           hideExportButton
+          headerComponent={<CalendarHeader />}
           translations={TRANSLATIONS}
           onEventClick={onEventClick}
           onDateChange={(_date: unknown, range: { start: unknown; end: unknown }) => refetch(range)}
