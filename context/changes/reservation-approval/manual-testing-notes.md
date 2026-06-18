@@ -63,10 +63,16 @@ Worked the backlog in three committed phases (branch `feature/reservation-approv
 **Deferred (decisions stand):** L3 dispatch *dashboard chrome* → S-07 — greeting/
 Dispatch hero, Pickups/Returns/Overdue tiles, and Today's Schedule need pickup
 (S-05) / return (S-06) / overdue (S-07) data that doesn't exist yet. Only the
-"Need a decision" mini-list was in S-03 scope and is now built (Phase 4). L5
-"other confirmed blocks (green) on the same vehicle" + focusing the calendar on
-that vehicle/window → needs `getVehicleBusyRanges` wired to the client island (a
-follow-up); the mini-timeline currently shows the held block only.
+"Need a decision" mini-list was in S-03 scope and is now built (Phase 4).
+
+**L5 calendar focus — done (Phase 5):** "Zobacz w kalendarzu" now deep-links to
+`/dashboard/calendar?view=week&date=<pickup>&vehicle=<id>`; the page anchors the
+SSR data window on that date, opens in week view on the booking, and tints the
+vehicle's row. **Re-test:** click it from a request whose dates are off the
+default month — the calendar should land on the booking instead of today.
+Remaining L5 follow-up: showing the vehicle's *other* confirmed blocks (green) in
+the detail's mini-timeline still needs `getVehicleBusyRanges` wired to the client
+island; the mini-timeline shows the held block only.
 
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
