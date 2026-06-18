@@ -164,14 +164,32 @@ function CalendarHeader() {
 export default function ReservationCalendar({
   resources,
   reservations: initial,
+  initialDate,
+  initialView = "month",
+  focusVehicleId,
 }: {
   resources: Resource[];
   reservations: CalendarReservation[];
+  initialDate?: string;
+  initialView?: CalendarView;
+  focusVehicleId?: string;
 }) {
   const [reservations, setReservations] = React.useState<CalendarReservation[]>(initial);
   const [active, setActive] = React.useState<CalendarReservation | null>(null);
 
   const events = React.useMemo(() => reservationsToEvents(reservations), [reservations]);
+
+  // When deep-linked from a request's dates-held card (L5), tint the focused
+  // vehicle's row so it's obvious which booking the calendar landed on.
+  const displayResources = React.useMemo(
+    () =>
+      focusVehicleId
+        ? resources.map((r) =>
+            String(r.id) === focusVehicleId ? { ...r, backgroundColor: "var(--flota-accent-soft)" } : r,
+          )
+        : resources,
+    [resources, focusVehicleId],
+  );
 
   async function refetch(range: { start: unknown; end: unknown }) {
     try {
@@ -209,9 +227,10 @@ export default function ReservationCalendar({
     <div className="flex flex-col gap-4">
       <div className="border-border bg-card shadow-card overflow-x-auto rounded-2xl border p-2">
         <IlamyResourceCalendar
-          resources={resources}
+          resources={displayResources}
           events={events}
-          initialView="month"
+          initialView={initialView}
+          initialDate={initialDate}
           weekViewGranularity="daily"
           firstDayOfWeek="monday"
           locale="pl"

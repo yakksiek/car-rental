@@ -254,6 +254,12 @@ export function RequestDetail({
   const pad = Math.max(1, Math.round(days * 0.4));
   const heldSidePct = (pad / (days + 2 * pad)) * 100;
 
+  // Deep-link the dates-held card to the calendar focused on this booking: week
+  // view, anchored on the pickup date, with the vehicle's row highlighted (L5).
+  const calendarHref = `/dashboard/calendar?view=week&date=${reservation.pickup_date}&vehicle=${encodeURIComponent(
+    reservation.vehicle_id,
+  )}`;
+
   return (
     <div className={cn("flex flex-col", className)}>
       {/* Mobile header — centered, with the list→detail back affordance */}
@@ -352,7 +358,7 @@ export function RequestDetail({
         {/* Dates held — a mini timeline of the held window that links through to
             the full calendar (L5). The vehicle's other bookings (green confirmed
             blocks) need the per-vehicle busy ranges and are a follow-up. */}
-        <a href="/dashboard/calendar" className={cn(cardClass, "hover:bg-background block p-4 transition-colors")}>
+        <a href={calendarHref} className={cn(cardClass, "hover:bg-background block p-4 transition-colors")}>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="bg-warning size-2 rounded-[3px]" />
