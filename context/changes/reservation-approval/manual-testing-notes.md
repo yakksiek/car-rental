@@ -29,6 +29,34 @@ boundaries. **No behavioural bugs found.**
   (b) L5/L7/L8-status-label = S-03 polish vs defer; (c) L8 supersedes plan 7.5's
   "14:00→10:00 bars" — confirm day-resolution bars are acceptable.
 
+## ✅ Fix log — layout follow-up session (2026-06-18)
+
+Worked the backlog in three committed phases (branch `feature/reservation-approval`);
+`npm run build` + `npm run lint` clean after each. Re-test with the dev server.
+
+- **Phase 1 — shell (L1, L2, L4, L6):** new `src/components/shell/StaffShell.astro`
+  (+ `NavIcon.astro`, `src/lib/staff-identity.ts`). One responsive nav: left
+  sidebar + user chip at md+, floating dark tab bar below md, wrapping the three
+  staff pages. Dropped the `← Pulpit` text links and the in-queue count header
+  (now the shell topbar on desktop + a centered mobile header). Added the
+  initials avatar / account chip. **Re-test:** nav between Pulpit/Wnioski/Kalendarz
+  on mobile + desktop; active states; pending badge; signout from the chip.
+- **Phase 2 — calendar (L8, L9, L10):** `initialView="month"`,
+  `weekViewGranularity="daily"` (7 day columns, no hour grid), a custom
+  `headerComponent` (prev/Dziś/next + Miesiąc/Tydzień switch) that omits `+ New`
+  and the Dzień/Rok views. Today's column marked via `#day-number-today` (crimson
+  pill) in `global.css`. **Re-test:** week view shows day columns (no scroll);
+  no `+ New`; today highlighted; bar-click decide/read-only still works.
+- **Phase 3 — detail polish (L7, partial L5):** desktop `RequestDetail` header is
+  now left-aligned (reference + PENDING + big name) with a prominent right total
+  and Vehicle/Pickup 2-up; mobile centered header preserved. Dates-held card shows
+  a mini timeline of the held window + links to `/dashboard/calendar`.
+
+**Deferred (decisions stand):** L3 dispatch dashboard → S-07. L5 "other confirmed
+blocks (green) on the same vehicle" + focusing the calendar on that vehicle/window
+→ needs `getVehicleBusyRanges` wired to the client island (a follow-up); the
+mini-timeline currently shows the held block only.
+
 ## 📐 Design source — pull live, not screenshots (DesignSync)
 
 This Claude Code build has the **`DesignSync`** tool + `/design-sync` skill (Claude
