@@ -463,14 +463,10 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
 
   return (
     <div className="relative min-h-[60vh]">
-      {/* Header */}
-      <div className="flex items-baseline gap-2 px-1">
-        <span className="text-warning text-[40px] leading-none font-bold tracking-tight">{count}</span>
-        <span className="text-muted-foreground text-sm font-[540]">{COPY.awaitingDecision}</span>
-      </div>
-
+      {/* The count header lives in the shell topbar (desktop) + page header
+          (mobile); the queue only owns the re-sync banner + the list/detail. */}
       {banner && (
-        <div className="border-border mt-3 rounded-xl border bg-[var(--flota-warning-soft)] px-4 py-3 text-sm text-[var(--flota-ink-2)]">
+        <div className="border-border rounded-xl border bg-[var(--flota-warning-soft)] px-4 py-3 text-sm text-[var(--flota-ink-2)]">
           {banner}
         </div>
       )}

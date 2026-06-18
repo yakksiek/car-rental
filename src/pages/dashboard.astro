@@ -1,68 +1,91 @@
 ---
 // components
 import Layout from "../layouts/Layout.astro";
+import StaffShell from "../components/shell/StaffShell.astro";
 
 // others
 import { listPendingReservations } from "../lib/services/reservations";
+import { staffIdentity } from "../lib/staff-identity";
 
 const { user, role, supabase } = Astro.locals;
 
-// Cheap pending count for the queue entry card (mirrors the desktop "Need a
-// decision" panel intent; the full mini-list lands with the desktop pass).
+// Cheap pending count for the queue entry card + shell badge (mirrors the desktop
+// "Need a decision" panel intent; the full mini-list lands with S-07).
 const pending = await listPendingReservations(supabase);
 const pendingCount = pending.length;
+
+const { initials } = staffIdentity(user?.email, role);
+
+// Mobile hero date — "Czw · 18 czerwca". Formatted from PL arrays (workerd ICU is
+// not guaranteed for toLocaleDateString).
+const now = new Date();
+const PL_DAYS = ["Niedz", "Pon", "Wt", "Śr", "Czw", "Pt", "Sob"];
+const PL_MONTHS = [
+  "stycznia",
+  "lutego",
+  "marca",
+  "kwietnia",
+  "maja",
+  "czerwca",
+  "lipca",
+  "sierpnia",
+  "września",
+  "października",
+  "listopada",
+  "grudnia",
+];
+const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.getMonth()]}`;
 ---
 
 <Layout title="Pulpit — Flota">
-  <main class="mx-auto min-h-screen w-full max-w-2xl px-4 py-8">
-    <header class="mb-6 flex items-start justify-between gap-4 px-1">
-      <div>
-        <h1 class="text-foreground text-2xl font-bold tracking-tight">Pulpit</h1>
-        <p class="text-muted-foreground mt-1 text-sm">
-          {user?.email}{role ? ` · ${role}` : ""}
-        </p>
-      </div>
-      <form method="POST" action="/api/auth/signout">
-        <button
-          type="submit"
-          class="border-border bg-card text-foreground shadow-card hover:bg-background rounded-[14px] border px-4 py-2 text-sm font-medium"
+  <StaffShell active="dash" title="Pulpit" user={user} role={role} pendingCount={pendingCount}>
+    <main class="mx-auto w-full max-w-2xl px-4 py-8">
+      {/* Mobile hero (the desktop topbar carries the title at md+) */}
+      <header class="mb-6 flex items-start justify-between gap-4 px-1 md:hidden">
+        <div>
+          <div class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{dateLabel}</div>
+          <h1 class="text-foreground mt-1 text-[32px] leading-none font-bold tracking-tight">Pulpit</h1>
+          <p class="text-muted-foreground mt-1.5 text-sm">{user?.email}</p>
+        </div>
+        <span
+          class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-base font-medium"
         >
-          Wyloguj
-        </button>
-      </form>
-    </header>
+          {initials}
+        </span>
+      </header>
 
-    <div class="flex flex-col gap-3">
-      <a
-        href="/dashboard/reservations"
-        class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
-      >
-        <div>
-          <div class="text-foreground text-base font-[650] tracking-tight">Oczekujące wnioski</div>
-          <div class="text-muted-foreground mt-0.5 text-sm">Zatwierdź lub odrzuć zgłoszenia rezerwacji</div>
-        </div>
-        <div class="flex items-center gap-3">
-          {
-            pendingCount > 0 && (
-              <span class="text-warning flex min-w-7 items-center justify-center rounded-full bg-[var(--flota-warning-soft)] px-2 py-0.5 text-sm font-bold">
-                {pendingCount}
-              </span>
-            )
-          }
+      <div class="flex flex-col gap-3">
+        <a
+          href="/dashboard/reservations"
+          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+        >
+          <div>
+            <div class="text-foreground text-base font-[650] tracking-tight">Oczekujące wnioski</div>
+            <div class="text-muted-foreground mt-0.5 text-sm">Zatwierdź lub odrzuć zgłoszenia rezerwacji</div>
+          </div>
+          <div class="flex items-center gap-3">
+            {
+              pendingCount > 0 && (
+                <span class="text-warning flex min-w-7 items-center justify-center rounded-full bg-[var(--flota-warning-soft)] px-2 py-0.5 text-sm font-bold">
+                  {pendingCount}
+                </span>
+              )
+            }
+            <span class="text-muted-foreground" aria-hidden="true">→</span>
+          </div>
+        </a>
+
+        <a
+          href="/dashboard/calendar"
+          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+        >
+          <div>
+            <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
+            <div class="text-muted-foreground mt-0.5 text-sm">Oś czasu rezerwacji według pojazdów</div>
+          </div>
           <span class="text-muted-foreground" aria-hidden="true">→</span>
-        </div>
-      </a>
-
-      <a
-        href="/dashboard/calendar"
-        class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
-      >
-        <div>
-          <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
-          <div class="text-muted-foreground mt-0.5 text-sm">Oś czasu rezerwacji według pojazdów</div>
-        </div>
-        <span class="text-muted-foreground" aria-hidden="true">→</span>
-      </a>
-    </div>
-  </main>
+        </a>
+      </div>
+    </main>
+  </StaffShell>
 </Layout>
