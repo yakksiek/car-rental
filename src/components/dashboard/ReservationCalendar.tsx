@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CalendarDecision } from "./ReservationDecision";
 
 // others
-import "../../lib/calendar/dayjs";
+import dayjs from "../../lib/calendar/dayjs";
 import { reservationsToEvents } from "../../lib/calendar/map";
 import { cn } from "../../lib/utils";
 import type { CalendarReservation } from "../../types";
@@ -161,6 +161,93 @@ function CalendarHeader() {
   );
 }
 
+// @ilamy v1.8.1 has no public hook for two things the day-resolution timeline
+// needs (researched against the shipped bundle): (C1) marking today in the
+// *month* resource header — its day cells render a plain `format("D")` with no
+// `day-number-today` testid and no highlight (only the week header marks today),
+// and (C2) scrolling the horizontal timeline to a target day on load. Both are
+// derivable from one primitive — the target day's column index in the visible
+// window — so this component computes it and drives the DOM directly. The hooks
+// it relies on (`ilamy-resource-calendar`, `horizontal-grid-header`, the Radix
+// `scroll-area-viewport`, the sticky gutter being the row's first child) are
+// internal/unofficial; every step bails safely if the structure can't be
+// resolved, so a library upgrade degrades to "no marker / no auto-scroll" rather
+// than throwing. Pin: @ilamy/calendar 1.8.1.
+
+// Walk past single-child wrappers to the flex row that holds the sticky
+// resource-label gutter (first child) + the per-day column cells (the rest).
+// The day cells carry no testid, so callers index them positionally.
+function findColumnRow(header: Element): HTMLElement | null {
+  let node: Element = header;
+  while (node.children.length === 1) {
+    node = node.children[0];
+  }
+  return node.children.length >= 2 ? (node as HTMLElement) : null;
+}
+
+function CalendarAutoFocus({ focusDate }: { focusDate?: string }) {
+  const { currentDate, view } = useIlamyCalendarContext();
+  const dateKey = currentDate.valueOf();
+  const didScroll = React.useRef(false);
+
+  React.useEffect(() => {
+    // Two frames: let @ilamy commit the (re)rendered header/grid before we measure.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const root = document.querySelector('[data-testid="ilamy-resource-calendar"]');
+        const header = root?.querySelector('[data-testid="horizontal-grid-header"]');
+        if (!root || !header) return;
+        const row = findColumnRow(header);
+        if (!row) return;
+        const cells = Array.from(row.children) as HTMLElement[];
+        const dayCells = cells.slice(1); // drop the sticky resource-label gutter
+        if (dayCells.length === 0) return;
+
+        const windowStart =
+          view === "week"
+            ? currentDate.subtract((currentDate.day() + 6) % 7, "day").startOf("day") // Monday
+            : currentDate.startOf("month");
+        const today = dayjs().startOf("day");
+
+        // C1 — mark today's column header. Month view only: the week header is
+        // already marked by the library, so we'd otherwise double-highlight.
+        root.querySelectorAll("[data-today-col]").forEach((el) => {
+          el.removeAttribute("data-today-col");
+        });
+        if (view === "month") {
+          const todayIdx = today.diff(windowStart, "day");
+          if (todayIdx >= 0 && todayIdx < dayCells.length) {
+            dayCells[todayIdx].setAttribute("data-today-col", "");
+          }
+        }
+
+        // C2 — one-time horizontal scroll to the deep-linked pickup day (L5) or,
+        // on a default load, today. Aligns the target column flush past the
+        // pinned gutter. Skipped after the first run so it never fights the user.
+        if (!didScroll.current) {
+          didScroll.current = true;
+          const target = focusDate ? dayjs(focusDate).startOf("day") : today;
+          const idx = target.diff(windowStart, "day");
+          const viewport = root.querySelector('[data-slot="scroll-area-viewport"]');
+          if (viewport && idx >= 0 && idx < dayCells.length) {
+            const gutterWidth = cells[0]?.getBoundingClientRect().width ?? 0;
+            const delta =
+              dayCells[idx].getBoundingClientRect().left - viewport.getBoundingClientRect().left - gutterWidth;
+            viewport.scrollLeft += delta;
+          }
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [dateKey, view, focusDate, currentDate]);
+
+  return null;
+}
+
 export default function ReservationCalendar({
   resources,
   reservations: initial,
@@ -238,7 +325,12 @@ export default function ReservationCalendar({
           disableDragAndDrop
           disableCellClick
           hideExportButton
-          headerComponent={<CalendarHeader />}
+          headerComponent={
+            <>
+              <CalendarHeader />
+              <CalendarAutoFocus focusDate={initialDate} />
+            </>
+          }
           translations={TRANSLATIONS}
           onEventClick={onEventClick}
           onDateChange={(_date: unknown, range: { start: unknown; end: unknown }) => refetch(range)}
