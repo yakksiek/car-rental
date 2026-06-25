@@ -232,8 +232,14 @@
    visible highlight in the resource timeline header. Render it as a filled crimson
    pill (the same treatment the library's month view uses for today), so today's
    column stands out in the day-resolution timeline. The attribute selector
-   outranks the library's `.w-full`/`.truncate` utilities, so no `!important`. */
-[data-testid="day-number-today"] {
+   outranks the library's `.w-full`/`.truncate` utilities, so no `!important`.
+
+   The month resource header emits no `day-number-today` testid (see follow-up
+   C1), so ReservationCalendar tags today's header cell with `data-today-col`
+   after layout; its day-number child gets the same pill, plus a soft column
+   tint, to mirror the week view's today treatment. */
+[data-testid="day-number-today"],
+[data-today-col] > :first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -245,6 +251,9 @@
   background: var(--flota-accent);
   color: var(--flota-accent-ink);
   font-weight: var(--flota-fw-heavy);
+}
+[data-today-col] {
+  background-color: var(--flota-accent-soft);
 }
 
 @layer base {

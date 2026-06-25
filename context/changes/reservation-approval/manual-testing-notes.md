@@ -77,8 +77,44 @@ default month — the calendar lands on the booking's week with the vehicle row
 highlighted.
 ## 🚧 Open calendar follow-ups (revisit AFTER the rest of testing)
 
-Two related, still-open calendar items the owner wants to return to. Both confirmed
-on the dev server 2026-06-18.
+Two related calendar items the owner wanted to return to. Both confirmed on the
+dev server 2026-06-18, then **implemented together (2026-06-18) — `npm run lint` +
+`npm run build` clean.** **✅ VERIFIED on the dev server 2026-06-25:** (a) default
+month shows today's crimson pill + tint and scrolls to today; (b) nav away drops
+the marker, nav back restores it; (c) week view keeps its single library highlight
+(no double pill); (d) the L5 deep-link (R-0003 → pickup 2026-07-05) lands in week
+view on the July pickup week with the vehicle row tinted and scrolled to the pickup
+day. **C1 + C2 done.**
+
+### ✅ DONE + VERIFIED — C1 + C2 shared column-index effect
+
+New `CalendarAutoFocus` component inside `ReservationCalendar.tsx` (rendered in the
+`headerComponent` fragment, so it sits inside the @ilamy provider and reads
+`currentDate`/`view` via `useIlamyCalendarContext`). After two `requestAnimationFrame`s
+(let the lib commit the grid) it locates the header row (`findColumnRow` walks past
+single-child wrappers to the flex row, drops the sticky gutter = first child) and:
+- **C1:** in **month** view, tags today's column cell with `data-today-col`
+  (index = `today.diff(windowStart,"day")`); `global.css` gives it a crimson
+  day-number pill + soft column tint, mirroring the week header (which the lib
+  already marks, so we skip month-style marking there to avoid double-highlight).
+- **C2:** **one-time** horizontal scroll of the Radix viewport
+  (`[data-slot="scroll-area-viewport"]`) so the deep-linked pickup day (L5) — or
+  today on a default load — sits flush past the pinned gutter
+  (`scrollLeft += colLeft − viewportLeft − gutterWidth`). Guarded by a ref so it
+  never fights later user navigation.
+
+Defensive: every DOM step bails (no-op) if the structure can't be resolved, so a
+lib upgrade degrades to "no marker / no auto-scroll" rather than throwing. Pinned to
+@ilamy/calendar 1.8.1.
+
+**Re-test:** (a) load `/dashboard/calendar` (default month) → today's column shows
+the crimson pill + tint and the timeline is scrolled to today, not day 1; (b) nav
+to another month → no today marker (correct), nav back → marker returns; (c) switch
+to Tydzień → today still marked (library's own highlight), no double-pill; (d) from a
+request whose pickup is off the default month, click "Zobacz w kalendarzu" → lands on
+the pickup's week with the row tinted and scrolled to the pickup day.
+
+### Original observations (kept for context)
 
 ### C1 — Month view never marks today; opens at day 1 (not centered on today)
 - **Observed:** in **Miesiąc** (month) view the timeline opens scrolled to the 1st
@@ -110,6 +146,65 @@ on the dev server 2026-06-18.
   `dayIndex × columnWidth` (measure a column from the header cells). Use today's
   index for the default month load and the pickup-day index for the deep-link.
 - **Files:** `src/components/dashboard/ReservationCalendar.tsx`.
+
+### 🔬 Library research — `@ilamy/calendar` v1.8.1 (2026-06-18)
+
+Read the installed `dist/index.d.ts` + bundled `index.js` and Context7 docs
+(`/kcsujeet/ilamy-calendar`) to settle whether C1/C2 are achievable. **Verdict:
+C2 is doable via the DOM; C1 has no clean prop/CSS route and needs a JS overlay.
+Both share one primitive — the target day's column index — so they're one change.**
+
+**Three day-header renderers exist; only the month one is unhookable:**
+| View | Renderer | Today marked? | Hook |
+| --- | --- | --- | --- |
+| Regular month cells | `P1` DayNumber pill | ✅ `bg-primary` + `data-testid="day-number-today"` | testid |
+| Resource **week** (daily) | `resource-week-day-header` | ✅ `bg-primary/10 font-bold` (library's own, via internal `isToday`) | works already |
+| Resource **month** (our default) | inline | ❌ none | **none** |
+
+The resource-month day-column header renders only
+`<div class="w-20 … flex-col"><div class="text-xs font-medium">{X.format("D")}</div>`
+`<div class="text-xs text-muted-foreground">{X.format("ddd")}</div></div>` — **no
+`isToday`, no `bg-primary`, no `day-number-*` testid, no per-column testid.** Our
+`[data-testid="day-number-today"]` CSS can never match here. Confirms the original
+root-cause note and explains why week marks today but month doesn't.
+
+**C1 (mark today, month view) — no prop/CSS path in v1.8.1:**
+- Public render hooks are only `renderEvent` / `renderResource` / `renderHour` /
+  `renderCurrentTimeIndicator` / `renderEventForm` / `headerComponent` (whole
+  toolbar). **No per-day column-header render prop.**
+- `renderCurrentTimeIndicator` fires **only on hour-resolution grids** (vertical
+  day/week, horizontal resource *hour* grid) — never the daily/month timeline.
+- `classesOverride` exposes only `disabledCell`.
+- → Only routes: compute today's column index in JS and render our own marker/
+  overlay (CSS-only impossible — no stable anchor), **or** upstream/upgrade the lib.
+
+**C2 (scroll-to-target on load) — doable via DOM:**
+- The scroll container is a **Radix ScrollArea**. `data-testid="horizontal-grid-scroll"`
+  is on the *Root*; the real scroller is its child
+  `[data-slot="scroll-area-viewport"]` (also `[data-radix-scroll-area-viewport]`).
+  The viewport `ref` is private → query the DOM.
+- No public horizontal-scroll prop. `scrollTime` is vertical-only, hour-views-only,
+  and a no-op without a fixed height — irrelevant here.
+- The earlier `scrollIntoView` likely failed by targeting the Root or running
+  pre-layout. Robust mechanism: after mount set `viewport.scrollLeft = dayIndex ×
+  columnWidth`. Columns are `min-w-20 flex-1` (≥80px, may stretch) → **measure** a
+  header cell via `getBoundingClientRect`, don't hardcode 80.
+
+**Unifying mechanism (both):** target day's column index in the current window —
+month: `targetDate.date() - 1`; deep-link week: `pickup.diff(weekStart, "day")`.
+Re-run on mount, on `onDateChange` (nav), and on view switch.
+
+**Risk:** both couple to internal, unofficial hooks (`horizontal-grid-scroll`,
+`data-slot="scroll-area-viewport"`, `w-20` columns, positional indexing for the
+marker — C1's overlay is the more fragile). No public API covers either, so a lib
+upgrade could break them; pin the version + comment the hooks.
+
+**Upgrade path is closed (checked 2026-06-18):** `1.8.1` IS the latest (`npm view
+@ilamy/calendar` → `latest: 1.8.1`, published 2026-06-06; we're already on it). The
+week-view today-highlight standardization (changelog 2026-05-27) shipped in 1.8.0/
+1.8.1 but the **month** resource header still has no marker in the installed bundle.
+→ No newer version to adopt; **the JS overlay is the only route for C1.** Implement
+the shared column-index effect for C1 + C2 together.
 
 > The detail's held-block mini-timeline (L5) is **done and working** and links to
 > the calendar. Rendering the vehicle's *other* confirmed (green) blocks alongside
