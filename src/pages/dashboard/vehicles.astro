@@ -1,0 +1,39 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import StaffShell from "../../components/shell/StaffShell.astro";
+import FleetList from "../../components/fleet/FleetList";
+
+// others
+import { getCategoryCounts, listFleet } from "../../lib/services/vehicles";
+import { listPendingReservations } from "../../lib/services/reservations";
+
+// Fleet management (S-04 Phase 4). The /dashboard/vehicles route is gated to
+// `employee` by the middleware (src/lib/access.ts → /dashboard prefix); this page
+// SSR-loads the full fleet (including retired, now visible to staff after the
+// RLS broadening) plus the active-fleet category counts, then mounts the island.
+const { user, role, supabase } = Astro.locals;
+
+const [vehicles, counts, pending] = await Promise.all([
+  listFleet(supabase, { includeRetired: true }),
+  getCategoryCounts(supabase),
+  listPendingReservations(supabase),
+]);
+
+const subtitle = `${counts.total} aktywnych pojazdów`;
+---
+
+<Layout title="Zarządzanie flotą — Flota">
+  <StaffShell
+    active="fleet"
+    title="Zarządzanie flotą"
+    subtitle={subtitle}
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+  >
+    <main class="mx-auto w-full max-w-5xl px-4 py-6">
+      <FleetList client:load vehicles={vehicles} counts={counts} />
+    </main>
+  </StaffShell>
+</Layout>

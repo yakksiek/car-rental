@@ -369,27 +369,27 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 
 #### Automated
 
-- [x] 3.1 `npm run lint` and `npm run build` pass
-- [x] 3.2 `npx astro sync` passes (routes typecheck)
+- [x] 3.1 `npm run lint` and `npm run build` pass — 67d7236
+- [x] 3.2 `npx astro sync` passes (routes typecheck) — 67d7236
 
 #### Manual
 
-- [x] 3.3 `POST /api/vehicles` creates with valid body; 400 `{errors}` on missing fields; 403 for non-staff
-- [x] 3.4 `POST /api/vehicles/<id>/active {active:false}` returns 409 for the MAN Chłodnia, 200 for an unreserved vehicle (then gone from the public catalog)
+- [x] 3.3 `POST /api/vehicles` creates with valid body; 400 `{errors}` on missing fields; 403 for non-staff — 67d7236
+- [x] 3.4 `POST /api/vehicles/<id>/active {active:false}` returns 409 for the MAN Chłodnia, 200 for an unreserved vehicle (then gone from the public catalog) — 67d7236
 
 ### Phase 4: Fleet list screen
 
 #### Automated
 
-- [ ] 4.1 `npm run lint`, `npm run build`, `npx astro sync` pass
+- [x] 4.1 `npm run lint`, `npm run build`, `npx astro sync` pass
 
 #### Manual
 
-- [ ] 4.2 List renders seed vehicles; category pills filter with correct counts; search narrows by name/make/model
-- [ ] 4.3 „Pokaż wycofane" reveals the retired Fiat Ducato; default hides it
-- [ ] 4.4 Retire unreserved works; MAN Chłodnia shows the „aktywne rezerwacje" error; „Przywróć" restores
-- [ ] 4.5 Matches the design contract at desktop (table) + mobile (cards); reached from the dashboard card
-- [ ] 4.6 Unauthenticated `/dashboard/vehicles` redirects to sign-in
+- [x] 4.2 List renders seed vehicles; category pills filter with correct counts; search narrows by name/make/model
+- [x] 4.3 „Pokaż wycofane" reveals the retired Fiat Ducato; default hides it
+- [x] 4.4 Retire unreserved works; MAN Chłodnia shows the „aktywne rezerwacje" error; „Przywróć" restores
+- [x] 4.5 Matches the design contract at desktop (table) + mobile (cards); reached from the dashboard card
+- [x] 4.6 Unauthenticated `/dashboard/vehicles` redirects to sign-in
 
 ### Phase 5: Add / Edit form
 
