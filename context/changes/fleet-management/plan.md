@@ -381,25 +381,25 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 
 #### Automated
 
-- [x] 4.1 `npm run lint`, `npm run build`, `npx astro sync` pass
+- [x] 4.1 `npm run lint`, `npm run build`, `npx astro sync` pass — 8a2cf83
 
 #### Manual
 
-- [x] 4.2 List renders seed vehicles; category pills filter with correct counts; search narrows by name/make/model
-- [x] 4.3 „Pokaż wycofane" reveals the retired Fiat Ducato; default hides it
-- [x] 4.4 Retire unreserved works; MAN Chłodnia shows the „aktywne rezerwacje" error; „Przywróć" restores
-- [x] 4.5 Matches the design contract at desktop (table) + mobile (cards); reached from the dashboard card
-- [x] 4.6 Unauthenticated `/dashboard/vehicles` redirects to sign-in
+- [x] 4.2 List renders seed vehicles; category pills filter with correct counts; search narrows by name/make/model — 8a2cf83
+- [x] 4.3 „Pokaż wycofane" reveals the retired Fiat Ducato; default hides it — 8a2cf83
+- [x] 4.4 Retire unreserved works; MAN Chłodnia shows the „aktywne rezerwacje" error; „Przywróć" restores — 8a2cf83
+- [x] 4.5 Matches the design contract at desktop (table) + mobile (cards); reached from the dashboard card — 8a2cf83
+- [x] 4.6 Unauthenticated `/dashboard/vehicles` redirects to sign-in — 8a2cf83
 
 ### Phase 5: Add / Edit form
 
 #### Automated
 
-- [ ] 5.1 `npm run lint`, `npm run build`, `npx astro sync` pass
+- [x] 5.1 `npm run lint`, `npm run build`, `npx astro sync` pass
 
 #### Manual
 
-- [ ] 5.2 Creating a vehicle (required fields) adds it to the list + public catalog
-- [ ] 5.3 Empty required field shows the field error (400 round-trip)
-- [ ] 5.4 Editing persists; photo URLs render in the catalog gallery
-- [ ] 5.5 Editing a retired vehicle works
+- [x] 5.2 Creating a vehicle (required fields) adds it to the list + public catalog
+- [x] 5.3 Empty required field shows the field error (400 round-trip)
+- [x] 5.4 Editing persists; photo URLs render in the catalog gallery
+- [x] 5.5 Editing a retired vehicle works

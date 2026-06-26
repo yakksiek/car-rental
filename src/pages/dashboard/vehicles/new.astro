@@ -1,0 +1,30 @@
+---
+// components
+import Layout from "../../../layouts/Layout.astro";
+import StaffShell from "../../../components/shell/StaffShell.astro";
+import VehicleForm from "../../../components/fleet/VehicleForm";
+
+// others
+import { listPendingReservations } from "../../../lib/services/reservations";
+
+// Add-vehicle route (S-04 Phase 5). Gated to `employee` by the middleware
+// (/dashboard prefix); renders the shared VehicleForm island in create mode. The
+// island POSTs /api/vehicles and, on success, hard-navigates to the fleet list.
+// The pending queue is loaded only for the shell's nav badge (consistency with
+// the other staff pages).
+const { user, role, supabase } = Astro.locals;
+const pending = await listPendingReservations(supabase);
+---
+
+<Layout title="Dodaj pojazd — Flota">
+  <StaffShell
+    active="fleet"
+    title="Dodaj pojazd"
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+    showHeader={false}
+  >
+    <VehicleForm client:load mode="create" />
+  </StaffShell>
+</Layout>
