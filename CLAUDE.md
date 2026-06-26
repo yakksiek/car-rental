@@ -48,6 +48,7 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 - **Tailwind classes**: always merge with `cn()` from `src/lib/utils` (relative import). Never concatenate class strings manually.
 - **shadcn/ui**: components in `src/components/ui/`, "new-york" style. Add new ones with `npx shadcn@latest add [name]`, then rewrite the generated `@/` imports to relative paths.
 - **React**: no Next.js directives ("use client"/"use server"). Extract hooks to `src/components/hooks/`.
+- **Async buttons**: any button that triggers an async action (form submit, mutation, API POST/PATCH) must show a pending state — `disabled` while in-flight and swap its label/icon for a spinner + pending text. Reuse the `animate-spin` ring from `src/components/auth/SubmitButton.tsx`, driven by an explicit `submitting`/`pending` flag (forms post to URLs, so `useFormStatus` won't report pending). Keep the pending state through a success redirect; reset only on error. See `FormActions` in `src/components/fleet/VehicleForm.tsx`.
 - **Services/helpers**: `src/lib/` (or `src/lib/services/` for extracted business logic).
 - **Shared types**: `src/types.ts` (entities, DTOs).
 - **Supabase migrations**: `supabase/migrations/` with format `YYYYMMDDHHmmss_short_description.sql`. Always enable RLS on new tables with per-operation, per-role policies.
