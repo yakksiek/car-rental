@@ -96,7 +96,12 @@ export interface CategoryCounts {
  * (design screens 02/08 show `label · N`). These are fleet sizes — independent of
  * the date/payload filters and of the currently-selected category — so the tab
  * count reads as "how many of this type exist", not "how many match right now".
- * RLS restricts the rows to `is_active = true`; a `null` client yields zeros.
+ *
+ * The explicit `.eq('is_active', true)` is load-bearing for the same reason as
+ * `listVehicles`: S-04 broadened `vehicles_select_authenticated` to `using (true)`,
+ * so RLS no longer hides retired rows from a logged-in caller. Without it the staff
+ * fleet pills (and the "N aktywnych pojazdów" subtitle) would over-count retired
+ * vehicles. A `null` client yields zeros.
  */
 export async function getCategoryCounts(client: CatalogClient | null): Promise<CategoryCounts> {
   const byCategory: Record<VehicleCategory, number> = {
@@ -110,7 +115,7 @@ export async function getCategoryCounts(client: CatalogClient | null): Promise<C
     return { total: 0, byCategory };
   }
 
-  const { data, error } = await client.from("vehicles").select("category");
+  const { data, error } = await client.from("vehicles").select("category").eq("is_active", true);
   if (error) {
     throw error;
   }
@@ -128,8 +133,16 @@ export async function getCategoryCounts(client: CatalogClient | null): Promise<C
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Fetch one active vehicle by id, or `null` when the id is malformed, missing, or
- * inactive (RLS hides inactive rows, so the detail route renders a 404 for all).
+ * Fetch one vehicle by id, or `null` when the id is malformed or missing.
+ *
+ * NOTE on visibility: this does not filter `is_active`. For an **anon** caller RLS
+ * (`is_active = true`) still hides retired rows, so the public detail route renders
+ * a 404 for them. For an **authenticated/staff** caller the S-04 RLS broadening
+ * (`using (true)`) means retired rows ARE returned — intended for the staff edit
+ * page (`/dashboard/vehicles/[id]/edit`), which must load retired vehicles. Callers
+ * that require an *active* vehicle (e.g. the reservation funnel) must not assume
+ * this is filtered; the booking path stays correct because `available_vehicles`
+ * re-applies `is_active` downstream.
  */
 export async function getVehicleById(client: CatalogClient | null, id: string): Promise<Vehicle | null> {
   if (!client || !UUID_RE.test(id)) {
