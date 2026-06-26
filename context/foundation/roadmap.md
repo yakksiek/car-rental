@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-06-25
+updated: 2026-06-26
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -33,7 +33,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | F-02  | employee-admin-roles         | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control          | done     |
 | S-01  | public-fleet-catalog         | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003   | done     |
 | S-02  | public-reservation-request   | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005       | done     |
-| S-03  | reservation-approval         | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010       | proposed |
+| S-03  | reservation-approval         | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010       | done     |
 | S-04  | fleet-management             | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                  | proposed |
 | S-05  | issue-protocol               | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR  | proposed |
 | S-06  | return-protocol-comparison   | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR  | proposed |
@@ -143,7 +143,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Turns a request into a confirmed booking. Sequenced after S-02 because there's nothing to approve until requests exist; the accept action is where the confirmed-reservation state that downstream protocols depend on is created.
-- **Status:** proposed
+- **Status:** done
 
 ### S-04: Fleet management
 
@@ -250,3 +250,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-02: (foundation) an employee/admin role is attached to the existing Supabase auth and enforced at the route/middleware level, so authed slices can gate behavior by role without each re-implementing access checks. No user-facing feature.** — Archived 2026-06-07 → `context/archive/2026-06-04-employee-admin-roles/`. Lesson: —.
 - **S-01: A visitor can browse vehicles by category, filter by specs and available dates, and open a vehicle detail card with technical specs, cargo dimensions, photos, and pricing.** — Archived 2026-06-25 → `context/archive/2026-06-05-public-fleet-catalog/`. Lesson: —.
 - **S-02: A visitor can submit a reservation request (name, email, phone, vehicle, dates) without an account, and overlapping dates on an already-booked vehicle are blocked before submission; the request lands for employee approval.** — Archived 2026-06-25 → `context/archive/2026-06-07-public-reservation-request/`. Lesson: —.
+- **S-03: A logged-in employee can view all pending reservation requests and accept or reject each one; accepting confirms the booking against the overlap rule.** — Archived 2026-06-26 → `context/archive/2026-06-17-reservation-approval/`. Lesson: —.
