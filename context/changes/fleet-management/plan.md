@@ -349,21 +349,21 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly on a fresh DB: `npx supabase db reset`
-- [x] 1.2 `set_vehicle_active` exists and is `authenticated`-executable (in regenerated types `Functions`)
-- [x] 1.3 Type generation succeeds and `npx astro sync` passes
-- [x] 1.4 `npm run lint` and `npm run build` pass
+- [x] 1.1 Migration applies cleanly on a fresh DB: `npx supabase db reset` — 3de8e2b
+- [x] 1.2 `set_vehicle_active` exists and is `authenticated`-executable (in regenerated types `Functions`) — 3de8e2b
+- [x] 1.3 Type generation succeeds and `npx astro sync` passes — 3de8e2b
+- [x] 1.4 `npm run lint` and `npm run build` pass — 3de8e2b
 
 #### Manual
 
-- [x] 1.5 `set_vehicle_active` returns `has_active_reservations` for the MAN Chłodnia, `ok` for an unreserved vehicle
+- [x] 1.5 `set_vehicle_active` returns `has_active_reservations` for the MAN Chłodnia, `ok` for an unreserved vehicle — 3de8e2b
 
 ### Phase 2: Service layer + validation schema
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` passes (typed-lint clean)
-- [ ] 2.2 `npm run build` passes (no type errors across the new service + schema)
+- [x] 2.1 `npm run lint` passes (typed-lint clean)
+- [x] 2.2 `npm run build` passes (no type errors across the new service + schema)
 
 ### Phase 3: API routes
 
