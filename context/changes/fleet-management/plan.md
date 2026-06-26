@@ -362,20 +362,20 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 
 #### Automated
 
-- [x] 2.1 `npm run lint` passes (typed-lint clean)
-- [x] 2.2 `npm run build` passes (no type errors across the new service + schema)
+- [x] 2.1 `npm run lint` passes (typed-lint clean) — c7de9d6
+- [x] 2.2 `npm run build` passes (no type errors across the new service + schema) — c7de9d6
 
 ### Phase 3: API routes
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` and `npm run build` pass
-- [ ] 3.2 `npx astro sync` passes (routes typecheck)
+- [x] 3.1 `npm run lint` and `npm run build` pass
+- [x] 3.2 `npx astro sync` passes (routes typecheck)
 
 #### Manual
 
-- [ ] 3.3 `POST /api/vehicles` creates with valid body; 400 `{errors}` on missing fields; 403 for non-staff
-- [ ] 3.4 `POST /api/vehicles/<id>/active {active:false}` returns 409 for the MAN Chłodnia, 200 for an unreserved vehicle (then gone from the public catalog)
+- [x] 3.3 `POST /api/vehicles` creates with valid body; 400 `{errors}` on missing fields; 403 for non-staff
+- [x] 3.4 `POST /api/vehicles/<id>/active {active:false}` returns 409 for the MAN Chłodnia, 200 for an unreserved vehicle (then gone from the public catalog)
 
 ### Phase 4: Fleet list screen
 
