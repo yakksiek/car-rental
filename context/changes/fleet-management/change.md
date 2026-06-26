@@ -1,9 +1,9 @@
 ---
 change_id: fleet-management
 title: Fleet management — add, edit, and remove vehicles with a deletion guard
-status: planned
+status: implementing
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-25
 archived_at: null
 ---
 
