@@ -349,6 +349,12 @@ export type Database = {
           vehicle_model: string
         }[]
       }
+      set_vehicle_active: {
+        Args: { p_active: boolean; p_id: string }
+        Returns: {
+          result: string
+        }[]
+      }
     }
     Enums: {
       app_role: "employee" | "admin"
