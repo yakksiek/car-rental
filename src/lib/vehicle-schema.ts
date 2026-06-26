@@ -111,8 +111,13 @@ export const vehicleInputSchema = z.object({
   cargo_height_cm: optionalNumber(MSG.numNonNeg, { min: 0 }),
   km_limit: optionalNumber(MSG.intNonNeg, { int: true, min: 0 }),
   // Photos are URLs in v1 (object storage is S-05). The island splits a textarea
-  // into one URL per line; an empty list is valid.
-  photos: z.array(z.url(MSG.url)).optional().default([]),
+  // into one URL per line; an empty list is valid. Restrict the scheme to http(s)
+  // so non-fetchable/unsafe URIs (javascript:/data:/mailto:) fail closed — these
+  // strings are rendered as <img src> on the public catalog.
+  photos: z
+    .array(z.url({ protocol: /^https?$/, error: MSG.url }))
+    .optional()
+    .default([]),
 });
 
 export type VehicleInput = z.infer<typeof vehicleInputSchema>;

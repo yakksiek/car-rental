@@ -460,11 +460,20 @@ export default function VehicleForm({ mode, vehicle }: Props) {
               {renderField(NAME_FIELD)}
               {/* Type — required category chips (reuses the catalog/list Polish labels). */}
               <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label htmlFor="category" className={LABEL_CLASS}>
+                {/* The chips are a button group, not a single labelable control, so
+                    the label associates via aria-labelledby on a role="group". */}
+                <span id="category-label" className={cn(LABEL_CLASS, "flex items-center")}>
                   {COPY.labelType}
                   <Req />
-                </Label>
-                <div className="flex flex-wrap gap-2" id="category" tabIndex={-1}>
+                </span>
+                <div
+                  className="flex flex-wrap gap-2"
+                  id="category"
+                  role="group"
+                  aria-labelledby="category-label"
+                  aria-invalid={Boolean(fieldErrors.category)}
+                  tabIndex={-1}
+                >
                   {CATEGORY_ORDER.map((c) => {
                     const on = category === c;
                     return (

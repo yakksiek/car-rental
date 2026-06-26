@@ -49,9 +49,13 @@ create policy vehicles_update_staff
 
 -- The single atomic retire/restore path. The retire guard (existence + active
 -- reservation check) and the is_active flip happen in ONE update statement, so a
--- reservation confirmed between a separate check and write can never slip past:
--- the `not exists (...)` predicate is evaluated against the same row version the
--- update locks. Returns a tag the API maps to HTTP:
+-- check-then-write race on the vehicle row cannot slip past: the `not exists (...)`
+-- predicate is part of the same UPDATE that locks the row. (Strictly, under READ
+-- COMMITTED the subquery reads `reservations` at statement-snapshot time and the
+-- UPDATE locks only the `vehicles` row, so a reservation committing in that instant
+-- is a theoretical window — but it's unreachable in practice: once a vehicle is
+-- retired the booking path filters `is_active`, so no new active reservation forms.)
+-- Returns a tag the API maps to HTTP:
 --   * 'unauthorized'           -> role gate failed (employee/admin only) -> 403
 --   * 'not_found'              -> no such vehicle id                      -> 404
 --   * 'has_active_reservations'-> retire blocked by pending/confirmed     -> 409
