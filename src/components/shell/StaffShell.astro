@@ -20,9 +20,12 @@ interface Props {
   pendingCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
+  // Full-page forms (e.g. add/edit vehicle) render their own eyebrow+title header,
+  // so they suppress the shell's desktop title bar to avoid a duplicate heading.
+  showHeader?: boolean;
 }
 
-const { active, title, subtitle, pendingCount = 0, user, role } = Astro.props;
+const { active, title, subtitle, pendingCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
 type IconName = "home" | "list" | "calendar" | "truck";
@@ -108,12 +111,16 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
 
   {/* ── Content column ────────────────────────────────────────────── */}
   <div class="flex min-w-0 flex-1 flex-col">
-    <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
-      <div>
-        <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-        {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-      </div>
-    </header>
+    {
+      showHeader && (
+        <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
+          <div>
+            <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+            {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+          </div>
+        </header>
+      )
+    }
     <div class="pb-28 md:pb-0">
       <slot />
     </div>

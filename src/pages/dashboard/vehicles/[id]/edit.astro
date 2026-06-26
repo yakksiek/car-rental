@@ -1,0 +1,58 @@
+---
+// components
+import Layout from "../../../../layouts/Layout.astro";
+import StaffShell from "../../../../components/shell/StaffShell.astro";
+import VehicleForm from "../../../../components/fleet/VehicleForm";
+
+// others
+import { getVehicleById } from "../../../../lib/services/vehicles";
+import { listPendingReservations } from "../../../../lib/services/reservations";
+
+// Edit-vehicle route (S-04 Phase 5). Gated to `employee` by the middleware; SSR
+// resolves the vehicle by id and renders the shared VehicleForm in edit mode.
+// `getVehicleById` runs on the authed `locals.supabase` client, whose RLS is now
+// `using (true)`, so staff can load retired vehicles too (Phase 1 broadening). A
+// missing/malformed id is a styled 404. The island PATCHes /api/vehicles/[id].
+const { user, role, supabase } = Astro.locals;
+const { id } = Astro.params;
+
+const vehicle = id ? await getVehicleById(supabase, id) : null;
+if (!vehicle) {
+  Astro.response.status = 404;
+}
+
+const pending = await listPendingReservations(supabase);
+const title = vehicle ? "Edytuj pojazd" : "Nie znaleziono pojazdu";
+---
+
+<Layout title={`${title} — Flota`}>
+  <StaffShell
+    active="fleet"
+    title={title}
+    subtitle={vehicle?.name}
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+    showHeader={false}
+  >
+    {
+      vehicle ? (
+        <VehicleForm client:load mode="edit" vehicle={vehicle} />
+      ) : (
+        <main class="mx-auto max-w-2xl px-4 py-24 text-center">
+          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
+          <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
+          <p class="text-muted-foreground mx-auto mt-3 max-w-md">
+            Ten pojazd nie istnieje lub został usunięty z floty.
+          </p>
+          <a
+            href="/dashboard/vehicles"
+            class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
+          >
+            Wróć do floty
+          </a>
+        </main>
+      )
+    }
+  </StaffShell>
+</Layout>
