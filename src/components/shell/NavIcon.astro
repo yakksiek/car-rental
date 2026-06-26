@@ -2,7 +2,7 @@
 // Inline nav glyphs for the staff shell (lucide-style 24×24 stroked paths,
 // matching design `shared.jsx` Icon). Kept as a switch so we avoid `set:html`.
 interface Props {
-  glyph: "home" | "list" | "calendar";
+  glyph: "home" | "list" | "calendar" | "truck";
   size?: number;
 }
 const { glyph, size = 18 } = Astro.props;
@@ -26,6 +26,15 @@ const { glyph, size = 18 } = Astro.props;
       <>
         <rect x="3" y="5" width="18" height="16" rx="2" />
         <path d="M3 10h18M8 3v4M16 3v4" />
+      </>
+    )
+  }
+  {
+    glyph === "truck" && (
+      <>
+        <path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z" />
+        <circle cx="7" cy="18" r="1.6" />
+        <circle cx="17" cy="18" r="1.6" />
       </>
     )
   }

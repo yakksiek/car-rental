@@ -14,7 +14,7 @@ import { staffIdentity } from "../../lib/staff-identity";
 // are intentionally omitted until those slices land.
 
 interface Props {
-  active: "dash" | "requests" | "cal";
+  active: "dash" | "requests" | "cal" | "fleet";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -25,11 +25,12 @@ interface Props {
 const { active, title, subtitle, pendingCount = 0, user, role } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
-type IconName = "home" | "list" | "calendar";
+type IconName = "home" | "list" | "calendar" | "truck";
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
   { id: "dash", href: "/dashboard", label: "Pulpit", icon: "home" },
   { id: "requests", href: "/dashboard/reservations", label: "Wnioski", icon: "list", badge: pendingCount },
   { id: "cal", href: "/dashboard/calendar", label: "Kalendarz", icon: "calendar" },
+  { id: "fleet", href: "/dashboard/vehicles", label: "Flota", icon: "truck" },
 ];
 ---
 
