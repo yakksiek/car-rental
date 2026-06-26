@@ -395,11 +395,11 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 
 #### Automated
 
-- [x] 5.1 `npm run lint`, `npm run build`, `npx astro sync` pass
+- [x] 5.1 `npm run lint`, `npm run build`, `npx astro sync` pass — 14db20a
 
 #### Manual
 
-- [x] 5.2 Creating a vehicle (required fields) adds it to the list + public catalog
-- [x] 5.3 Empty required field shows the field error (400 round-trip)
-- [x] 5.4 Editing persists; photo URLs render in the catalog gallery
-- [x] 5.5 Editing a retired vehicle works
+- [x] 5.2 Creating a vehicle (required fields) adds it to the list + public catalog — 14db20a
+- [x] 5.3 Empty required field shows the field error (400 round-trip) — 14db20a
+- [x] 5.4 Editing persists; photo URLs render in the catalog gallery — 14db20a
+- [x] 5.5 Editing a retired vehicle works — 14db20a
