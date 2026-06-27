@@ -1,10 +1,10 @@
 ---
 change_id: rls-auth-initplan
 title: Wrap auth.uid()/current_app_role() in (select …) to fix RLS InitPlan re-evaluation
-status: impl_reviewed
+status: archived
 created: 2026-06-27
 updated: 2026-06-27
-archived_at: null
+archived_at: 2026-06-27T10:28:24Z
 ---
 
 ## Notes
