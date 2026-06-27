@@ -144,13 +144,13 @@ Additive and reversible: each `ALTER POLICY` is undone by a symmetric `ALTER POL
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset`
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 Build passes: `npm run build`
+- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset` — 0cf7743
+- [x] 1.2 Type checking passes: `npx astro check` — 0cf7743
+- [x] 1.3 Linting passes: `npm run lint` — 0cf7743
+- [x] 1.4 Build passes: `npm run build` — 0cf7743
 
 #### Manual
 
-- [x] 1.5 `EXPLAIN` on `select * from profiles` shows the auth check in an InitPlan node, not a per-row Filter
-- [x] 1.6 Access semantics unchanged (own-row vs admin-all read; non-staff denied vehicles insert/update)
+- [x] 1.5 `EXPLAIN` on `select * from profiles` shows the auth check in an InitPlan node, not a per-row Filter — 0cf7743
+- [x] 1.6 Access semantics unchanged (own-row vs admin-all read; non-staff denied vehicles insert/update) — 0cf7743
 - [ ] 1.7 Supabase advisor no longer reports `auth_rls_initplan` for `public.profiles` (post-deploy)
