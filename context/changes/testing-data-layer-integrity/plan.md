@@ -579,24 +579,24 @@ default `npm test` (and today's CI) runs.
 
 #### Automated
 
-- [x] 1.1 Unit project still passes and is DB-free: `npm test`
-- [x] 1.2 Integration project runs and smoke test passes against a reset DB: `npx supabase db reset && npm run test:integration`
-- [x] 1.3 Lint passes: `npm run lint`
-- [x] 1.4 `npm test` does NOT require Supabase running (Supabase down, `npm test` still green)
+- [x] 1.1 Unit project still passes and is DB-free: `npm test` — f2e7e16
+- [x] 1.2 Integration project runs and smoke test passes against a reset DB: `npx supabase db reset && npm run test:integration` — f2e7e16
+- [x] 1.3 Lint passes: `npm run lint` — f2e7e16
+- [x] 1.4 `npm test` does NOT require Supabase running (Supabase down, `npm test` still green) — f2e7e16
 
 #### Manual
 
-- [x] 1.5 `npx supabase status` keys in `.env.test` produce a passing smoke run
-- [x] 1.6 `.env.test` is gitignored (untracked-and-ignored, not staged)
-- [x] 1.7 A fresh `db reset` makes all three seeded roles signable
+- [x] 1.5 `npx supabase status` keys in `.env.test` produce a passing smoke run — f2e7e16
+- [x] 1.6 `.env.test` is gitignored (untracked-and-ignored, not staged) — f2e7e16
+- [x] 1.7 A fresh `db reset` makes all three seeded roles signable — f2e7e16
 
 ### Phase 2: Overlap Constraint Suite (Risk #2)
 
 #### Automated
 
-- [ ] 2.1 Overlap suite passes: `npm run test:integration`
-- [ ] 2.2 The reject case asserts the `conflict` result (not a raw exception)
-- [ ] 2.3 Re-running the suite twice stays green (idempotent teardown)
+- [x] 2.1 Overlap suite passes: `npm run test:integration`
+- [x] 2.2 The reject case asserts the `conflict` result (not a raw exception)
+- [x] 2.3 Re-running the suite twice stays green (idempotent teardown)
 
 #### Manual
 
