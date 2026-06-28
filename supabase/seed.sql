@@ -146,6 +146,7 @@ insert into reservations (
 --
 --   admin@fleetrent.test    / Fl33tRent-Admin_2026!      -> role admin
 --   employee@fleetrent.test / Fl33tRent-Employee_2026!   -> role employee
+--   norole@fleetrent.test   / Fl33tRent-NoRole_2026!     -> role NULL (no profile)
 -- (Long/mixed dev-only passwords so Chrome's breached-password check stays quiet.)
 --
 -- Each account needs THREE things to sign in via email/password:
@@ -158,6 +159,12 @@ insert into reservations (
 --      owner and bypasses RLS, so the admin-only insert policy does not apply).
 -- Fixed UUIDs keep resets reproducible. The token columns are set to '' (not
 -- null) because GoTrue scans them as non-nullable strings.
+--
+-- norole@fleetrent.test is the integration-test fail-closed fixture: a fully
+-- signable authenticated user that DELIBERATELY has steps 1-2 but NOT step 3
+-- (no profiles row), so public.current_app_role() resolves to NULL. It is the
+-- sharpest probe for a stray direct-table grant (see the data-layer integrity
+-- harness). Do not give it a profiles row.
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -182,6 +189,15 @@ insert into auth.users (
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'b0000000-0000-0000-0000-0000000000b0',
+    'authenticated', 'authenticated',
+    'norole@fleetrent.test', crypt('Fl33tRent-NoRole_2026!', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    '', '', '', ''
   );
 
 insert into auth.identities (
@@ -199,8 +215,16 @@ insert into auth.identities (
     'e0000000-0000-0000-0000-0000000000e0',
     '{"sub":"e0000000-0000-0000-0000-0000000000e0","email":"employee@fleetrent.test","email_verified":true,"phone_verified":false}',
     'email', now(), now(), now()
+  ),
+  (
+    'b0000000-0000-0000-0000-0000000000b0',
+    'b0000000-0000-0000-0000-0000000000b0',
+    '{"sub":"b0000000-0000-0000-0000-0000000000b0","email":"norole@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
   );
 
+-- NOTE: norole@fleetrent.test (b0…b0) intentionally has NO profiles row below,
+-- so current_app_role() resolves to NULL (fail-closed). Do not add it here.
 insert into profiles (user_id, role) values
   ('a0000000-0000-0000-0000-0000000000ad', 'admin'),
   ('e0000000-0000-0000-0000-0000000000e0', 'employee');
