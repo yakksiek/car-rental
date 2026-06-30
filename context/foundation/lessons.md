@@ -23,6 +23,13 @@
 - **Rule**: For larger/complex form islands, prefer `react-hook-form` + `@hookform/resolvers` (`zodResolver(sharedSchema)`) over plain `useState`; keep the zod schema as the single validation source for client + API. Reserve plain `useState` for small forms. For non-interactive forms that don't need an island at all, the Astro-native choice is a plain `<form method="POST">` to an API route (works without JS).
 - **Applies to**: plan, implement, impl-review
 
+## API routes are outside middleware's gate — every /api route must self-gate
+
+- **Context**: Any HTTP route under `src/pages/api/`, during both planning and implementation. Touches every current and future API endpoint (e.g. an admin-only `/api/invoices`).
+- **Problem**: `src/middleware.ts` only enforces auth/role for paths listed in `ROUTE_ROLES` (`src/lib/access.ts:27-38`), which contains **only `/dashboard*` page prefixes** — no `/api/*` entry. So `resolveRequiredRole("/api/...")` returns `null` and middleware calls `next()` without any check. A new API route that forgets its in-handler gate is silently reachable by anonymous or wrong-role callers. Middleware *can't* cleanly cover `/api` anyway: its unauthenticated branch is a 302 redirect to `/auth/signin` (page-shaped), not the 401/JSON an API client needs, and routes are non-uniform (`POST /api/reservations` is deliberately public; `vehicles` is staff-only). Writes have a DB backstop (RLS `WITH CHECK` / RPC `current_app_role()`), but reads via a definer RPC or service-role client do not.
+- **Rule**: Treat every `/api` route as unprotected by default. Each handler must self-gate **in this order** before any work: (a) same-origin CSRF check on mutations (`origin !== context.url.origin` → 403), (b) auth (`!context.locals.user` → 401), (c) role (`!requireRole(context.locals, "<min>")` → 403), then (d) zod parse → 400, then the DB call. Use `json(status, …)` bodies, never a redirect. A route that is intentionally public must say so in a comment. Reference: `src/pages/api/vehicles.ts:30-63`. Do NOT rely on middleware or `ROUTE_ROLES` to protect API paths.
+- **Applies to**: plan, implement, impl-review
+
 ## Wrap auth calls and role helpers in (select …) inside RLS policies
 
 - **Context**: Any RLS policy `USING` / `WITH CHECK` clause that gates on the caller — `auth.uid()`, `auth.jwt()`, `current_setting(...)`, or a role helper like `public.current_app_role()`. Touches every authed slice (e.g. `supabase/migrations/20260604153139_employee_admin_roles.sql`, `20260625120000_fleet_management.sql`, and upcoming S-05/S-06/S-07/S-08).
