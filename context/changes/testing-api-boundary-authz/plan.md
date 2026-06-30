@@ -482,28 +482,28 @@ normalization) is deferred and captured as a finding doc.
 
 #### Automated
 
-- [x] 2.1 Authz suite passes: `npm run test:integration`
-- [x] 2.2 All 5 protected routes + CSRF + public funnel covered
-- [x] 2.3 Linting + type checking pass: `npm run lint`
+- [x] 2.1 Authz suite passes: `npm run test:integration` — 0e80919
+- [x] 2.2 All 5 protected routes + CSRF + public funnel covered — 0e80919
+- [x] 2.3 Linting + type checking pass: `npm run lint` — 0e80919
 
 #### Manual
 
-- [x] 2.4 Every deny assertion runs through anon/`norole` context (never service-role)
-- [x] 2.5 401-vehicles / 403-reservations split asserted as-is, not normalized
-- [x] 2.6 Disposable rows gone after the run (rerun stays green)
+- [x] 2.4 Every deny assertion runs through anon/`norole` context (never service-role) — 0e80919
+- [x] 2.5 401-vehicles / 403-reservations split asserted as-is, not normalized — 0e80919
+- [x] 2.6 Disposable rows gone after the run (rerun stays green) — 0e80919
 
 ### Phase 3: Validation parity (Risk #5)
 
 #### Automated
 
-- [ ] 3.1 Validation suite passes: `npm run test:integration`
-- [ ] 3.2 Each write route has bad-payload → 400 + no-DB-write, plus malformed-JSON → 400
-- [ ] 3.3 Linting + type checking pass: `npm run lint`
+- [x] 3.1 Validation suite passes: `npm run test:integration`
+- [x] 3.2 Each write route has bad-payload → 400 + no-DB-write, plus malformed-JSON → 400
+- [x] 3.3 Linting + type checking pass: `npm run lint`
 
 #### Manual
 
-- [ ] 3.4 No-DB-write assertion queries the DB back (not status-only)
-- [ ] 3.5 Cases assert HTTP contract, not schema internals
+- [x] 3.4 No-DB-write assertion queries the DB back (not status-only)
+- [x] 3.5 Cases assert HTTP contract, not schema internals
 
 ### Phase 4: Vehicle schema unit suite
 

@@ -49,6 +49,12 @@ export interface BuildApiContextOptions {
   /** Request body — JSON-serialized into the Request. Omit for GET. */
   body?: unknown;
   /**
+   * Raw request body, written verbatim (NOT JSON-serialized). Use to send a
+   * malformed-JSON body so a handler's `await request.json()` throws and the
+   * route returns its pre-schema 400. Takes precedence over `body` when set.
+   */
+  rawBody?: string;
+  /**
    * `Origin` header. Defaults to the same origin as `path` (passes the CSRF
    * check). Pass a foreign origin to test a cross-site POST, or `null` to send
    * no Origin header at all.
@@ -60,8 +66,12 @@ export interface BuildApiContextOptions {
 export function buildApiContext(opts: BuildApiContextOptions): APIContext {
   const url = new URL(opts.path, BASE_ORIGIN);
 
+  // `rawBody` wins over `body`: it carries a (possibly malformed) string verbatim.
+  const hasBody = opts.rawBody !== undefined || opts.body !== undefined;
+  const serializedBody = opts.rawBody ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
+
   const headers = new Headers();
-  if (opts.body !== undefined) {
+  if (hasBody) {
     headers.set("content-type", "application/json");
   }
   // `origin: null` → send no Origin header; otherwise default to same-origin.
@@ -72,7 +82,7 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
   const request = new Request(url, {
     method: opts.method,
     headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body: serializedBody,
   });
 
   return {
