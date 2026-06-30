@@ -1,10 +1,10 @@
 ---
 change_id: testing-data-layer-integrity
 title: Data-layer integrity harness — RLS PII isolation + reservation overlap (test-plan Phase 1)
-status: implemented
+status: archived
 created: 2026-06-27
 updated: 2026-06-30
-archived_at: null
+archived_at: 2026-06-30T08:21:54Z
 ---
 
 ## Notes
