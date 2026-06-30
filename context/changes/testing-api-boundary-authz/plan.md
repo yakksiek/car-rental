@@ -520,11 +520,11 @@ normalization) is deferred and captured as a finding doc.
 
 #### Automated
 
-- [x] 5.1 §3 Phase 2 row reads `complete`; §6.3 no longer says "TBD"
-- [x] 5.2 Finding doc exists
-- [x] 5.3 Full suite green: `npm test` and `npm run test:integration`
+- [x] 5.1 §3 Phase 2 row reads `complete`; §6.3 no longer says "TBD" — b7a526a
+- [x] 5.2 Finding doc exists — b7a526a
+- [x] 5.3 Full suite green: `npm test` and `npm run test:integration` — b7a526a
 
 #### Manual
 
-- [x] 5.4 §6.3 reads as a usable recipe
-- [x] 5.5 Finding doc captures the decision clearly enough to act on later
+- [x] 5.4 §6.3 reads as a usable recipe — b7a526a
+- [x] 5.5 Finding doc captures the decision clearly enough to act on later — b7a526a
