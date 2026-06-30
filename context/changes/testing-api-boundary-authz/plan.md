@@ -509,22 +509,22 @@ normalization) is deferred and captured as a finding doc.
 
 #### Automated
 
-- [x] 4.1 Unit suite includes and passes the new file: `npm test`
-- [x] 4.2 Linting + type checking pass: `npm run lint`
+- [x] 4.1 Unit suite includes and passes the new file: `npm test` — 5a4a5b4
+- [x] 4.2 Linting + type checking pass: `npm run lint` — 5a4a5b4
 
 #### Manual
 
-- [x] 4.3 Case breadth comparable to `reservation-schema.test.ts`
+- [x] 4.3 Case breadth comparable to `reservation-schema.test.ts` — 5a4a5b4
 
 ### Phase 5: Cookbook §6.3 + finding + close-out
 
 #### Automated
 
-- [ ] 5.1 §3 Phase 2 row reads `complete`; §6.3 no longer says "TBD"
-- [ ] 5.2 Finding doc exists
-- [ ] 5.3 Full suite green: `npm test` and `npm run test:integration`
+- [x] 5.1 §3 Phase 2 row reads `complete`; §6.3 no longer says "TBD"
+- [x] 5.2 Finding doc exists
+- [x] 5.3 Full suite green: `npm test` and `npm run test:integration`
 
 #### Manual
 
-- [ ] 5.4 §6.3 reads as a usable recipe
-- [ ] 5.5 Finding doc captures the decision clearly enough to act on later
+- [x] 5.4 §6.3 reads as a usable recipe
+- [x] 5.5 Finding doc captures the decision clearly enough to act on later
