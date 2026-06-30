@@ -469,28 +469,28 @@ normalization) is deferred and captured as a finding doc.
 
 #### Automated
 
-- [x] 1.1 Integration suite runs the smoke test green: `npm run test:integration`
-- [x] 1.2 Type checking passes: `npm run lint`
-- [x] 1.3 Linting passes: `npm run lint`
+- [x] 1.1 Integration suite runs the smoke test green: `npm run test:integration` — 3081372
+- [x] 1.2 Type checking passes: `npm run lint` — 3081372
+- [x] 1.3 Linting passes: `npm run lint` — 3081372
 
 #### Manual
 
-- [ ] 1.4 Factory mirrors middleware locals derivation; cast escape commented
-- [ ] 1.5 Smoke 403 runs through a real anon-shaped context, not service-role
+- [x] 1.4 Factory mirrors middleware locals derivation; cast escape commented — 3081372
+- [x] 1.5 Smoke 403 runs through a real anon-shaped context, not service-role — 3081372
 
 ### Phase 2: Authz matrix (Risk #4)
 
 #### Automated
 
-- [ ] 2.1 Authz suite passes: `npm run test:integration`
-- [ ] 2.2 All 5 protected routes + CSRF + public funnel covered
-- [ ] 2.3 Linting + type checking pass: `npm run lint`
+- [x] 2.1 Authz suite passes: `npm run test:integration`
+- [x] 2.2 All 5 protected routes + CSRF + public funnel covered
+- [x] 2.3 Linting + type checking pass: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Every deny assertion runs through anon/`norole` context (never service-role)
-- [ ] 2.5 401-vehicles / 403-reservations split asserted as-is, not normalized
-- [ ] 2.6 Disposable rows gone after the run (rerun stays green)
+- [x] 2.4 Every deny assertion runs through anon/`norole` context (never service-role)
+- [x] 2.5 401-vehicles / 403-reservations split asserted as-is, not normalized
+- [x] 2.6 Disposable rows gone after the run (rerun stays green)
 
 ### Phase 3: Validation parity (Risk #5)
 
