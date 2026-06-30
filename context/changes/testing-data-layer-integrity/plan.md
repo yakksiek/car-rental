@@ -594,9 +594,9 @@ default `npm test` (and today's CI) runs.
 
 #### Automated
 
-- [x] 2.1 Overlap suite passes: `npm run test:integration`
-- [x] 2.2 The reject case asserts the `conflict` result (not a raw exception)
-- [x] 2.3 Re-running the suite twice stays green (idempotent teardown)
+- [x] 2.1 Overlap suite passes: `npm run test:integration` — e3a5ba7
+- [x] 2.2 The reject case asserts the `conflict` result (not a raw exception) — e3a5ba7
+- [x] 2.3 Re-running the suite twice stays green (idempotent teardown) — e3a5ba7
 
 #### Manual
 
@@ -607,16 +607,16 @@ default `npm test` (and today's CI) runs.
 
 #### Automated
 
-- [ ] 3.1 RLS suite + fix migration green after `db reset`: `npx supabase db reset && npm run test:integration`
-- [ ] 3.2 Booking flow still works via the RPC (Phase 2 overlap suite re-passes): `npm run test:integration`
-- [ ] 3.3 No access assertion runs through `serviceClient()` (setup/teardown only)
-- [ ] 3.4 Lint passes: `npm run lint`
+- [x] 3.1 RLS suite + fix migration green after `db reset`: `npx supabase db reset && npm run test:integration`
+- [x] 3.2 Booking flow still works via the RPC (Phase 2 overlap suite re-passes): `npm run test:integration`
+- [x] 3.3 No access assertion runs through `serviceClient()` (setup/teardown only)
+- [x] 3.4 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.5 Public booking in the running app creates a `pending` row; `/r/<token>` resolves
-- [ ] 3.6 Staff queue still shows pending PII for an employee/admin login
-- [ ] 3.7 Expecting rows for `norole` on a staff RPC makes the suite fail
+- [x] 3.5 Public booking in the running app creates a `pending` row; `/r/<token>` resolves
+- [x] 3.6 Staff queue still shows pending PII for an employee/admin login
+- [x] 3.7 Expecting rows for `norole` on a staff RPC makes the suite fail
 
 ### Phase 4: Cookbook + Leak Finding
 
