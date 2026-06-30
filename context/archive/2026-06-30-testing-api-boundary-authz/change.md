@@ -1,10 +1,10 @@
 ---
 change_id: testing-api-boundary-authz
 title: API boundary tests — authz matrix + server-side input parity
-status: implemented
+status: archived
 created: 2026-06-30
 updated: 2026-06-30
-archived_at: null
+archived_at: 2026-06-30T17:42:51Z
 ---
 
 ## Notes
