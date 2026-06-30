@@ -496,25 +496,25 @@ normalization) is deferred and captured as a finding doc.
 
 #### Automated
 
-- [x] 3.1 Validation suite passes: `npm run test:integration`
-- [x] 3.2 Each write route has bad-payload → 400 + no-DB-write, plus malformed-JSON → 400
-- [x] 3.3 Linting + type checking pass: `npm run lint`
+- [x] 3.1 Validation suite passes: `npm run test:integration` — fe04181
+- [x] 3.2 Each write route has bad-payload → 400 + no-DB-write, plus malformed-JSON → 400 — fe04181
+- [x] 3.3 Linting + type checking pass: `npm run lint` — fe04181
 
 #### Manual
 
-- [x] 3.4 No-DB-write assertion queries the DB back (not status-only)
-- [x] 3.5 Cases assert HTTP contract, not schema internals
+- [x] 3.4 No-DB-write assertion queries the DB back (not status-only) — fe04181
+- [x] 3.5 Cases assert HTTP contract, not schema internals — fe04181
 
 ### Phase 4: Vehicle schema unit suite
 
 #### Automated
 
-- [ ] 4.1 Unit suite includes and passes the new file: `npm test`
-- [ ] 4.2 Linting + type checking pass: `npm run lint`
+- [x] 4.1 Unit suite includes and passes the new file: `npm test`
+- [x] 4.2 Linting + type checking pass: `npm run lint`
 
 #### Manual
 
-- [ ] 4.3 Case breadth comparable to `reservation-schema.test.ts`
+- [x] 4.3 Case breadth comparable to `reservation-schema.test.ts`
 
 ### Phase 5: Cookbook §6.3 + finding + close-out
 
