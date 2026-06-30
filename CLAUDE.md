@@ -58,6 +58,7 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 - Node.js v22.14.0 (`.nvmrc`)
 - Local Supabase: `npx supabase start` (requires Docker)
 - Deploy: `npx wrangler deploy`
+- `jq` — required by the per-edit lint hook in `.claude/settings.json` (it parses the edited file path from the hook's stdin). Without it the hook silently no-ops. Install: `brew install jq` (macOS) · `apt install jq` (Debian/Ubuntu) · `winget install jqlang.jq` (Windows).
 
 ## CI
 
