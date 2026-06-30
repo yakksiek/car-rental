@@ -600,33 +600,33 @@ default `npm test` (and today's CI) runs.
 
 #### Manual
 
-- [ ] 2.4 No leftover test rows in the disposable scope after a run
-- [ ] 2.5 Widening the turnover case to a true overlap makes it fail
+- [x] 2.4 No leftover test rows in the disposable scope after a run
+- [x] 2.5 Widening the turnover case to a true overlap makes it fail
 
 ### Phase 3: Close the PII Leak (Risk #1) — Regression Suite + Fix Migration
 
 #### Automated
 
-- [x] 3.1 RLS suite + fix migration green after `db reset`: `npx supabase db reset && npm run test:integration`
-- [x] 3.2 Booking flow still works via the RPC (Phase 2 overlap suite re-passes): `npm run test:integration`
-- [x] 3.3 No access assertion runs through `serviceClient()` (setup/teardown only)
-- [x] 3.4 Lint passes: `npm run lint`
+- [x] 3.1 RLS suite + fix migration green after `db reset`: `npx supabase db reset && npm run test:integration` — 945ff11
+- [x] 3.2 Booking flow still works via the RPC (Phase 2 overlap suite re-passes): `npm run test:integration` — 945ff11
+- [x] 3.3 No access assertion runs through `serviceClient()` (setup/teardown only) — 945ff11
+- [x] 3.4 Lint passes: `npm run lint` — 945ff11
 
 #### Manual
 
-- [x] 3.5 Public booking in the running app creates a `pending` row; `/r/<token>` resolves
-- [x] 3.6 Staff queue still shows pending PII for an employee/admin login
-- [x] 3.7 Expecting rows for `norole` on a staff RPC makes the suite fail
+- [x] 3.5 Public booking in the running app creates a `pending` row; `/r/<token>` resolves — 945ff11
+- [x] 3.6 Staff queue still shows pending PII for an employee/admin login — 945ff11
+- [x] 3.7 Expecting rows for `norole` on a staff RPC makes the suite fail — 945ff11
 
 ### Phase 4: Cookbook + Leak Finding
 
 #### Automated
 
-- [ ] 4.1 §6.2 no longer contains "TBD" (filled recipe present)
-- [ ] 4.2 Finding artifact exists: `finding-rls-pii-leak.md`
-- [ ] 4.3 Lint/format of touched markdown passes
+- [x] 4.1 §6.2 no longer contains "TBD" (filled recipe present)
+- [x] 4.2 Finding artifact exists: `finding-rls-pii-leak.md`
+- [x] 4.3 Lint/format of touched markdown passes
 
 #### Manual
 
-- [ ] 4.4 The finding accurately reflects the confirmed leak + the Phase 3 fix
-- [ ] 4.5 The cookbook recipe is followable from scratch
+- [x] 4.4 The finding accurately reflects the confirmed leak + the Phase 3 fix
+- [x] 4.5 The cookbook recipe is followable from scratch

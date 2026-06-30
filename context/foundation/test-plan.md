@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-27 (Phase 1 → change opened)
+> Last updated: 2026-06-30 (Phase 1 → §6.2 cookbook filled; F1 leak found + fixed)
 
 ## 1. Strategy
 
@@ -19,9 +19,9 @@ Tests follow three non-negotiable principles for this project:
 2. **User concerns are first-class evidence.** Risks anchored in "the team
    is worried about X, and the failure would surface somewhere in <area>"
    carry the same weight as PRD lines or hot-spot data.
-3. **Risks are scenarios, not code locations.** This plan documents *what
-   could fail* and *why we believe it's likely* — drawn from documents,
-   interview, and codebase *signal* (churn, structure, test base). It does
+3. **Risks are scenarios, not code locations.** This plan documents _what
+   could fail_ and _why we believe it's likely_ — drawn from documents,
+   interview, and codebase _signal_ (churn, structure, test base). It does
    NOT claim to know which line owns the failure. That knowledge is
    produced by `/10x-research` during each rollout phase. If the plan and
    research disagree about where the failure lives, research is the
@@ -34,29 +34,29 @@ with `supabase/migrations/` tracked separately for RLS churn.
 
 The top failure scenarios this project must protect against, ordered by
 risk = impact × likelihood. Risks are failure scenarios in user / business
-terms, not test names. The Source column cites the *evidence that surfaced
-this risk* — never a specific file as "where the failure lives" (that is
+terms, not test names. The Source column cites the _evidence that surfaced
+this risk_ — never a specific file as "where the failure lives" (that is
 research's job, see §1 principle #3).
 
-| # | Risk (failure scenario) | Impact | Likelihood | Source (evidence — not anchor) |
-|---|-------------------------|--------|------------|--------------------------------|
-| 1 | An employee, wrong-role, or anonymous caller reads customer PII (names, phones, emails, protocol photos) they shouldn't — an RLS gap | High | High | PRD Access Control + Guardrail #2; interview Q1, Q4; hot-spot dir `supabase/migrations/` (13 files/30d); lessons.md (RLS policies actively churned) |
-| 2 | A double-booking slips through — two confirmed reservations overlap on one vehicle, or the same-day changeover buffer is off-by-one | High | High | PRD FR-005 / Guardrails / Business Logic; interview Q3; hot-spot dir `src/lib/services/` (11 commits/30d), `src/lib/` (39 commits/30d); roadmap S-02a |
-| 3 | A handover protocol email fails silently or carries wrong/missing photos — the customer gets nothing, or bad dispute evidence | High | Medium | PRD FR-008 / US-02; interview Q1; roadmap S-05/S-06 (slice not yet built — phase activates when it ships) |
-| 4 | IDOR / broken authorization — an authed-but-wrong-role caller or crafted request reaches a reservation/protocol/vehicle resource (including the public `/r/[token]` link) without an ownership/role check | High | Medium | PRD Access Control; hot-spot dir `src/pages/api/` (11 commits/30d), `src/pages/` (11 commits/30d); abuse lens (authorization/IDOR) |
-| 5 | Server-side validation bypass — a request crafted to skip the client (bad dates, overlapping range, malformed fields, invalid vehicle id) is accepted by the API | High | Medium | PRD FR-004 / FR-005; interview Q3; hot-spot dir `src/pages/api/` (11 commits/30d); abuse lens (input parity) |
-| 6 | The dashboard shows wrong reservation/availability state — calendar/queue render stale or incorrect day-states (phantom availability, overdue not flagged, accepted booking not blocking) → an employee accepts a conflict | Medium | High | interview Q3; hot-spot dir `src/components/dashboard/` (15 commits/30d) |
+| #   | Risk (failure scenario)                                                                                                                                                                                                    | Impact | Likelihood | Source (evidence — not anchor)                                                                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | An employee, wrong-role, or anonymous caller reads customer PII (names, phones, emails, protocol photos) they shouldn't — an RLS gap                                                                                       | High   | High       | PRD Access Control + Guardrail #2; interview Q1, Q4; hot-spot dir `supabase/migrations/` (13 files/30d); lessons.md (RLS policies actively churned)   |
+| 2   | A double-booking slips through — two confirmed reservations overlap on one vehicle, or the same-day changeover buffer is off-by-one                                                                                        | High   | High       | PRD FR-005 / Guardrails / Business Logic; interview Q3; hot-spot dir `src/lib/services/` (11 commits/30d), `src/lib/` (39 commits/30d); roadmap S-02a |
+| 3   | A handover protocol email fails silently or carries wrong/missing photos — the customer gets nothing, or bad dispute evidence                                                                                              | High   | Medium     | PRD FR-008 / US-02; interview Q1; roadmap S-05/S-06 (slice not yet built — phase activates when it ships)                                             |
+| 4   | IDOR / broken authorization — an authed-but-wrong-role caller or crafted request reaches a reservation/protocol/vehicle resource (including the public `/r/[token]` link) without an ownership/role check                  | High   | Medium     | PRD Access Control; hot-spot dir `src/pages/api/` (11 commits/30d), `src/pages/` (11 commits/30d); abuse lens (authorization/IDOR)                    |
+| 5   | Server-side validation bypass — a request crafted to skip the client (bad dates, overlapping range, malformed fields, invalid vehicle id) is accepted by the API                                                           | High   | Medium     | PRD FR-004 / FR-005; interview Q3; hot-spot dir `src/pages/api/` (11 commits/30d); abuse lens (input parity)                                          |
+| 6   | The dashboard shows wrong reservation/availability state — calendar/queue render stale or incorrect day-states (phantom availability, overdue not flagged, accepted booking not blocking) → an employee accepts a conflict | Medium | High       | interview Q3; hot-spot dir `src/components/dashboard/` (15 commits/30d)                                                                               |
 
 ### Risk Response Guidance
 
-| Risk | What would prove protection | Must challenge | Context `/10x-research` must ground | Likely cheapest layer | Anti-pattern to avoid |
-|------|-----------------------------|----------------|--------------------------------------|-----------------------|-----------------------|
-| #1 | anon + employee + admin clients each get exactly the rows policy allows; a wrong-role SELECT returns 0 PII rows | "logged in" ≠ "allowed to read this"; a `STABLE SECURITY DEFINER` helper ≠ enforced access | every table's per-role × per-operation policy; which client (anon vs service-role) each path uses | integration vs real local Postgres with RLS | asserting policy SQL text instead of observed row access; a service-role client masking the gap |
-| #2 | a second overlapping reservation is rejected at the DB; same-day return-10:00 / pickup-14:00 turnover is *allowed* | a green insert means "no conflict"; the existing pure-rule unit test already covers the DB constraint | the overlap constraint + the service insert path; the half-open window boundaries | integration (constraint via service) + existing unit on the rule | oracle copied from the rule's own code; testing only the helper, not the DB constraint |
-| #3 | email send is attempted, failures surface (not swallowed), and the payload carries the correct photos | a 200 from the provider ≠ correct attachments; "sent" ≠ "received correct" | the send path + attachment assembly once S-05 lands; the transport seam to fake | integration with a captured/fake transport + contract on the payload | mocking the transport so deeply nothing real is asserted; happy-path-only |
-| #4 | each protected route denies anon + wrong-role + cross-resource access by id/token | a route "is protected" ≠ "checks ownership"; a middleware gate ≠ a per-resource check | the middleware coverage map; which routes check role vs ownership; the `/r/[token]` scope | integration (API route auth matrix) | testing only the happy authed path; trusting middleware to cover IDOR |
-| #5 | the API rejects payloads the client would block (bad dates, overlap, bad id) with a clean 4xx and no DB write | client-side zod ≠ server enforcement; importing the schema ≠ applying it server-side | where the shared schema is actually parsed server-side; the reject path | integration (API route) — the schema unit test already exists | re-asserting the zod schema in isolation (already covered) instead of the route applying it |
-| #6 | day-states / availability derived for the calendar match the server overlap rule exactly (no phantom availability; overdue flagged) | UI greying matches the server rule (the known calendar↔catalog asymmetry) | the busy-ranges → day-states derivation; the overdue computation | unit on the extracted pure mapping (extend the existing calendar map test) + a thin component check | snapshot-without-meaning on the calendar; asserting rendered DOM over the derivation logic |
+| Risk | What would prove protection                                                                                                         | Must challenge                                                                                        | Context `/10x-research` must ground                                                               | Likely cheapest layer                                                                               | Anti-pattern to avoid                                                                           |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| #1   | anon + employee + admin clients each get exactly the rows policy allows; a wrong-role SELECT returns 0 PII rows                     | "logged in" ≠ "allowed to read this"; a `STABLE SECURITY DEFINER` helper ≠ enforced access            | every table's per-role × per-operation policy; which client (anon vs service-role) each path uses | integration vs real local Postgres with RLS                                                         | asserting policy SQL text instead of observed row access; a service-role client masking the gap |
+| #2   | a second overlapping reservation is rejected at the DB; same-day return-10:00 / pickup-14:00 turnover is _allowed_                  | a green insert means "no conflict"; the existing pure-rule unit test already covers the DB constraint | the overlap constraint + the service insert path; the half-open window boundaries                 | integration (constraint via service) + existing unit on the rule                                    | oracle copied from the rule's own code; testing only the helper, not the DB constraint          |
+| #3   | email send is attempted, failures surface (not swallowed), and the payload carries the correct photos                               | a 200 from the provider ≠ correct attachments; "sent" ≠ "received correct"                            | the send path + attachment assembly once S-05 lands; the transport seam to fake                   | integration with a captured/fake transport + contract on the payload                                | mocking the transport so deeply nothing real is asserted; happy-path-only                       |
+| #4   | each protected route denies anon + wrong-role + cross-resource access by id/token                                                   | a route "is protected" ≠ "checks ownership"; a middleware gate ≠ a per-resource check                 | the middleware coverage map; which routes check role vs ownership; the `/r/[token]` scope         | integration (API route auth matrix)                                                                 | testing only the happy authed path; trusting middleware to cover IDOR                           |
+| #5   | the API rejects payloads the client would block (bad dates, overlap, bad id) with a clean 4xx and no DB write                       | client-side zod ≠ server enforcement; importing the schema ≠ applying it server-side                  | where the shared schema is actually parsed server-side; the reject path                           | integration (API route) — the schema unit test already exists                                       | re-asserting the zod schema in isolation (already covered) instead of the route applying it     |
+| #6   | day-states / availability derived for the calendar match the server overlap rule exactly (no phantom availability; overdue flagged) | UI greying matches the server rule (the known calendar↔catalog asymmetry)                             | the busy-ranges → day-states derivation; the overdue computation                                  | unit on the extracted pure mapping (extend the existing calendar map test) + a thin component check | snapshot-without-meaning on the calendar; asserting rendered DOM over the derivation logic      |
 
 ## 3. Phased Rollout
 
@@ -64,13 +64,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
-|---|------------|-----------------|---------------|------------|--------|---------------|
-| 1 | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2 | integration | change opened | context/changes/testing-data-layer-integrity/ |
-| 2 | API boundary: authz + input parity | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed | #4, #5 | integration, contract | not started | — |
-| 3 | Dashboard & availability state | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged) | #6 | unit + thin component | not started | — |
-| 4 | Protocol email & photo integrity | Prove the handover email sends, fails loudly, and carries the correct photos | #3 | integration, contract | not started | — |
-| 5 | Quality-gates wiring | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook | cross-cutting | gates | not started | — |
+| #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status        | Change folder                                 |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ------------- | --------------------------------------------- |
+| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | change opened | context/changes/testing-data-layer-integrity/ |
+| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | not started   | —                                             |
+| 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started   | —                                             |
+| 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | not started   | —                                             |
+| 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook                                                                                | cross-cutting | gates                 | not started   | —                                             |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened` → `researched` → `planned` → `implementing` → `complete`.
 
@@ -86,16 +86,17 @@ Phase 1.
 The classic test base for this project. AI-native tools (if any) carry a
 `checked:` date so future readers can see which lines need re-verification.
 
-| Layer | Tool | Version | Notes |
-|-------|------|---------|-------|
-| unit + integration | Vitest | ^4.1.8 | configured; `npm test` = `vitest run`. 9 unit files, all in `src/lib/` (pure helpers). Components/pages/API/services/RLS untested |
-| DB integration harness | local Supabase (`npx supabase start`) + supabase-js clients | n/a | none yet — see §3 Phase 1. Needs anon/employee/admin clients against a seeded test DB to exercise RLS + the overlap constraint for real |
-| API route integration | Vitest + Astro route handlers | ^4.1.8 | none yet — see §3 Phase 2. Routes export `GET`/`POST`; test request → response + DB side-effect |
-| e2e | Playwright (or Cypress) | — | none yet — deferred (see §7). The DOM is reachable, but integration covers the booking/auth logic more cheaply |
-| accessibility | axe-core | — | none yet — not prioritized in this rollout |
-| (optional) AI-native | Playwright MCP — checked: 2026-06-27 | n/a | **not available in current session.** When NOT to use: never put a vision/agent layer on RLS, overlap, or authz — deterministic integration gives the cheaper, stronger signal |
+| Layer                  | Tool                                                        | Version | Notes                                                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| unit + integration     | Vitest                                                      | ^4.1.8  | configured; `npm test` = `vitest run`. 9 unit files, all in `src/lib/` (pure helpers). Components/pages/API/services/RLS untested                                              |
+| DB integration harness | local Supabase (`npx supabase start`) + supabase-js clients | n/a     | none yet — see §3 Phase 1. Needs anon/employee/admin clients against a seeded test DB to exercise RLS + the overlap constraint for real                                        |
+| API route integration  | Vitest + Astro route handlers                               | ^4.1.8  | none yet — see §3 Phase 2. Routes export `GET`/`POST`; test request → response + DB side-effect                                                                                |
+| e2e                    | Playwright (or Cypress)                                     | —       | none yet — deferred (see §7). The DOM is reachable, but integration covers the booking/auth logic more cheaply                                                                 |
+| accessibility          | axe-core                                                    | —       | none yet — not prioritized in this rollout                                                                                                                                     |
+| (optional) AI-native   | Playwright MCP — checked: 2026-06-27                        | n/a     | **not available in current session.** When NOT to use: never put a vision/agent layer on RLS, overlap, or authz — deterministic integration gives the cheaper, stronger signal |
 
 **Stack grounding tools (current session):**
+
 - Docs: Context7 — available; can ground Vitest 4 + Astro route + Supabase local-test setup at plan time; checked: 2026-06-27
 - Search: Exa.ai — available; for current tool status / discovery only; checked: 2026-06-27
 - Runtime/browser: Playwright MCP — not available in current session; e2e would need wiring as its own future phase; checked: 2026-06-27
@@ -112,15 +113,15 @@ The full set of gates that must pass before a change reaches production.
 "Required after §3 Phase <N>" means the gate is enforced once that rollout
 phase lands; before that, the gate is planned.
 
-| Gate | Where | Required? | Catches |
-|------|-------|-----------|---------|
-| lint + typecheck | local + CI | required (wired today) | syntactic / type drift |
-| unit | local + CI | required after §3 Phase 1 | logic regressions in pure helpers |
-| integration (RLS + overlap + API) | local + CI | required after §3 Phase 2 | PII leaks, double-bookings, authz/validation bypass |
-| post-edit hook | local (agent loop) | recommended after §3 Phase 5 | regressions at edit time |
-| e2e on critical flows | CI on PR | optional (deferred — see §7) | broken booking/auth user paths |
-| visual diff / multimodal review | CI on PR | optional | rendering regressions classic tests miss |
-| pre-prod smoke | between merge + prod | optional | environment-specific failures |
+| Gate                              | Where                | Required?                    | Catches                                             |
+| --------------------------------- | -------------------- | ---------------------------- | --------------------------------------------------- |
+| lint + typecheck                  | local + CI           | required (wired today)       | syntactic / type drift                              |
+| unit                              | local + CI           | required after §3 Phase 1    | logic regressions in pure helpers                   |
+| integration (RLS + overlap + API) | local + CI           | required after §3 Phase 2    | PII leaks, double-bookings, authz/validation bypass |
+| post-edit hook                    | local (agent loop)   | recommended after §3 Phase 5 | regressions at edit time                            |
+| e2e on critical flows             | CI on PR             | optional (deferred — see §7) | broken booking/auth user paths                      |
+| visual diff / multimodal review   | CI on PR             | optional                     | rendering regressions classic tests miss            |
+| pre-prod smoke                    | between merge + prod | optional                     | environment-specific failures                       |
 
 CI today (`.github/workflows/ci.yml`) runs `astro sync` + lint + build only;
 the unit and integration gates are wired by §3 Phase 5 (and the unit gate
@@ -141,7 +142,42 @@ relevant rollout phase ships; before that, the sub-section reads "TBD — see
 
 ### 6.2 Adding an integration test (RLS + DB)
 
-- TBD — see §3 Phase 1 (RLS per-role × per-operation denial + overlap-constraint rejection vs local Supabase).
+Integration tests run against a **local Supabase** (`npx supabase start`),
+driving real Postgres so RLS policies, grants, constraints, and SECURITY
+DEFINER RPCs are observed — never asserted as SQL text.
+
+- **Location**: `tests/integration/` (separate from the `src/`-colocated unit
+  suite). Shared client factories live in `tests/helpers/clients.ts`.
+- **Naming**: `<area>-<concern>.test.ts` (e.g. `reservations-overlap.test.ts`,
+  `reservations-rls.test.ts`).
+- **Reference test**: `tests/integration/reservations-overlap.test.ts` (the
+  canonical DB-constraint suite — disposable test vehicle, far-future dates,
+  unique `reference`/`access_token`, service-role teardown). For an RLS
+  access-matrix, see `tests/integration/reservations-rls.test.ts`.
+- **Run command**: `npm run test:integration`
+  (= `vitest run --project integration`). `npm test` runs only the DB-free
+  `unit` project and must stay that way (today's CI runs it without Supabase).
+- **Env**: copy `.env.test.example` → `.env.test` and fill from
+  `npx supabase status` (anon = Publishable key, service = Secret key). Run
+  `npx supabase db reset` after any seed/migration change to pick it up.
+- **Conventions** (non-negotiable):
+  - **Service-role is setup/teardown ONLY.** `serviceClient()` bypasses RLS;
+    every _access assertion_ must run on `anonClient()` / `as(role)` (anon key +
+    real JWT), or an RLS bypass will make a leak test pass falsely.
+  - **Serial execution.** The integration project runs `fileParallelism: false`
+    — the GiST `EXCLUDE` overlap constraint makes concurrent reservation writes
+    collide. Don't parallelize.
+  - **Disposable data scope.** Own a dedicated vehicle / far-future window that
+    no seed row touches; clean up via `serviceClient()` in `afterEach`/`afterAll`
+    so reruns stay green (teardown must be idempotent).
+  - **Untyped client caveat.** Test clients are built without generated DB
+    types, so `.rpc()` results are `any` — cast them to a local row interface to
+    satisfy lint (see the row shapes in `reservations-rls.test.ts`). `.from()`
+    selects infer their shape and need no cast.
+  - **Catalog functions (`has_table_privilege`, `information_schema`) are not
+    reachable** through PostgREST/supabase-js (only `public`-schema functions
+    are exposed). Assert the _behavior_ (e.g. a direct read returns 0 rows)
+    rather than the grant; verify grants out-of-band via psql if needed.
 
 ### 6.3 Adding an API route integration test
 
@@ -159,6 +195,16 @@ relevant rollout phase ships; before that, the sub-section reads "TBD — see
 
 (Optional. After each phase lands, `/10x-implement` appends a 2–3 line note
 here capturing anything surprising the rollout phase taught.)
+
+- **Phase 1 (data-layer integrity, 2026-06-30):** Risk #1 was not hypothetical —
+  the harness confirmed a live PII leak (F1): `authenticated` held an implicit
+  schema-wide `SELECT` grant on `reservations` (contrary to a migration
+  comment), so any logged-in user — even one with no `profiles` row — read every
+  customer's name/email/phone directly off the table. Fixed in-phase by revoking
+  SELECT + dropping the `using(true)` policy (migration
+  `20260630120000_reservations_revoke_select_grant.sql`). See
+  `context/changes/testing-data-layer-integrity/finding-rls-pii-leak.md`. The
+  `norole` (role-null) fixture is the sharpest probe for this class of hole.
 
 ## 7. What We Deliberately Don't Test
 
