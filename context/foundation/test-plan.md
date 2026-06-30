@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-30 (Phase 1 → §6.2 cookbook filled; F1 leak found + fixed)
+> Last updated: 2026-06-30 (Phase 2 → §6.3 cookbook filled; authz matrix + input parity suites; F2 anon-status split documented)
 
 ## 1. Strategy
 
@@ -66,8 +66,8 @@ orchestrator updates Status as artifacts appear on disk.
 
 | #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status        | Change folder                                 |
 | --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ------------- | --------------------------------------------- |
-| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | change opened | context/changes/testing-data-layer-integrity/ |
-| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | not started   | —                                             |
+| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | complete      | context/archive/2026-06-27-testing-data-layer-integrity/ |
+| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | complete      | context/changes/testing-api-boundary-authz/   |
 | 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started   | —                                             |
 | 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | not started   | —                                             |
 | 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook                                                                                | cross-cutting | gates                 | not started   | —                                             |
@@ -181,7 +181,45 @@ DEFINER RPCs are observed — never asserted as SQL text.
 
 ### 6.3 Adding an API route integration test
 
-- TBD — see §3 Phase 2 (authz matrix + server-side validation parity).
+API-route tests invoke an exported handler (`GET`/`POST`/`PATCH`) **directly**
+with a constructed `APIContext` — no HTTP server, because `/api/*` is outside
+middleware (see `context/foundation/lessons.md`) so the handler's own self-gate
+is the whole contract. They run in the same local-Supabase integration project
+as §6.2.
+
+- **Location**: `tests/integration/` (alongside the RLS/overlap suites).
+- **Naming**: `api-<concern>.test.ts` (e.g. `api-authz.test.ts`,
+  `api-validation.test.ts`).
+- **Helper**: `tests/helpers/context.ts` exports `buildApiContext({ method,
+  path, supabase, user, role, params, body, origin })`, which assembles the
+  minimal object the handlers read (`request`, `url`, `locals.{supabase,user,
+  role}`, `params`) and casts it to `APIContext`. Import the handler from the
+  route module and call it: `const res = await POST(buildApiContext({...}))`.
+- **Reference tests**: `tests/integration/api-authz.test.ts` (role × status
+  matrix per route + CSRF + public funnel), `tests/integration/api-validation.test.ts`
+  (bad-payload → 400 + no-DB-write), `tests/integration/api-context.smoke.test.ts`
+  (harness self-check).
+- **Run command**: `npm run test:integration`.
+- **Conventions** (non-negotiable):
+  - **Client ⇄ locals role consistency.** For an allow-path case the context
+    must carry `supabase: as(role)` AND `role: role` AND a truthy `user` — all
+    derived from one role argument so they can't drift. A mismatch passes the
+    app gate but the DB RPC/RLS denies, testing the wrong layer. Mirror how
+    middleware derives locals from the session.
+  - **Deny assertions run through anon / `norole` contexts**, never
+    `serviceClient()` — service-role bypasses RLS and would make a deny test
+    pass falsely (same rule as §6.2).
+  - **CSRF precedes auth.** Every mutation handler checks `Origin` first, so a
+    foreign/missing `origin` → 403 regardless of role. `buildApiContext`
+    defaults `origin` to `url.origin`; override it to test the CSRF branch.
+  - **No-DB-write is verified by querying the DB back** through `serviceClient()`
+    on the disposable scope — never trust the 4xx status alone.
+  - **Accept each route's real anon status.** Vehicle routes return 401 for
+    signed-out callers, reservation routes 403; assert the actual contract per
+    route, not a normalized one (see
+    `context/changes/testing-api-boundary-authz/finding-anon-status-inconsistency.md`).
+  - **Allow/funnel cases own disposable rows** (dedicated id outside the seeded
+    fleet, far-future dates) seeded + torn down via `serviceClient()`, per §6.2.
 
 ### 6.4 Adding a dashboard / availability state test
 
@@ -205,6 +243,15 @@ here capturing anything surprising the rollout phase taught.)
   `20260630120000_reservations_revoke_select_grant.sql`). See
   `context/changes/testing-data-layer-integrity/finding-rls-pii-leak.md`. The
   `norole` (role-null) fixture is the sharpest probe for this class of hole.
+- **Phase 2 (API boundary, 2026-06-30):** Risks #4/#5 were regression guards, not
+  bug hunts — every route already self-gates and applies its schema. The load-
+  bearing fact: `/api/*` is entirely outside middleware (`ROUTE_ROLES` lists only
+  `/dashboard*`), so the per-route gate is the *only* protection — tests invoke
+  handlers directly via a constructed `APIContext` (`tests/helpers/context.ts`),
+  not over HTTP. One real inconsistency surfaced (F2): vehicle routes return 401
+  for signed-out callers, reservation routes 403 — same protection, different
+  status; documented as a deferred product decision, not normalized. See
+  `context/changes/testing-api-boundary-authz/finding-anon-status-inconsistency.md`.
 
 ## 7. What We Deliberately Don't Test
 
@@ -223,6 +270,7 @@ underlying assumption changes.
 - Strategy (§1–§5) last reviewed: 2026-06-27
 - Stack versions last verified: 2026-06-27
 - AI-native tool references last verified: 2026-06-27
+- Cookbook (§6) last extended: 2026-06-30 (Phase 2 → §6.3 API-route recipe)
 
 Refresh (`/10x-test-plan --refresh`) when:
 
