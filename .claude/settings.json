@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r .tool_input.file_path); case \"$FILE\" in *.ts|*.tsx|*.astro) npx eslint --fix \"$FILE\" --quiet 2>/dev/null;; esac'",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}
