@@ -600,8 +600,8 @@ default `npm test` (and today's CI) runs.
 
 #### Manual
 
-- [x] 2.4 No leftover test rows in the disposable scope after a run
-- [x] 2.5 Widening the turnover case to a true overlap makes it fail
+- [x] 2.4 No leftover test rows in the disposable scope after a run — 794b918
+- [x] 2.5 Widening the turnover case to a true overlap makes it fail — 794b918
 
 ### Phase 3: Close the PII Leak (Risk #1) — Regression Suite + Fix Migration
 
@@ -622,11 +622,11 @@ default `npm test` (and today's CI) runs.
 
 #### Automated
 
-- [x] 4.1 §6.2 no longer contains "TBD" (filled recipe present)
-- [x] 4.2 Finding artifact exists: `finding-rls-pii-leak.md`
-- [x] 4.3 Lint/format of touched markdown passes
+- [x] 4.1 §6.2 no longer contains "TBD" (filled recipe present) — 794b918
+- [x] 4.2 Finding artifact exists: `finding-rls-pii-leak.md` — 794b918
+- [x] 4.3 Lint/format of touched markdown passes — 794b918
 
 #### Manual
 
-- [x] 4.4 The finding accurately reflects the confirmed leak + the Phase 3 fix
-- [x] 4.5 The cookbook recipe is followable from scratch
+- [x] 4.4 The finding accurately reflects the confirmed leak + the Phase 3 fix — 794b918
+- [x] 4.5 The cookbook recipe is followable from scratch — 794b918
