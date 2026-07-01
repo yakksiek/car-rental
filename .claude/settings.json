@@ -8,6 +8,11 @@
             "type": "command",
             "command": "bash -c 'FILE=$(jq -r .tool_input.file_path); case \"$FILE\" in *.ts|*.tsx|*.astro) npx eslint --fix \"$FILE\" --quiet 2>/dev/null;; esac'",
             "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "AI_AGENT=1 bash -c 'FILE=$(jq -r .tool_input.file_path); case \"$FILE\" in *src/lib/*.ts) npx vitest related \"$FILE\" --run --project unit 2>/dev/null;; esac'",
+            "timeout": 30000
           }
         ]
       }
