@@ -64,13 +64,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status        | Change folder                                 |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ------------- | --------------------------------------------- |
-| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | complete      | context/archive/2026-06-27-testing-data-layer-integrity/ |
-| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | complete      | context/changes/testing-api-boundary-authz/   |
-| 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started   | —                                             |
-| 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | not started   | —                                             |
-| 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook                                                                                | cross-cutting | gates                 | not started   | —                                             |
+| #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status      | Change folder                                            |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ----------- | -------------------------------------------------------- |
+| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | complete    | context/archive/2026-06-27-testing-data-layer-integrity/ |
+| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | complete    | context/changes/testing-api-boundary-authz/              |
+| 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started | —                                                        |
+| 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | not started | —                                                        |
+| 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook                                                                                | cross-cutting | gates                 | not started | —                                                        |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened` → `researched` → `planned` → `implementing` → `complete`.
 
@@ -191,9 +191,9 @@ as §6.2.
 - **Naming**: `api-<concern>.test.ts` (e.g. `api-authz.test.ts`,
   `api-validation.test.ts`).
 - **Helper**: `tests/helpers/context.ts` exports `buildApiContext({ method,
-  path, supabase, user, role, params, body, origin })`, which assembles the
+path, supabase, user, role, params, body, origin })`, which assembles the
   minimal object the handlers read (`request`, `url`, `locals.{supabase,user,
-  role}`, `params`) and casts it to `APIContext`. Import the handler from the
+role}`, `params`) and casts it to `APIContext`. Import the handler from the
   route module and call it: `const res = await POST(buildApiContext({...}))`.
 - **Reference tests**: `tests/integration/api-authz.test.ts` (role × status
   matrix per route + CSRF + public funnel), `tests/integration/api-validation.test.ts`
@@ -246,7 +246,7 @@ here capturing anything surprising the rollout phase taught.)
 - **Phase 2 (API boundary, 2026-06-30):** Risks #4/#5 were regression guards, not
   bug hunts — every route already self-gates and applies its schema. The load-
   bearing fact: `/api/*` is entirely outside middleware (`ROUTE_ROLES` lists only
-  `/dashboard*`), so the per-route gate is the *only* protection — tests invoke
+  `/dashboard*`), so the per-route gate is the _only_ protection — tests invoke
   handlers directly via a constructed `APIContext` (`tests/helpers/context.ts`),
   not over HTTP. One real inconsistency surfaced (F2): vehicle routes return 401
   for signed-out callers, reservation routes 403 — same protection, different
