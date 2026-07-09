@@ -1,8 +1,9 @@
 // core
-import { test as setup, expect, type Locator } from "@playwright/test";
+import { test as setup, expect } from "@playwright/test";
 
 // others
 import { SEEDED_CREDENTIALS } from "../tests/helpers/clients";
+import { fillHydrated, waitForIslands } from "./support/hydration";
 
 // Authentication setup. Runs once before the browser projects (see the `setup`
 // project in `playwright.config.ts`), signing in each staff role through the
@@ -23,31 +24,16 @@ import { SEEDED_CREDENTIALS } from "../tests/helpers/clients";
 
 const AUTH_DIR = "playwright/.auth";
 
-/**
- * Fill a React-island input and prove the value stuck.
- *
- * Astro server-renders `SignInForm`, then hydrates it (`client:load`). A `fill()`
- * that lands in the window between paint and hydration writes straight to the
- * DOM node, and React then re-renders the controlled input from its empty
- * `useState` — silently discarding the value. The form submits blank and the
- * test times out waiting for a redirect that never comes.
- *
- * `toPass` retries the fill until the value survives a round trip, which is a
- * wait on application state (the island is interactive) rather than on time.
- * Do not replace this with `waitForTimeout`.
- */
-async function fillHydrated(locator: Locator, value: string) {
-  await expect(async () => {
-    await locator.fill(value);
-    await expect(locator).toHaveValue(value);
-  }).toPass({ timeout: 10_000 });
-}
-
 for (const role of ["employee", "admin"] as const) {
   setup(`authenticate as ${role}`, async ({ page }) => {
     const { email, password } = SEEDED_CREDENTIALS[role];
 
     await page.goto("/auth/signin");
+
+    // SignInForm is a `client:load` island. Filling before it hydrates writes to
+    // an inert DOM node whose value React discards on mount — so wait for the
+    // island to own its inputs before typing a character.
+    await waitForIslands(page);
 
     await fillHydrated(page.getByRole("textbox", { name: "E-mail służbowy" }), email);
     // Scoped to the textbox role on purpose: `FormField` nests the "Pokaż hasło"
