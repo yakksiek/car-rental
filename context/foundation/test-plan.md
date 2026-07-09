@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-30 (Phase 2 → §6.3 cookbook filled; authz matrix + input parity suites; F2 anon-status split documented)
+> Last updated: 2026-07-09 (§7 e2e exclusion narrowed — Playwright wired; one browser spec covers risk #6's rendered calendar; §4/§5 stack + gate rows updated to match)
 
 ## 1. Strategy
 
@@ -86,20 +86,20 @@ Phase 1.
 The classic test base for this project. AI-native tools (if any) carry a
 `checked:` date so future readers can see which lines need re-verification.
 
-| Layer                  | Tool                                                        | Version | Notes                                                                                                                                                                          |
-| ---------------------- | ----------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| unit + integration     | Vitest                                                      | ^4.1.8  | configured; `npm test` = `vitest run`. 9 unit files, all in `src/lib/` (pure helpers). Components/pages/API/services/RLS untested                                              |
-| DB integration harness | local Supabase (`npx supabase start`) + supabase-js clients | n/a     | none yet — see §3 Phase 1. Needs anon/employee/admin clients against a seeded test DB to exercise RLS + the overlap constraint for real                                        |
-| API route integration  | Vitest + Astro route handlers                               | ^4.1.8  | none yet — see §3 Phase 2. Routes export `GET`/`POST`; test request → response + DB side-effect                                                                                |
-| e2e                    | Playwright (or Cypress)                                     | —       | none yet — deferred (see §7). The DOM is reachable, but integration covers the booking/auth logic more cheaply                                                                 |
-| accessibility          | axe-core                                                    | —       | none yet — not prioritized in this rollout                                                                                                                                     |
-| (optional) AI-native   | Playwright MCP — checked: 2026-06-27                        | n/a     | **not available in current session.** When NOT to use: never put a vision/agent layer on RLS, overlap, or authz — deterministic integration gives the cheaper, stronger signal |
+| Layer                  | Tool                                                        | Version | Notes                                                                                                                                                                                                                                                                                                |
+| ---------------------- | ----------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| unit + integration     | Vitest                                                      | ^4.1.8  | configured; `npm test` = `vitest run`. 9 unit files, all in `src/lib/` (pure helpers). Components/pages/API/services/RLS untested                                                                                                                                                                    |
+| DB integration harness | local Supabase (`npx supabase start`) + supabase-js clients | n/a     | none yet — see §3 Phase 1. Needs anon/employee/admin clients against a seeded test DB to exercise RLS + the overlap constraint for real                                                                                                                                                              |
+| API route integration  | Vitest + Astro route handlers                               | ^4.1.8  | none yet — see §3 Phase 2. Routes export `GET`/`POST`; test request → response + DB side-effect                                                                                                                                                                                                      |
+| e2e                    | Playwright                                                  | ^1.61.1 | wired 2026-07-09. `playwright.config.ts` + `storageState` auth (`e2e/auth.setup.ts`, employee + admin). 1 spec: `e2e/seed.spec.ts` (risk #6's rendered calendar). Levers: `e2e/seed.spec.ts` + `e2e/e2e-rules.md`. Local only — not a CI gate yet (§5)                                               |
+| accessibility          | axe-core                                                    | —       | none yet — not prioritized in this rollout                                                                                                                                                                                                                                                           |
+| (optional) AI-native   | Playwright CLI — checked: 2026-07-09                        | 0.1.15  | available (global install; agent-driven exploration via accessibility snapshots). Playwright MCP still not installed — CLI is preferred (lower token cost). When NOT to use: never put a vision/agent layer on RLS, overlap, or authz — deterministic integration gives the cheaper, stronger signal |
 
 **Stack grounding tools (current session):**
 
 - Docs: Context7 — available; can ground Vitest 4 + Astro route + Supabase local-test setup at plan time; checked: 2026-06-27
 - Search: Exa.ai — available; for current tool status / discovery only; checked: 2026-06-27
-- Runtime/browser: Playwright MCP — not available in current session; e2e would need wiring as its own future phase; checked: 2026-06-27
+- Runtime/browser: Playwright (test runner + CLI) — wired and driving one spec; MCP not installed and not needed (CLI covers exploration at ~4x lower token cost); checked: 2026-07-09
 - Provider/platform: no Supabase/GitHub MCP this session; repo uses `gh` CLI + `npx supabase` locally + Cloudflare Workers deploy; checked: 2026-06-27
 
 Use docs MCPs for current framework/library APIs and setup details. Use
@@ -113,15 +113,15 @@ The full set of gates that must pass before a change reaches production.
 "Required after §3 Phase <N>" means the gate is enforced once that rollout
 phase lands; before that, the gate is planned.
 
-| Gate                              | Where                | Required?                    | Catches                                             |
-| --------------------------------- | -------------------- | ---------------------------- | --------------------------------------------------- |
-| lint + typecheck                  | local + CI           | required (wired today)       | syntactic / type drift                              |
-| unit                              | local + CI           | required after §3 Phase 1    | logic regressions in pure helpers                   |
-| integration (RLS + overlap + API) | local + CI           | required after §3 Phase 2    | PII leaks, double-bookings, authz/validation bypass |
-| post-edit hook                    | local (agent loop)   | recommended after §3 Phase 5 | regressions at edit time                            |
-| e2e on critical flows             | CI on PR             | optional (deferred — see §7) | broken booking/auth user paths                      |
-| visual diff / multimodal review   | CI on PR             | optional                     | rendering regressions classic tests miss            |
-| pre-prod smoke                    | between merge + prod | optional                     | environment-specific failures                       |
+| Gate                              | Where                  | Required?                              | Catches                                              |
+| --------------------------------- | ---------------------- | -------------------------------------- | ---------------------------------------------------- |
+| lint + typecheck                  | local + CI             | required (wired today)                 | syntactic / type drift                               |
+| unit                              | local + CI             | required after §3 Phase 1              | logic regressions in pure helpers                    |
+| integration (RLS + overlap + API) | local + CI             | required after §3 Phase 2              | PII leaks, double-bookings, authz/validation bypass  |
+| post-edit hook                    | local (agent loop)     | recommended after §3 Phase 5           | regressions at edit time                             |
+| e2e on critical flows             | local (CI: §3 Phase 5) | optional — green locally, not enforced | phantom availability; broken booking/auth user paths |
+| visual diff / multimodal review   | CI on PR               | optional                               | rendering regressions classic tests miss             |
+| pre-prod smoke                    | between merge + prod   | optional                               | environment-specific failures                        |
 
 CI today (`.github/workflows/ci.yml`) runs `astro sync` + lint + build only;
 the unit and integration gates are wired by §3 Phase 5 (and the unit gate
@@ -263,14 +263,35 @@ underlying assumption changes.
 - **Marketing / static-layout Astro pages** — snapshot tests churn and catch nothing. Re-evaluate if a static page gains real logic. (Source: Phase 2 interview Q5.)
 - **Dev-only Tailwind/ClientRouter CSS staleness** — known, accepted, prod-unaffected. (Source: `context/foundation/known-issues.md`.)
 - **Rate-limiting / abuse mitigation on the public reservation endpoint** — unimplemented today; a test would require building the safeguard first. Flag as a product gap, not a test. Re-evaluate if rate limiting is added. (Source: challenger pass on the abuse lens.)
-- **AI-native / vision / agent e2e layers** — deferred; classic integration covers RLS/overlap/authz more cheaply, and Playwright MCP is not wired. Re-evaluate if a DOM-unreachable surface appears or Playwright MCP is added. (Source: challenger pass; §4 grounding.)
+- **e2e for risks #1, #2, #4, #5** — each is already proven deterministically by a named suite in `tests/integration/` against real Postgres and real route handlers. A browser test would be slower, flakier, and would tell us nothing new. This is the half of the original exclusion that still holds. Re-evaluate only if a risk moves out of reach of the integration harness. (Source: challenger pass; re-affirmed 2026-07-09.)
+- **Vision / agent layers on RLS, overlap, or authz** — never put a vision or agent layer where deterministic integration gives the cheaper, stronger signal. Unchanged. (Source: challenger pass; §4 grounding.)
+- **Pixel/visual regression** — if it is ever wanted, use a deterministic tool (`toMatchSnapshot`, Argos, Lost Pixel), not a vision model. (Source: §4 grounding.)
+
+> **Amended 2026-07-09 — e2e is no longer deferred wholesale.** The original
+> exclusion rested on two reasons. The first (integration covers RLS/overlap/authz
+> more cheaply) is still true and is preserved above. The second ("Playwright MCP
+> is not wired") no longer holds: Playwright is installed, `storageState` auth is
+> wired, and Playwright CLI is available. Its own re-evaluation condition —
+> _"re-evaluate if … Playwright MCP is added"_ — was therefore met.
+>
+> A standalone `/10x-e2e` run then applied the browser-level gate to all six
+> risks. Only **risk #6** survived it, and only its _rendered composition_: the
+> pure `busyRanges → dayStates` derivation is unit-covered
+> (`src/lib/availability.test.ts`), but nothing proved the hydrated calendar
+> actually consumes it — and finding F1 of the S-02 Phase-6 review shipped exactly
+> that bug. `e2e/seed.spec.ts` now covers it, verified by deliberately breaking
+> the production behavior in both directions and confirming the test goes red.
+>
+> This does not promote e2e generally. §1 principle #1 stands: the cheapest test
+> that gives a real signal wins. Risk #3 remains untestable at any layer until
+> S-05 ships (see §3 Phase 4).
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-06-27
-- Stack versions last verified: 2026-06-27
-- AI-native tool references last verified: 2026-06-27
-- Cookbook (§6) last extended: 2026-06-30 (Phase 2 → §6.3 API-route recipe)
+- Strategy (§1–§5) last reviewed: 2026-07-09 (§4 e2e + AI-native rows, §5 e2e gate)
+- Stack versions last verified: 2026-07-09 (Playwright ^1.61.1, Playwright CLI 0.1.15)
+- AI-native tool references last verified: 2026-07-09
+- Cookbook (§6) last extended: 2026-06-30 (Phase 2 → §6.3 API-route recipe). No e2e recipe yet — `e2e/e2e-rules.md` + `e2e/seed.spec.ts` serve that role until an e2e rollout phase exists.
 
 Refresh (`/10x-test-plan --refresh`) when:
 
