@@ -1,4 +1,5 @@
 <!-- IMPL-REVIEW-REPORT -->
+
 # Implementation Review: Fleet Management (S-04)
 
 - **Plan**: context/changes/fleet-management/plan.md
@@ -9,14 +10,14 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| Plan Adherence | PASS |
-| Scope Discipline | WARNING |
-| Safety & Quality | WARNING |
-| Architecture | PASS |
-| Pattern Consistency | PASS |
-| Success Criteria | PASS |
+| Dimension           | Verdict |
+| ------------------- | ------- |
+| Plan Adherence      | PASS    |
+| Scope Discipline    | WARNING |
+| Safety & Quality    | WARNING |
+| Architecture        | PASS    |
+| Pattern Consistency | PASS    |
+| Success Criteria    | PASS    |
 
 Automated criteria (lint / build / `astro sync`) all pass; manual checks 5.2–5.5 confirmed by the user. The retire guard is atomic with full definer hygiene; the three-layer trust boundary (route role gate → RLS WITH CHECK → SECURITY DEFINER RPC) is clean; all scope guardrails held (no plate/branch/status/upload leaked in).
 

@@ -23,6 +23,7 @@ Give a logged-in employee an authenticated screen to **add, edit, and remove veh
 ## Desired End State
 
 An employee opens `/dashboard/vehicles`, sees the fleet as category-filterable, searchable cards/rows (each showing name, specs, **Aktywny/Wycofany** status, daily+monthly rate, edit + delete), and can:
+
 - **Add** a vehicle via `/dashboard/vehicles/new` (full-page form), which appears in the public catalog (S-01).
 - **Edit** any vehicle via `/dashboard/vehicles/[id]/edit`.
 - **Retire** a vehicle (the `×` action) — it leaves the public catalog but stays visible to staff under a "Pokaż wycofane" toggle and can be restored. Retiring a vehicle that has `pending`/`confirmed` reservations is **blocked** with a Polish message telling the employee to cancel those first.
@@ -32,7 +33,7 @@ Verified by: migration applies on a clean `supabase db reset`; lint/build/typech
 ## What We're NOT Doing
 
 - **No** license-plate (`Rejestracja`) column, utilization/`Wykorzystanie` stats, the four stat cards (`Dostępne/Wynajęte/Serwis/Po terminie`), the `Najbliższe` next-booking column, the list/grid view toggle, or a `maintenance`/`service` vehicle status — all deferred (unmodeled, parked statistics, or S-07).
-- **No** real photo upload / object storage — photos are entered as **URLs** (storage arrives in S-05). 
+- **No** real photo upload / object storage — photos are entered as **URLs** (storage arrives in S-05).
 - **No** hard delete; **no** bulk actions; **no** audit trail (parked to v2).
 - **No** change to `src/lib/access.ts` or the auth/role model (F-02 already gates `/dashboard`).
 - **No** admin-only gating — fleet management is **employee-level** per FR-011.
@@ -72,6 +73,7 @@ Add the authenticated write path to `vehicles` and the atomic retire guard, and 
 **Intent**: Open vehicle writes to staff, broaden staff reads to include retired vehicles, and add a guarded soft-delete RPC. Mirror the definer-hygiene of existing RPCs (`security definer`, `set search_path = ''`, schema-qualified names, `grant execute`).
 
 **Contract**:
+
 - **Drop & recreate** `vehicles_select_authenticated` as `using (true)` (staff see all incl. retired; v1 `authenticated` == staff). Leave `vehicles_select_anon` (`is_active = true`) untouched.
 - **New** `vehicles_insert_staff` (INSERT, `to authenticated`, `with check (public.current_app_role() in ('employee','admin'))`).
 - **New** `vehicles_update_staff` (UPDATE, `to authenticated`, `using` + `with check` = `public.current_app_role() in ('employee','admin')`).
@@ -128,6 +130,7 @@ A shared zod schema and the service functions wrapping create/update/retire/list
 **Intent**: Add staff write + fleet-read functions; patch the public list for the broadened RLS.
 
 **Contract**:
+
 - `createVehicle(client, input): Promise<{status:'created'; vehicle: Vehicle} | {status:'unauthorized'}>` — insert; map RLS denial (Postgres `42501`) → `unauthorized`.
 - `updateVehicle(client, id, input): Promise<{status:'updated'; vehicle: Vehicle} | {status:'not_found'} | {status:'unauthorized'}>` — UUID-guard like `getVehicleById`; update by id, `.select().maybeSingle()`; null row → `not_found`.
 - `setVehicleActive(client, id, active): Promise<{status:'ok'|'has_active_reservations'|'not_found'|'unauthorized'}>` — `client.rpc('set_vehicle_active', …)`, map the `result` tag.
@@ -323,6 +326,7 @@ Fleet size is small (single operator); `listFleet` is an unpaginated ordered rea
 ## Migration Notes
 
 **S-03 and S-04 land in parallel** (separate branches). Shared-merge surfaces:
+
 - `src/pages/dashboard.astro` — both add an entry card. Additive; resolve by keeping both cards.
 - `src/types.ts` — both add DTO/result types. Additive.
 - `src/db/database.types.ts` — both regenerate after their migration. **Regenerate once after both migrations are applied** to avoid a stale/partial types file; never hand-merge this generated file.
