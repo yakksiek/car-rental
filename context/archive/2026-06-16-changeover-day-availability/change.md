@@ -1,17 +1,17 @@
 ---
 change_id: changeover-day-availability
 title: Changeover-day half-availability on the per-vehicle booking calendar
-status: implemented
+status: archived
 created: 2026-06-16
-updated: 2026-06-16
-archived_at: null
+updated: 2026-07-09
+archived_at: 2026-07-09T08:35:04Z
 ---
 
 ## Notes
 
 Source: roadmap slice **S-02a** (`context/foundation/roadmap.md`), promoted from parked FR-014.
 
-Refines S-02 Phase 6 (per-vehicle booking calendar greys booked dates, conservatively greying *both* changeover days). Goal: show a booked range's changeover days as **half-available** instead of fully greyed — the booking's pickup day stays selectable as a new **return**, its return day stays selectable as a new **pickup** — so back-to-back rentals (return 10:00, next pickup 14:00) can be booked from the UI, matching what the half-open `EXCLUDE` window already permits.
+Refines S-02 Phase 6 (per-vehicle booking calendar greys booked dates, conservatively greying _both_ changeover days). Goal: show a booked range's changeover days as **half-available** instead of fully greyed — the booking's pickup day stays selectable as a new **return**, its return day stays selectable as a new **pickup** — so back-to-back rentals (return 10:00, next pickup 14:00) can be booked from the UI, matching what the half-open `EXCLUDE` window already permits.
 
 Prereqs: S-02 (done). PRD ref: FR-014 (refinement). Parallel with S-03, S-04, S-07, S-08.
 

@@ -131,7 +131,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Half-cell affordance + a11y: react-day-picker can't natively mark a day "valid only as range end," so selection rules ride a custom `onSelect` veto + custom modifiers; the half-grey cell needs a legend and keyboard/SR semantics. Owner: user. Block: no.
 - **Risk:** Refinement of S-02 Phase 6 (which shipped per-vehicle greying, conservatively inclusive of both changeover days). The model is correct but interaction-heavy and ships without a UI test runner — mitigate by extracting the per-day half-state computation (`busyRanges → dayStates`) as a pure, Vitest-tested helper; that's where the edge cases live (adjacent bookings sharing a day, single-day gaps). Win: the calendar then matches `available_vehicles` + the `EXCLUDE` constraint exactly, closing the calendar↔catalog asymmetry noted in the S-02 Phase-6 review.
-- **Status:** proposed
+- **Status:** done
 
 ### S-03: Reservation approval
 
@@ -252,3 +252,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: A visitor can submit a reservation request (name, email, phone, vehicle, dates) without an account, and overlapping dates on an already-booked vehicle are blocked before submission; the request lands for employee approval.** — Archived 2026-06-25 → `context/archive/2026-06-07-public-reservation-request/`. Lesson: —.
 - **S-03: A logged-in employee can view all pending reservation requests and accept or reject each one; accepting confirms the booking against the overlap rule.** — Archived 2026-06-26 → `context/archive/2026-06-17-reservation-approval/`. Lesson: —.
 - **S-04: A logged-in employee can add and edit vehicles in the fleet, and remove a vehicle — with removal blocked when active reservations exist (employee must cancel them first).** — Archived 2026-07-09 → `context/archive/2026-06-17-fleet-management/`. Lesson: —.
+- **S-02a: On the per-vehicle booking calendar, a booked range's changeover days are shown half-available instead of fully greyed — the booking's pickup day stays selectable as a new return, and its return day as a new pickup — so back-to-back rentals can be booked from the UI, matching the half-open EXCLUDE window.** — Archived 2026-07-09 → `context/archive/2026-06-16-changeover-day-availability/`. Lesson: —.

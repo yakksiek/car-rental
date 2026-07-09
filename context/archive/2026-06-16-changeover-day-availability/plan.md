@@ -2,20 +2,20 @@
 
 ## Overview
 
-The per-vehicle booking calendar (`BookingWidget`) currently greys each booked range **inclusive of both bounds**, so it refuses back-to-back rentals that the database actually permits. The DB authority is the half-open window `[pickup 14:00, return 10:00)`, which leaves a booking's two **changeover days** half-free: the pickup day's morning is still valid as a new *return*, and the return day's afternoon is still valid as a new *pickup*. This plan makes the calendar render those two days as **half-available** (diagonal half-grey, selectable only as the matching range end), closing the calendar↔DB asymmetry surfaced in the S-02 Phase-6 review (finding F1).
+The per-vehicle booking calendar (`BookingWidget`) currently greys each booked range **inclusive of both bounds**, so it refuses back-to-back rentals that the database actually permits. The DB authority is the half-open window `[pickup 14:00, return 10:00)`, which leaves a booking's two **changeover days** half-free: the pickup day's morning is still valid as a new _return_, and the return day's afternoon is still valid as a new _pickup_. This plan makes the calendar render those two days as **half-available** (diagonal half-grey, selectable only as the matching range end), closing the calendar↔DB asymmetry surfaced in the S-02 Phase-6 review (finding F1).
 
 The change is **entirely client-side**: `get_vehicle_busy_ranges` already returns exactly `[pickup_date, return_date]` per blocking reservation — the sufficient input. No migration, no RPC change, no type regen.
 
 ## Current State Analysis
 
 - **Calendar greying** (`src/components/vehicle/BookingWidget.tsx:90-100`): `disabledDays` is a `Matcher[]` of `{ before: today }` plus one `{ from: pickup_date, to: return_date }` per busy range — **inclusive of both ends**. `excludeDisabled` (line 177) resets any selection that spans a disabled day.
-- **DB authority** (`supabase/migrations/20260603155136_booking_integrity_data.sql:104-129`): `reserved_period` is `tsrange(pickup + 14:00, return + 10:00, '[)')`, guarded by an `EXCLUDE … with &&` constraint. Same-day turnover is *allowed* (return 10:00 adjacent to, not overlapping, pickup 14:00).
+- **DB authority** (`supabase/migrations/20260603155136_booking_integrity_data.sql:104-129`): `reserved_period` is `tsrange(pickup + 14:00, return + 10:00, '[)')`, guarded by an `EXCLUDE … with &&` constraint. Same-day turnover is _allowed_ (return 10:00 adjacent to, not overlapping, pickup 14:00).
 - **Pure mirror** (`src/lib/availability.ts:18-59`): `PICKUP_HOUR = 14`, `RETURN_HOUR = 10`, `bookingWindow`, `windowsOverlap`, `hasConflict`. This is the existing, tested twin of the `EXCLUDE` rule — the new helper must reuse these hours so it cannot drift.
 - **Data flow**: `get_vehicle_busy_ranges` RPC (`supabase/migrations/20260613170000…` + date floor `20260616120000…`) → `getVehicleBusyRanges` (`src/lib/services/reservations.ts:132-147`, fail-soft `[]` on error) → SSR in `src/pages/fleet/[id]/[...slug].astro:33` → `VehicleDetail.astro:174` → `BookingWidget` prop `busyRanges: VehicleBusyRange[]` (`{ pickup_date: string; return_date: string }`, ISO `YYYY-MM-DD`).
 - **shadcn Calendar primitive** (`src/components/ui/calendar.tsx`): wraps `DayPicker`. `CalendarDayButton` (lines 131-159) already destructures `modifiers` — custom modifiers flow through, so half-cells can render via `modifiers` + `modifiersClassNames` without re-plumbing the primitive. The `disabled` classNames slot is line 97.
 - **Test infra**: Vitest is configured (`vitest.config.ts`, `"test": "vitest run"`); `src/lib/availability.test.ts` already exists and covers the half-open window — the new helper extends the same file.
 - **Date helpers**: `fromIsoDate` / `toIsoDate` (`src/lib/date-iso.ts`), `validateDateRange` (`src/lib/catalog-filters.ts:116-142`, the existing pre-`navigate` guard in `handleReserve`).
-- **Design system**: `context/foundation/design-system.md:93-115` already specifies a *"booked or requested"* **legend** for this picker (currently unshipped). `--muted`, `--primary`, hairline `--flota-hair-2` tokens live in `src/styles/global.css`.
+- **Design system**: `context/foundation/design-system.md:93-115` already specifies a _"booked or requested"_ **legend** for this picker (currently unshipped). `--muted`, `--primary`, hairline `--flota-hair-2` tokens live in `src/styles/global.css`.
 
 ## Desired End State
 
@@ -35,7 +35,7 @@ Verify: `npm run test` (new matrix green), `npx astro check`, `npm run lint`, `n
 
 - No DB work: `get_vehicle_busy_ranges` already returns `[pickup_date, return_date]` — `src/lib/services/reservations.ts:132-147`.
 - `CalendarDayButton` already forwards `modifiers` — `src/components/ui/calendar.tsx:131` — so half-cells need only a `modifiers` + `modifiersClassNames` pair, not a primitive rewrite.
-- `excludeDisabled` only auto-rejects ranges that **span a fully-disabled day**; a range whose *interior* contains a half-day must be vetoed in `onSelect` (rule 3 below). This is why CSS alone is insufficient.
+- `excludeDisabled` only auto-rejects ranges that **span a fully-disabled day**; a range whose _interior_ contains a half-day must be vetoed in `onSelect` (rule 3 below). This is why CSS alone is insufficient.
 - Reuse `PICKUP_HOUR`/`RETURN_HOUR` from `availability.ts` so the half-state cannot drift from the `EXCLUDE` window.
 
 ## What We're NOT Doing
@@ -59,14 +59,14 @@ amTaken(d)  ⟺  ∃ range with P <  d ≤ R     // morning occupied: interior o
 pmTaken(d)  ⟺  ∃ range with P ≤ d <  R     // afternoon occupied: interior or a pickup day
 ```
 
-| State        | am / pm       | Meaning                                            | Calendar treatment                          |
-| ------------ | ------------- | -------------------------------------------------- | ------------------------------------------- |
-| `free`       | free / free   | fully bookable                                      | normal                                      |
-| `pickupOnly` | taken / free  | **return day** of an existing booking               | selectable as range **start** only; am half-grey |
-| `returnOnly` | free / taken  | **pickup day** of an existing booking               | selectable as range **end** only; pm half-grey |
-| `blocked`    | taken / taken | interior day, or shared return+pickup (seed `07-10`) | fully disabled                              |
+| State        | am / pm       | Meaning                                              | Calendar treatment                               |
+| ------------ | ------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| `free`       | free / free   | fully bookable                                       | normal                                           |
+| `pickupOnly` | taken / free  | **return day** of an existing booking                | selectable as range **start** only; am half-grey |
+| `returnOnly` | free / taken  | **pickup day** of an existing booking                | selectable as range **end** only; pm half-grey   |
+| `blocked`    | taken / taken | interior day, or shared return+pickup (seed `07-10`) | fully disabled                                   |
 
-> Naming note: a `pickupOnly` day (the existing booking's **return** day) is free in the afternoon, so a *new* booking can **pick up** there — hence "pickupOnly" = valid as a new range **start**. A `returnOnly` day (the existing **pickup** day) is free in the morning, so a new booking can **return** there — valid as a new range **end**. Keep the modifier names oriented to the *new* booking's action.
+> Naming note: a `pickupOnly` day (the existing booking's **return** day) is free in the afternoon, so a _new_ booking can **pick up** there — hence "pickupOnly" = valid as a new range **start**. A `returnOnly` day (the existing **pickup** day) is free in the morning, so a new booking can **return** there — valid as a new range **end**. Keep the modifier names oriented to the _new_ booking's action.
 
 ### Validity of a candidate new range `[p, r]`
 
@@ -78,8 +78,8 @@ pmTaken(d)  ⟺  ∃ range with P ≤ d <  R     // afternoon occupied: interior
 
 ## Critical Implementation Details
 
-- **`onSelect` veto, not CSS** — `disabled` + `excludeDisabled` only auto-reset ranges that *span* a fully-`blocked` day. A range whose interior contains a `pickupOnly`/`returnOnly` half-day, or that ends on a `returnOnly` day / starts on a `pickupOnly` day, passes `excludeDisabled` and **must** be vetoed in `onSelect` via `isRangeBookable`. Resetting to `{ from: triggerDate }` (the just-clicked day) mirrors what `excludeDisabled` already does for blocked days.
-- **First-click is always treated as start by react-day-picker** — a `returnOnly` day is a valid *end* but not a *start*. Don't special-case the first click; validate the **completed** range only. Date-order normalization (`range.from`/`range.to`) handles the common "click the later day first" path; the one genuinely-invalid gesture (first-click a `returnOnly`, then extend forward) is caught by rule 1 at completion.
+- **`onSelect` veto, not CSS** — `disabled` + `excludeDisabled` only auto-reset ranges that _span_ a fully-`blocked` day. A range whose interior contains a `pickupOnly`/`returnOnly` half-day, or that ends on a `returnOnly` day / starts on a `pickupOnly` day, passes `excludeDisabled` and **must** be vetoed in `onSelect` via `isRangeBookable`. Resetting to `{ from: triggerDate }` (the just-clicked day) mirrors what `excludeDisabled` already does for blocked days.
+- **First-click is always treated as start by react-day-picker** — a `returnOnly` day is a valid _end_ but not a _start_. Don't special-case the first click; validate the **completed** range only. Date-order normalization (`range.from`/`range.to`) handles the common "click the later day first" path; the one genuinely-invalid gesture (first-click a `returnOnly`, then extend forward) is caught by rule 1 at completion.
 - **Hours must be shared** — derive `amTaken`/`pmTaken` from the same `PICKUP_HOUR`/`RETURN_HOUR` already in `availability.ts`; never hard-code 14/10 a second time.
 - **Map keys are ISO `YYYY-MM-DD` strings**, not `Date` objects (avoids tz/identity pitfalls); the component converts calendar `Date`s with `toIsoDate` at the lookup boundary.
 
@@ -118,11 +118,12 @@ export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, return
 **Intent**: Extend the existing test file with the 8-case matrix that pins the edge behavior (this is the load-bearing safety net — no UI test runner).
 
 **Contract**: Vitest cases —
+
 1. Single booking `16→20` ⇒ `16` (pickup day) `returnOnly`, `17-19` `blocked`, `20` (return day) `pickupOnly`.
 2. Adjacent bookings sharing a day (`07-01→07-10`, `07-10→07-15`) ⇒ `07-10` `blocked`.
 3. One-day gap between two bookings ⇒ gap day resolves from both sides.
-4. New range *ending* on a `pickupOnly` day ⇒ `isRangeBookable` false (rule 2).
-5. New range *starting* on a `returnOnly` day ⇒ false (rule 1).
+4. New range _ending_ on a `pickupOnly` day ⇒ `isRangeBookable` false (rule 2).
+5. New range _starting_ on a `returnOnly` day ⇒ false (rule 1).
 6. Valid back-to-back: new `13→16` where `16` is an existing pickup day (`returnOnly`) ⇒ true.
 7. Range whose interior contains a half-day ⇒ false (rule 3).
 8. Empty `busy` ⇒ empty map; any well-ordered range bookable.
@@ -165,7 +166,7 @@ Wire the helper into `BookingWidget`: derive `disabled` and `modifiers` from the
 
 **Intent**: In `onSelect`, when a full range (`from` + `to`) forms, run `isRangeBookable(busyRanges, pickupIso, returnIso)`; if false, reset selection to `{ from: triggerDate }` and set an inline Polish error hint instead of accepting the range. Date-order normalize before validating.
 
-**Contract**: `onSelect={(next, triggerDate) => …}` (react-day-picker passes the clicked day as the 2nd arg). On veto: `setRange({ from: triggerDate })`, `setError(COPY.changeoverHint)`. On valid completion: existing `setRange(next); setError(null)`. Add `COPY.changeoverHint` — a Polish string explaining the day is only free for half the day (e.g. *"Wybrany termin nachodzi na dzień przekazania pojazdu. Wybierz inny zakres."* — finalize copy against design-system Polish-canonical tone). The existing `handleReserve` `validateDateRange` guard stays as the second line of defense.
+**Contract**: `onSelect={(next, triggerDate) => …}` (react-day-picker passes the clicked day as the 2nd arg). On veto: `setRange({ from: triggerDate })`, `setError(COPY.changeoverHint)`. On valid completion: existing `setRange(next); setError(null)`. Add `COPY.changeoverHint` — a Polish string explaining the day is only free for half the day (e.g. _"Wybrany termin nachodzi na dzień przekazania pojazdu. Wybierz inny zakres."_ — finalize copy against design-system Polish-canonical tone). The existing `handleReserve` `validateDateRange` guard stays as the second line of defense.
 
 #### 3. Per-day aria-labels
 
@@ -173,7 +174,7 @@ Wire the helper into `BookingWidget`: derive `disabled` and `modifiers` from the
 
 **Intent**: Give `pickupOnly` / `returnOnly` days an `aria-label` stating the rule so SR/keyboard users get the start-only/end-only signal the visual can't convey.
 
-**Contract**: Supply day labels via react-day-picker's `labels`/`formatters` or a `modifiers`-aware `aria-label` on the day button (preferred: extend the existing `CalendarDayButton` to append a state-derived suffix when `modifiers.pickupOnly`/`modifiers.returnOnly` is set, keeping the primitive generic). Polish copy, e.g. *"dostępny tylko jako dzień odbioru"* / *"…jako dzień zwrotu"*.
+**Contract**: Supply day labels via react-day-picker's `labels`/`formatters` or a `modifiers`-aware `aria-label` on the day button (preferred: extend the existing `CalendarDayButton` to append a state-derived suffix when `modifiers.pickupOnly`/`modifiers.returnOnly` is set, keeping the primitive generic). Polish copy, e.g. _"dostępny tylko jako dzień odbioru"_ / _"…jako dzień zwrotu"_.
 
 ### Success Criteria:
 
@@ -209,6 +210,7 @@ Render the diagonal half-grey for the two changeover states, ship the visible le
 **Intent**: Map the `pickupOnly` / `returnOnly` modifiers to diagonal-gradient classes so the cell shows which half is taken. `pickupOnly` (morning taken) greys the upper-left; `returnOnly` (afternoon taken) greys the lower-right.
 
 **Contract**: Add `modifiersClassNames={{ pickupOnly: "…", returnOnly: "…" }}` wired through the `Calendar` wrapper (it already spreads `...props` to `DayPicker`, so `BookingWidget` can pass `modifiersClassNames` directly, or add named classes to the wrapper's `classNames`). Gradient utilities in `global.css`:
+
 - `pickupOnly`: `linear-gradient(135deg, var(--muted) 0 50%, transparent 50%)`
 - `returnOnly`: `linear-gradient(135deg, transparent 0 50%, var(--muted) 50%)`
 
