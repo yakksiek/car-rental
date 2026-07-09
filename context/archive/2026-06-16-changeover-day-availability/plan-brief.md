@@ -6,7 +6,7 @@
 
 ## What & Why
 
-The per-vehicle booking calendar greys each booked range inclusive of both ends, so it refuses back-to-back rentals the database actually permits. The DB rule is a half-open window `[pickup 14:00, return 10:00)`, leaving a booking's two **changeover days** half-free — the pickup day's morning is still a valid new *return*, the return day's afternoon a valid new *pickup*. This slice (roadmap S-02a) renders those days as **half-available** so the UI matches the DB, recovering lost bookable inventory and removing a "guess again" UX.
+The per-vehicle booking calendar greys each booked range inclusive of both ends, so it refuses back-to-back rentals the database actually permits. The DB rule is a half-open window `[pickup 14:00, return 10:00)`, leaving a booking's two **changeover days** half-free — the pickup day's morning is still a valid new _return_, the return day's afternoon a valid new _pickup_. This slice (roadmap S-02a) renders those days as **half-available** so the UI matches the DB, recovering lost bookable inventory and removing a "guess again" UX.
 
 ## Starting Point
 
@@ -18,15 +18,15 @@ A booked range's pickup day shows a diagonal half-grey and is selectable only as
 
 ## Key Decisions Made
 
-| Decision                         | Choice                                              | Why (1 sentence)                                                              | Source   |
-| -------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- | -------- |
-| Where the logic lives            | Pure helper in `src/lib/availability.ts` + Vitest   | No UI test runner — correctness must live in a tested pure function           | Research |
-| DB / RPC changes                 | None — entirely client-side                         | `get_vehicle_busy_ranges` already returns the needed `[pickup, return]` pairs | Research |
-| Half-cell affordance             | 135° diagonal half-grey gradient                    | Spatially encodes which half (am/pm) is free; matches the proposal            | Plan     |
-| Accessibility                    | Visible legend **+** per-day `aria-label` (full)    | Half-cells are selectable (not `aria-disabled`) so SR users need an explicit signal | Plan |
-| Invalid-range recovery           | Reset to the clicked day + inline Polish hint       | Mirrors how `excludeDisabled` already handles blocked days; lets user re-pick | Plan     |
-| Scope of release                 | Everything-or-nothing (incl. real-device check)     | No half-finished half-cell UX in production                                   | Plan     |
-| Invalid range caught by          | `onSelect` veto via `isRangeBookable`, not CSS      | `excludeDisabled` only rejects ranges spanning a *fully*-disabled day         | Research |
+| Decision                | Choice                                            | Why (1 sentence)                                                                    | Source   |
+| ----------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- | -------- |
+| Where the logic lives   | Pure helper in `src/lib/availability.ts` + Vitest | No UI test runner — correctness must live in a tested pure function                 | Research |
+| DB / RPC changes        | None — entirely client-side                       | `get_vehicle_busy_ranges` already returns the needed `[pickup, return]` pairs       | Research |
+| Half-cell affordance    | 135° diagonal half-grey gradient                  | Spatially encodes which half (am/pm) is free; matches the proposal                  | Plan     |
+| Accessibility           | Visible legend **+** per-day `aria-label` (full)  | Half-cells are selectable (not `aria-disabled`) so SR users need an explicit signal | Plan     |
+| Invalid-range recovery  | Reset to the clicked day + inline Polish hint     | Mirrors how `excludeDisabled` already handles blocked days; lets user re-pick       | Plan     |
+| Scope of release        | Everything-or-nothing (incl. real-device check)   | No half-finished half-cell UX in production                                         | Plan     |
+| Invalid range caught by | `onSelect` veto via `isRangeBookable`, not CSS    | `excludeDisabled` only rejects ranges spanning a _fully_-disabled day               | Research |
 
 ## Scope
 
@@ -40,11 +40,11 @@ A booked range's pickup day shows a diagonal half-grey and is selectable only as
 
 ## Phases at a Glance
 
-| Phase                                          | What it delivers                                                   | Key risk                                                      |
-| ---------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------ |
-| 1. Pure helper + Vitest matrix                 | `dayAvailabilityMap` / `isRangeBookable` + 8-case tests            | Edge cases (adjacent shared day, one-day gap) — caught by tests |
-| 2. BookingWidget selection behavior            | Map-driven `disabled`/`modifiers`, `onSelect` veto + hint, aria   | `onSelect` veto must catch interior half-days CSS can't       |
-| 3. Half-cell visuals + legend + mobile verify  | Diagonal gradients, legend, real-device check                     | Diagonal split illegible/untappable on small mobile cell      |
+| Phase                                         | What it delivers                                                | Key risk                                                        |
+| --------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1. Pure helper + Vitest matrix                | `dayAvailabilityMap` / `isRangeBookable` + 8-case tests         | Edge cases (adjacent shared day, one-day gap) — caught by tests |
+| 2. BookingWidget selection behavior           | Map-driven `disabled`/`modifiers`, `onSelect` veto + hint, aria | `onSelect` veto must catch interior half-days CSS can't         |
+| 3. Half-cell visuals + legend + mobile verify | Diagonal gradients, legend, real-device check                   | Diagonal split illegible/untappable on small mobile cell        |
 
 **Prerequisites:** S-02 Phase 6 (done). Seeded back-to-back bookings (`07-01→07-10` + `07-10→07-15`) present for manual verification.
 **Estimated effort:** ~1-2 sessions across 3 phases (logic is small + pre-specified; bulk is UI wiring + a11y + mobile polish).
