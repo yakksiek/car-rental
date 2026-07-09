@@ -1,9 +1,10 @@
 ---
 change_id: deployment
 title: Cloudflare Workers integration & deployment (Workers Builds auto-deploy on main)
-status: implemented
+status: archived
 created: 2026-05-29
 updated: 2026-07-09
+archived_at: 2026-07-09T08:24:03Z
 ---
 
 ## Notes

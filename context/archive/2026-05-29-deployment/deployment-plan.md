@@ -9,16 +9,17 @@ the default branch auto-deploy without a GitHub Action (per the user's decision)
 Exploration found the repo is **already most of the way there** — the `infrastructure.md`
 "Getting Started" steps largely assume a fresh repo, but most are done:
 
-| Already in place | Detail |
-|---|---|
-| Adapter | `@astrojs/cloudflare` **v13.5.0**, `output: "server"`, `adapter: cloudflare()` |
-| `wrangler.jsonc` | exists: `nodejs_compat`, `compatibility_date 2026-05-08`, `ASSETS` binding → `./dist`, `observability.enabled` |
-| wrangler CLI | **v4.90.0** in devDependencies |
-| `.dev.vars` | exists with real Supabase creds, **gitignored** (`.dev.vars`, `.wrangler/`) |
-| Dev parity | Astro 6 runs `astro dev` on real **workerd** with `platformProxy` enabled by default — the register's "almost-Node dev parity" risk is largely mitigated already |
-| Env schema | `SUPABASE_URL`/`SUPABASE_KEY` declared `astro:env/server`, `secret`, `optional: true` |
+| Already in place | Detail                                                                                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adapter          | `@astrojs/cloudflare` **v13.5.0**, `output: "server"`, `adapter: cloudflare()`                                                                                   |
+| `wrangler.jsonc` | exists: `nodejs_compat`, `compatibility_date 2026-05-08`, `ASSETS` binding → `./dist`, `observability.enabled`                                                   |
+| wrangler CLI     | **v4.90.0** in devDependencies                                                                                                                                   |
+| `.dev.vars`      | exists with real Supabase creds, **gitignored** (`.dev.vars`, `.wrangler/`)                                                                                      |
+| Dev parity       | Astro 6 runs `astro dev` on real **workerd** with `platformProxy` enabled by default — the register's "almost-Node dev parity" risk is largely mitigated already |
+| Env schema       | `SUPABASE_URL`/`SUPABASE_KEY` declared `astro:env/server`, `secret`, `optional: true`                                                                            |
 
 **Genuine gaps this plan closes:**
+
 1. Worker `name` is still the starter default `"10x-astro-starter"` → rename to `fleetrent`.
 2. Production **runtime** secrets are not wired on Cloudflare (the load-bearing risk in the register).
 3. Supabase Auth (external integration) needs its **Site/Redirect URLs** pointed at the deployed URL or signup/email-confirm breaks.
@@ -34,29 +35,32 @@ Exploration found the repo is **already most of the way there** — the `infrast
 These set up the credentials and tools every later phase assumes. None of them deploy anything.
 
 ### P1 — Local toolchain
+
 - [ ] Use the pinned Node: `nvm use` (reads `.nvmrc` → **22.14.0**).
 - [ ] `npm ci` to install dependencies. **No global installs needed** — `wrangler` (v4.90.0) and `supabase` (v2.23.4) are already devDependencies; invoke them with `npx wrangler …` / `npx supabase …`.
 
 ### P2 — Cloudflare account + Wrangler auth
+
 - [ ] Create / confirm a Cloudflare account at **dash.cloudflare.com** (free tier is sufficient at FleetRent's scale).
 - [ ] `npx wrangler login` → opens a browser OAuth flow; authorize Wrangler. The token is stored locally (no secret in the repo).
 - [ ] Verify with `npx wrangler whoami` → should print your email + account name + account ID.
 - [ ] **Multiple Cloudflare accounts?** Pin the target so deploys don't go to the wrong one: add `"account_id": "<id>"` to `wrangler.jsonc` (or `export CLOUDFLARE_ACCOUNT_ID=<id>`). The ID is shown by `wrangler whoami` / in the dashboard URL.
-- [ ] *(Optional, non-interactive only)* If browser login isn't possible, create a **scoped API token** (`Workers Scripts:Edit`) and `export CLOUDFLARE_API_TOKEN=…`. Not required for the manual first deploy; Workers Builds issues its own token in Phase 3.
+- [ ] _(Optional, non-interactive only)_ If browser login isn't possible, create a **scoped API token** (`Workers Scripts:Edit`) and `export CLOUDFLARE_API_TOKEN=…`. Not required for the manual first deploy; Workers Builds issues its own token in Phase 3.
 
 ### P3 — Supabase project + keys (external integration)
+
 - [ ] Confirm dashboard access to the existing project (`.dev.vars` points at `https://recfckvdrnedcuqzpbtg.supabase.co`).
-- [ ] Locate credentials in **Supabase dashboard → Project Settings → API**:
-      - **Project URL** → use as `SUPABASE_URL`
-      - **Publishable key** (`sb_publishable_…` — the new client-safe key that replaced the legacy `anon` key) → use as `SUPABASE_KEY`. The app pairs this with `@supabase/ssr` for cookie-based, **RLS-enforced** sessions. **Do not** use the `secret`/`service_role` key here — it would bypass RLS and must never reach the client path.
+- [ ] Locate credentials in **Supabase dashboard → Project Settings → API**: - **Project URL** → use as `SUPABASE_URL` - **Publishable key** (`sb_publishable_…` — the new client-safe key that replaced the legacy `anon` key) → use as `SUPABASE_KEY`. The app pairs this with `@supabase/ssr` for cookie-based, **RLS-enforced** sessions. **Do not** use the `secret`/`service_role` key here — it would bypass RLS and must never reach the client path.
 - [ ] Confirm **Email** auth provider is enabled (**Authentication → Providers → Email**) — the signup / confirm-email flow (`src/pages/auth/*`) depends on it.
-- [ ] *(Site URL / Redirect URLs are configured in Phase 2, once the deployed URL exists.)*
+- [ ] _(Site URL / Redirect URLs are configured in Phase 2, once the deployed URL exists.)_
 
 ### P4 — Supabase CLI (optional — only when DB migrations appear)
+
 - [ ] No action required now: `supabase/config.toml` exists but `supabase/migrations/` is **empty**, so this deploy has no DB schema step.
 - [ ] If migrations are added later: `npx supabase login` → `npx supabase link --project-ref recfckvdrnedcuqzpbtg` → `npx supabase db push`. Recall the register caveat — schema changes do **not** roll back with `wrangler rollback`, so pair any migration with a manual revert plan.
 
 ### P5 — GitHub repo access (for Phase 3)
+
 - [ ] Confirm admin rights on the GitHub repo (needed to authorize the Cloudflare GitHub App) and that the default branch is **`main`**.
 
 **Gate:** `wrangler whoami` succeeds, Supabase URL + publishable key are in hand, and `.dev.vars` already holds them for local dev. Proceed to Phase 0.
@@ -84,8 +88,7 @@ Per `infrastructure.md`'s production-access boundary, the **first** production c
 - [ ] **First deploy:** `npm run build && npx wrangler deploy` → creates Worker `fleetrent` and returns the `*.workers.dev` URL. (Expect the config banner here — secrets not set yet.)
 - [ ] **Wire runtime secrets** (the load-bearing step — these are read at **runtime**, separate from build-time):
       `npx wrangler secret put SUPABASE_URL` and `npx wrangler secret put SUPABASE_KEY`.
-      Setting a secret redeploys the existing Worker automatically.
-      > Edge case: if `secret put` errors "Worker not found", it means the deploy in the prior step didn't complete — re-run `wrangler deploy` first.
+      Setting a secret redeploys the existing Worker automatically. > Edge case: if `secret put` errors "Worker not found", it means the deploy in the prior step didn't complete — re-run `wrangler deploy` first.
 - [ ] **Verify secrets resolved:** reload the `*.workers.dev` URL → catalog renders and the missing-config banner is **gone** (proves runtime secrets reach `astro:env/server` on workerd).
 - [ ] **Confirm ops loop:** `npx wrangler tail` streams live logs; `npx wrangler versions list` shows history (rollback target exists).
 
@@ -109,12 +112,7 @@ Cloudflare's Git integration (not a GitHub Action). This is a **dashboard / OAut
 
 - [ ] Dashboard → **Workers & Pages → `fleetrent` → Settings → Builds → Connect**.
 - [ ] Authorize the **Cloudflare GitHub App** for this repository (one-time OAuth; scope to this repo only).
-- [ ] Configure build settings:
-      - **Production branch:** `main`
-      - **Build command:** `npm run build`
-      - **Deploy command:** `npx wrangler deploy` (default)
-      - **Root directory:** blank (repo root)
-      - **Non-production branch command:** leave default `npx wrangler versions upload` (harmless; PR previews are out of scope but this just uploads a non-promoted version)
+- [ ] Configure build settings: - **Production branch:** `main` - **Build command:** `npm run build` - **Deploy command:** `npx wrangler deploy` (default) - **Root directory:** blank (repo root) - **Non-production branch command:** leave default `npx wrangler versions upload` (harmless; PR previews are out of scope but this just uploads a non-promoted version)
 - [ ] **Runtime secrets** are already set from Phase 1 (Settings → Variables & Secrets). Build-time vars are **not required** because the schema vars are `optional` — `astro build` won't fail without them. (Optional: add them as build variables too if you want build-time `astro:env` validation; not needed for MVP.)
 - [ ] **Trigger & verify:** push a trivial commit to `main` → confirm Cloudflare runs the build and deploys; the commit shows a Cloudflare check/status. Reload the URL to confirm the change shipped.
 
