@@ -1,5 +1,12 @@
 // core
 import { defineConfig, devices } from "@playwright/test";
+import dotenv from "dotenv";
+
+// Fixtures seed/tear down rows through a service-role Supabase client, whose
+// credentials live in `.env.test` alongside the integration harness's. Loaded
+// here so a spec importing `e2e/fixtures/*` finds them already in `process.env`.
+// The dev server does NOT read this file — it reads `.dev.vars` (see below).
+dotenv.config({ path: ".env.test", quiet: true });
 
 // E2E config. Complements the two Vitest projects in `vitest.config.ts` (unit,
 // integration) with the only layer that crosses every boundary at once:
