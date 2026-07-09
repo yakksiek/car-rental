@@ -22,6 +22,15 @@ pnpm-debug.log*
 .dev.vars
 .wrangler/
 
+# playwright — saved sessions are live credentials; reports/traces are artifacts
+playwright/.auth/
+playwright-report/
+test-results/
+blob-report/
+
+# playwright-cli — per-session snapshots and console logs from agent exploration
+.playwright-cli/
+
 # macOS-specific files
 .DS_Store
 
