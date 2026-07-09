@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-06-26
+updated: 2026-07-09
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -27,29 +27,29 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID    | Change ID                    | Outcome (user can …)                                                        | Prerequisites | PRD refs                | Status   |
-| ----- | ---------------------------- | --------------------------------------------------------------------------- | ------------- | ----------------------- | -------- |
-| F-01  | booking-integrity-data       | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails      | done     |
-| F-02  | employee-admin-roles         | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control          | done     |
-| S-01  | public-fleet-catalog         | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003   | done     |
-| S-02  | public-reservation-request   | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005       | done     |
-| S-03  | reservation-approval         | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010       | done     |
-| S-04  | fleet-management             | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                  | proposed |
-| S-05  | issue-protocol               | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR  | proposed |
-| S-06  | return-protocol-comparison   | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR  | proposed |
-| S-07  | overdue-returns-dashboard    | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                  | proposed |
-| S-08  | employee-account-management  | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                  | proposed |
+| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status   |
+| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | -------- |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done     |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done     |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done     |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done     |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done     |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done     |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | proposed |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | proposed |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                       | Chain                                | Note                                                                                          |
-| ------ | --------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------- |
-| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`             | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.           |
-| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06`    | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.          |
-| C      | Fleet & account admin       | `S-04` / `S-08`                      | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever. |
-| D      | Operations visibility       | `S-07`                               | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after. |
+| Stream | Theme                       | Chain                             | Note                                                                                           |
+| ------ | --------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------- |
+| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`          | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.            |
+| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06` | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.          |
+| C      | Fleet & account admin       | `S-04` / `S-08`                   | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever. |
+| D      | Operations visibility       | `S-07`                            | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after. |
 
 ## Baseline
 
@@ -155,7 +155,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Replaces F-01's seed with real CRUD; the deletion guard protects integrity (no orphaned active reservations). Fully independent of the booking and protocol chains — a prime candidate to interleave given the solo capacity constraint.
-- **Status:** proposed
+- **Status:** done
 
 ### S-05: Issue protocol
 
@@ -208,19 +208,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                    | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
-| ---------- | ---------------------------- | --------------------------------------------------------- | --------------------- | ----- |
-| F-01       | booking-integrity-data       | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data` |
-| F-02       | employee-admin-roles         | Employee/admin role model on existing auth                | yes                   | Parallel with F-01 |
-| S-01       | public-fleet-catalog         | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01 |
-| S-02       | public-reservation-request   | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01 |
-| S-02a      | changeover-day-availability   | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability` |
-| S-03       | reservation-approval         | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02 |
-| S-04       | fleet-management             | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable |
-| S-05       | issue-protocol               | Issue handover protocol + photos/signature + email        | no                    | Needs F-02, S-03; sets up storage + email |
-| S-06       | return-protocol-comparison   | Return protocol with auto-comparison + email              | no                    | Needs S-05 |
-| S-07       | overdue-returns-dashboard    | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable |
-| S-08       | employee-account-management  | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable |
+| Roadmap ID | Change ID                   | Suggested issue title                                     | Ready for `/10x-plan` | Notes                                                                  |
+| ---------- | --------------------------- | --------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------- |
+| F-01       | booking-integrity-data      | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data`                                 |
+| F-02       | employee-admin-roles        | Employee/admin role model on existing auth                | yes                   | Parallel with F-01                                                     |
+| S-01       | public-fleet-catalog        | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01                                                             |
+| S-02       | public-reservation-request  | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01                                           |
+| S-02a      | changeover-day-availability | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability` |
+| S-03       | reservation-approval        | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02                                                       |
+| S-04       | fleet-management            | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable                                       |
+| S-05       | issue-protocol              | Issue handover protocol + photos/signature + email        | no                    | Needs F-02, S-03; sets up storage + email                              |
+| S-06       | return-protocol-comparison  | Return protocol with auto-comparison + email              | no                    | Needs S-05                                                             |
+| S-07       | overdue-returns-dashboard   | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable                                       |
+| S-08       | employee-account-management | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable                                             |
 
 ## Open Roadmap Questions
 
@@ -251,3 +251,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: A visitor can browse vehicles by category, filter by specs and available dates, and open a vehicle detail card with technical specs, cargo dimensions, photos, and pricing.** — Archived 2026-06-25 → `context/archive/2026-06-05-public-fleet-catalog/`. Lesson: —.
 - **S-02: A visitor can submit a reservation request (name, email, phone, vehicle, dates) without an account, and overlapping dates on an already-booked vehicle are blocked before submission; the request lands for employee approval.** — Archived 2026-06-25 → `context/archive/2026-06-07-public-reservation-request/`. Lesson: —.
 - **S-03: A logged-in employee can view all pending reservation requests and accept or reject each one; accepting confirms the booking against the overlap rule.** — Archived 2026-06-26 → `context/archive/2026-06-17-reservation-approval/`. Lesson: —.
+- **S-04: A logged-in employee can add and edit vehicles in the fleet, and remove a vehicle — with removal blocked when active reservations exist (employee must cancel them first).** — Archived 2026-07-09 → `context/archive/2026-06-17-fleet-management/`. Lesson: —.
