@@ -2,6 +2,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // others
+import { POST as protocolCreatePOST } from "../../src/pages/api/protocols";
+import { POST as protocolPdfPOST } from "../../src/pages/api/protocols/[id]/pdf";
+import { POST as protocolResendPOST } from "../../src/pages/api/protocols/[id]/resend-email";
 import { POST as reservationFunnelPOST } from "../../src/pages/api/reservations";
 import { PATCH as reservationDecidePATCH } from "../../src/pages/api/reservations/[id]";
 import { GET as calendarGET } from "../../src/pages/api/reservations/calendar";
@@ -31,6 +34,10 @@ import { anonContext, asContext } from "../helpers/context";
 // vehicle routes return 401 for a signed-out caller (`!locals.user` check);
 // reservation routes return 403 (no user check — a null role just fails the
 // role gate). See finding-anon-status-inconsistency.md (Phase 5).
+// S-05 resolved F2 for NEW routes only: the three protocol routes adopt the
+// vehicles two-step (401 then 403), the shape lessons.md cites as reference.
+// The reservation-route assertions above stay as they are — that retrofit is a
+// separate change.
 //
 // Disposable scope: a dedicated vehicle outside the seeded `1111…`–`7777…`
 // fleet, on far-future dates, seeded/torn down via service-role like
@@ -380,6 +387,45 @@ describe("API authz matrix (#4)", () => {
       // service-role that the database was never touched.
       const { data } = await svc.from("reservations").select("id").eq("vehicle_id", TEST_VEHICLE_ID);
       expect(data ?? []).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The three S-05 protocol routes. Every deny case fires at the gate, before
+  // any DB work — so an empty body and a non-existent id are enough, and no
+  // fixture (and no email adapter swap) is needed. The allow paths and the
+  // commit-then-email contract live in protocols-api.test.ts.
+  // -------------------------------------------------------------------------
+  describe.each([
+    { name: "POST /api/protocols (submit)", handler: protocolCreatePOST, path: "/api/protocols", params: undefined },
+    {
+      name: "POST /api/protocols/[id]/pdf (finalize + send)",
+      handler: protocolPdfPOST,
+      path: `/api/protocols/${DUMMY_ID}/pdf`,
+      params: { id: DUMMY_ID },
+    },
+    {
+      name: "POST /api/protocols/[id]/resend-email (recovery)",
+      handler: protocolResendPOST,
+      path: `/api/protocols/${DUMMY_ID}/resend-email`,
+      params: { id: DUMMY_ID },
+    },
+  ])("$name", ({ handler, path, params }) => {
+    const body = {};
+
+    it("anon → 401 (protocol routes check !locals.user first — the F2 resolution)", async () => {
+      const res = await handler(anonContext({ method: "POST", path, params, body }));
+      expect(res.status).toBe(401);
+    });
+
+    it("norole → 403", async () => {
+      const res = await handler(await asContext("norole", { method: "POST", path, params, body }));
+      expect(res.status).toBe(403);
+    });
+
+    it("CSRF: foreign Origin → 403 (before auth, runnable as anon)", async () => {
+      const res = await handler(anonContext({ method: "POST", path, params, body, origin: FOREIGN_ORIGIN }));
+      expect(res.status).toBe(403);
     });
   });
 });

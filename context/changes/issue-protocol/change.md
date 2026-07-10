@@ -143,6 +143,25 @@ archived_at: null
      PDF in a real inbox, diacritics intact). Its Progress row stays `- [ ]` and `/10x-archive` will surface it as
      an informational warning; that is the correct signal, because the thing it asks for has genuinely not been
      proven yet at this phase.
+- 2026-07-10 — **Phase 3 implemented.** Three self-gating routes: `POST /api/protocols` (commit, no email),
+  `POST /api/protocols/[id]/pdf` (store `pdf_path` → sign → send, 200 either way), and
+  `POST /api/protocols/[id]/resend-email` (recovery, 409 when `pdf_path` is null). F2 resolved for new routes
+  only: all three use the vehicles two-step (`!user` → 401, then role → 403); the reservation routes' 403-for-anon
+  assertions in `api-authz.test.ts` stay untouched. Four notes:
+  1. **`tests/helpers/email.ts` landed here, not in Phase 7.** Criterion 3.7 ("a finalize call whose email throws
+     still returns 200") cannot be proven without a throwing adapter — `devLogAdapter` never throws. The capturing
+     and throwing doubles are the ones Phase 7 §1 specifies, injected via `setEmailAdapter`; Phase 7 consumes them
+     rather than creating them.
+  2. **The finalize route pins `path` to `issue/<id>/…​.pdf`** via its own zod refine, mirroring
+     `protocolInputSchema`'s `superRefine`. Not in the plan. `set_protocol_pdf` records whatever path it is handed
+     and `storage.objects` RLS scopes only to the `issue/` prefix, so without it one protocol's `pdf_path` could
+     point at another protocol's evidence.
+  3. **The bucket's `allowed_mime_types` reads the Blob's `type`, not storage-js's `contentType` option.** An
+     upload of a bare `new Blob([bytes])` is rejected as `application/octet-stream`. The test fixture sets
+     `new Blob([bytes], { type: "application/pdf" })`; the Phase 5 island must do the same for photos and the PDF.
+  4. **Both send routes return `{ status: "ok", delivery: "sent" | "failed" }`.** The delivery status is a body
+     field, never an HTTP status — that separation is what lets the island pick its `sent` / `email` overlay while
+     the handover itself reads as succeeded.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are
