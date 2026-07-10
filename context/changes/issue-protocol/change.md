@@ -162,6 +162,67 @@ archived_at: null
   4. **Both send routes return `{ status: "ok", delivery: "sent" | "failed" }`.** The delivery status is a body
      field, never an HTTP status — that separation is what lets the island pick its `sent` / `email` overlay while
      the handover itself reads as succeeded.
+
+  Reproducing 3.8 by hand: `POST /api/auth/signin` needs an `Origin` header too — Astro's _built-in_ CSRF check
+  rejects form POSTs without one (`Cross-site POST form submissions are forbidden`), so a curl sign-in that omits
+  it silently yields an empty cookie jar and the next request 401s for the wrong reason. With a real `norole`
+  session the route answers 403 `Brak uprawnień.`, while `employee` on the _same_ malformed body answers 400 with
+  zod's field errors — and zod runs after the role gate and before the RPC, which is what proves the 403 never
+  reached Postgres. Separately: `api-authz.test.ts`'s decide allow-path leaves its `email_deliveries` rows behind
+  (harmless — `protocols-api.test.ts` scopes cleanup to `entity_type = 'protocol'` — but they accumulate).
+
+- 2026-07-10 — **Phase 4 implemented.** `compressImage`, `isHeic` + lazy `heic2any`, `buildProtocolPdf`
+  (+ `fonts.ts`, `protocol-labels.ts`). Seven findings, one of which **changes Phase 5**:
+  1. **⚠ `client:load` puts the island's whole module graph into the Worker bundle.** Measured with a throwaway
+     probe island: an island that imports `protocol-pdf` builds a Worker of **6,002 KiB raw / 1,506 KiB gzip**, vs.
+     a **2,704 KiB / 559 KiB** baseline. pdf-lib and heic2any land in `dist/server/chunks/` _as well as_
+     `dist/client/`, because Astro server-renders a `client:load` island to produce its initial HTML, so the server
+     build must be able to execute the component — and emits everything reachable from it.
+     **Converting the imports to `await import(...)` does not help**: Vite's SSR build follows the dynamic-import
+     edge and still emits the chunks (6,003 KiB). _Reachability_ is the criterion, not whether the code could ever
+     run on the server. The only lever that works is **`client:only="react"`**, which keeps the component out of the
+     server build's entry graph entirely and restores a byte-identical 2,703.55 KiB / 74-module Worker — with plain
+     static imports, no dynamic-import gymnastics.
+     **This is a budget finding, not a hard-limit one.** Cloudflare's 3 MB cap applies to the _gzipped_ bundle, and
+     1,506 KiB gzip still fits. Correcting an earlier overstatement in this log: `client:load` would not have failed
+     the deploy. It would have spent ~950 KiB gzip — about half the remaining headroom — on code the Worker can never
+     execute, and would quietly invalidate the plan's "headroom is ~2,517 KiB gzip (~5.5×)" premise. S-06's return
+     protocol reuses this same pipeline, so the waste compounds.
+     Consequence for the plan: **Phase 5 §2's "Mount `client:load`" is wrong for `ProtocolForm` and must become
+     `client:only="react"`.** The stated guardrail ("never import them at SSR module scope") is necessary but not
+     sufficient — an island's own module scope _is_ SSR-reachable whenever the island is server-rendered. The cost of
+     `client:only` is nil here: the form is staff-only behind auth, so no SEO or no-JS story is being protected.
+     Confirmed `heic2any` splits into its own 1,324 KiB chunk (333 KiB gzip) that the initial island load never pulls.
+  2. **Fonts are a subset, embedded as a `?inline` data URI.** Noto Sans Regular + Bold (OFL), `pyftsubset`-ed to
+     ASCII + Latin-1 + Latin Extended-A + the punctuation the copy uses: **393 KB → 23 KB each**. `?inline` (not
+     `?url`) because it resolves to a `data:font/ttf;base64,…` URI that `fetch` reads identically in the browser
+     and under vitest's node environment — so the diacritic test exercises the _exact bytes the phone ships_.
+     `?url` yields `/src/assets/…`, which node cannot fetch. Regeneration command + the unicode ranges are in
+     `src/assets/fonts/README.md`; widening the copy beyond those ranges needs a re-subset.
+  3. **"It does not throw" is NOT a sufficient diacritic test.** Unlike a standard WinAnsi font, an _embedded_ font
+     renders a character it lacks a glyph for as `.notdef` (a tofu box) and returns quietly. A subset regenerated
+     with too narrow a range would pass the plan's criterion 4.2 while shipping the customer a name full of boxes.
+     Added a direct `fontkit.layout(...)` glyph-coverage assertion over `ą ć ę ł ń ó ś ź ż` + uppercase, per weight.
+     The upside of the same fact: a stray Cyrillic character in a damage note costs a tofu box, not the protocol.
+  4. **pdf-lib's `embedJpg` reads `bytes.buffer` and ignores `byteOffset`.** Any `Uint8Array` that is a _view_ into
+     a larger buffer — every node `Buffer`, anything from `.subarray()` — is read from the wrong offset, throwing
+     `SOI not found in JPEG` if you are lucky and embedding garbage if you are not. `buildProtocolPdf` now
+     `tighten()`s every image before embedding. The browser path (`new Uint8Array(await blob.arrayBuffer())`) is
+     already tight, so this is pure insurance against a future caller.
+  5. **`buildProtocolPdf` returns a `Blob` typed `application/pdf`, not the plan's `Uint8Array`** — and
+     `compressImage` returns a Blob typed `image/jpeg`. Direct consequence of the Phase 3 §3 finding: the bucket's
+     `allowed_mime_types` reads the Blob's own `type`, so an untyped blob uploads as `application/octet-stream` and
+     is rejected. Both are normalized defensively rather than trusting the canvas/`heic2any` to set it.
+  6. **`isHeic` sniffs ten ISO-BMFF brands, not two.** `mif1`/`msf1` are _generic_ HEIF brands an iPhone also
+     emits, so a sniff that only looks for `heic`/`heix` waves them through and Chrome renders a blank. The plan's
+     "attempted-`createImageBitmap`-and-catch fallback" was dropped: magic bytes are authoritative, and the residual
+     case (a format the browser cannot decode) is better served by letting `compressImage` **throw loudly** into the
+     tile's `failed` / `Ponów` state than by silently uploading a blank rectangle. The fallback is now the MIME type,
+     used only when the file is too short to sniff.
+  7. **`compressImage` falls back to `HTMLCanvasElement.toBlob`** when `OffscreenCanvas` is absent — iOS Safari only
+     gained it in 16.4, and an employee's phone is exactly the device that lags. Also added `src/lib/protocol-labels.ts`
+     (slot + damage-type Polish labels, `fuelLabelPl`) since the PDF and the Phase 5 form must not name a slot
+     differently on screen and in the customer's only copy of the evidence.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are
