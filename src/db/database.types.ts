@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_deliveries: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          error: string | null
+          id: string
+          recipient: string
+          status: string
+          template: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          error?: string | null
+          id?: string
+          recipient: string
+          status: string
+          template: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          error?: string | null
+          id?: string
+          recipient?: string
+          status?: string
+          template?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -54,6 +87,140 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      protocol_damage_photos: {
+        Row: {
+          damage_id: string
+          id: string
+          path: string
+        }
+        Insert: {
+          damage_id: string
+          id?: string
+          path: string
+        }
+        Update: {
+          damage_id?: string
+          id?: string
+          path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_damage_photos_damage_id_fkey"
+            columns: ["damage_id"]
+            isOneToOne: false
+            referencedRelation: "protocol_damages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocol_damages: {
+        Row: {
+          id: string
+          location: string
+          protocol_id: string
+          size: string | null
+          type: Database["public"]["Enums"]["protocol_damage_type"]
+        }
+        Insert: {
+          id: string
+          location: string
+          protocol_id: string
+          size?: string | null
+          type: Database["public"]["Enums"]["protocol_damage_type"]
+        }
+        Update: {
+          id?: string
+          location?: string
+          protocol_id?: string
+          size?: string | null
+          type?: Database["public"]["Enums"]["protocol_damage_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_damages_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocol_photos: {
+        Row: {
+          id: string
+          path: string
+          protocol_id: string
+          slot: Database["public"]["Enums"]["protocol_photo_slot"]
+        }
+        Insert: {
+          id?: string
+          path: string
+          protocol_id: string
+          slot: Database["public"]["Enums"]["protocol_photo_slot"]
+        }
+        Update: {
+          id?: string
+          path?: string
+          protocol_id?: string
+          slot?: Database["public"]["Enums"]["protocol_photo_slot"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_photos_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocols: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_ack: boolean
+          fuel_eighths: number
+          id: string
+          odometer_km: number
+          pdf_path: string | null
+          reservation_id: string
+          signature: string
+          signed_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_ack: boolean
+          fuel_eighths: number
+          id: string
+          odometer_km: number
+          pdf_path?: string | null
+          reservation_id: string
+          signature: string
+          signed_at: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_ack?: boolean
+          fuel_eighths?: number
+          id?: string
+          odometer_km?: number
+          pdf_path?: string | null
+          reservation_id?: string
+          signature?: string
+          signed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocols_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: true
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reservations: {
         Row: {
@@ -149,6 +316,7 @@ export type Database = {
           payload_capacity_kg: number | null
           per_extra_km_rate: number
           photos: string[]
+          plate: string
           production_year: number | null
           seats: number | null
           transmission: Database["public"]["Enums"]["transmission_type"] | null
@@ -173,6 +341,7 @@ export type Database = {
           payload_capacity_kg?: number | null
           per_extra_km_rate: number
           photos?: string[]
+          plate: string
           production_year?: number | null
           seats?: number | null
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
@@ -197,6 +366,7 @@ export type Database = {
           payload_capacity_kg?: number | null
           per_extra_km_rate?: number
           photos?: string[]
+          plate?: string
           production_year?: number | null
           seats?: number | null
           transmission?: Database["public"]["Enums"]["transmission_type"] | null
@@ -230,6 +400,7 @@ export type Database = {
           payload_capacity_kg: number | null
           per_extra_km_rate: number
           photos: string[]
+          plate: string
           production_year: number | null
           seats: number | null
           transmission: Database["public"]["Enums"]["transmission_type"] | null
@@ -243,6 +414,23 @@ export type Database = {
         }
       }
       base36_encode: { Args: { p_value: number }; Returns: string }
+      create_protocol: {
+        Args: {
+          p_customer_ack: boolean
+          p_damages: Json
+          p_fuel_eighths: number
+          p_id: string
+          p_odometer_km: number
+          p_photos: Json
+          p_reservation_id: string
+          p_signature: string
+          p_signed_at: string
+        }
+        Returns: {
+          protocol_id: string
+          result: string
+        }[]
+      }
       create_reservation_request: {
         Args: {
           p_company?: string
@@ -288,6 +476,32 @@ export type Database = {
           vehicle_production_year: number
         }[]
       }
+      get_protocol: {
+        Args: { p_id: string }
+        Returns: {
+          created_at: string
+          customer_ack: boolean
+          customer_email: string
+          customer_name: string
+          damages: Json
+          delivery_created_at: string
+          delivery_status: string
+          fuel_eighths: number
+          id: string
+          odometer_km: number
+          pdf_path: string
+          photos: Json
+          pickup_date: string
+          reference: string
+          reservation_id: string
+          return_date: string
+          signature: string
+          signed_at: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_plate: string
+        }[]
+      }
       get_reservation_status: {
         Args: { p_token: string }
         Returns: {
@@ -311,6 +525,26 @@ export type Database = {
         Returns: {
           pickup_date: string
           return_date: string
+        }[]
+      }
+      list_dispatch_today: {
+        Args: never
+        Returns: {
+          customer_email: string
+          customer_name: string
+          delivery_created_at: string
+          delivery_status: string
+          last_odometer_km: number
+          pdf_path: string
+          pickup_date: string
+          protocol_id: string
+          reference: string
+          reservation_id: string
+          return_date: string
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_plate: string
         }[]
       }
       list_pending_reservations: {
@@ -349,6 +583,23 @@ export type Database = {
           vehicle_model: string
         }[]
       }
+      record_email_delivery: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_error?: string
+          p_recipient: string
+          p_status: string
+          p_template: string
+        }
+        Returns: undefined
+      }
+      set_protocol_pdf: {
+        Args: { p_id: string; p_path: string }
+        Returns: {
+          result: string
+        }[]
+      }
       set_vehicle_active: {
         Args: { p_active: boolean; p_id: string }
         Returns: {
@@ -358,6 +609,14 @@ export type Database = {
     }
     Enums: {
       app_role: "employee" | "admin"
+      protocol_damage_type: "scratch" | "dent" | "crack" | "missing"
+      protocol_photo_slot:
+        | "front"
+        | "rear"
+        | "left"
+        | "right"
+        | "interior"
+        | "dashboard"
       reservation_status: "pending" | "confirmed" | "rejected" | "cancelled"
       transmission_type: "manual" | "automatic"
       vehicle_category:
@@ -497,6 +756,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["employee", "admin"],
+      protocol_damage_type: ["scratch", "dent", "crack", "missing"],
+      protocol_photo_slot: [
+        "front",
+        "rear",
+        "left",
+        "right",
+        "interior",
+        "dashboard",
+      ],
       reservation_status: ["pending", "confirmed", "rejected", "cancelled"],
       transmission_type: ["manual", "automatic"],
       vehicle_category: [

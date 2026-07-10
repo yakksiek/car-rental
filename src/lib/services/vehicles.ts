@@ -170,9 +170,18 @@ export async function getVehicleById(client: CatalogClient | null, id: string): 
 // write (e.g. a non-staff role slips past the route gate). Maps to `unauthorized`.
 const PG_INSUFFICIENT_PRIVILEGE = "42501";
 
-export type CreateVehicleResult = { status: "created"; vehicle: Vehicle } | { status: "unauthorized" };
+// Postgres `unique_violation` — the only unique constraint a caller can trip on
+// this table is `vehicles_plate_unique` (S-05). Surfaced as a typed miss so the
+// route can return it as a per-field 400 rather than a 500.
+const PG_UNIQUE_VIOLATION = "23505";
+
+export type CreateVehicleResult =
+  | { status: "created"; vehicle: Vehicle }
+  | { status: "duplicate_plate" }
+  | { status: "unauthorized" };
 export type UpdateVehicleResult =
   | { status: "updated"; vehicle: Vehicle }
+  | { status: "duplicate_plate" }
   | { status: "not_found" }
   | { status: "unauthorized" };
 export interface SetVehicleActiveResult {
@@ -193,6 +202,9 @@ export async function createVehicle(client: CatalogClient | null, input: Vehicle
   if (error) {
     if (error.code === PG_INSUFFICIENT_PRIVILEGE) {
       return { status: "unauthorized" };
+    }
+    if (error.code === PG_UNIQUE_VIOLATION) {
+      return { status: "duplicate_plate" };
     }
     throw error;
   }
@@ -218,6 +230,9 @@ export async function updateVehicle(
   if (error) {
     if (error.code === PG_INSUFFICIENT_PRIVILEGE) {
       return { status: "unauthorized" };
+    }
+    if (error.code === PG_UNIQUE_VIOLATION) {
+      return { status: "duplicate_plate" };
     }
     throw error;
   }

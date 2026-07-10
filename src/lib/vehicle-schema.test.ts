@@ -10,6 +10,7 @@ import { vehicleInputSchema } from "./vehicle-schema";
 // `null` (or `[]` for photos).
 const VALID = {
   name: "Mercedes Sprinter",
+  plate: "WX 1234A",
   category: "cargo_van",
   daily_rate: "120.00",
   monthly_rate: "3000",
@@ -55,6 +56,12 @@ describe("vehicleInputSchema", () => {
 
   it("rejects a missing name", () => {
     expect(messagesOf({ ...VALID, name: "   " })).toContain("Podaj nazwę pojazdu.");
+  });
+
+  // `plate` became required in S-05 (vehicles.plate is not null + unique) — the
+  // fleet holds many identical models, so it is the only field telling them apart.
+  it("rejects a missing plate", () => {
+    expect(messagesOf({ ...VALID, plate: "   " })).toContain("Podaj numer rejestracyjny.");
   });
 
   it("rejects an unknown category", () => {

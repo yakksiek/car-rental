@@ -1,7 +1,7 @@
 ---
 change_id: issue-protocol
 title: Issue protocol
-status: plan_reviewed
+status: implementing
 created: 2026-07-09
 updated: 2026-07-10
 archived_at: null
@@ -82,6 +82,40 @@ archived_at: null
      non-blocking call that rested on the `devLogAdapter` fallback. Rationale: a slice whose only exercised path
      is `console.log` has not proven the thing it exists to do. Definition of done = one real protocol emailed to
      a real inbox with `ą ć ę ł ń ó ś ź ż` rendering correctly in the PDF. `roadmap.md` reconciled to match.
+- 2026-07-10 — **Phase 1 implemented.** The §4 storage spike passed on the first `db reset`: a plain migration
+  _can_ create the bucket and its `storage.objects` policies (postgres inherits `supabase_storage_admin`), so
+  neither documented fallback was needed. Employee upload/download OK; anon and role-null denied at both verbs;
+  the MIME allowlist and the `issue/` prefix scope both bite. Three deviations from the plan, all found by tests:
+  1. **`grant execute … to authenticated` is decorative.** Postgres grants EXECUTE to `PUBLIC` by default and
+     Supabase's default privileges add an explicit `anon` grant, so all five RPCs were anon-callable (their
+     in-RPC role gates held, so nothing leaked — but criterion 1.6 failed). Fixed with an explicit
+     `revoke execute … from public, anon` per function. **This is the same default-grant shape as the
+     `reservations` PII leak, one layer up** — though NOT exploitable, unlike that one: verified by probing all
+     four staff RPCs as `anon` (including `decide_reservation` confirm + `set_vehicle_active` retire), each
+     returned `unauthorized`/`[]` and changed no state. Tables have no in-function guard; RPCs do. Captured as
+     `lessons.md` → "Revoke EXECUTE before granting it".
+     **FOLLOW-UP CHANGE (agreed 2026-07-10, to run AFTER S-05 ships):** harden repo-wide —
+     (a) `alter default privileges in schema public revoke execute on functions from public, anon, authenticated;`
+     so future functions start closed; (b) explicit `revoke execute … from public, anon` on the four pre-existing
+     staff RPCs (`decide_reservation`, `set_vehicle_active`, `list_pending_reservations`,
+     `list_reservations_for_calendar`); (c) an integration test pinning anon-uncallability. Carve-outs: the four
+     intentionally-public RPCs (`available_vehicles`, `get_vehicle_busy_ranges`, `get_reservation_status`,
+     `create_reservation_request`) already carry an explicit `grant … to anon` and survive untouched; a helper
+     called from inside an RLS policy (`current_app_role()`) runs as the querying role and needs its own explicit
+     grant to `authenticated`. Run `/10x-new rpc-execute-grant-hardening`.
+  2. **Two more test files needed `plate`**, not just the `reservations-overlap.test.ts` the plan named:
+     `api-authz.test.ts` and `api-validation.test.ts` both upsert a harness vehicle, and `api-authz`'s request
+     body fixture also had to gain the field (the shared schema now requires it). Plates must be distinct — the
+     column is unique.
+  3. **No DELETE policy on `storage.objects`** (decided 2026-07-10, surfaced by the 1.10 manual check when the
+     employee's cleanup `DELETE` returned 403). Intentional: the protocol is the customer's dispute evidence, so
+     it is append-only at the storage layer and no role may delete through the app. Orphaned bytes from abandoned
+     form sessions are accepted (service-role cleanup only); photo retry is unaffected (upsert = UPDATE). Also
+     learned: Supabase blocks direct SQL `delete from storage.objects` via a `storage.protect_delete()` trigger.
+  4. **A duplicate plate would have 500'd.** The new unique constraint makes `23505` reachable from the S-04
+     create/edit routes, which rethrow unexpected DB errors. Added a `duplicate_plate` tag to
+     `createVehicle`/`updateVehicle` and mapped it to the existing `400 {errors: {plate}}` contract the form
+     already re-maps onto inputs. Not in the plan; the constraint made it necessary.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are

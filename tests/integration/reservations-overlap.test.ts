@@ -56,6 +56,9 @@ beforeAll(async () => {
   const { error } = await svc.from("vehicles").insert({
     id: TEST_VEHICLE_ID,
     name: "Overlap Harness Vehicle",
+    // `plate` is NOT NULL + unique since S-05; a harness-only value keeps it
+    // clear of the seven seeded `WX ...` plates.
+    plate: "ZZ TEST01",
     category: "cargo_van",
     daily_rate: 100,
     monthly_rate: 2000,
