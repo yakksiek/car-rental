@@ -19,6 +19,7 @@ const MSG = {
   unauthenticated: "Wymagane logowanie.",
   forbidden: "Brak uprawnień.",
   notFound: "Nie znaleziono pojazdu.",
+  duplicatePlate: "Pojazd o tym numerze rejestracyjnym już istnieje.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -67,5 +68,7 @@ export const PATCH: APIRoute = async (context) => {
       return json(404, { error: MSG.notFound });
     case "unauthorized":
       return json(403, { error: MSG.forbidden });
+    case "duplicate_plate":
+      return json(400, { errors: { plate: MSG.duplicatePlate } });
   }
 };

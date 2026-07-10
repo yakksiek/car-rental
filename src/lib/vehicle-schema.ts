@@ -12,6 +12,7 @@ import { z } from "zod";
 
 const MSG = {
   name: "Podaj nazwę pojazdu.",
+  plate: "Podaj numer rejestracyjny.",
   category: "Wybierz kategorię pojazdu.",
   rate: "Podaj dodatnią kwotę.",
   transmission: "Wybierz skrzynię biegów.",
@@ -88,8 +89,11 @@ function optionalText() {
 }
 
 export const vehicleInputSchema = z.object({
-  // Required identity + pricing.
+  // Required identity + pricing. `plate` is unique in the DB — the fleet holds
+  // many identical models, so it is the only field that tells two of them apart
+  // on the dispatch list and the protocol PDF (S-05).
   name: z.string(MSG.name).trim().min(1, MSG.name),
+  plate: z.string(MSG.plate).trim().min(1, MSG.plate),
   category: z.enum(VEHICLE_CATEGORIES, MSG.category),
   daily_rate: requiredPositive(MSG.rate),
   monthly_rate: requiredPositive(MSG.rate),

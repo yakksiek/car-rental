@@ -66,6 +66,9 @@ export async function createBookedVehicle(): Promise<BookedVehicle> {
     .from("vehicles")
     .insert({
       name: `E2E Fixture ${stamp}`,
+      // `plate` is NOT NULL + unique since S-05. It carries the same timestamp
+      // stamp as the name so parallel runs and re-runs never collide on it.
+      plate: `E2E ${stamp}`,
       category: "cargo_van",
       make: "E2E",
       model: "Fixture",

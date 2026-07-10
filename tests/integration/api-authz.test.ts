@@ -61,10 +61,15 @@ const FUTURE_RETURN = "2031-05-10";
 
 const FOREIGN_ORIGIN = "https://evil.example.com";
 
-/** A complete, schema-valid vehicle create/edit payload (strings coerce). */
-function vehiclePayload(name: string) {
+/**
+ * A complete, schema-valid vehicle create/edit payload (strings coerce).
+ * `plate` is required + unique since S-05, so the create probe and the edit probe
+ * must carry different ones — the employee-authorized POST and PATCH both write.
+ */
+function vehiclePayload(name: string, plate = "ZZ PROBE1") {
   return {
     name,
+    plate,
     category: "cargo_van",
     daily_rate: "150.00",
     monthly_rate: "3000",
@@ -104,6 +109,8 @@ async function upsertHarnessVehicle() {
   const { error } = await svc.from("vehicles").upsert({
     id: TEST_VEHICLE_ID,
     name: TEST_VEHICLE_NAME,
+    // `plate` is NOT NULL + unique since S-05; each harness vehicle needs its own.
+    plate: "ZZ AUTH01",
     category: "cargo_van",
     daily_rate: 100,
     monthly_rate: 2000,
@@ -298,7 +305,13 @@ describe("API authz matrix (#4)", () => {
 
     it("employee → 200 on the disposable vehicle", async () => {
       const res = await vehicleUpdatePATCH(
-        await asContext("employee", { method: "PATCH", path, params, body: vehiclePayload(UPDATE_EDITED_NAME) }),
+        await asContext("employee", {
+          method: "PATCH",
+          path,
+          params,
+          // A plate distinct from the create probe's, which the sibling POST test writes.
+          body: vehiclePayload(UPDATE_EDITED_NAME, "ZZ EDIT01"),
+        }),
       );
       expect(res.status).toBe(200);
     });

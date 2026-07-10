@@ -134,6 +134,70 @@ export interface BookingWindow {
 }
 
 // ---------------------------------------------------------------------------
+// Issue protocol (S-05) — the handover record. Like S-02/S-03, every read and
+// write crosses the RLS boundary through a SECURITY DEFINER RPC (the five new
+// tables carry a `revoke all` and no policies at all), so the view contracts are
+// RPC-shaped while the entities are table-row-shaped.
+//
+// "Issued" is not a reservation_status value — it is the existence of a
+// `protocols` row, which is why the EXCLUDE overlap predicate is untouched.
+//
+// NOTE: `odometer_km` is `int` and `fuel_eighths` is `smallint`, so both really
+// are numbers at runtime — unlike the numeric(10,2) money fields above. Do not
+// add a numeric column here.
+// ---------------------------------------------------------------------------
+
+export type Protocol = Database["public"]["Tables"]["protocols"]["Row"];
+export type ProtocolPhoto = Database["public"]["Tables"]["protocol_photos"]["Row"];
+export type ProtocolDamage = Database["public"]["Tables"]["protocol_damages"]["Row"];
+export type EmailDelivery = Database["public"]["Tables"]["email_deliveries"]["Row"];
+
+export type ProtocolPhotoSlot = Database["public"]["Enums"]["protocol_photo_slot"];
+export type ProtocolDamageType = Database["public"]["Enums"]["protocol_damage_type"];
+
+// One row of the dispatch list: today's confirmed reservations with their
+// protocol state folded in. `protocol_id` null ⇒ still awaiting handover (the
+// row offers `Wydaj`); non-null ⇒ already issued, carrying `pdf_path` and the
+// newest delivery status for the badge + resend action. `last_odometer_km` is
+// the soft-warning baseline, never a hard block.
+export type DispatchRow = Database["public"]["Functions"]["list_dispatch_today"]["Returns"][number];
+
+// The full protocol for the read-only view screen: photos and damages arrive as
+// jsonb aggregates, so they are typed here rather than left as `Json`.
+export type ProtocolView = Omit<
+  Database["public"]["Functions"]["get_protocol"]["Returns"][number],
+  "photos" | "damages"
+> & {
+  photos: { slot: ProtocolPhotoSlot; path: string }[];
+  damages: ProtocolDamageItem[];
+};
+
+// A damage item as it crosses the wire: `id` is client-minted (it keys the
+// item's storage objects, so it must exist before the first byte uploads).
+// The `existing | new` tag is derived at return time (S-06) by diffing against
+// this issue baseline — never stored at pickup.
+export interface ProtocolDamageItem {
+  id: string;
+  type: ProtocolDamageType;
+  location: string;
+  size: string | null;
+  photos: string[];
+}
+
+// Typed union over `create_protocol`'s result tag. `conflict` carries the
+// existing protocol's id so the conflict screen can link to it.
+export type CreateProtocolResult =
+  | { status: "ok"; protocolId: string }
+  | { status: "conflict"; protocolId: string }
+  | { status: "not_found" }
+  | { status: "not_confirmed" }
+  | { status: "unauthorized" };
+
+// The outcome of a tracked send. Never thrown — recorded in `email_deliveries`
+// and surfaced on the dispatch row, because email is the customer's only channel.
+export type DeliveryStatus = "sent" | "failed";
+
+// ---------------------------------------------------------------------------
 // Public catalog (S-01) — filter state carried in the URL and read by the
 // fleet listing + filter island. `pickup`/`return` are ISO `YYYY-MM-DD` strings
 // (or null when no range is set); presence of a *valid* range routes the query

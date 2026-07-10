@@ -21,6 +21,7 @@ const MSG = {
   badBody: "Nieprawidłowe zgłoszenie.",
   unauthenticated: "Wymagane logowanie.",
   forbidden: "Brak uprawnień.",
+  duplicatePlate: "Pojazd o tym numerze rejestracyjnym już istnieje.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -55,10 +56,15 @@ export const POST: APIRoute = async (context) => {
     return json(400, { errors: firstIssuePerField(parsed.error.issues) });
   }
 
-  // (d) Insert through the authed client; an RLS WITH CHECK denial is 403.
+  // (d) Insert through the authed client; an RLS WITH CHECK denial is 403. A
+  // duplicate plate is a user-correctable field error, not a fault — it rides the
+  // same `{ errors }` shape the island already re-maps onto inputs.
   const result = await createVehicle(context.locals.supabase, parsed.data);
   if (result.status === "unauthorized") {
     return json(403, { error: MSG.forbidden });
+  }
+  if (result.status === "duplicate_plate") {
+    return json(400, { errors: { plate: MSG.duplicatePlate } });
   }
   return json(201, { vehicle: result.vehicle });
 };

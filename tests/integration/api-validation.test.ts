@@ -86,6 +86,8 @@ async function upsertHarnessVehicle() {
   const { error } = await svc.from("vehicles").upsert({
     id: TEST_VEHICLE_ID,
     name: TEST_VEHICLE_NAME,
+    // `plate` is NOT NULL + unique since S-05; each harness vehicle needs its own.
+    plate: "ZZ VALD01",
     category: "cargo_van",
     daily_rate: TEST_VEHICLE_RATE,
     monthly_rate: 2000,

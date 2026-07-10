@@ -30,11 +30,12 @@ import type { Vehicle, VehicleCategory } from "../../types";
 // two-column body (content 1.15fr / sticky photos 1fr, ~1080px) that stacks on
 // mobile with the photos card FIRST; numbered section cards (Dane pojazdu /
 // Specyfikacja / Ceny i limity / Zdjęcia); an eyebrow+title header with a back
-// arrow; grey-filled 44px field tiles; category as chips. The design's plate,
-// branch, maintenance-status, photo-upload, and save-draft affordances are
-// intentionally OUT of S-04 scope (no DB columns / deferred to S-05/S-07), so
-// they're omitted; `per_extra_km_rate` is included because the column is NOT NULL
-// even though the mockup omits it. Polish copy is canonical.
+// arrow; grey-filled 44px field tiles; category as chips. The design's branch,
+// maintenance-status, photo-upload, and save-draft affordances are intentionally
+// OUT of S-04 scope (no DB columns / deferred to S-07), so they're omitted;
+// `per_extra_km_rate` is included because the column is NOT NULL even though the
+// mockup omits it. The design's `Rejestracja` field landed in S-05, which added
+// the `vehicles.plate` column (not null, unique). Polish copy is canonical.
 
 // Stable display order for the category chips (matches the catalog + fleet list).
 const CATEGORY_ORDER: VehicleCategory[] = [
@@ -95,6 +96,7 @@ interface FieldDef {
 
 type StringFieldKey =
   | "name"
+  | "plate"
   | "make"
   | "model"
   | "production_year"
@@ -117,6 +119,13 @@ const NAME_FIELD: FieldDef = {
   required: true,
   full: true,
   placeholder: "np. Mercedes Sprinter 317 CDI",
+};
+const PLATE_FIELD: FieldDef = {
+  id: "plate",
+  label: "Rejestracja",
+  required: true,
+  full: true,
+  placeholder: "WX 0000A",
 };
 const IDENTITY: FieldDef[] = [
   { id: "make", label: "Marka", placeholder: "Mercedes-Benz" },
@@ -167,6 +176,7 @@ const PRICING: FieldDef[] = [
 // Visual order — drives "scroll to the first error" on a failed submit.
 const FIELD_ORDER: string[] = [
   "name",
+  "plate",
   "category",
   ...IDENTITY.map((f) => f.id),
   "fuel_type",
@@ -186,6 +196,7 @@ type StringFields = Record<StringFieldKey, string>;
 function initialStrings(vehicle?: Vehicle): StringFields {
   return {
     name: toInput(vehicle?.name),
+    plate: toInput(vehicle?.plate),
     make: toInput(vehicle?.make),
     model: toInput(vehicle?.model),
     production_year: toInput(vehicle?.production_year),
@@ -458,6 +469,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
           <div className="flex flex-col gap-5">
             <Section n={1} title={COPY.secIdentity}>
               {renderField(NAME_FIELD)}
+              {renderField(PLATE_FIELD)}
               {/* Type — required category chips (reuses the catalog/list Polish labels). */}
               <div className="flex flex-col gap-1.5 sm:col-span-2">
                 {/* The chips are a button group, not a single labelable control, so
