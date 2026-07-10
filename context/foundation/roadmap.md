@@ -27,18 +27,18 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status   |
-| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | -------- |
-| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done     |
-| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done     |
-| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done     |
-| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done     |
-| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done     |
-| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done     |
-| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | proposed |
-| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | proposed |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed |
-| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed |
+| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status    |
+| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | --------- |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done      |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done      |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done      |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done      |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done      |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done      |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | preparing |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | proposed  |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed  |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed  |
 
 ## Streams
 
@@ -64,6 +64,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Observability:** partial — Cloudflare `observability.enabled` flag is on; no app-level logging/error-tracking/metrics instrumentation.
 
 > Domain-critical absences folded into the slices that need them (progressive disclosure, not separate foundations): **transactional email** (absent — set up in `S-05`, used by `S-05`/`S-06` for FR-008) and **file/object storage for photos** (absent — set up in `S-05`, reused by `S-06` for FR-006/007).
+>
+> **Update 2026-07-09** (from `/10x-research issue-protocol`): both absences are smaller than they look. A provider-agnostic email seam already exists (`src/lib/email/index.ts` — `EmailAdapter` + `devLogAdapter`, with an explicit S-05 TODO to select a real adapter), so S-05 adds an adapter, not a subsystem. Supabase Storage is enabled in `supabase/config.toml` but **defines no buckets** — S-05 creates the first one. Also corrected: the **test runner is configured** (Vitest, two projects, 17 test files) despite `CLAUDE.md` claiming otherwise, and CI targets `main`, not `master`.
 
 ## Foundations
 
@@ -164,11 +166,14 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** US-02, FR-006, FR-008, NFR (mobile-usable protocol forms)
 - **Prerequisites:** F-02, S-03
 - **Parallel with:** S-04, S-07, S-08
-- **Blockers:** —
+- **Blockers:** verified sender domain (see Unknowns).
 - **Unknowns:**
-  - Transactional email provider + verified sender domain not yet chosen (email is absent in baseline). Owner: user. Block: no.
-- **Risk:** The heaviest slice — it stands up file storage (photos) and transactional email for the first time, and carries the main field-usability risk: on-device photo capture and touch signature must work at the vehicle (NFR). Sequenced after an accepted reservation exists (S-03) so a real protocol has something to attach to.
-- **Status:** proposed
+  - ~~Transactional email provider not yet chosen.~~ **Resolved 2026-07-09 → Resend** (raw `fetch`, no SDK; SMTP is impossible on `workerd`). Brevo documented as a one-file swap if EU data residency becomes a hard requirement. See `context/changes/issue-protocol/research.md`.
+  - **Verified sender domain still required.** A Polish business domain with SPF + DKIM (2 records, DMARC optional) must be owned and verified before real mail sends. Owner: user. **Block: yes** — revised 2026-07-09 (user's call, superseding the earlier `Block: no`). The `devLogAdapter` fallback keeps the code path compiling, but a slice whose only exercised path is `console.log` has not proven the thing it exists to do. Definition of done = one real protocol emailed to a real inbox, with `ą ć ę ł ń ó ś ź ż` rendering correctly in the PDF.
+- **Risk:** Stands up file storage (photos) and transactional email for the first time, and carries the main field-usability risk: on-device photo capture and touch signature must work at the vehicle (NFR). Sequenced after an accepted reservation exists (S-03) so a real protocol has something to attach to.
+  **Research 2026-07-09 materially reduced the estimate**: the email work is a ~15-line adapter into a seam that already exists (`src/lib/email/index.ts:37-39`), and `infrastructure.md`'s 3 MB bundle risk is measured false (Worker uploads at `gzip: 554.76 KiB`; client islands are separate static assets). Two risks _grew_: a new `protocols` table carries customer PII + damage photos and must close its default grants from the start (the `reservations` leak), and **pdf-lib throws on 8 of 9 Polish diacritics** unless fontkit + an embedded TTF are wired.
+  Scope grew deliberately in two places: an `email_deliveries` table (a failed protocol email is currently invisible — `console.error` only — and email is the customer's _only_ channel), and a client-generated PDF attachment replacing signed URLs (durability for dispute evidence; deletes the bearer-link risk).
+- **Status:** preparing — `/10x-research` and `/10x-plan` complete; `/10x-plan-review` verdict **SOUND** (all 10 findings fixed). 7 phases in `context/changes/issue-protocol/plan.md`. Next: `/10x-implement issue-protocol`, once the sender domain is verified.
 
 ### S-06: Return protocol with comparison
 
@@ -208,23 +213,25 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                   | Suggested issue title                                     | Ready for `/10x-plan` | Notes                                                                  |
-| ---------- | --------------------------- | --------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------- |
-| F-01       | booking-integrity-data      | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data`                                 |
-| F-02       | employee-admin-roles        | Employee/admin role model on existing auth                | yes                   | Parallel with F-01                                                     |
-| S-01       | public-fleet-catalog        | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01                                                             |
-| S-02       | public-reservation-request  | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01                                           |
-| S-02a      | changeover-day-availability | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability` |
-| S-03       | reservation-approval        | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02                                                       |
-| S-04       | fleet-management            | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable                                       |
-| S-05       | issue-protocol              | Issue handover protocol + photos/signature + email        | no                    | Needs F-02, S-03; sets up storage + email                              |
-| S-06       | return-protocol-comparison  | Return protocol with auto-comparison + email              | no                    | Needs S-05                                                             |
-| S-07       | overdue-returns-dashboard   | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable                                       |
-| S-08       | employee-account-management | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable                                             |
+| Roadmap ID | Change ID                   | Suggested issue title                                     | Ready for `/10x-plan` | Notes                                                                                                    |
+| ---------- | --------------------------- | --------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
+| F-01       | booking-integrity-data      | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data`                                                                   |
+| F-02       | employee-admin-roles        | Employee/admin role model on existing auth                | yes                   | Parallel with F-01                                                                                       |
+| S-01       | public-fleet-catalog        | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01                                                                                               |
+| S-02       | public-reservation-request  | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01                                                                             |
+| S-02a      | changeover-day-availability | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability`                                   |
+| S-03       | reservation-approval        | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02                                                                                         |
+| S-04       | fleet-management            | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable                                                                         |
+| S-05       | issue-protocol              | Issue handover protocol + photos/signature + email        | planned               | Plan reviewed (SOUND), 7 phases. Blocked on verified sender domain; then `/10x-implement issue-protocol` |
+| S-06       | return-protocol-comparison  | Return protocol with auto-comparison + email              | no                    | Needs S-05                                                                                               |
+| S-07       | overdue-returns-dashboard   | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable                                                                         |
+| S-08       | employee-account-management | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable                                                                               |
 
 ## Open Roadmap Questions
 
-1. **Which transactional email provider and sender domain for protocol delivery (FR-008)?** Email is absent in the baseline and is shared by S-05 and S-06. Owner: user. Block: S-05, S-06 — not roadmap-wide, and not blocking until those slices are planned (a default in-stack option exists; this is a pick at plan time, not a research blocker).
+1. ~~**Which transactional email provider and sender domain for protocol delivery (FR-008)?**~~ **Resolved 2026-07-09 → Resend.** Decided during `/10x-research issue-protocol`; see that change's `research.md` §5 for the scored comparison. `workerd` has no raw TCP, so SMTP is impossible and every candidate had to be a `fetch()`-callable HTTP API — which also retires the "Node deps in the email path" pre-mortem, since the adapter ships no SDK. Brevo is the documented one-file swap if EU data residency becomes a hard requirement (Resend stores logs/recipients in the US). **Residual:** the verified Polish sender domain (SPF + DKIM) is still to be provisioned — as of 2026-07-09 this **blocks S-05** (and therefore S-06), though it remains scoped to those slices rather than roadmap-wide.
+
+(No open roadmap questions remain.)
 
 (PRD `## Open Questions` were all resolved — none carried forward.)
 
