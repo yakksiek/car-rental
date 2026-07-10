@@ -1002,32 +1002,32 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 2.1 Unit tests pass, including the template with a diacritic-bearing fixture
-- [x] 2.2 Type checking passes: `npx astro sync && npm run build`
-- [x] 2.3 Linting passes: `npm run lint`
-- [x] 2.4 `resendAdapter` throws on a non-2xx response
-- [x] 2.5 `sendTracked` returns `{status:"failed"}` and does not throw when the adapter throws
+- [x] 2.1 Unit tests pass, including the template with a diacritic-bearing fixture — edc07e0
+- [x] 2.2 Type checking passes: `npx astro sync && npm run build` — edc07e0
+- [x] 2.3 Linting passes: `npm run lint` — edc07e0
+- [x] 2.4 `resendAdapter` throws on a non-2xx response — edc07e0
+- [x] 2.5 `sendTracked` returns `{status:"failed"}` and does not throw when the adapter throws — edc07e0
 
 #### Manual
 
-- [x] 2.6 With no `RESEND_API_KEY`, the app boots, the banner renders, `devLogAdapter` logs
+- [x] 2.6 With no `RESEND_API_KEY`, the app boots, the banner renders, `devLogAdapter` logs — edc07e0
 - [ ] 2.7 With a key set, a send lands in local `inbucket`
 
 ### Phase 3: API routes
 
 #### Automated
 
-- [ ] 3.1 Integration tests pass: `npm run test:integration`
-- [ ] 3.2 Anon → 401 and role-null authed → 403 on all three new routes
-- [ ] 3.3 Cross-origin POST → 403 before any DB work
-- [ ] 3.4 Malformed body → 400 with `{errors: {...}}`
-- [ ] 3.5 A second submit → 409 `conflict`, and the 409 body carries the existing `protocol_id`
-- [ ] 3.6 `POST /api/protocols` sends no email and writes no delivery row
-- [ ] 3.7 A finalize call whose email throws still returns 200 and writes a `failed` delivery row
+- [x] 3.1 Integration tests pass: `npm run test:integration`
+- [x] 3.2 Anon → 401 and role-null authed → 403 on all three new routes
+- [x] 3.3 Cross-origin POST → 403 before any DB work
+- [x] 3.4 Malformed body → 400 with `{errors: {...}}`
+- [x] 3.5 A second submit → 409 `conflict`, and the 409 body carries the existing `protocol_id`
+- [x] 3.6 `POST /api/protocols` sends no email and writes no delivery row
+- [x] 3.7 A finalize call whose email throws still returns 200 and writes a `failed` delivery row
 
 #### Manual
 
-- [ ] 3.8 A stale session cookie is rejected at the role gate, not at the DB
+- [x] 3.8 A stale session cookie is rejected at the role gate, not at the DB
 
 ### Phase 4: Client media pipeline (pure helpers)
 
