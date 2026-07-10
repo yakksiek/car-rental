@@ -164,3 +164,95 @@ export function reservationRejectedEmail(params: ReservationRejectedParams): Ema
 
   return { subject, html, text };
 }
+
+// ---------------------------------------------------------------------------
+// S-05 issue-protocol email — composed after a committed handover, once the PDF
+// has been uploaded. The customer has no account and no portal: this mail and
+// its PDF attachment are their ONLY copy of the evidence, possibly needed in a
+// dispute months later. So the mail carries no link into the app — the PDF is
+// the artifact, and the body is a human-readable summary of it.
+// ---------------------------------------------------------------------------
+
+export interface ProtocolIssuedParams {
+  reference: string;
+  customerName: string;
+  /** Display name, e.g. `"Ford Transit"`. */
+  vehicle: string;
+  /** Registration plate, e.g. `"WX 5519M"` — what tells two identical models apart. */
+  plate: string;
+  odometerKm: number;
+  /** Fuel level in eighths, 0–8. */
+  fuelEighths: number;
+  /** Number of damage items recorded at pickup (`0` reads as "no damage"). */
+  damageCount: number;
+}
+
+/** `3` → `"3/8"`, with the two ends named the way the form names them. */
+function fuelLabel(eighths: number): string {
+  if (eighths === 8) {
+    return "8/8 (pełny)";
+  }
+  if (eighths === 0) {
+    return "0/8 (pusty)";
+  }
+  return `${eighths}/8`;
+}
+
+/**
+ * `0` → `"brak"`, otherwise the count with the Polish plural it takes:
+ * 1 → `pozycja`, 2–4 → `pozycje`, everything else → `pozycji`, with the
+ * 12–14 exception that makes the teens take the genitive plural.
+ */
+function damageLabel(count: number): string {
+  if (count === 0) {
+    return "brak";
+  }
+  if (count === 1) {
+    return "1 pozycja";
+  }
+  const lastTwo = count % 100;
+  const last = count % 10;
+  const few = last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14);
+  return `${count} ${few ? "pozycje" : "pozycji"}`;
+}
+
+/** Handover email: the signed protocol, summarized, with the PDF attached. */
+export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent {
+  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
+  const fuel = fuelLabel(params.fuelEighths);
+  const damages = damageLabel(params.damageCount);
+
+  const subject = `FleetRent — protokół wydania ${params.reference}`;
+
+  const text = [
+    `Dzień dobry, ${params.customerName}!`,
+    "",
+    `W załączniku przesyłamy podpisany protokół wydania pojazdu (${params.reference}).`,
+    "",
+    `Pojazd: ${params.vehicle}`,
+    `Rejestracja: ${params.plate}`,
+    `Stan licznika: ${odometer}`,
+    `Poziom paliwa: ${fuel}`,
+    `Uszkodzenia zapisane przy wydaniu: ${damages}`,
+    "",
+    "Prosimy o zachowanie tego dokumentu — będzie podstawą porównania przy zwrocie pojazdu.",
+    "",
+    "Życzymy szerokiej drogi!",
+  ].join("\n");
+
+  const html = [
+    `<p>Dzień dobry, ${params.customerName}!</p>`,
+    `<p>W załączniku przesyłamy podpisany protokół wydania pojazdu (<strong>${params.reference}</strong>).</p>`,
+    "<ul>",
+    `<li>Pojazd: ${params.vehicle}</li>`,
+    `<li>Rejestracja: ${params.plate}</li>`,
+    `<li>Stan licznika: ${odometer}</li>`,
+    `<li>Poziom paliwa: ${fuel}</li>`,
+    `<li>Uszkodzenia zapisane przy wydaniu: ${damages}</li>`,
+    "</ul>",
+    "<p>Prosimy o zachowanie tego dokumentu — będzie podstawą porównania przy zwrocie pojazdu.</p>",
+    "<p>Życzymy szerokiej drogi!</p>",
+  ].join("\n");
+
+  return { subject, html, text };
+}

@@ -116,6 +116,33 @@ archived_at: null
      create/edit routes, which rethrow unexpected DB errors. Added a `duplicate_plate` tag to
      `createVehicle`/`updateVehicle` and mapped it to the existing `400 {errors: {plate}}` contract the form
      already re-maps onto inputs. Not in the plan; the constraint made it necessary.
+- 2026-07-10 — **Phase 2 implemented.** Schema, Resend adapter, adapter selection + `setEmailAdapter`,
+  `sendTracked`, the protocols service, the `protocolIssuedEmail` template, and the config banner. Five
+  deviations / findings, none contradicting the plan's intent:
+  1. **`resendAdapter` is a factory, `createResendAdapter({apiKey, from, fetchImpl})`,** not a module-level const.
+     Configuration is read once in `email/index.ts`; `resend.ts` never imports `astro:env/server` and so stays
+     unit-testable with a fake `fetch`. Criterion 2.4 depends on this.
+  2. **Vitest could not resolve `astro:env/server`** (an `astro sync` virtual module) once a unit test reached the
+     email seam. Added `tests/stubs/astro-env-server.ts` (every value `undefined` = an unconfigured deployment) and
+     aliased it in `vitest.config.ts`. Also found that **projects do NOT inherit the root `resolve` block** — the
+     config's own header comment claimed they share it, but the `@` alias it named had simply never been exercised
+     by a test. The alias is now applied per project.
+  3. **`z.uuid()` is stricter than the database.** Zod 4's `uuid()` asserts the RFC 9562 version + variant nibbles,
+     so it rejects ids the `uuid` column and the repo's `UUID_RE` guard both accept (e.g. the `1111…` seed ids).
+     The schema uses `z.guid()`, which matches `UUID_RE`. A `crypto.randomUUID()` value satisfies either.
+  4. **The schema pins every storage path to `issue/<protocolId>/`** (a `superRefine`). Not in the plan, but
+     `storage.objects` RLS only scopes to the `issue/` prefix and the RPC records whatever path it is handed, so
+     without this a caller could record a path pointing at another protocol's evidence. Bounded either way for
+     trusted staff — but the schema is the cheapest place to close it.
+  5. **⚠ Plan criterion 2.7 ("with a key set, a send lands in local `inbucket`") is not achievable as written.**
+     `inbucket` (`:54324`) only catches mail Supabase Auth sends through its own SMTP; the Resend adapter POSTs to
+     `https://api.resend.com/emails` over HTTPS and never touches it. With a key set, a send lands in the _Resend
+     dashboard_ and the real inbox. Verifying it is therefore the same act as Phase 7's send gate (7.6), and the
+     honest local check is 2.6: no key ⇒ banner + `devLogAdapter` logs the composed message.
+     **Decided 2026-07-10: 2.7 is deferred, not dropped** — it is subsumed by 7.6/7.7 (a real Resend send landing a
+     PDF in a real inbox, diacritics intact). Its Progress row stays `- [ ]` and `/10x-archive` will surface it as
+     an informational warning; that is the correct signal, because the thing it asks for has genuinely not been
+     proven yet at this phase.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are

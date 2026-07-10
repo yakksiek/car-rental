@@ -982,35 +982,35 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset`
-- [x] 1.2 Type regeneration produces no diff beyond the new tables
-- [x] 1.3 Type checking passes: `npx astro sync && npm run build`
-- [x] 1.4 Linting passes: `npm run lint`
-- [x] 1.5 Role-null authed client reads zero rows from all five new tables
-- [x] 1.6 `anon` cannot execute any of the five RPCs
-- [x] 1.7 A second `create_protocol` on the same reservation returns `conflict`
-- [x] 1.8 `create_protocol` on a `pending` reservation returns `not_confirmed`
-- [x] 1.9 The pre-existing integration suite still passes with `plate` NOT NULL (seeds + overlap test updated)
+- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset` — 9597797
+- [x] 1.2 Type regeneration produces no diff beyond the new tables — 9597797
+- [x] 1.3 Type checking passes: `npx astro sync && npm run build` — 9597797
+- [x] 1.4 Linting passes: `npm run lint` — 9597797
+- [x] 1.5 Role-null authed client reads zero rows from all five new tables — 9597797
+- [x] 1.6 `anon` cannot execute any of the five RPCs — 9597797
+- [x] 1.7 A second `create_protocol` on the same reservation returns `conflict` — 9597797
+- [x] 1.8 `create_protocol` on a `pending` reservation returns `not_confirmed` — 9597797
+- [x] 1.9 The pre-existing integration suite still passes with `plate` NOT NULL (seeds + overlap test updated) — 9597797
 
 #### Manual
 
-- [x] 1.10 Object upload to `protocols/issue/<id>/` succeeds as employee, fails as anon — **do this first**
-- [x] 1.11 The seven seeded vehicles have plausible Polish plates after `db reset`
-- [x] 1.12 The `EXCLUDE` constraint still rejects an overlapping confirmed reservation
+- [x] 1.10 Object upload to `protocols/issue/<id>/` succeeds as employee, fails as anon — **do this first** — 9597797
+- [x] 1.11 The seven seeded vehicles have plausible Polish plates after `db reset` — 9597797
+- [x] 1.12 The `EXCLUDE` constraint still rejects an overlapping confirmed reservation — 9597797
 
 ### Phase 2: Service layer + Resend adapter + delivery tracking
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass, including the template with a diacritic-bearing fixture
-- [ ] 2.2 Type checking passes: `npx astro sync && npm run build`
-- [ ] 2.3 Linting passes: `npm run lint`
-- [ ] 2.4 `resendAdapter` throws on a non-2xx response
-- [ ] 2.5 `sendTracked` returns `{status:"failed"}` and does not throw when the adapter throws
+- [x] 2.1 Unit tests pass, including the template with a diacritic-bearing fixture
+- [x] 2.2 Type checking passes: `npx astro sync && npm run build`
+- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.4 `resendAdapter` throws on a non-2xx response
+- [x] 2.5 `sendTracked` returns `{status:"failed"}` and does not throw when the adapter throws
 
 #### Manual
 
-- [ ] 2.6 With no `RESEND_API_KEY`, the app boots, the banner renders, `devLogAdapter` logs
+- [x] 2.6 With no `RESEND_API_KEY`, the app boots, the banner renders, `devLogAdapter` logs
 - [ ] 2.7 With a key set, a send lands in local `inbucket`
 
 ### Phase 3: API routes

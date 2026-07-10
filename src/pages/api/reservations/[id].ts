@@ -1,11 +1,13 @@
 // core
 import type { APIRoute } from "astro";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 // others
 import { isRoleSufficient } from "../../../lib/access";
-import { sendEmail } from "../../../lib/email";
+import type { Database } from "../../../db/database.types";
 import { reservationConfirmedEmail, reservationRejectedEmail } from "../../../lib/email/templates";
+import { sendTracked } from "../../../lib/services/email-delivery";
 import { decideReservation } from "../../../lib/services/reservations";
 import type { DecisionEmailPayload } from "../../../types";
 
@@ -58,43 +60,47 @@ function vehicleLabel(email: DecisionEmailPayload): string {
 }
 
 /**
- * Compose and send the confirm/reject email through the dev-log seam. Best-effort:
- * swallows any error so a send failure never rolls back the committed decision.
+ * Compose and send the confirm/reject email, recording the outcome in
+ * `email_deliveries`. Best-effort: `sendTracked` never throws, so a send failure
+ * never rolls back the committed decision — but it is no longer silent either.
+ * S-05 replaced this function's own try/catch with that call.
  */
 async function notifyCustomer(
+  client: SupabaseClient<Database> | null,
+  reservationId: string,
   status: "confirmed" | "rejected",
   email: DecisionEmailPayload,
   reason: (typeof REJECTION_REASONS)[number] | undefined,
   note: string | undefined,
   origin: string,
 ): Promise<void> {
-  try {
-    const statusUrl = new URL(`/r/${email.access_token}`, origin).href;
-    const content =
-      status === "confirmed"
-        ? reservationConfirmedEmail({
-            reference: email.reference,
-            statusUrl,
-            vehicle: vehicleLabel(email),
-            pickup: email.pickup_date,
-            return: email.return_date,
-            dailyRate: email.vehicle_daily_rate,
-            deposit: email.vehicle_deposit,
-          })
-        : reservationRejectedEmail({
-            reference: email.reference,
-            statusUrl,
-            vehicle: vehicleLabel(email),
-            // A committed reject always carried a valid reason through the zod
-            // gate; default defensively so the template never receives undefined.
-            reason: reason ?? "other",
-            note,
-          });
-    await sendEmail({ to: email.customer_email, ...content });
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("[api/reservations/[id]] decision email failed (request still succeeds):", error);
-  }
+  const statusUrl = new URL(`/r/${email.access_token}`, origin).href;
+  const content =
+    status === "confirmed"
+      ? reservationConfirmedEmail({
+          reference: email.reference,
+          statusUrl,
+          vehicle: vehicleLabel(email),
+          pickup: email.pickup_date,
+          return: email.return_date,
+          dailyRate: email.vehicle_daily_rate,
+          deposit: email.vehicle_deposit,
+        })
+      : reservationRejectedEmail({
+          reference: email.reference,
+          statusUrl,
+          vehicle: vehicleLabel(email),
+          // A committed reject always carried a valid reason through the zod
+          // gate; default defensively so the template never receives undefined.
+          reason: reason ?? "other",
+          note,
+        });
+
+  await sendTracked(client, email.customer_email, content, {
+    entityType: "reservation",
+    entityId: reservationId,
+    template: status === "confirmed" ? "reservation_confirmed" : "reservation_rejected",
+  });
 }
 
 /** First zod message per top-level field — the island mirrors this shape. */
@@ -146,8 +152,8 @@ export const PATCH: APIRoute = async (context) => {
     case "confirmed":
     case "rejected":
       // (e) Best-effort notification. The decision is already committed, so a
-      // send failure is logged and never fails the request (S-02 pattern).
-      await notifyCustomer(result.status, result.email, reason, note, context.url.origin);
+      // send failure is recorded and never fails the request (S-02 pattern).
+      await notifyCustomer(context.locals.supabase, id, result.status, result.email, reason, note, context.url.origin);
       return json(200, { status: result.status });
     case "already_decided":
       return json(409, { error: MSG.alreadyDecided, reason: "already_decided" });
