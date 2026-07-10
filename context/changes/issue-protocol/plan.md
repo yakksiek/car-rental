@@ -1017,32 +1017,32 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 3.1 Integration tests pass: `npm run test:integration`
-- [x] 3.2 Anon → 401 and role-null authed → 403 on all three new routes
-- [x] 3.3 Cross-origin POST → 403 before any DB work
-- [x] 3.4 Malformed body → 400 with `{errors: {...}}`
-- [x] 3.5 A second submit → 409 `conflict`, and the 409 body carries the existing `protocol_id`
-- [x] 3.6 `POST /api/protocols` sends no email and writes no delivery row
-- [x] 3.7 A finalize call whose email throws still returns 200 and writes a `failed` delivery row
+- [x] 3.1 Integration tests pass: `npm run test:integration` — cceb653
+- [x] 3.2 Anon → 401 and role-null authed → 403 on all three new routes — cceb653
+- [x] 3.3 Cross-origin POST → 403 before any DB work — cceb653
+- [x] 3.4 Malformed body → 400 with `{errors: {...}}` — cceb653
+- [x] 3.5 A second submit → 409 `conflict`, and the 409 body carries the existing `protocol_id` — cceb653
+- [x] 3.6 `POST /api/protocols` sends no email and writes no delivery row — cceb653
+- [x] 3.7 A finalize call whose email throws still returns 200 and writes a `failed` delivery row — cceb653
 
 #### Manual
 
-- [x] 3.8 A stale session cookie is rejected at the role gate, not at the DB
+- [x] 3.8 A stale session cookie is rejected at the role gate, not at the DB — cceb653
 
 ### Phase 4: Client media pipeline (pure helpers)
 
 #### Automated
 
-- [ ] 4.1 Unit tests pass: `npm test`
-- [ ] 4.2 A PDF renders with every Polish diacritic and does not throw
-- [ ] 4.3 `isHeic` returns true for HEIC, false for JPEG/PNG
-- [ ] 4.4 PDF output has a valid `%PDF-` header and non-trivial length
-- [ ] 4.5 `npx wrangler deploy --dry-run` shows no Worker bundle increase
+- [x] 4.1 Unit tests pass: `npm test`
+- [x] 4.2 A PDF renders with every Polish diacritic and does not throw
+- [x] 4.3 `isHeic` returns true for HEIC, false for JPEG/PNG
+- [x] 4.4 PDF output has a valid `%PDF-` header and non-trivial length
+- [x] 4.5 `npx wrangler deploy --dry-run` shows no Worker bundle increase
 
 #### Manual
 
-- [ ] 4.6 A generated PDF opens with correct Polish glyphs, not tofu boxes
-- [ ] 4.7 A real iPhone HEIC photo converts to a visible JPEG in Chrome
+- [x] 4.6 A generated PDF opens with correct Polish glyphs, not tofu boxes
+- [x] 4.7 A real iPhone HEIC photo converts to a visible JPEG in Chrome
 
 ### Phase 5: Protocol form island
 

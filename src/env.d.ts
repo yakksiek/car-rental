@@ -1,3 +1,11 @@
+// Vite's `?inline` suffix resolves a binary asset to a `data:` URI string. Used
+// by `src/lib/media/fonts.ts` to embed the PDF's Unicode TTFs; `astro/client`
+// declares `?url` and `?raw` but not `?inline`.
+declare module "*.ttf?inline" {
+  const dataUri: string;
+  export default dataUri;
+}
+
 declare namespace App {
   interface Locals {
     user: import("@supabase/supabase-js").User | null;
