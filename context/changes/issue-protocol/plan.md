@@ -1033,34 +1033,34 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 4.1 Unit tests pass: `npm test`
-- [x] 4.2 A PDF renders with every Polish diacritic and does not throw
-- [x] 4.3 `isHeic` returns true for HEIC, false for JPEG/PNG
-- [x] 4.4 PDF output has a valid `%PDF-` header and non-trivial length
-- [x] 4.5 `npx wrangler deploy --dry-run` shows no Worker bundle increase
+- [x] 4.1 Unit tests pass: `npm test` — 75b3a9f
+- [x] 4.2 A PDF renders with every Polish diacritic and does not throw — 75b3a9f
+- [x] 4.3 `isHeic` returns true for HEIC, false for JPEG/PNG — 75b3a9f
+- [x] 4.4 PDF output has a valid `%PDF-` header and non-trivial length — 75b3a9f
+- [x] 4.5 `npx wrangler deploy --dry-run` shows no Worker bundle increase — 75b3a9f
 
 #### Manual
 
-- [x] 4.6 A generated PDF opens with correct Polish glyphs, not tofu boxes
-- [x] 4.7 A real iPhone HEIC photo converts to a visible JPEG in Chrome
+- [x] 4.6 A generated PDF opens with correct Polish glyphs, not tofu boxes — 75b3a9f
+- [x] 4.7 A real iPhone HEIC photo converts to a visible JPEG in Chrome — 75b3a9f
 
 ### Phase 5: Protocol form island
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npx astro sync && npm run build`
-- [ ] 5.2 Linting passes, including `jsx-a11y` on the fuel buttons and photo inputs
-- [ ] 5.3 `npx wrangler deploy --dry-run` shows the Worker bundle unchanged
-- [ ] 5.4 Unit test on the fuel-eighths mapping and photo-slot completeness check
+- [x] 5.1 Type checking passes: `npx astro sync && npm run build`
+- [x] 5.2 Linting passes, including `jsx-a11y` on the fuel buttons and photo inputs
+- [x] 5.3 `npx wrangler deploy --dry-run` shows the Worker bundle unchanged
+- [x] 5.4 Unit test on the fuel-eighths mapping and photo-slot completeness check
 
 #### Manual
 
-- [ ] 5.5 On a real phone: six rear-camera captures, thumb signature, tappable fuel bar
-- [ ] 5.6 On desktop: drag-and-drop multi-select and a mouse signature
-- [ ] 5.7 Empty odometer scrolls to and focuses that field with the crimson banner
-- [ ] 5.8 All three overlays render correctly on both viewports
-- [ ] 5.9 A failed email shows the `email` overlay with a working `Wyślij ponownie`
-- [ ] 5.10 A thrown `buildProtocolPdf` still commits the protocol and shows the `pdf` overlay
+- [x] 5.5 On a real phone: six rear-camera captures, thumb signature, tappable fuel bar
+- [x] 5.6 On desktop: drag-and-drop multi-select and a mouse signature
+- [x] 5.7 Empty odometer scrolls to and focuses that field with the crimson banner
+- [x] 5.8 All three overlays render correctly on both viewports
+- [x] 5.9 A failed email shows the `email` overlay with a working `Wyślij ponownie`
+- [x] 5.10 A thrown `buildProtocolPdf` still commits the protocol and shows the `pdf` overlay
 
 ### Phase 6: Dispatch list + recovery surfaces
 

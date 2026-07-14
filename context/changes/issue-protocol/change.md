@@ -3,7 +3,7 @@ change_id: issue-protocol
 title: Issue protocol
 status: implementing
 created: 2026-07-09
-updated: 2026-07-10
+updated: 2026-07-14
 archived_at: null
 ---
 
@@ -223,6 +223,71 @@ archived_at: null
      gained it in 16.4, and an employee's phone is exactly the device that lags. Also added `src/lib/protocol-labels.ts`
      (slot + damage-type Polish labels, `fuelLabelPl`) since the PDF and the Phase 5 form must not name a slot
      differently on screen and in the customer's only copy of the evidence.
+- 2026-07-10 — **Phase 5 implemented.** `ProtocolForm` + `FuelBar` / `PhotoSlot` / `DamageEditor` / `SignaturePad` /
+  `Overlays`, `useProtocolSubmit`, a browser storage client, and the host page
+  `/dashboard/pickups/[reservationId].astro`. First `react-hook-form` adopter, per `lessons.md`. Findings:
+  1. **`client:only="react"` confirmed on the built bundle**, per the Phase 4 finding. `dist/server` contains no
+     pdf-lib, fontkit or heic2any module — the sole `heic2any` string in `worker-entry` is its client-asset URL in
+     the manifest. Worker: **2,709.93 KiB / 560.02 KiB gzip** vs. the 2,703.55 / 559 baseline. The ~6 KiB is the new
+     `.astro` page and its manifest entries, not the island. `heic2any` splits into its own 1,353 KB client chunk.
+  2. **A top-level `return` in `.astro` frontmatter crashes ESLint.** `@typescript-eslint/no-misused-promises`
+     throws `Non-null Assertion Failed: Expected node to have a parent` under `astro-eslint-parser` — reproduced on a
+     two-line probe, for both `return new Response(...)` and `return Astro.redirect(...)`. No page in this repo has
+     one, which is why it had never surfaced. The page uses the catalog detail page's `Astro.response.status = 404`
+     pattern instead, and the "already issued" case renders a static twin of the conflict screen rather than
+     redirecting. (The React `ConflictScreen` stays — it serves the 409 race, which is a different event.)
+  3. **The island talks to Storage with `createBrowserClient`, not a token prop.** `@supabase/ssr` writes its session
+     cookies with `httpOnly: false` (its `DEFAULT_COOKIE_OPTIONS`), so the browser client picks up the employee's JWT
+     from the same cookies the SSR client wrote. `SUPABASE_KEY` (the publishable anon key) is passed as a prop.
+  4. **The signature canvas is the one blob the island mints itself** — `canvas.toBlob(cb, "image/png")` — and
+     `uploadObject` passes `blob.type` through as `contentType` for every upload. `compressImage` already types
+     `image/jpeg` and `buildProtocolPdf` `application/pdf`; an untyped blob is rejected as `application/octet-stream`
+     by the bucket's `allowed_mime_types` (Phase 3 finding #3).
+  5. **`useFieldArray` needs `keyName: "_key"`.** Its default key field is `id`, which collides with the damage row's
+     own client-minted `id` — the very value that keys that item's storage objects.
+  6. **The resolver is asserted once, across the schema's input/output boundary.** `protocolInputSchema` sees the
+     odometer as a string and yields `ProtocolInput` with a number; `z.preprocess` widens its input type to `unknown`,
+     so a single `as unknown as Resolver<FormValues, unknown, ProtocolInput>` beats scattering casts at every field.
+  7. **The React Compiler skips memoizing `ProtocolForm`** (`react-hooks/incompatible-library`, a warning, not an
+     error): RHF's `watch()` returns a function it cannot memoize safely. Expected, and preferable to stale fields.
+  8. Two deliberate departures from the design contract, both to avoid a worse failure:
+     **(a)** submit is disabled while an upload is in flight and while submitting, but **not** merely because
+     validation errors exist — the contract's "disable the submit button" on a failed submit would strand an employee
+     whose only way out is to resubmit. **(b)** a `done` photo tile shows the compressed thumbnail under a dark scrim
+     instead of the contract's flat hatch, and re-opens the picker on tap, so a mis-aimed shot is retakeable.
+     Also: `Rozmiar`-less damage rows render without the `({size})` suffix, and Polish photo counts take all three
+     plural forms (`1 zdjęcie` / `2 zdjęcia` / `5 zdjęć`) rather than the contract's two.
+  9. **`5.3` reads "unchanged", measured as +1 KiB gzip.** Recorded rather than rounded away: the island contributed
+     zero, the page contributed the rest.
+- 2026-07-14 — **Phase 5 manual verification (5.5–5.10) done on real iOS + Android + desktop.** The session surfaced
+  a set of deliberate deviations beyond those above, each a UX/correctness call taken with the user. All are captured
+  for the mocks in `design-deltas.md` (hand-off to the Claude Design project); summary here:
+  1. **`crypto.randomUUID` needs a secure context.** Blank island on a phone over LAN (`http://<ip>:4321`, insecure):
+     the `useState` initializer threw. Added `randomUuid()` in `protocol-form.ts` — `crypto.randomUUID` when present,
+     else a v4 built from `crypto.getRandomValues` (available in insecure contexts). Unit-tested both paths.
+  2. **`createImageBitmap(_, {imageOrientation:"from-image"})` throws on older iOS Safari.** Photos hung at 20% then
+     `Ponów`. `compress.ts` now decodes in three tiers: with the option → without it → `<img>` fallback.
+  3. **Signature became a full-screen modal**, replacing the inline pad (`SignaturePad.tsx` → `SignatureField` +
+     `SignatureModal`). Scroll-locked, big canvas, `Zatwierdź podpis` commits+uploads then closes; the inline field
+     collapses to a signed summary with `Zmień`. This also dissolved a clear-vs-async-upload race seen only on slower
+     Android (the inline pad had needed a generation guard; the modal removes the race by construction).
+  4. **Photo pickers offer the gallery, not only the camera** — dropped `capture="environment"` from `PhotoSlot` and
+     the damage picker so the native chooser lists library + camera. `accept="image/*"`, still no `image/heic`.
+  5. **In-session `Pobierz PDF`** on the `sent` / `email` overlays (object URL of the just-built blob, revoked on
+     unmount). Not on `pdf` (no blob). Durable retrieval stays an S-06 concern.
+  6. **Desktop layout is now two independent-height columns** (left §1+§3, right §2+§4) via `display:contents`
+     wrappers that collapse to the single mobile column with `order-*`. Fixes a large void under §1 caused by CSS
+     grid's shared row heights (the tall photos section set the row).
+  7. **Section-1 fixes:** the odometer input box grows so its bottom aligns with the fuel bar's E/F line; both field
+     errors are bottom-pinned, horizontally aligned, with matching ⚠ icon+text.
+  8. **Overlay recipient copy corrected:** the contract's `Wysłano do <email>` was false on failures. Now `sent` shows
+     no recipient line, `email` shows `Nie wysłano do <email>`, `pdf` shows none (no send was attempted).
+  9. **Test-only injections used then reverted:** a bogus `RESEND_API_KEY`/`EMAIL_FROM` in `.dev.vars` (forces the
+     `email` overlay) and a `?failPdf=1` URL hook (forces the `pdf` overlay). Both removed before this commit; the
+     `photoError` on-screen diagnostic added mid-debug was also removed. `5.9`'s `Wyślij ponownie` was proven to
+     re-post and re-fail with the fake key; proving it flips to `sent` needs a real key (Phase 7 send gate).
+  10. **`vehicles.plate` note for testers:** the dispatch RPC filters `pickup_date = current_date`, so manual test
+      reservations must be re-seeded for "today" — they are local-only fixtures, wiped by `db reset`, not committed.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are
