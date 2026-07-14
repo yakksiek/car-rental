@@ -1048,37 +1048,37 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx astro sync && npm run build`
-- [x] 5.2 Linting passes, including `jsx-a11y` on the fuel buttons and photo inputs
-- [x] 5.3 `npx wrangler deploy --dry-run` shows the Worker bundle unchanged
-- [x] 5.4 Unit test on the fuel-eighths mapping and photo-slot completeness check
+- [x] 5.1 Type checking passes: `npx astro sync && npm run build` — b8d6acd
+- [x] 5.2 Linting passes, including `jsx-a11y` on the fuel buttons and photo inputs — b8d6acd
+- [x] 5.3 `npx wrangler deploy --dry-run` shows the Worker bundle unchanged — b8d6acd
+- [x] 5.4 Unit test on the fuel-eighths mapping and photo-slot completeness check — b8d6acd
 
 #### Manual
 
-- [x] 5.5 On a real phone: six rear-camera captures, thumb signature, tappable fuel bar
-- [x] 5.6 On desktop: drag-and-drop multi-select and a mouse signature
-- [x] 5.7 Empty odometer scrolls to and focuses that field with the crimson banner
-- [x] 5.8 All three overlays render correctly on both viewports
-- [x] 5.9 A failed email shows the `email` overlay with a working `Wyślij ponownie`
-- [x] 5.10 A thrown `buildProtocolPdf` still commits the protocol and shows the `pdf` overlay
+- [x] 5.5 On a real phone: six rear-camera captures, thumb signature, tappable fuel bar — b8d6acd
+- [x] 5.6 On desktop: drag-and-drop multi-select and a mouse signature — b8d6acd
+- [x] 5.7 Empty odometer scrolls to and focuses that field with the crimson banner — b8d6acd
+- [x] 5.8 All three overlays render correctly on both viewports — b8d6acd
+- [x] 5.9 A failed email shows the `email` overlay with a working `Wyślij ponownie` — b8d6acd
+- [x] 5.10 A thrown `buildProtocolPdf` still commits the protocol and shows the `pdf` overlay — b8d6acd
 
 ### Phase 6: Dispatch list + recovery surfaces
 
 #### Automated
 
-- [ ] 6.1 Type checking passes: `npx astro sync && npm run build`
-- [ ] 6.2 Linting passes: `npm run lint`
-- [ ] 6.3 `/dashboard/pickups` redirects an anonymous caller to `/auth/signin`
-- [ ] 6.4 `list_dispatch_today` folds `protocol_id` + newest delivery status into issued rows, null into un-issued ones
-- [ ] 6.5 A role-null user gets zero rows from `get_protocol`
+- [x] 6.1 Type checking passes: `npx astro sync && npm run build`
+- [x] 6.2 Linting passes: `npm run lint`
+- [x] 6.3 `/dashboard/pickups` redirects an anonymous caller to `/auth/signin`
+- [x] 6.4 `list_dispatch_today` folds `protocol_id` + newest delivery status into issued rows, null into un-issued ones
+- [x] 6.5 A role-null user gets zero rows from `get_protocol`
 
 #### Manual
 
-- [ ] 6.6 A confirmed reservation appears with `Wydaj`, and after filing stays on the list as an issued row with a badge
-- [ ] 6.7 `Otwórz protokół` navigates to a real, populated protocol view
-- [ ] 6.8 The PDF downloads from the protocol view with correct Polish glyphs
+- [x] 6.6 A confirmed reservation appears with `Wydaj`, and after filing stays on the list as an issued row with a badge
+- [x] 6.7 `Otwórz protokół` navigates to a real, populated protocol view
+- [x] 6.8 The PDF downloads from the protocol view with correct Polish glyphs
 - [ ] 6.9 A failed delivery shows the badge; `Wyślij ponownie` clears it
-- [ ] 6.10 The `W toku` chip is gone
+- [x] 6.10 The `W toku` chip is gone
 
 ### Phase 7: Risk #3 tests, corrections, and the send gate
 

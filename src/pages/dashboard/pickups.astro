@@ -1,0 +1,46 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import StaffShell from "../../components/shell/StaffShell.astro";
+import PickupQueue from "../../components/dashboard/PickupQueue";
+
+// others
+import { listDispatchToday } from "../../lib/services/protocols";
+import { listPendingReservations } from "../../lib/services/reservations";
+
+// The dispatch list (S-05 Phase 6): today's confirmed reservations, each awaiting
+// handover or already issued. Gated to `employee` by the middleware (/dashboard
+// prefix); the list itself comes from the role-gated `list_dispatch_today` RPC,
+// so a non-staff caller would see zero rows even if the page rendered.
+//
+// This is the entry point S-06 (return) and S-07 (overdue) reuse. `PickupQueue`
+// mounts `client:load` — it is lightweight (no pdf-lib/heic2any), so unlike the
+// form island there is no Worker-bundle reason to force `client:only`.
+const { user, role, supabase } = Astro.locals;
+
+const [rows, pending] = await Promise.all([listDispatchToday(supabase), listPendingReservations(supabase)]);
+
+const count = rows.length;
+const countLabel =
+  count === 0 ? "Brak wydań na dziś" : count === 1 ? "1 rezerwacja do wydania" : `${count} rezerwacje do wydania`;
+---
+
+<Layout title="Wydania — Flota">
+  <StaffShell
+    active="pickups"
+    title="Wydania"
+    subtitle={countLabel}
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+  >
+    <main class="mx-auto w-full max-w-3xl px-4 py-6">
+      {/* Mobile centered header (the desktop topbar carries this at md+) */}
+      <header class="mb-4 text-center md:hidden">
+        <h1 class="text-foreground text-xl font-bold tracking-tight">Wydania</h1>
+        <p class="text-muted-foreground mt-1 text-sm">{countLabel}</p>
+      </header>
+      <PickupQueue client:load rows={rows} />
+    </main>
+  </StaffShell>
+</Layout>

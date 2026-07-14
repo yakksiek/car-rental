@@ -33,6 +33,10 @@ export const ROUTE_ROLES: { prefix: string; role: AppRole }[] = [
   { prefix: "/dashboard/reservations", role: "employee" },
   // Reservation calendar (S-03) — employee. Likewise covered by /dashboard.
   { prefix: "/dashboard/calendar", role: "employee" },
+  // Issue-protocol dispatch list + view (S-05) — employee. Covered by /dashboard;
+  // this explicit entry documents intent.
+  { prefix: "/dashboard/pickups", role: "employee" },
+  { prefix: "/dashboard/protocols", role: "employee" },
   // Authenticated staff area — any role with a profile.
   { prefix: "/dashboard", role: "employee" },
 ];
