@@ -326,3 +326,30 @@ archived_at: null
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are
   **left `1.35fr` = condition + damage, right `1fr` = photos + signature** — the audit had them reversed.
+- 2026-07-14 — **Phase 7 implemented (code) — automated done, real-send gate deferred.** Added the risk #3
+  contract suite `tests/integration/protocol-email.test.ts` (attempted / surfaced / correct-payload, +140 lines,
+  108 integration tests green), corrected the two stale `CLAUDE.md` claims (test runner → two Vitest projects;
+  CI branch `master` → `main`, which the workflow already targeted), and flipped `test-plan.md` §3 Phase 4 →
+  `complete` against this folder. §1 (email doubles) needed no work — it landed in Phase 3 already; verified, not
+  rewritten. Findings:
+  1. **⚠ The hosted-attachment send cannot complete against LOCAL Supabase.** The finalize/resend route delivers
+     the PDF as a Resend _hosted attachment_ — Resend fetches the signed URL from its own cloud at send time. A
+     local signed URL is `http://127.0.0.1:54321/...`, so Resend rejects it: `422 invalid_attachment "Attachment
+path should not point to localhost"`. This is architectural, not a misconfig: the design (plan §Approach 1)
+     keeps PDF bytes off the Worker by handing Resend a URL, and only a publicly-reachable URL works. So 7.6/7.7
+     (mail actually landing) are a **production/public-URL gate**, not a local one.
+  2. **7.8 (failure is loud) IS proven locally** — the real 422 produced a `failed` `email_deliveries` row and the
+     red `E-mail niewysłany` badge with a working `Wyślij ponownie`, exactly the recover-from-the-dashboard
+     guarantee `email_deliveries` exists for. Its Progress row is `- [x]`.
+  3. **7.6 / 7.7 / 7.9 stay `- [ ]`** (send gate). Smoke-tested with `onboarding@resend.dev` (no domain) → the key
+     loaded and the send fired, but the localhost-URL 422 blocks a real landing locally, and `onboarding@resend.dev`
+     never satisfies 7.9 (needs a verified sender domain). Decided 2026-07-14 with the user: **close the phase's
+     code, leave the real-send gate for deploy time.** Per the 2026-07-09 DoD (S-05 does not merge until real mail
+     sends), `change.md.status` stays `implementing` — the slice is code-complete but not merge-complete.
+     `/10x-archive` will surface 7.6/7.7/7.9 (and the earlier-deferred 2.7, 6.9) as informational missing-SHA
+     warnings, which is the correct signal.
+  4. **Local send-gate fixtures** (uncommitted, wiped by `db reset`): a disposable today-dated confirmed
+     reservation `R-SEND1` (`Zażółć Gęślą-Jaźń`, the full-diacritic pangram, → `marcin.kulbicki@gmail.com`) on a
+     disposable vehicle `WX SEND01`. To finish the gate: deploy, `wrangler secret put RESEND_API_KEY / EMAIL_FROM`,
+     verify a real sender domain, seed the same shape in prod, file one protocol on the live site, confirm the PDF
+     lands with glyphs intact. **Rotate the smoke-test Resend key** — it was shared in-session.
