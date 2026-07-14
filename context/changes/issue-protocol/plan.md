@@ -1066,33 +1066,33 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 6.1 Type checking passes: `npx astro sync && npm run build`
-- [x] 6.2 Linting passes: `npm run lint`
-- [x] 6.3 `/dashboard/pickups` redirects an anonymous caller to `/auth/signin`
-- [x] 6.4 `list_dispatch_today` folds `protocol_id` + newest delivery status into issued rows, null into un-issued ones
-- [x] 6.5 A role-null user gets zero rows from `get_protocol`
+- [x] 6.1 Type checking passes: `npx astro sync && npm run build` — 54b41fe
+- [x] 6.2 Linting passes: `npm run lint` — 54b41fe
+- [x] 6.3 `/dashboard/pickups` redirects an anonymous caller to `/auth/signin` — 54b41fe
+- [x] 6.4 `list_dispatch_today` folds `protocol_id` + newest delivery status into issued rows, null into un-issued ones — 54b41fe
+- [x] 6.5 A role-null user gets zero rows from `get_protocol` — 54b41fe
 
 #### Manual
 
-- [x] 6.6 A confirmed reservation appears with `Wydaj`, and after filing stays on the list as an issued row with a badge
-- [x] 6.7 `Otwórz protokół` navigates to a real, populated protocol view
-- [x] 6.8 The PDF downloads from the protocol view with correct Polish glyphs
-- [ ] 6.9 A failed delivery shows the badge; `Wyślij ponownie` clears it
-- [x] 6.10 The `W toku` chip is gone
+- [x] 6.6 A confirmed reservation appears with `Wydaj`, and after filing stays on the list as an issued row with a badge — 54b41fe
+- [x] 6.7 `Otwórz protokół` navigates to a real, populated protocol view — 54b41fe
+- [x] 6.8 The PDF downloads from the protocol view with correct Polish glyphs — 54b41fe
+- [ ] 6.9 A failed delivery shows the badge; `Wyślij ponownie` clears it — deferred to Phase 7 send gate (7.8)
+- [x] 6.10 The `W toku` chip is gone — 54b41fe
 
 ### Phase 7: Risk #3 tests, corrections, and the send gate
 
 #### Automated
 
-- [ ] 7.1 Unit tests pass: `npm test`
-- [ ] 7.2 Integration tests pass: `npm run test:integration`
-- [ ] 7.3 The three risk #3 assertions pass (attempted / surfaced / correct payload)
-- [ ] 7.4 Linting and build pass: `npm run lint && npm run build`
-- [ ] 7.5 `test-plan.md` §3 Phase 4 status updated to `complete`
+- [x] 7.1 Unit tests pass: `npm test`
+- [x] 7.2 Integration tests pass: `npm run test:integration`
+- [x] 7.3 The three risk #3 assertions pass (attempted / surfaced / correct payload)
+- [x] 7.4 Linting and build pass: `npm run lint && npm run build`
+- [x] 7.5 `test-plan.md` §3 Phase 4 status updated to `complete`
 
 #### Manual
 
 - [ ] 7.6 A real Resend send lands a PDF attachment in a real inbox
 - [ ] 7.7 The PDF renders every Polish diacritic correctly in a real viewer
-- [ ] 7.8 Revoking the API key makes the delivery row go `failed` and the badge appear
+- [x] 7.8 Revoking the API key makes the delivery row go `failed` and the badge appear
 - [ ] 7.9 The sender domain passes SPF + DKIM checks

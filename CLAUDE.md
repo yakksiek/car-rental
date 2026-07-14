@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint:fix` — auto-fix lint issues
 - `npm run format` — Prettier (includes prettier-plugin-astro + prettier-plugin-tailwindcss)
 
-No test runner is configured. Pre-commit hooks (husky + lint-staged) run `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+Tests run on Vitest, configured in `vitest.config.ts` as two projects: `unit` (jsdom, pure functions and components) and `integration` (runs serially against a local Supabase). Scripts: `npm test` (unit), `npm run test:integration` (integration), `npm run test:watch` (all, watch mode), `npm run test:e2e` (Playwright). E2E follows the `/10x-e2e` skill. Pre-commit hooks (husky + lint-staged) run `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
 
 Before first build, run `npx astro sync` to generate virtual module types (required for `astro:env/server` imports to resolve).
 
@@ -62,7 +62,7 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`): runs `astro sync` + lint + build on push/PR to `master`. Requires `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets.
+GitHub Actions (`.github/workflows/ci.yml`): runs `astro sync` + lint + build on push/PR to `main`. Requires `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets.
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
