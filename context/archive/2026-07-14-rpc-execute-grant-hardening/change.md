@@ -1,10 +1,10 @@
 ---
 change_id: rpc-execute-grant-hardening
 title: RPC execute-grant hardening
-status: implemented
+status: archived
 created: 2026-07-14
 updated: 2026-07-14
-archived_at: null
+archived_at: 2026-07-14T17:17:16Z
 ---
 
 ## Notes
