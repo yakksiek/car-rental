@@ -174,23 +174,23 @@ A dedicated integration test that pins both sides: anon is refused on the four s
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset`
-- [x] 1.2 Type checking / build passes: `npx astro sync && npm run build`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 The full pre-existing suite still passes: `npm test && npm run test:integration`
+- [x] 1.1 Migration applies cleanly from scratch: `npx supabase db reset` — 4e4b897
+- [x] 1.2 Type checking / build passes: `npx astro sync && npm run build` — 4e4b897
+- [x] 1.3 Linting passes: `npm run lint` — 4e4b897
+- [x] 1.4 The full pre-existing suite still passes: `npm test && npm run test:integration` — 4e4b897
 
 #### Manual
 
-- [x] 1.5 Default-privileges spike: `__canary()` proves anon is refused after `db reset`, then dropped (apply role-qualified fallback if it didn't bite)
-- [x] 1.6 `pg_proc.proacl`: the four staff RPCs no longer list `anon`; the four public RPCs still do
+- [x] 1.5 Default-privileges spike: `__canary()` proves anon is refused after `db reset`, then dropped (apply role-qualified fallback if it didn't bite) — 4e4b897
+- [x] 1.6 `pg_proc.proacl`: the four staff RPCs no longer list `anon`; the four public RPCs still do — 4e4b897
 
 ### Phase 2: Anon-uncallability + public-RPC regression tests
 
 #### Automated
 
-- [ ] 2.1 New test passes: anon refused on the four staff RPCs; anon still succeeds on the four public RPCs
-- [ ] 2.2 Full integration suite still green: `npm run test:integration`
+- [x] 2.1 New test passes: anon refused on the four staff RPCs; anon still succeeds on the four public RPCs
+- [x] 2.2 Full integration suite still green: `npm run test:integration`
 
 #### Manual
 
-- [ ] 2.3 Skim the test to confirm assertion polarity (permission rejection for staff RPCs, business result for public RPCs)
+- [x] 2.3 Skim the test to confirm assertion polarity (permission rejection for staff RPCs, business result for public RPCs)
