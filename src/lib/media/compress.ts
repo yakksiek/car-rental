@@ -38,12 +38,61 @@ const JPEG = "image/jpeg";
 export async function compressImage(file: File | Blob): Promise<Blob> {
   const source = (await isHeic(file)) ? await heicToJpeg(file) : file;
 
-  const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
+  const bitmap = await decode(source);
   try {
     const { width, height } = scaleToFit(bitmap.width, bitmap.height, MAX_EDGE);
     return await drawToJpeg(bitmap, width, height);
   } finally {
     bitmap.close();
+  }
+}
+
+/**
+ * Decode a blob to an `ImageBitmap`, resilient to mobile-browser quirks.
+ *
+ * `createImageBitmap` is the fast, memory-lean path, but the `imageOrientation`
+ * option is a compatibility trap: older iOS Safari only accepted `"none"` /
+ * `"flipY"` and **throws a `TypeError`** on `"from-image"`, and a portrait phone
+ * photo is exactly where orientation matters. So: try with the option, fall back
+ * to no option, and finally fall back to an `<img>` decode for any engine whose
+ * `createImageBitmap` cannot handle the source at all. The browser applies EXIF
+ * orientation by default in all three paths.
+ */
+async function decode(source: Blob): Promise<ImageBitmap> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await createImageBitmap(source, { imageOrientation: "from-image" });
+    } catch {
+      try {
+        return await createImageBitmap(source);
+      } catch {
+        // Fall through to the <img> path.
+      }
+    }
+  }
+  return decodeViaImage(source);
+}
+
+/** Last-resort decode: an `<img>` element painted to a bitmap. Works wherever the DOM does. */
+async function decodeViaImage(source: Blob): Promise<ImageBitmap> {
+  const url = URL.createObjectURL(source);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => {
+        resolve();
+      };
+      image.onerror = () => {
+        reject(new Error("Nie udało się odczytać zdjęcia."));
+      };
+      image.src = url;
+    });
+    // `createImageBitmap` accepts an `HTMLImageElement` even where it rejected the
+    // Blob, and this yields the ImageBitmap the rest of the pipeline expects.
+    return await createImageBitmap(image);
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }
 

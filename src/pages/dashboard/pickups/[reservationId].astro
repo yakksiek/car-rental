@@ -1,0 +1,106 @@
+---
+// core
+import { SUPABASE_KEY, SUPABASE_URL } from "astro:env/server";
+
+// components
+import Layout from "../../../layouts/Layout.astro";
+import ProtocolForm from "../../../components/protocol/ProtocolForm";
+
+// others
+import { listDispatchToday } from "../../../lib/services/protocols";
+
+// The issue-protocol screen (S-05 Phase 5). Gated to `employee` by the middleware
+// (/dashboard prefix). The form's fixed context comes from `list_dispatch_today`
+// — the same role-gated RPC the dispatch list reads — so a reservation that is not
+// confirmed, not today's, or not visible to this caller simply is not there, and
+// the page 404s without a second authorization check.
+//
+// The island is mounted `client:only="react"`: a `client:load` island is
+// server-rendered, which pulls pdf-lib and heic2any into the Worker bundle
+// (measured 559 → 1,506 KiB gzip). `await import()` does not sever that edge —
+// only `client:only` does. The form is staff-only behind auth, so there is no SEO
+// or no-JS story to protect. It also renders its own header, so no StaffShell.
+//
+// `SUPABASE_KEY` is the publishable anon key; the island needs it to talk to
+// Storage directly (browser → Supabase, never through the Worker's 10 ms CPU cap).
+// The employee's JWT comes from the same cookies the SSR client writes.
+//
+// Note the frontmatter has no early `return`: a top-level return in an `.astro`
+// file crashes `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`.
+// The 404 follows the catalog detail page's `Astro.response.status` pattern instead.
+const { supabase } = Astro.locals;
+const { reservationId } = Astro.params;
+
+const row = (await listDispatchToday(supabase)).find((dispatch) => dispatch.reservation_id === reservationId);
+
+// Both are set whenever Supabase is configured; an unconfigured deployment never
+// reaches here (middleware has no session to gate on and redirects to sign-in).
+const supabaseUrl = SUPABASE_URL ?? "";
+const supabaseKey = SUPABASE_KEY ?? "";
+const configured = supabaseUrl !== "" && supabaseKey !== "";
+
+if (!row || !configured) {
+  Astro.response.status = 404;
+}
+
+// Already issued: `unique (reservation_id)` means there is nothing to fill in here.
+// The React conflict *screen* exists for the race (two employees, one tap each);
+// arriving at a settled URL is just a stale link, so it gets a static twin.
+const issuedProtocolId = row?.protocol_id ?? null;
+
+const ctx = row
+  ? {
+      reservationId: row.reservation_id,
+      reference: row.reference,
+      customerName: row.customer_name,
+      customerEmail: row.customer_email,
+      vehicle: [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" "),
+      plate: row.vehicle_plate,
+      // The booking's fixed hotel-style pickup hour, not `signed_at`.
+      pickupTime: "14:00",
+      lastOdometerKm: row.last_odometer_km,
+    }
+  : null;
+---
+
+<Layout title={row ? `Protokół wydania ${row.reference} — Flota` : "Nie znaleziono — Flota"}>
+  {
+    !ctx || !configured ? (
+      <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono wydania</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">
+          Ta rezerwacja nie czeka dziś na wydanie albo nie masz do niej dostępu.
+        </p>
+        <a
+          href="/dashboard/pickups"
+          class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
+        >
+          Wróć do pulpitu
+        </a>
+      </main>
+    ) : issuedProtocolId ? (
+      <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">
+          Dla tej rezerwacji wydano już protokół — każde wydanie może mieć tylko jeden.
+        </p>
+        <div class="border-border bg-card shadow-card mt-5 rounded-[14px] border p-4">
+          <span class="text-foreground text-[14px] font-semibold tracking-tight">
+            {ctx.reference} · <span class="font-mono">{ctx.plate}</span>
+          </span>
+        </div>
+        <a
+          href={`/dashboard/protocols/${issuedProtocolId}`}
+          class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
+        >
+          Otwórz protokół
+        </a>
+        <a href="/dashboard/pickups" class="text-muted-foreground mt-3 text-[13px] font-semibold">
+          Wróć do pulpitu
+        </a>
+      </main>
+    ) : (
+      <ProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />
+    )
+  }
+</Layout>
