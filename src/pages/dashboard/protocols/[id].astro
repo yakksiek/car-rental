@@ -1,0 +1,120 @@
+---
+// components
+import Layout from "../../../layouts/Layout.astro";
+import StaffShell from "../../../components/shell/StaffShell.astro";
+import ProtocolView from "../../../components/protocol/ProtocolView";
+
+// others
+import type { ProtocolViewDamage, ProtocolViewPhoto } from "../../../components/protocol/ProtocolView";
+import { getProtocol } from "../../../lib/services/protocols";
+import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
+import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
+
+// Read-only view of an issued protocol (S-05 Phase 6). Gated to `employee` by the
+// middleware (/dashboard prefix); `get_protocol` is role-gated too, so a non-staff
+// caller gets zero rows and this page 404s regardless.
+//
+// Every object is served through a short-TTL SIGNED url minted HERE, server-side,
+// with the staff JWT — the customer never receives a bucket URL. The view island
+// only renders the urls it is handed.
+//
+// No early `return` in frontmatter: a top-level return crashes
+// `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`. The 404
+// follows the `Astro.response.status` pattern used elsewhere.
+const { user, role, supabase } = Astro.locals;
+const { id } = Astro.params;
+
+const protocol = id ? await getProtocol(supabase, id) : null;
+
+if (!protocol) {
+  Astro.response.status = 404;
+}
+
+const BUCKET = "protocols";
+const SIGNED_URL_TTL_SECONDS = 300;
+
+// One batch sign for every object the page shows. Missing/unsignable paths map to
+// null so a single broken object never takes the whole view down.
+const signedByPath = new Map<string, string>();
+if (protocol && supabase) {
+  const paths = [
+    ...(protocol.pdf_path ? [protocol.pdf_path] : []),
+    protocol.signature,
+    ...protocol.photos.map((p) => p.path),
+    ...protocol.damages.flatMap((d) => d.photos),
+  ];
+  if (paths.length > 0) {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
+    for (const entry of data ?? []) {
+      if (entry.path && entry.signedUrl && !entry.error) {
+        signedByPath.set(entry.path, entry.signedUrl);
+      }
+    }
+  }
+}
+
+const sign = (path: string | null): string | null => (path ? (signedByPath.get(path) ?? null) : null);
+
+// Photos in canonical capture order, each carrying its Polish slot label.
+const photos: ProtocolViewPhoto[] = protocol
+  ? PHOTO_SLOTS.map((slot) => {
+      const match = protocol.photos.find((p) => p.slot === slot);
+      return { slot, label: PHOTO_SLOT_LABELS_PL[slot], url: match ? sign(match.path) : null };
+    })
+  : [];
+
+const damages: ProtocolViewDamage[] = protocol
+  ? protocol.damages.map((d) => ({
+      id: d.id,
+      type: d.type,
+      typeLabel: DAMAGE_TYPE_LABELS_PL[d.type],
+      location: d.location,
+      size: d.size,
+      photoUrls: d.photos.map((p) => sign(p)).filter((u): u is string => u !== null),
+    }))
+  : [];
+
+const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filter(Boolean).join(" ") : "";
+---
+
+<Layout title={protocol ? `Protokół ${protocol.reference} — Flota` : "Nie znaleziono — Flota"}>
+  <StaffShell active="pickups" title="Protokół" user={user} role={role} showHeader={false}>
+    {
+      protocol ? (
+        <ProtocolView
+          client:load
+          protocolId={protocol.id}
+          reference={protocol.reference}
+          customerName={protocol.customer_name}
+          customerEmail={protocol.customer_email}
+          vehicle={vehicle}
+          plate={protocol.vehicle_plate}
+          pickupTime="14:00"
+          odometerKm={protocol.odometer_km}
+          fuelEighths={protocol.fuel_eighths}
+          signedAt={protocol.signed_at}
+          customerAck={protocol.customer_ack}
+          pdfPath={protocol.pdf_path}
+          pdfUrl={sign(protocol.pdf_path)}
+          deliveryStatus={protocol.delivery_status}
+          signatureUrl={sign(protocol.signature)}
+          photos={photos}
+          damages={damages}
+        />
+      ) : (
+        <main class="mx-auto flex min-h-[60vh] max-w-[460px] flex-col justify-center px-5 text-center">
+          <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono protokołu</h1>
+          <p class="text-muted-foreground mt-1.5 text-[13px]">
+            Ten protokół nie istnieje albo nie masz do niego dostępu.
+          </p>
+          <a
+            href="/dashboard/pickups"
+            class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
+          >
+            Wróć do wydań
+          </a>
+        </main>
+      )
+    }
+  </StaffShell>
+</Layout>

@@ -20,6 +20,9 @@ const alias = {
   // seam or config-status would fail to import. The stub reports an unconfigured
   // deployment (every value `undefined`).
   "astro:env/server": new URL("./tests/stubs/astro-env-server.ts", import.meta.url).pathname,
+  // `astro:middleware` is another build-time virtual module. The stub lets a test
+  // import `src/middleware.ts` directly to exercise the page-level auth gate.
+  "astro:middleware": new URL("./tests/stubs/astro-middleware.ts", import.meta.url).pathname,
 };
 
 export default defineConfig({

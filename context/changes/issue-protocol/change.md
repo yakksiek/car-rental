@@ -288,6 +288,40 @@ archived_at: null
      re-post and re-fail with the fake key; proving it flips to `sent` needs a real key (Phase 7 send gate).
   10. **`vehicles.plate` note for testers:** the dispatch RPC filters `pickup_date = current_date`, so manual test
       reservations must be re-seeded for "today" — they are local-only fixtures, wiped by `db reset`, not committed.
+- 2026-07-14 — **Phase 6 implemented.** The dispatch list (`/dashboard/pickups` + `PickupQueue`), the shared
+  `DeliveryBadge`, the read-only view (`/dashboard/protocols/[id]` + `ProtocolView`), the `useResendEmail` hook,
+  and nav/access wiring (`Wydania` tab + `key` glyph, explicit `pickups`/`protocols` `ROUTE_ROLES` entries).
+  Findings:
+  1. **§4 (`W toku` chip) was a no-op.** The chip only ever existed in the design prototype's `ScreenStaffDash`
+     JSX under `context/` — a `grep` for `inProgress`/`toku` across `src/` is empty. The repo's real
+     `dashboard.astro` never implemented it, so 6.10 is satisfied by construction; there was nothing to remove.
+  2. **6.5 needed no new test.** "A role-null user gets zero rows from `get_protocol`" is already proven by the
+     existing `protocols-rls.test.ts` ("get_protocol returns zero rows"). Marked done against that test rather
+     than duplicating it.
+  3. **6.3 (page gate) is tested by exercising the real middleware.** There is no page-level HTTP harness (only
+     `buildApiContext` for `/api`), so `pages-authz.test.ts` imports `src/middleware.ts` and calls `onRequest`
+     with a hand-built context. Needed a new `tests/stubs/astro-middleware.ts` (`defineMiddleware` is identity in
+     Astro) aliased in `vitest.config.ts`, mirroring the existing `astro:env/server` stub. Under Vitest the env
+     stub makes `createClient` return null ⇒ `locals.user` null ⇒ the anonymous branch, which is exactly the
+     caller the redirect protects; a public-path control proves the gate is path-specific, not blanket.
+  4. **6.4 uses two disposable vehicles, not re-dated seed rows.** `list_dispatch_today` filters
+     `pickup_date = current_date`, and the two confirmed seed reservations (R-0001/R-0002) share vehicle `1111…`,
+     so re-dating both onto today would trip the `EXCLUDE` overlap constraint. `dispatch-list.test.ts` seeds its
+     own two vehicles + reservations dated today (one issued, one not) and asserts the fold, incl. that the
+     lateral join surfaces the NEWEST of two deliveries (`failed` then `sent`).
+  5. **Local seed had drifted from Phase 5 manual testing.** 4 integration tests failed on first run (R-0003 was
+     `confirmed` not `pending`; stray protocols on reservations 002/005/008/009/010) — leftover manual-test state,
+     not a code fault. `npx supabase db reset` restored the seed and all 105 integration + 198 unit tests pass.
+     The reset wiped the tester's today-dated fixtures (per 5.10.10); re-dated R-0002 onto today for the 6.6–6.8
+     walkthrough — local-only, uncommitted.
+  6. **6.9 deferred to the Phase 7 send gate.** The failed-badge + re-post-fails behaviour is proven with a bogus
+     key, but proving `Wyślij ponownie` flips to `Dostarczono` needs a real verified sender — the same act as
+     7.8. Its Progress row stays `- [ ]`; `/10x-archive` will surface it as an informational warning, correctly,
+     because that half genuinely has not been exercised yet.
+  7. **Dev-only, found mid-verification (not a code issue):** two orphaned `astro dev` servers (`:4321` + `:4322`)
+     sharing one `node_modules/.vite` handed out stale optimized-deps chunks, rendering unrelated islands (the
+     sign-in form) blank. Fix is kill both + clear `.vite` + start one — the same stale-chunk family already noted
+     in project memory.
 - **Design contract distilled into `plan.md` Phase 5** (all 60+ `proto.*` PL strings verbatim, every component
   state, both viewport layouts). Per `lessons.md`, `/10x-implement` must build from that text and **not** re-open
   the JSX or the PNG exports. One correction to audit v2 §A: read from source, the desktop columns are
