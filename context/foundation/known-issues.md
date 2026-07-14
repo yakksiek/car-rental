@@ -26,3 +26,24 @@ elsewhere). Keep entries short: symptom → cause → scope → decision.
   `<style data-vite-dev-id>` the current DOM lacks, or bump `@tailwindcss/vite` / `astro` (this
   class of "Tailwind missing after view transition in dev" has had upstream fixes). To verify a fix,
   reproduce in `npm run dev` (not `preview`).
+
+## Queued: repo-wide RPC EXECUTE-grant hardening (`rpc-execute-grant-hardening`)
+
+- **Symptom:** `grant execute … to authenticated` on a `SECURITY DEFINER` RPC restricts nothing —
+  Postgres grants EXECUTE to `PUBLIC` by default and Supabase's default privileges add an explicit
+  `anon` grant, so every RPC is anon-callable at the grant layer. Found 2026-07-10 during S-05 Phase 1.
+- **Cause:** Default function grants, not the app. See `lessons.md` → "Revoke EXECUTE before granting it".
+- **Scope:** Repo-wide, but **verified NOT exploitable** — every pre-existing staff RPC
+  (`decide_reservation`, `set_vehicle_active`, `list_pending_reservations`,
+  `list_reservations_for_calendar`) refuses at its in-function `current_app_role()` gate (no leak, no
+  state change). S-05's own five RPCs were fixed in-slice with explicit `revoke … from public, anon`.
+  This is defense-in-depth for the older RPCs and future ones, not an open hole.
+- **Decision:** Deferred to its own change (agreed 2026-07-10, run after S-05 shipped — now done). Fix:
+  (a) `alter default privileges in schema public revoke execute on functions from public, anon,
+authenticated;` so new functions start closed; (b) explicit `revoke execute … from public, anon` on
+  the four staff RPCs above; (c) an integration test pinning anon-uncallability. **Carve-outs:** the
+  four intentionally-public RPCs (`available_vehicles`, `get_vehicle_busy_ranges`,
+  `get_reservation_status`, `create_reservation_request`) keep their explicit `anon` grant; the
+  `current_app_role()` policy helper keeps its `authenticated` grant.
+- **To action:** `/10x-new rpc-execute-grant-hardening`. Full context in the archived S-05 change log
+  (`context/archive/2026-07-09-issue-protocol/change.md`, Phase 1 note).
