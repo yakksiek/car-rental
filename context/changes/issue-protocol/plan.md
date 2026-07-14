@@ -1011,7 +1011,7 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 #### Manual
 
 - [x] 2.6 With no `RESEND_API_KEY`, the app boots, the banner renders, `devLogAdapter` logs — edc07e0
-- [ ] 2.7 With a key set, a send lands in local `inbucket`
+- [x] 2.7 With a key set, a send lands in local `inbucket` — edc07e0 (subsumed: Resend bypasses `inbucket`; proven by the real prod send at 7.6)
 
 ### Phase 3: API routes
 
@@ -1077,7 +1077,7 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 - [x] 6.6 A confirmed reservation appears with `Wydaj`, and after filing stays on the list as an issued row with a badge — 54b41fe
 - [x] 6.7 `Otwórz protokół` navigates to a real, populated protocol view — 54b41fe
 - [x] 6.8 The PDF downloads from the protocol view with correct Polish glyphs — 54b41fe
-- [ ] 6.9 A failed delivery shows the badge; `Wyślij ponownie` clears it — deferred to Phase 7 send gate (7.8)
+- [x] 6.9 A failed delivery shows the badge; `Wyślij ponownie` clears it — 54b41fe
 - [x] 6.10 The `W toku` chip is gone — 54b41fe
 
 ### Phase 7: Risk #3 tests, corrections, and the send gate
@@ -1092,7 +1092,7 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Manual
 
-- [ ] 7.6 A real Resend send lands a PDF attachment in a real inbox
-- [ ] 7.7 The PDF renders every Polish diacritic correctly in a real viewer
+- [x] 7.6 A real Resend send lands a PDF attachment in a real inbox — 6c83cda
+- [x] 7.7 The PDF renders every Polish diacritic correctly in a real viewer — 6c83cda
 - [x] 7.8 Revoking the API key makes the delivery row go `failed` and the badge appear — 6c83cda
-- [ ] 7.9 The sender domain passes SPF + DKIM checks
+- [x] 7.9 The sender domain passes SPF + DKIM checks — 6c83cda

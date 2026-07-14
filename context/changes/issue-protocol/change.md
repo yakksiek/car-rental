@@ -1,7 +1,7 @@
 ---
 change_id: issue-protocol
 title: Issue protocol
-status: implementing
+status: implemented
 created: 2026-07-09
 updated: 2026-07-14
 archived_at: null
@@ -353,3 +353,28 @@ path should not point to localhost"`. This is architectural, not a misconfig: th
      disposable vehicle `WX SEND01`. To finish the gate: deploy, `wrangler secret put RESEND_API_KEY / EMAIL_FROM`,
      verify a real sender domain, seed the same shape in prod, file one protocol on the live site, confirm the PDF
      lands with glyphs intact. **Rotate the smoke-test Resend key** — it was shared in-session.
+- 2026-07-14 — **Send gate PASSED in production — slice is now merge-complete (`status: implemented`).** Deployed
+  S-05 to prod and landed a real protocol email with the diacritic set intact. Sequence and findings:
+  1. **Domain**: registered `wujcar.com` (any TLD passes SPF/DKIM; skipped `.pl` — the ultra-cheap spammy TLDs
+     hurt the "not junked" half, a `.com` at Cloudflare is the cheap-and-reputable pick). Added to Resend, **EU
+     region (eu-west-1)**, DNS on Cloudflare via Resend's **Auto configure** (OAuth) — verified in ~4 min. Closes
+     **7.9** (SPF+DKIM), and the inbox-not-spam landing confirms the deliverability half.
+  2. **A verified domain does NOT unblock local testing.** The hosted-attachment 422 is about the signed-URL host,
+     not the sender — local stays `127.0.0.1`. The real send gate is inherently a **production** exercise (prod
+     Supabase is on public `*.supabase.co`, which Resend can fetch). So 7.6/7.7 were done against the live Worker.
+  3. **Prod deploy**: one pending migration (`20260710120000`) pushed to prod (`fmgbyfpilgzvhkziigsj`). The plate
+     `set not null` risk was neutralised by clearing prod's disposable vehicles+reservations first (user's call),
+     so the backfill ran against an empty table; re-seeded from `seed.prod.sql` + a today-dated `R-SEND1` test
+     reservation. `npm run build && wrangler deploy` → `fleetrent` Worker version `6e0a78cd`, live at
+     `fleetrent.marcin-kulbicki.workers.dev`. Secrets set via `wrangler secret put` (persist across deploys).
+  4. **⚠ `EMAIL_FROM` format gotcha.** First prod send 422'd: `Invalid \`from\` field`. The `FleetRent
+     <protokol@wujcar.com>`value picked up a stray character when set as a secret (quotes/whitespace, or an
+unquoted shell`<`redirect). Fix: re-set`EMAIL_FROM`to the **bare**`protokol@wujcar.com`(no display
+name, no angle brackets) — Resend accepts`email@example.com`or`Name <email@example.com>`, and the bare
+form removes the paste hazard. Subject already carries "FleetRent —", so no branding lost. `secret put`deploys immediately, so **Wyślij ponownie** on the already-committed protocol re-sent with no redeploy →`Dostarczono`, PDF in the inbox with glyphs correct. This also proved **6.9** (failed badge → resend clears).
+  5. Every Progress row is now `- [x]`. **2.7** was flipped as subsumed (its literal "local `inbucket`" wording is
+     unachievable — Resend POSTs to its HTTPS API; the real prod send at 7.6 proves the intent).
+  6. **Follow-ups (not S-05):** rotate the Resend key again if desired (a working key was set as a prod secret,
+     not shared, but the earlier smoke-test key was); the `rpc-execute-grant-hardening` change is still queued;
+     optionally clean the `R-SEND1` test protocol out of prod; and `wujcar.com`'s `EMAIL_FROM` can regain the
+     `FleetRent <…>` display name later via the interactive prompt (unquoted) if wanted.
