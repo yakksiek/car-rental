@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-07-09
+updated: 2026-07-14
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -27,18 +27,18 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status    |
-| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | --------- |
-| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done      |
-| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done      |
-| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done      |
-| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done      |
-| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done      |
-| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done      |
-| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | preparing |
-| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | proposed  |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed  |
-| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed  |
+| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status   |
+| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | -------- |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done     |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done     |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done     |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done     |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done     |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done     |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | done     |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | proposed |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed |
 
 ## Streams
 
@@ -173,7 +173,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Stands up file storage (photos) and transactional email for the first time, and carries the main field-usability risk: on-device photo capture and touch signature must work at the vehicle (NFR). Sequenced after an accepted reservation exists (S-03) so a real protocol has something to attach to.
   **Research 2026-07-09 materially reduced the estimate**: the email work is a ~15-line adapter into a seam that already exists (`src/lib/email/index.ts:37-39`), and `infrastructure.md`'s 3 MB bundle risk is measured false (Worker uploads at `gzip: 554.76 KiB`; client islands are separate static assets). Two risks _grew_: a new `protocols` table carries customer PII + damage photos and must close its default grants from the start (the `reservations` leak), and **pdf-lib throws on 8 of 9 Polish diacritics** unless fontkit + an embedded TTF are wired.
   Scope grew deliberately in two places: an `email_deliveries` table (a failed protocol email is currently invisible — `console.error` only — and email is the customer's _only_ channel), and a client-generated PDF attachment replacing signed URLs (durability for dispute evidence; deletes the bearer-link risk).
-- **Status:** preparing — `/10x-research` and `/10x-plan` complete; `/10x-plan-review` verdict **SOUND** (all 10 findings fixed). 7 phases in `context/changes/issue-protocol/plan.md`. Next: `/10x-implement issue-protocol`, once the sender domain is verified.
+- **Status:** done
 
 ### S-06: Return protocol with comparison
 
@@ -260,3 +260,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: A logged-in employee can view all pending reservation requests and accept or reject each one; accepting confirms the booking against the overlap rule.** — Archived 2026-06-26 → `context/archive/2026-06-17-reservation-approval/`. Lesson: —.
 - **S-04: A logged-in employee can add and edit vehicles in the fleet, and remove a vehicle — with removal blocked when active reservations exist (employee must cancel them first).** — Archived 2026-07-09 → `context/archive/2026-06-17-fleet-management/`. Lesson: —.
 - **S-02a: On the per-vehicle booking calendar, a booked range's changeover days are shown half-available instead of fully greyed — the booking's pickup day stays selectable as a new return, and its return day as a new pickup — so back-to-back rentals can be booked from the UI, matching the half-open EXCLUDE window.** — Archived 2026-07-09 → `context/archive/2026-06-16-changeover-day-availability/`. Lesson: —.
+- **S-05: A logged-in employee can fill an issue protocol at pickup — mileage, fuel level, damage notes, photos, and a digital signature — on a phone or tablet, and the completed protocol is auto-emailed to the customer.** — Archived 2026-07-14 → `context/archive/2026-07-09-issue-protocol/`. Lesson: —.

@@ -1,10 +1,10 @@
 ---
 change_id: issue-protocol
 title: Issue protocol
-status: implemented
+status: archived
 created: 2026-07-09
 updated: 2026-07-14
-archived_at: null
+archived_at: 2026-07-14T16:04:35Z
 ---
 
 ## Notes
