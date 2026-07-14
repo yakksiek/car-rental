@@ -1084,15 +1084,15 @@ done for the slice**: one real protocol emailed to a real inbox, with a customer
 
 #### Automated
 
-- [x] 7.1 Unit tests pass: `npm test`
-- [x] 7.2 Integration tests pass: `npm run test:integration`
-- [x] 7.3 The three risk #3 assertions pass (attempted / surfaced / correct payload)
-- [x] 7.4 Linting and build pass: `npm run lint && npm run build`
-- [x] 7.5 `test-plan.md` §3 Phase 4 status updated to `complete`
+- [x] 7.1 Unit tests pass: `npm test` — 6c83cda
+- [x] 7.2 Integration tests pass: `npm run test:integration` — 6c83cda
+- [x] 7.3 The three risk #3 assertions pass (attempted / surfaced / correct payload) — 6c83cda
+- [x] 7.4 Linting and build pass: `npm run lint && npm run build` — 6c83cda
+- [x] 7.5 `test-plan.md` §3 Phase 4 status updated to `complete` — 6c83cda
 
 #### Manual
 
 - [ ] 7.6 A real Resend send lands a PDF attachment in a real inbox
 - [ ] 7.7 The PDF renders every Polish diacritic correctly in a real viewer
-- [x] 7.8 Revoking the API key makes the delivery row go `failed` and the badge appear
+- [x] 7.8 Revoking the API key makes the delivery row go `failed` and the badge appear — 6c83cda
 - [ ] 7.9 The sender domain passes SPF + DKIM checks
