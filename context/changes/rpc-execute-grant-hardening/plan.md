@@ -188,9 +188,9 @@ A dedicated integration test that pins both sides: anon is refused on the four s
 
 #### Automated
 
-- [x] 2.1 New test passes: anon refused on the four staff RPCs; anon still succeeds on the four public RPCs
-- [x] 2.2 Full integration suite still green: `npm run test:integration`
+- [x] 2.1 New test passes: anon refused on the four staff RPCs; anon still succeeds on the four public RPCs — 9f37338
+- [x] 2.2 Full integration suite still green: `npm run test:integration` — 9f37338
 
 #### Manual
 
-- [x] 2.3 Skim the test to confirm assertion polarity (permission rejection for staff RPCs, business result for public RPCs)
+- [x] 2.3 Skim the test to confirm assertion polarity (permission rejection for staff RPCs, business result for public RPCs) — 9f37338
