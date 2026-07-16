@@ -155,6 +155,14 @@ export type EmailDelivery = Database["public"]["Tables"]["email_deliveries"]["Ro
 export type ProtocolPhotoSlot = Database["public"]["Enums"]["protocol_photo_slot"];
 export type ProtocolDamageType = Database["public"]["Enums"]["protocol_damage_type"];
 
+// The protocol discriminator (S-06), mirroring the DB `protocol_type` enum. It
+// also names the storage folder every protocol object lives under
+// (`<kind>/<protocol_id>/…`), so `src/lib/protocol-storage-paths.ts` keys its
+// path builders + the `isValidObjectPath` checker on it — one TypeScript source
+// the client, the return schema, and the PDF route guard all share, instead of
+// four hand-copied `issue/`/`return/` literals.
+export type ProtocolKind = Database["public"]["Enums"]["protocol_type"];
+
 // One row of the dispatch list: today's confirmed reservations with their
 // protocol state folded in. `protocol_id` null ⇒ still awaiting handover (the
 // row offers `Wydaj`); non-null ⇒ already issued, carrying `pdf_path` and the
@@ -191,6 +199,52 @@ export type CreateProtocolResult =
   | { status: "conflict"; protocolId: string }
   | { status: "not_found" }
   | { status: "not_confirmed" }
+  | { status: "unauthorized" };
+
+// ---------------------------------------------------------------------------
+// Return protocol (S-06) — the return record diffed against the issue baseline.
+// Like S-05, every read/write crosses the RLS boundary through a definer RPC, so
+// these are RPC-shaped. "Returned" is not a reservation_status value — it is the
+// existence of a `type='return'` protocols row.
+// ---------------------------------------------------------------------------
+
+// One baseline damage as `get_return_baseline` aggregates it (no photos): the
+// issue-time list the return form shows read-only and the auto-tagger diffs
+// against. `size` is nullable, mirroring `protocol_damages.size`.
+export interface ReturnBaselineDamage {
+  id: string;
+  type: ProtocolDamageType;
+  location: string;
+  size: string | null;
+}
+
+// The issue baseline for the return screen: odometer/fuel + the damage list to
+// diff against, plus reservation + vehicle reference fields and the existing
+// return protocol's id (null until a return is filed). `baseline_damages` comes
+// back as a jsonb aggregate, so it is typed here rather than left as `Json`.
+export type ReturnBaseline = Omit<
+  Database["public"]["Functions"]["get_return_baseline"]["Returns"][number],
+  "baseline_damages"
+> & {
+  baseline_damages: ReturnBaselineDamage[];
+};
+
+// One row of the returns worklist: confirmed reservations due-or-overdue to
+// return, with the return protocol state folded in. `return_protocol_id` null ⇒
+// still open (the row offers `Przyjmij zwrot`); non-null ⇒ already returned,
+// carrying `pdf_path`, the newest delivery status for the badge + resend, and the
+// baseline summary the deltas are computed against.
+export type DispatchReturnRow = Database["public"]["Functions"]["list_returns_today"]["Returns"][number];
+
+// Typed union over `create_return_protocol`'s result tag. `conflict` carries the
+// existing return protocol's id (like `create_protocol`); `no_baseline` means no
+// issue protocol exists for the reservation (or the submitted baseline id does
+// not match it) — a return may never stand without an issue baseline.
+export type CreateReturnProtocolResult =
+  | { status: "ok"; protocolId: string }
+  | { status: "conflict"; protocolId: string }
+  | { status: "not_found" }
+  | { status: "no_baseline" }
   | { status: "unauthorized" };
 
 // The outcome of a tracked send. Never thrown — recorded in `email_deliveries`

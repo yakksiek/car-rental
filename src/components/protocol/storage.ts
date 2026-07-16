@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // others
 import type { Database } from "../../db/database.types";
+import * as paths from "../../lib/protocol-storage-paths";
 import type { ProtocolPhotoSlot } from "../../types";
 
 // Browser → Supabase Storage, direct. The Worker never sees an image byte (10 ms
@@ -29,11 +30,16 @@ export function createStorageClient(url: string, anonKey: string): BrowserClient
 // upload precisely so these paths can exist: `create_protocol` records the path,
 // it does not mint it. `protocolInputSchema` re-checks every path sits under
 // `issue/<protocolId>/`.
-export const photoPath = (protocolId: string, slot: ProtocolPhotoSlot) => `issue/${protocolId}/photo-${slot}.jpg`;
+//
+// The builders live in the shared `protocol-storage-paths` module keyed by
+// `kind` (S-06); these wrappers bind `kind = 'issue'` so the issue call sites
+// (ProtocolForm) stay unchanged. The return form calls the kind-aware builders
+// directly.
+export const photoPath = (protocolId: string, slot: ProtocolPhotoSlot) => paths.photoPath("issue", protocolId, slot);
 export const damagePhotoPath = (protocolId: string, damageId: string, n: number) =>
-  `issue/${protocolId}/damage-${damageId}-${n}.jpg`;
-export const signaturePath = (protocolId: string) => `issue/${protocolId}/signature.png`;
-export const pdfPath = (protocolId: string) => `issue/${protocolId}/protocol.pdf`;
+  paths.damagePhotoPath("issue", protocolId, damageId, n);
+export const signaturePath = (protocolId: string) => paths.signaturePath("issue", protocolId);
+export const pdfPath = (protocolId: string) => paths.pdfPath("issue", protocolId);
 
 /**
  * Upload one object and return its path.
