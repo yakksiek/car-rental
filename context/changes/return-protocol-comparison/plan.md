@@ -812,28 +812,28 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly (`npx supabase db reset`)
-- [x] 2.2 Types regenerate and `npm run build` passes
-- [x] 2.3 `npm run test:integration` passes the new `returns-rls` suite
+- [x] 2.1 Migration applies cleanly (`npx supabase db reset`) — 818360e
+- [x] 2.2 Types regenerate and `npm run build` passes — 818360e
+- [x] 2.3 `npm run test:integration` passes the new `returns-rls` suite — 818360e
 
 #### Manual
 
-- [x] 2.4 Seeded issue row present; seeded reservation appears in `list_returns_today()` as an open return
-- [x] 2.5 A `return/`-prefixed object is insertable by staff and invisible to anon
-- [x] 2.6 `create_return_protocol` returns `no_baseline` (no issue) and `conflict` (second return)
+- [x] 2.4 Seeded issue row present; seeded reservation appears in `list_returns_today()` as an open return — 818360e
+- [x] 2.5 A `return/`-prefixed object is insertable by staff and invisible to anon — 818360e
+- [x] 2.6 `create_return_protocol` returns `no_baseline` (no issue) and `conflict` (second return) — 818360e
 
 ### Phase 3: Delta helper + return schema + service
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass (`protocol-delta.test.ts`, `return-protocol-schema.test.ts`)
-- [ ] 3.2 `npm run lint` passes
-- [ ] 3.3 Existing issue-flow unit tests stay green
+- [x] 3.1 Unit tests pass (`protocol-delta.test.ts`, `return-protocol-schema.test.ts`)
+- [x] 3.2 `npm run lint` passes
+- [x] 3.3 Existing issue-flow unit tests stay green
 
 #### Manual
 
-- [ ] 3.4 `computeReturnDeltas` matches hand-computed values on the seeded baseline
-- [ ] 3.5 `autoTagDamages` pre-selects unchanged baseline damage as `existing`, fresh damage as `new`
+- [x] 3.4 `computeReturnDeltas` matches hand-computed values on the seeded baseline
+- [x] 3.5 `autoTagDamages` pre-selects unchanged baseline damage as `existing`, fresh damage as `new`
 
 ### Phase 4: PDF comparison + email + API routes
 

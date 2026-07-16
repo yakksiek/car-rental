@@ -6,13 +6,18 @@ import type { Database } from "../../db/database.types";
 import { protocolIssuedEmail } from "../email/templates";
 import { PHOTO_SLOTS } from "../protocol-schema";
 import type { ProtocolInput } from "../protocol-schema";
+import type { ReturnProtocolInput } from "../return-protocol-schema";
 import { sendTracked } from "./email-delivery";
 import type {
   CreateProtocolResult,
+  CreateReturnProtocolResult,
+  DispatchReturnRow,
   DispatchRow,
   ProtocolDamageItem,
   ProtocolPhotoSlot,
   ProtocolView,
+  ReturnBaseline,
+  ReturnBaselineDamage,
 } from "../../types";
 
 // The single home for issue-protocol data access (S-05). The five protocol
@@ -255,4 +260,127 @@ export async function resendProtocolEmail(
     template: TEMPLATE,
     attachments: [{ path: signed.signedUrl, filename: `protokol-wydania-${protocol.reference}.pdf` }],
   });
+}
+
+// ---------------------------------------------------------------------------
+// Return protocol (S-06) — the three new wrappers, mirroring the issue wrappers
+// above: client-first, `UUID_RE`-guarded, null-client degrades to the "cannot
+// act" value, unexpected DB error rethrows. Every read/write still crosses the
+// RLS boundary through the same kind of definer RPC that self-gates on
+// `current_app_role()` and fails closed on a null role.
+// ---------------------------------------------------------------------------
+
+/**
+ * Load the issue baseline for a reservation's return screen, via the role-gated
+ * `get_return_baseline` definer RPC. `null` for a malformed id, a reservation
+ * with no issue protocol (the RPC returns zero rows — the not-found signal), or a
+ * caller the role gate turned away. The `baseline_damages` jsonb aggregate is
+ * cast to the shape the RPC builds it with.
+ */
+export async function getReturnBaseline(
+  client: ProtocolClient | null,
+  reservationId: string,
+): Promise<ReturnBaseline | null> {
+  if (!client || !UUID_RE.test(reservationId)) {
+    return null;
+  }
+
+  const { data, error } = await client.rpc("get_return_baseline", { p_reservation_id: reservationId });
+  if (error) {
+    throw error;
+  }
+
+  const row = data.at(0);
+  if (!row) {
+    return null;
+  }
+  const { baseline_damages, ...rest } = row;
+  return { ...rest, baseline_damages: baseline_damages as unknown as ReturnBaselineDamage[] };
+}
+
+/**
+ * The returns worklist — confirmed reservations due-or-overdue to return, with
+ * the return protocol state folded in — via the role-gated `list_returns_today`
+ * definer RPC (a non-staff caller gets zero rows).
+ *
+ * Returned rows are **kept, never filtered** while relevant: a return whose email
+ * failed is exactly the row the employee needs to find, and today's just-filed
+ * returns stay for resend. `return_protocol_id` null ⇒ still open.
+ */
+export async function listReturnsToday(client: ProtocolClient | null): Promise<DispatchReturnRow[]> {
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client.rpc("list_returns_today");
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Commit a return via the `create_return_protocol` definer RPC — the only way a
+ * return protocol row is ever created.
+ *
+ * Mirrors `createProtocol` plus the baseline precondition: the RPC asserts an
+ * issue protocol exists and that `p_baseline_protocol_id` is its id (else
+ * `no_baseline`), and the composite `unique (reservation_id, 'return')` is the
+ * backstop that turns a double-submit into a clean `conflict` tag carrying the
+ * existing return's id. Damages carry an optional `baseline_damage_id` per item
+ * (non-null ⇒ existing, null ⇒ new). **Nothing is emailed here** — the PDF does
+ * not exist yet, exactly as in the issue flow.
+ */
+export async function createReturnProtocol(
+  client: ProtocolClient | null,
+  input: ReturnProtocolInput,
+): Promise<CreateReturnProtocolResult> {
+  if (
+    !client ||
+    !UUID_RE.test(input.protocolId) ||
+    !UUID_RE.test(input.reservationId) ||
+    !UUID_RE.test(input.baselineProtocolId)
+  ) {
+    return { status: "unauthorized" };
+  }
+
+  const { data, error } = await client.rpc("create_return_protocol", {
+    p_id: input.protocolId,
+    p_reservation_id: input.reservationId,
+    p_baseline_protocol_id: input.baselineProtocolId,
+    p_odometer_km: input.odometerKm,
+    p_fuel_eighths: input.fuelEighths,
+    p_signed_at: input.signedAt,
+    p_customer_ack: input.customerAck,
+    p_signature: input.signaturePath,
+    p_photos: PHOTO_SLOTS.map((slot) => ({ slot, path: input.photos[slot] })),
+    p_damages: input.damages.map((damage) => ({
+      id: damage.id,
+      type: damage.type,
+      location: damage.location,
+      size: damage.size,
+      // The RPC persists this verbatim: non-null ⇒ existing, null ⇒ new.
+      baseline_damage_id: damage.baselineDamageId,
+      photos: damage.photos,
+    })),
+  });
+  if (error) {
+    throw error;
+  }
+
+  // The RPC always returns exactly one row with a result tag.
+  const row = data.at(0);
+  switch (row?.result) {
+    case "ok":
+    case "conflict":
+      return { status: row.result, protocolId: row.protocol_id };
+    case "not_found":
+      return { status: "not_found" };
+    case "no_baseline":
+      return { status: "no_baseline" };
+    case "unauthorized":
+      return { status: "unauthorized" };
+    default:
+      throw new Error(`create_return_protocol returned an unexpected result: ${JSON.stringify(data)}`);
+  }
 }
