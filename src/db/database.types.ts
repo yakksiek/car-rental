@@ -116,6 +116,7 @@ export type Database = {
       }
       protocol_damages: {
         Row: {
+          baseline_damage_id: string | null
           id: string
           location: string
           protocol_id: string
@@ -123,6 +124,7 @@ export type Database = {
           type: Database["public"]["Enums"]["protocol_damage_type"]
         }
         Insert: {
+          baseline_damage_id?: string | null
           id: string
           location: string
           protocol_id: string
@@ -130,6 +132,7 @@ export type Database = {
           type: Database["public"]["Enums"]["protocol_damage_type"]
         }
         Update: {
+          baseline_damage_id?: string | null
           id?: string
           location?: string
           protocol_id?: string
@@ -137,6 +140,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["protocol_damage_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "protocol_damages_baseline_damage_id_fkey"
+            columns: ["baseline_damage_id"]
+            isOneToOne: false
+            referencedRelation: "protocol_damages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "protocol_damages_protocol_id_fkey"
             columns: ["protocol_id"]
@@ -177,6 +187,7 @@ export type Database = {
       }
       protocols: {
         Row: {
+          baseline_protocol_id: string | null
           created_at: string
           created_by: string | null
           customer_ack: boolean
@@ -187,8 +198,10 @@ export type Database = {
           reservation_id: string
           signature: string
           signed_at: string
+          type: Database["public"]["Enums"]["protocol_type"]
         }
         Insert: {
+          baseline_protocol_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_ack: boolean
@@ -199,8 +212,10 @@ export type Database = {
           reservation_id: string
           signature: string
           signed_at: string
+          type: Database["public"]["Enums"]["protocol_type"]
         }
         Update: {
+          baseline_protocol_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_ack?: boolean
@@ -211,12 +226,20 @@ export type Database = {
           reservation_id?: string
           signature?: string
           signed_at?: string
+          type?: Database["public"]["Enums"]["protocol_type"]
         }
         Relationships: [
           {
+            foreignKeyName: "protocols_baseline_protocol_id_fkey"
+            columns: ["baseline_protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "protocols_reservation_id_fkey"
             columns: ["reservation_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
@@ -450,6 +473,24 @@ export type Database = {
           result: string
         }[]
       }
+      create_return_protocol: {
+        Args: {
+          p_baseline_protocol_id: string
+          p_customer_ack: boolean
+          p_damages: Json
+          p_fuel_eighths: number
+          p_id: string
+          p_odometer_km: number
+          p_photos: Json
+          p_reservation_id: string
+          p_signature: string
+          p_signed_at: string
+        }
+        Returns: {
+          protocol_id: string
+          result: string
+        }[]
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
@@ -520,6 +561,25 @@ export type Database = {
           vehicle_production_year: number
         }[]
       }
+      get_return_baseline: {
+        Args: { p_reservation_id: string }
+        Returns: {
+          baseline_damages: Json
+          baseline_fuel_eighths: number
+          baseline_odometer_km: number
+          baseline_protocol_id: string
+          customer_email: string
+          customer_name: string
+          pickup_date: string
+          reference: string
+          reservation_id: string
+          return_date: string
+          return_protocol_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_plate: string
+        }[]
+      }
       get_vehicle_busy_ranges: {
         Args: { p_vehicle_id: string }
         Returns: {
@@ -583,6 +643,28 @@ export type Database = {
           vehicle_model: string
         }[]
       }
+      list_returns_today: {
+        Args: never
+        Returns: {
+          baseline_fuel_eighths: number
+          baseline_odometer_km: number
+          baseline_protocol_id: string
+          customer_email: string
+          customer_name: string
+          delivery_created_at: string
+          delivery_status: string
+          pdf_path: string
+          pickup_date: string
+          reference: string
+          reservation_id: string
+          return_date: string
+          return_protocol_id: string
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_plate: string
+        }[]
+      }
       record_email_delivery: {
         Args: {
           p_entity_id: string
@@ -617,6 +699,7 @@ export type Database = {
         | "right"
         | "interior"
         | "dashboard"
+      protocol_type: "issue" | "return"
       reservation_status: "pending" | "confirmed" | "rejected" | "cancelled"
       transmission_type: "manual" | "automatic"
       vehicle_category:
@@ -765,6 +848,7 @@ export const Constants = {
         "interior",
         "dashboard",
       ],
+      protocol_type: ["issue", "return"],
       reservation_status: ["pending", "confirmed", "rejected", "cancelled"],
       transmission_type: ["manual", "automatic"],
       vehicle_category: [
