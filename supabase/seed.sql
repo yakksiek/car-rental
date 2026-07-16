@@ -228,3 +228,47 @@ insert into auth.identities (
 insert into profiles (user_id, role) values
   ('a0000000-0000-0000-0000-0000000000ad', 'admin'),
   ('e0000000-0000-0000-0000-0000000000e0', 'employee');
+
+-- ---------------------------------------------------------------------------
+-- issue protocol baseline (S-06) — makes the returns worklist + deltas demoable
+-- ---------------------------------------------------------------------------
+--
+-- One issue protocol (type='issue', no pdf) against reservation R-0001 (Jan
+-- Kowalski / Sprinter), which is confirmed with return_date 2026-07-10 (past),
+-- so it surfaces in list_returns_today() as an OVERDUE-open return. No storage
+-- objects (protocol_photos left empty; `signature` holds a path string whose
+-- bytes are never seeded) — the demo shows the numeric + damage deltas, not
+-- photos. Odometer 42000 / fuel 8/8 are the baseline the hand-worked example in
+-- the plan diffs against (42000 -> 42850 = 850 km; 8/8 -> 4/8 = -4, flagged).
+--
+-- Every seeded damage note carries the full Polish diacritic set
+-- `ą ć ę ł ń ó ś ź ż` / `Ą Ć Ę Ł Ń Ó Ś Ź Ż` (lessons.md) so the pdf-lib encoding
+-- boundary is exercised the moment a return PDF is built against this baseline.
+insert into protocols (
+  id, reservation_id, type, odometer_km, fuel_eighths,
+  signed_at, signature, customer_ack, pdf_path, created_by
+) values (
+  'dddddddd-0000-0000-0000-000000000001',
+  'aaaaaaaa-0000-0000-0000-000000000001',
+  'issue', 42000, 8,
+  '2026-07-01 14:20:00+02',
+  'issue/dddddddd-0000-0000-0000-000000000001/signature.png',
+  true, null,
+  'e0000000-0000-0000-0000-0000000000e0'
+);
+
+insert into protocol_damages (id, protocol_id, type, location, size) values
+  (
+    'dd000000-0000-0000-0000-0000000000d1',
+    'dddddddd-0000-0000-0000-000000000001',
+    'scratch',
+    'Lewe przednie błotnik — rysa przy klamce (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
+    '~5 cm'
+  ),
+  (
+    'dd000000-0000-0000-0000-0000000000d2',
+    'dddddddd-0000-0000-0000-000000000001',
+    'dent',
+    'Tylny zderzak po prawej — niewielkie wgniecenie (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
+    '~3 cm'
+  );
