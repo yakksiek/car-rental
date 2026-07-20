@@ -256,3 +256,102 @@ export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent 
 
   return { subject, html, text };
 }
+
+// ---------------------------------------------------------------------------
+// S-06 return-protocol email — composed after a committed return, once the PDF
+// (carrying the comparison section) has been uploaded. Like the issue mail it
+// carries no link into the app: the PDF attachment is the customer's only copy.
+// The body summarizes the comparison against the issue baseline — the
+// differentiating value over paper — using the same delta numbers the form and
+// the PDF show, so the three can never disagree (see src/lib/protocol-delta.ts).
+// ---------------------------------------------------------------------------
+
+export interface ProtocolReturnedParams {
+  reference: string;
+  customerName: string;
+  /** Display name, e.g. `"Ford Transit"`. */
+  vehicle: string;
+  /** Registration plate, e.g. `"WX 5519M"`. */
+  plate: string;
+  /** ISO `YYYY-MM-DD` rental window, for the body's "okres najmu" line. */
+  pickup: string;
+  return: string;
+  /** Odometer at return, in km. */
+  odometerKm: number;
+  /** Fuel at return, in eighths (0–8). */
+  fuelEighths: number;
+  /** `current − baseline` odometer; may be 0 or negative (a suspect reading). */
+  kmDriven: number;
+  /** `current − baseline` fuel, in eighths; negative ⇒ returned lower. */
+  fuelDelta: number;
+  /** Return damages with no baseline link — the "new damage" number. */
+  newDamageCount: number;
+}
+
+/** Signed km summary: `+1 228 km` / `−40 km` / `0 km` (pl-PL grouping). */
+function kmDrivenLabel(km: number): string {
+  const sign = km > 0 ? "+" : "";
+  return `${sign}${km.toLocaleString("pl-PL")} km`;
+}
+
+/** Signed fuel-eighths change: `bez zmian` / `+2/8` / `−4/8` (a true minus, U+2212). */
+function fuelDeltaLabel(delta: number): string {
+  if (delta === 0) {
+    return "bez zmian";
+  }
+  return `${delta > 0 ? "+" : "−"}${Math.abs(delta)}/8`;
+}
+
+/** Return email: the signed return protocol, its comparison summarized, PDF attached. */
+export function protocolReturnedEmail(params: ProtocolReturnedParams): EmailContent {
+  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
+  const fuel = fuelLabel(params.fuelEighths);
+  const kmDriven = kmDrivenLabel(params.kmDriven);
+  const fuelChange = fuelDeltaLabel(params.fuelDelta);
+  const newDamages = damageLabel(params.newDamageCount);
+
+  const subject = `FleetRent — protokół zwrotu ${params.reference}`;
+
+  const text = [
+    `Dzień dobry, ${params.customerName}!`,
+    "",
+    `W załączniku przesyłamy podpisany protokół zwrotu pojazdu (${params.reference}).`,
+    "",
+    `Pojazd: ${params.vehicle}`,
+    `Rejestracja: ${params.plate}`,
+    `Okres najmu: ${params.pickup} – ${params.return}`,
+    "",
+    "Porównanie ze stanem wydania:",
+    `Przejechano: ${kmDriven}`,
+    `Zmiana paliwa: ${fuelChange}`,
+    `Nowe uszkodzenia: ${newDamages}`,
+    "",
+    `Stan licznika przy zwrocie: ${odometer}`,
+    `Poziom paliwa przy zwrocie: ${fuel}`,
+    "",
+    "Dziękujemy za skorzystanie z naszych usług!",
+  ].join("\n");
+
+  const html = [
+    `<p>Dzień dobry, ${params.customerName}!</p>`,
+    `<p>W załączniku przesyłamy podpisany protokół zwrotu pojazdu (<strong>${params.reference}</strong>).</p>`,
+    "<ul>",
+    `<li>Pojazd: ${params.vehicle}</li>`,
+    `<li>Rejestracja: ${params.plate}</li>`,
+    `<li>Okres najmu: ${params.pickup} – ${params.return}</li>`,
+    "</ul>",
+    "<p><strong>Porównanie ze stanem wydania:</strong></p>",
+    "<ul>",
+    `<li>Przejechano: ${kmDriven}</li>`,
+    `<li>Zmiana paliwa: ${fuelChange}</li>`,
+    `<li>Nowe uszkodzenia: ${newDamages}</li>`,
+    "</ul>",
+    "<ul>",
+    `<li>Stan licznika przy zwrocie: ${odometer}</li>`,
+    `<li>Poziom paliwa przy zwrocie: ${fuel}</li>`,
+    "</ul>",
+    "<p>Dziękujemy za skorzystanie z naszych usług!</p>",
+  ].join("\n");
+
+  return { subject, html, text };
+}

@@ -520,6 +520,7 @@ export type Database = {
       get_protocol: {
         Args: { p_id: string }
         Returns: {
+          baseline_protocol_id: string
           created_at: string
           customer_ack: boolean
           customer_email: string
@@ -538,6 +539,7 @@ export type Database = {
           return_date: string
           signature: string
           signed_at: string
+          type: Database["public"]["Enums"]["protocol_type"]
           vehicle_make: string
           vehicle_model: string
           vehicle_plate: string

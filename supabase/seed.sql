@@ -233,13 +233,23 @@ insert into profiles (user_id, role) values
 -- issue protocol baseline (S-06) — makes the returns worklist + deltas demoable
 -- ---------------------------------------------------------------------------
 --
--- One issue protocol (type='issue', no pdf) against reservation R-0001 (Jan
--- Kowalski / Sprinter), which is confirmed with return_date 2026-07-10 (past),
--- so it surfaces in list_returns_today() as an OVERDUE-open return. No storage
--- objects (protocol_photos left empty; `signature` holds a path string whose
--- bytes are never seeded) — the demo shows the numeric + damage deltas, not
--- photos. Odometer 42000 / fuel 8/8 are the baseline the hand-worked example in
--- the plan diffs against (42000 -> 42850 = 850 km; 8/8 -> 4/8 = -4, flagged).
+-- One issue protocol (type='issue', no pdf) against reservation R-0002 (Anna
+-- Nowak / Sprinter), which is confirmed with return_date 2026-07-15 (past), so it
+-- surfaces in list_returns_today() as an OVERDUE-open return. No storage objects
+-- (protocol_photos left empty; `signature` holds a path string whose bytes are
+-- never seeded) — the demo shows the numeric + damage deltas, not photos.
+-- Odometer 42000 / fuel 8/8 are the baseline the hand-worked example in the plan
+-- diffs against (42000 -> 42850 = 850 km; 8/8 -> 4/8 = -4, flagged).
+--
+-- NOT R-0001: that reservation is the fixture the S-05 integration suites
+-- (protocols-api / protocol-email) submit their OWN issue protocol against, and a
+-- seeded issue row there collides on unique (reservation_id, 'issue'). R-0002 is
+-- confirmed, past-return, and used by no test — the decoupled home for the demo.
+--
+-- The protocol id lives in the `d6…` namespace (S-06), disjoint from every test's
+-- `dddddddd…` fixtures — notably protocols-rls, which reuses `dddddddd…001` and
+-- would otherwise delete this demo row in its own cleanup, leaving nothing to
+-- demo after `npm run test:integration`. Keep seed ids and test-fixture ids apart.
 --
 -- Every seeded damage note carries the full Polish diacritic set
 -- `ą ć ę ł ń ó ś ź ż` / `Ą Ć Ę Ł Ń Ó Ś Ź Ż` (lessons.md) so the pdf-lib encoding
@@ -248,11 +258,11 @@ insert into protocols (
   id, reservation_id, type, odometer_km, fuel_eighths,
   signed_at, signature, customer_ack, pdf_path, created_by
 ) values (
-  'dddddddd-0000-0000-0000-000000000001',
-  'aaaaaaaa-0000-0000-0000-000000000001',
+  'd6000000-0000-0000-0000-000000000001',
+  'aaaaaaaa-0000-0000-0000-000000000002',
   'issue', 42000, 8,
-  '2026-07-01 14:20:00+02',
-  'issue/dddddddd-0000-0000-0000-000000000001/signature.png',
+  '2026-07-10 14:20:00+02',
+  'issue/d6000000-0000-0000-0000-000000000001/signature.png',
   true, null,
   'e0000000-0000-0000-0000-0000000000e0'
 );
@@ -260,14 +270,14 @@ insert into protocols (
 insert into protocol_damages (id, protocol_id, type, location, size) values
   (
     'dd000000-0000-0000-0000-0000000000d1',
-    'dddddddd-0000-0000-0000-000000000001',
+    'd6000000-0000-0000-0000-000000000001',
     'scratch',
     'Lewe przednie błotnik — rysa przy klamce (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
     '~5 cm'
   ),
   (
     'dd000000-0000-0000-0000-0000000000d2',
-    'dddddddd-0000-0000-0000-000000000001',
+    'd6000000-0000-0000-0000-000000000001',
     'dent',
     'Tylny zderzak po prawej — niewielkie wgniecenie (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
     '~3 cm'

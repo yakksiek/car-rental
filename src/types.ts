@@ -182,13 +182,17 @@ export type ProtocolView = Omit<
 
 // A damage item as it crosses the wire: `id` is client-minted (it keys the
 // item's storage objects, so it must exist before the first byte uploads).
-// The `existing | new` tag is derived at return time (S-06) by diffing against
-// this issue baseline — never stored at pickup.
+// `baseline_damage_id` is the PERSISTED existing/new decision (S-06): non-null ⇒
+// carried over from that baseline item (existing), null ⇒ new — always null on
+// issue rows, whose damages have no baseline to diff against. The return email +
+// view read it to count new damage from the source of truth rather than
+// re-deriving the `existing | new` tag.
 export interface ProtocolDamageItem {
   id: string;
   type: ProtocolDamageType;
   location: string;
   size: string | null;
+  baseline_damage_id: string | null;
   photos: string[];
 }
 

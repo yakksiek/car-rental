@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // others
 import type { Database } from "../../db/database.types";
-import { protocolIssuedEmail } from "../email/templates";
+import { protocolIssuedEmail, protocolReturnedEmail } from "../email/templates";
+import { computeReturnDeltas } from "../protocol-delta";
 import { PHOTO_SLOTS } from "../protocol-schema";
 import type { ProtocolInput } from "../protocol-schema";
 import type { ReturnProtocolInput } from "../return-protocol-schema";
@@ -46,6 +47,7 @@ const BUCKET = "protocols";
 const SIGNED_URL_TTL_SECONDS = 300;
 
 const TEMPLATE = "protocol_issued";
+const TEMPLATE_RETURN = "protocol_returned";
 const ENTITY_TYPE = "protocol";
 
 /**
@@ -212,6 +214,13 @@ export type SendProtocolEmailResult =
  * stored) and every resend from the dispatch list — they are the same operation,
  * which is why append-only `email_deliveries` shows a retry as a second row.
  *
+ * **Type-aware (S-06):** a return row (`type = 'return'`) mails the comparison
+ * summary via `protocolReturnedEmail`; an issue row keeps the S-05 handover
+ * summary. The template and the attachment filename follow `type`; `ENTITY_TYPE`
+ * stays `'protocol'` (one delivery ledger) and the signed-URL path is
+ * prefix-agnostic, so both flows share this one function and both resend routes
+ * call it.
+ *
  * The attachment is a **short-TTL signed URL** that Resend fetches server-side:
  * the Worker never handles a PDF byte, and the customer receives the bytes, never
  * a bucket URL. Never throws — `sendTracked` records a provider failure as a
@@ -244,10 +253,52 @@ export async function resendProtocolEmail(
     return { status: "failed" };
   }
 
+  const vehicle = [protocol.vehicle_make, protocol.vehicle_model].filter(Boolean).join(" ");
+
+  if (protocol.type === "return") {
+    // Load the issue baseline the deltas are measured against, then compute them
+    // with the SAME pure helper the form and the PDF use, so the three cannot
+    // disagree. The persisted per-damage `baseline_damage_id` (from get_protocol)
+    // is the source of truth for the new-damage count — not a re-derivation.
+    const baseline = await getProtocol(client, protocol.baseline_protocol_id);
+    const deltas = computeReturnDeltas(
+      {
+        odometerKm: baseline?.odometer_km ?? protocol.odometer_km,
+        fuelEighths: baseline?.fuel_eighths ?? protocol.fuel_eighths,
+      },
+      {
+        odometerKm: protocol.odometer_km,
+        fuelEighths: protocol.fuel_eighths,
+        damages: protocol.damages.map((damage) => ({ baselineDamageId: damage.baseline_damage_id })),
+      },
+    );
+
+    const content = protocolReturnedEmail({
+      reference: protocol.reference,
+      customerName: protocol.customer_name,
+      vehicle,
+      plate: protocol.vehicle_plate,
+      pickup: protocol.pickup_date,
+      return: protocol.return_date,
+      odometerKm: protocol.odometer_km,
+      fuelEighths: protocol.fuel_eighths,
+      kmDriven: deltas.kmDriven,
+      fuelDelta: deltas.fuelDelta,
+      newDamageCount: deltas.newDamageCount,
+    });
+
+    return sendTracked(client, protocol.customer_email, content, {
+      entityType: ENTITY_TYPE,
+      entityId: protocolId,
+      template: TEMPLATE_RETURN,
+      attachments: [{ path: signed.signedUrl, filename: `protokol-zwrotu-${protocol.reference}.pdf` }],
+    });
+  }
+
   const content = protocolIssuedEmail({
     reference: protocol.reference,
     customerName: protocol.customer_name,
-    vehicle: [protocol.vehicle_make, protocol.vehicle_model].filter(Boolean).join(" "),
+    vehicle,
     plate: protocol.vehicle_plate,
     odometerKm: protocol.odometer_km,
     fuelEighths: protocol.fuel_eighths,
