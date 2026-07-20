@@ -158,6 +158,105 @@ describe("buildProtocolPdf", () => {
   });
 });
 
+describe("buildProtocolPdf — return comparison (S-06)", () => {
+  // A return document carries a `comparison` block (its presence flips every title
+  // to "Protokół zwrotu") and per-damage `baselineDamageId` marking each row
+  // existing/new. The comparison section draws baseline-vs-current, the three
+  // deltas, and the tagged damage list — all Polish, so the same encoding boundary
+  // that guards the issue PDF guards this section too.
+  function returnData(overrides: Partial<ProtocolPdfData> = {}): ProtocolPdfData {
+    return protocolData({
+      odometerKm: 42_850,
+      fuelEighths: 4,
+      comparison: {
+        baselineOdometerKm: 42_000,
+        baselineFuelEighths: 8,
+        kmDriven: 850,
+        fuelDelta: -4,
+        newDamageCount: 1,
+        fuelAdverse: true,
+        damageAdverse: true,
+        odometerSuspect: false,
+      },
+      damages: [
+        {
+          type: "scratch",
+          location: `istniejąca rysa lewego błotnika ${DIACRITICS}`,
+          size: "15 cm",
+          baselineDamageId: "dd000000-0000-0000-0000-0000000000d1",
+          photos: [jpeg()],
+        },
+        {
+          type: "dent",
+          location: "nowe wgniecenie — zażółć gęślą jaźń",
+          size: null,
+          baselineDamageId: null,
+          photos: [],
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("renders the comparison section with every Polish diacritic without throwing", async () => {
+    const pdf = await buildProtocolPdf(returnData());
+
+    expect(await header(pdf)).toBe("%PDF-");
+    expect(pdf.size).toBeGreaterThan(3000);
+  });
+
+  it("draws a real section — the return document is larger than the same data without a comparison", async () => {
+    const base = returnData();
+    const withComparison = await buildProtocolPdf(base);
+    // Identical data minus the comparison block: proves the extra bytes are the
+    // section itself, not incidental (the damages/photos are held constant).
+    const withoutComparison = await buildProtocolPdf({ ...base, comparison: undefined });
+
+    expect(withComparison.size).toBeGreaterThan(withoutComparison.size);
+  });
+
+  it("accepts an adverse, odometer-suspect comparison (negative km, fuel drop, new damage)", async () => {
+    // The below-baseline odometer path: km shows negative + the suspect note, fuel
+    // and damage flag `warning`. Never a hard block (soft warnings only, per FR).
+    const data = returnData({
+      odometerKm: 41_960,
+      comparison: {
+        baselineOdometerKm: 42_000,
+        baselineFuelEighths: 6,
+        kmDriven: -40,
+        fuelDelta: -2,
+        newDamageCount: 2,
+        fuelAdverse: true,
+        damageAdverse: true,
+        odometerSuspect: true,
+      },
+    });
+
+    await expect(buildProtocolPdf(data)).resolves.toBeInstanceOf(Blob);
+  });
+
+  it("renders a return with no new damage and an unchanged, neutral comparison", async () => {
+    const data = returnData({
+      damages: [],
+      photos: [],
+      comparison: {
+        baselineOdometerKm: 42_000,
+        baselineFuelEighths: 8,
+        kmDriven: 120,
+        fuelDelta: 0,
+        newDamageCount: 0,
+        fuelAdverse: false,
+        damageAdverse: false,
+        odometerSuspect: false,
+      },
+    });
+
+    const pdf = await buildProtocolPdf(data);
+    expect(await header(pdf)).toBe("%PDF-");
+    expect(pdf.size).toBeGreaterThan(3000);
+  });
+});
+
 describe("loadPdfFonts", () => {
   it("decodes both embedded TTFs from their data URIs", async () => {
     const fonts = await loadPdfFonts();

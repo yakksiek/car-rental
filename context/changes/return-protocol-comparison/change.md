@@ -3,7 +3,7 @@ change_id: return-protocol-comparison
 title: Return protocol with auto-computed deltas vs. issue baseline, emailed to customer
 status: implementing
 created: 2026-07-14
-updated: 2026-07-16
+updated: 2026-07-20
 archived_at: null
 ---
 

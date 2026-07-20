@@ -42,8 +42,41 @@ export interface ProtocolPdfDamage {
   type: ProtocolDamageType;
   location: string;
   size: string | null;
+  /**
+   * The persisted `existing | new` link (S-06): a truthy value ⇒ carried over from
+   * a baseline item (existing), a falsy one ⇒ new. Read only for return documents
+   * (those with a `comparison` block); omitted on issue documents.
+   */
+  baselineDamageId?: string | null;
   /** Compressed JPEG bytes for this item, if any were captured. */
   photos: Uint8Array[];
+}
+
+/**
+ * The baseline-vs-current comparison (S-06). Present ⇒ this is a **return**
+ * document ("Protokół zwrotu"); absent ⇒ an **issue** document ("Protokół
+ * wydania"). The numbers come from `computeReturnDeltas` (src/lib/protocol-delta.ts)
+ * — the same pure helper the return form and the email use, so the three cannot
+ * disagree. The per-damage `existing | new` tags are read from `data.damages`
+ * (each carrying `baselineDamageId`), not duplicated here.
+ */
+export interface ProtocolPdfComparison {
+  /** Odometer at issue time, in km. */
+  baselineOdometerKm: number;
+  /** Fuel at issue time, in eighths (0–8). */
+  baselineFuelEighths: number;
+  /** `current − baseline` odometer; may be 0 or negative (a suspect reading). */
+  kmDriven: number;
+  /** `current − baseline` fuel, in eighths; negative ⇒ returned lower. */
+  fuelDelta: number;
+  /** Return damages with no baseline link — the "new damage" count. */
+  newDamageCount: number;
+  /** Fuel returned below pickup level — the customer owes fuel. */
+  fuelAdverse: boolean;
+  /** At least one new (non-baseline) damage was recorded. */
+  damageAdverse: boolean;
+  /** Non-positive/NaN km — a soft warning; km still shows neutrally. */
+  odometerSuspect: boolean;
 }
 
 export interface ProtocolPdfData {
@@ -64,6 +97,11 @@ export interface ProtocolPdfData {
   signaturePng: Uint8Array;
   photos: ProtocolPdfPhoto[];
   damages: ProtocolPdfDamage[];
+  /**
+   * When set, renders the return comparison section and switches every document
+   * title to "Protokół zwrotu". Its presence is the issue/return discriminator.
+   */
+  comparison?: ProtocolPdfComparison;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +117,7 @@ const INK_2 = rgb(0.2, 0.255, 0.333); // #334155
 const MUTED = rgb(0.58, 0.639, 0.722); // #94A3B8
 const HAIRLINE = rgb(0.88, 0.89, 0.91);
 const CRIMSON = rgb(0.706, 0.212, 0.22); // #B43638
+const WARNING = rgb(0.714, 0.475, 0.055); // #B6790E — the app's `warning` token (adverse deltas)
 
 const TITLE_SIZE = 19;
 const HEADING_SIZE = 12;
@@ -118,13 +157,21 @@ export async function buildProtocolPdf(data: ProtocolPdfData, fonts?: PdfFonts):
   const font = await doc.embedFont(regular, { subset: true });
   const fontBold = await doc.embedFont(bold, { subset: true });
 
-  doc.setTitle(`Protokół wydania ${data.reference}`);
-  doc.setSubject("Protokół wydania pojazdu");
+  // The document kind is the presence of a comparison block: a return carries one,
+  // an issue never does. One title string threads through the metadata, the H1,
+  // and the page footer.
+  const title = data.comparison ? "Protokół zwrotu" : "Protokół wydania";
+
+  doc.setTitle(`${title} ${data.reference}`);
+  doc.setSubject(`${title} pojazdu`);
   doc.setCreator("FleetRent");
 
-  const w = new Writer(doc, font, fontBold);
+  const w = new Writer(doc, font, fontBold, title);
 
-  drawSummary(w, data);
+  drawSummary(w, data, title);
+  if (data.comparison) {
+    drawComparison(w, data, data.comparison);
+  }
   drawDamages(w, data);
   await drawSignature(w, doc, data);
   await drawPhotoGrid(w, doc, data);
@@ -139,8 +186,8 @@ export async function buildProtocolPdf(data: ProtocolPdfData, fonts?: PdfFonts):
 // Sections
 // ---------------------------------------------------------------------------
 
-function drawSummary(w: Writer, data: ProtocolPdfData): void {
-  w.text("Protokół wydania pojazdu", { size: TITLE_SIZE, bold: true });
+function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
+  w.text(`${title} pojazdu`, { size: TITLE_SIZE, bold: true });
   w.gap(4);
   w.text(`${data.reference} · podpisano ${formatDateTime(data.signedAt)}`, { size: BODY_SIZE, color: MUTED });
   w.gap(16);
@@ -154,6 +201,50 @@ function drawSummary(w: Writer, data: ProtocolPdfData): void {
   w.field("Stan licznika", `${formatKm(data.odometerKm)} km`);
   w.field("Poziom paliwa", fuelLabelPl(data.fuelEighths));
   w.gap(10);
+}
+
+/**
+ * The return document's comparison section (S-06) — the differentiating value
+ * over paper. Baseline (issue) vs current (return) odometer/fuel, the three
+ * deltas, and the `existing | new` damage list read from `data.damages`. Adverse
+ * deltas (fuel dropped, new damage, a suspect odometer) render in the `warning`
+ * token; km is always neutral (a below-baseline reading shows a negative number
+ * plus the suspect note, never a hard block — soft warnings only, per FR).
+ */
+function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparison): void {
+  w.heading("Porównanie ze stanem wydania");
+
+  w.field("Przy wydaniu", `${formatKm(c.baselineOdometerKm)} km · ${fuelLabelPl(c.baselineFuelEighths)}`);
+  w.field("Przy zwrocie", `${formatKm(data.odometerKm)} km · ${fuelLabelPl(data.fuelEighths)}`);
+  w.gap(8);
+
+  w.field("Przejechano", `${signedKm(c.kmDriven)} km`);
+  if (c.odometerSuspect) {
+    w.text("Licznik nie jest wyższy niż przy wydaniu — sprawdź odczyt.", {
+      size: SMALL_SIZE,
+      color: WARNING,
+      indent: 120,
+    });
+  }
+  w.field("Zmiana paliwa", signedEighths(c.fuelDelta), c.fuelAdverse ? { bold: true, color: WARNING } : {});
+  w.field("Nowe uszkodzenia", String(c.newDamageCount), c.damageAdverse ? { bold: true, color: WARNING } : {});
+  w.gap(10);
+
+  if (data.damages.length > 0) {
+    w.text("Uszkodzenia przy zwrocie", { size: HEADING_SIZE, bold: true });
+    w.gap(6);
+    for (const [index, damage] of data.damages.entries()) {
+      const size = damage.size ? ` (${damage.size})` : "";
+      const isNew = !damage.baselineDamageId;
+      const tag = isNew ? "Nowe" : "Istniejące";
+      w.ensure(LINE);
+      w.text(`${index + 1}. ${DAMAGE_TYPE_LABELS_PL[damage.type]} — ${damage.location}${size} — ${tag}`, {
+        size: BODY_SIZE,
+        color: isNew ? CRIMSON : INK_2,
+      });
+    }
+    w.gap(6);
+  }
 }
 
 function drawDamages(w: Writer, data: ProtocolPdfData): void {
@@ -280,6 +371,8 @@ class Writer {
     private doc: PDFDocument,
     readonly font: PDFFont,
     readonly fontBold: PDFFont,
+    /** Document label for the page footer, e.g. `"Protokół wydania"` / `"Protokół zwrotu"`. */
+    private docLabel: string,
   ) {
     this.page = this.addPage();
     this.cursor = A4.height - MARGIN;
@@ -334,7 +427,7 @@ class Writer {
   }
 
   /** A label/value row: muted label in a fixed gutter, value beside it. */
-  field(label: string, value: string, options: { bold?: boolean } = {}): void {
+  field(label: string, value: string, options: { bold?: boolean; color?: ReturnType<typeof rgb> } = {}): void {
     const gutter = 120;
     this.ensure(LINE + 4);
     this.cursor -= BODY_SIZE;
@@ -344,7 +437,7 @@ class Writer {
       y: this.cursor,
       size: BODY_SIZE,
       font: options.bold ? this.fontBold : this.font,
-      color: INK,
+      color: options.color ?? INK,
     });
     this.cursor -= 6;
   }
@@ -367,7 +460,7 @@ class Writer {
   /** Stamp `n / total` on every page. Only correct once no more pages will be added. */
   finish(): void {
     this.pages.forEach((page, index) => {
-      page.drawText(`FleetRent · Protokół wydania · strona ${index + 1} z ${this.pages.length}`, {
+      page.drawText(`FleetRent · ${this.docLabel} · strona ${index + 1} z ${this.pages.length}`, {
         x: MARGIN,
         y: MARGIN - 14,
         size: SMALL_SIZE,
@@ -433,6 +526,26 @@ function fit(image: PDFImage, maxWidth: number, maxHeight: number): { width: num
  */
 function formatKm(km: number): string {
   return String(Math.trunc(km)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0");
+}
+
+/**
+ * Signed, thousands-grouped km: `+1 228` / `-40` / `0`. ASCII `+`/`-` (not the
+ * typographic minus U+2212, which is outside the embedded subset and would tofu);
+ * `formatKm` groups the magnitude so the sign never lands mid-number.
+ */
+function signedKm(km: number): string {
+  if (km === 0) {
+    return "0";
+  }
+  return `${km > 0 ? "+" : "-"}${formatKm(Math.abs(km))}`;
+}
+
+/** Signed fuel-eighths change: `bez zmian` / `+2/8` / `-4/8` (ASCII sign, subset-safe). */
+function signedEighths(delta: number): string {
+  if (delta === 0) {
+    return "bez zmian";
+  }
+  return `${delta > 0 ? "+" : "-"}${Math.abs(delta)}/8`;
 }
 
 /** ISO → `DD.MM.YYYY, HH:MM` in the viewer's local time (the depot's, in practice). */

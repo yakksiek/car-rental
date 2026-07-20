@@ -2,7 +2,12 @@
 import { describe, expect, it } from "vitest";
 
 // others
-import { protocolIssuedEmail, reservationConfirmedEmail, reservationRejectedEmail } from "./templates";
+import {
+  protocolIssuedEmail,
+  protocolReturnedEmail,
+  reservationConfirmedEmail,
+  reservationRejectedEmail,
+} from "./templates";
 
 describe("reservationConfirmedEmail", () => {
   const params = {
@@ -110,6 +115,68 @@ describe("protocolIssuedEmail", () => {
 
   it("carries no link into the app — the PDF attachment is the customer's only artifact", () => {
     const { html, text } = protocolIssuedEmail(params);
+    expect(html).not.toContain("href=");
+    expect(text).not.toContain("http");
+  });
+});
+
+describe("protocolReturnedEmail", () => {
+  // Same encoding-boundary discipline as the issue mail: the customer name carries
+  // the full diacritic set so the byte path is exercised, and the return PDF built
+  // from the same data throws on eight of these nine glyphs without an embedded TTF.
+  const params = {
+    reference: "R-2401",
+    customerName: "Zażółć Gęślą Jaźń Wąsik",
+    vehicle: "Ford Transit",
+    plate: "WX 5519M",
+    pickup: "2026-07-01",
+    return: "2026-07-10",
+    odometerKm: 42850,
+    fuelEighths: 4,
+    kmDriven: 850,
+    fuelDelta: -4,
+    newDamageCount: 1,
+  };
+
+  it("composes a Polish return summary with the comparison deltas and the plate", () => {
+    const { subject, text, html } = protocolReturnedEmail(params);
+    expect(subject).toContain("R-2401");
+    expect(subject).toContain("protokół zwrotu");
+    expect(text).toContain("WX 5519M");
+    expect(text).toContain("Ford Transit");
+    // The three deltas — the differentiating value over paper — reach the body.
+    expect(text).toContain("Przejechano: +850 km");
+    expect(text).toContain("Zmiana paliwa: −4/8");
+    expect(text).toContain("Nowe uszkodzenia: 1 pozycja");
+    expect(html).toContain("<li>Rejestracja: WX 5519M</li>");
+  });
+
+  it("carries every Polish diacritic through untouched, in both cases", () => {
+    const lower = protocolReturnedEmail(params);
+    for (const char of "ąćęłńóśźż") {
+      expect(lower.text + lower.html).toContain(char);
+    }
+    const upper = protocolReturnedEmail({ ...params, customerName: "ZAŻÓŁĆ GĘŚLĄ JAŹŃ" });
+    for (const char of "ĄĆĘŁŃÓŚŹŻ") {
+      expect(upper.text + upper.html).toContain(char);
+    }
+  });
+
+  it("reads a signed km delta and names a below-baseline fuel change as adverse", () => {
+    // A positive km carries an explicit `+`; a negative one (suspect odometer) its minus.
+    expect(protocolReturnedEmail({ ...params, kmDriven: -40 }).text).toContain("Przejechano: -40 km");
+    // Fuel unchanged reads plainly; a rise carries a `+`; a drop a minus.
+    expect(protocolReturnedEmail({ ...params, fuelDelta: 0 }).text).toContain("Zmiana paliwa: bez zmian");
+    expect(protocolReturnedEmail({ ...params, fuelDelta: 2 }).text).toContain("Zmiana paliwa: +2/8");
+  });
+
+  it("reads no new damage as `brak` and pluralizes the count", () => {
+    expect(protocolReturnedEmail({ ...params, newDamageCount: 0 }).text).toContain("Nowe uszkodzenia: brak");
+    expect(protocolReturnedEmail({ ...params, newDamageCount: 3 }).text).toContain("Nowe uszkodzenia: 3 pozycje");
+  });
+
+  it("carries no link into the app — the PDF attachment is the customer's only artifact", () => {
+    const { html, text } = protocolReturnedEmail(params);
     expect(html).not.toContain("href=");
     expect(text).not.toContain("http");
   });

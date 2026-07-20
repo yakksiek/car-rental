@@ -826,28 +826,28 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 3.1 Unit tests pass (`protocol-delta.test.ts`, `return-protocol-schema.test.ts`)
-- [x] 3.2 `npm run lint` passes
-- [x] 3.3 Existing issue-flow unit tests stay green
+- [x] 3.1 Unit tests pass (`protocol-delta.test.ts`, `return-protocol-schema.test.ts`) — 523f1e4
+- [x] 3.2 `npm run lint` passes — 523f1e4
+- [x] 3.3 Existing issue-flow unit tests stay green — 523f1e4
 
 #### Manual
 
-- [x] 3.4 `computeReturnDeltas` matches hand-computed values on the seeded baseline
-- [x] 3.5 `autoTagDamages` pre-selects unchanged baseline damage as `existing`, fresh damage as `new`
+- [x] 3.4 `computeReturnDeltas` matches hand-computed values on the seeded baseline — 523f1e4
+- [x] 3.5 `autoTagDamages` pre-selects unchanged baseline damage as `existing`, fresh damage as `new` — 523f1e4
 
 ### Phase 4: PDF comparison + email + API routes
 
 #### Automated
 
-- [ ] 4.1 Unit tests pass (return-PDF comparison + diacritics, `protocolReturnedEmail`)
-- [ ] 4.2 Integration tests pass (`return-protocols-api`)
-- [ ] 4.3 `npm run build` and `npm run lint` pass
+- [x] 4.1 Unit tests pass (return-PDF comparison + diacritics, `protocolReturnedEmail`)
+- [x] 4.2 Integration tests pass (`return-protocols-api`)
+- [x] 4.3 `npm run build` and `npm run lint` pass
 
 #### Manual
 
-- [ ] 4.4 `POST /api/return-protocols` commits a return (201); second submit returns 409
-- [ ] 4.5 Return PDF opens with a correct comparison section and Polish characters intact
-- [ ] 4.6 Anon / wrong-role callers get 401 / 403 from all three routes
+- [x] 4.4 `POST /api/return-protocols` commits a return (201); second submit returns 409
+- [x] 4.5 Return PDF opens with a correct comparison section and Polish characters intact
+- [x] 4.6 Anon / wrong-role callers get 401 / 403 from all three routes
 
 ### Phase 5: Return form island (design-gated)
 
