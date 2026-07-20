@@ -86,8 +86,13 @@ Type: Inter (UI), JetBrains Mono (numbers/plates/deltas), Instrument Serif (bran
 | `Zmiana paliwa`    | `−4/8` (signed)      | **bad** if `< 0`, else neutral |
 | `Nowe uszkodzenia` | `+1`                 | **bad** if `> 0`               |
 
-Two variants: light (card) at the top of the mobile form and in the mobile sent overlay; **dark** (ink
-background, `#FB9B9B` for bad values) in the desktop right column and sent modals.
+**One dark variant everywhere** (ink `background`, light text, `#FB9B9B` for bad values), placed at the **bottom**
+of the form: the bottom of the desktop right column (below photos + signature) and, on mobile, **just above the
+submit bar** — the last card in the single-column scroll. Sent modals reuse the same dark summary.
+
+> **Decision (2026-07-20):** supersedes the original mockup, which showed a _light_ summary at the _top_ of the
+> mobile form. The condition cards already surface live per-field deltas as you fill, so the full summary now
+> sits at the bottom as a final pre-submit review, matching desktop. Applies to mobile + desktop.
 
 **Condition card** (odometer, fuel) — each shows the current value as an **editable input**, then a footer:
 row 1 `Przy wydaniu <baseline>` (read-only reference, mono), row 2 `<delta label> <chip>`. Odometer delta
@@ -116,16 +121,16 @@ opens a **full-screen** signature modal (reuse S-05's).
 
 Header (`PkHeader`): back · **`Protokół zwrotu`** · close. Then, in order:
 
-1. **Comparison summary** card at the top (light variant). In the **empty/start** state, replace it with a
-   muted banner: `Wprowadź bieżące wartości, aby zobaczyć porównanie`.
-2. **Section 1 — `Stan techniczny`** (sub `Licznik, paliwo i istniejące uszkodzenia…`): the two condition cards
+1. **Section 1 — `Stan techniczny`** (sub `Licznik, paliwo i istniejące uszkodzenia…`): the two condition cards
    (odometer input + fuel bar), each with baseline reference + live delta (§3).
-3. **Section 2 — `Zdjęcia pojazdu`**: the 6-slot photo grid + `N/6` badge.
-4. **Section 3 — `Uszkodzenia`** (sub `Zapisz każdy ślad osobno — zwrot porówna się z tą listą.`): the baseline
+2. **Section 2 — `Zdjęcia pojazdu`**: the 6-slot photo grid + `N/6` badge.
+3. **Section 3 — `Uszkodzenia`** (sub `Zapisz każdy ślad osobno — zwrot porówna się z tą listą.`): the baseline
    reference list, then the current-damage rows with override. Empty state → muted `Nie dodano nowych
 uszkodzeń.` A `Dodaj uszkodzenie` button opens the damage editor (bottom sheet).
-5. **Section 4 — `Podpis`** (sub `Klient potwierdza powyższy stan i składa podpis.`): ack checkbox + signature
+4. **Section 4 — `Podpis`** (sub `Klient potwierdza powyższy stan i składa podpis.`): ack checkbox + signature
    field.
+5. **Comparison summary** — the **dark** card (§3), last in the scroll, directly above the submit bar. In the
+   **empty/start** state, replace its rows with a muted banner: `Wprowadź bieżące wartości, aby zobaczyć porównanie`.
 
 Sticky submit bar: **`Potwierdź zwrot i wyślij`**.
 

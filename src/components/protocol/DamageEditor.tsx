@@ -11,16 +11,23 @@ import { Label } from "../ui/label";
 import { cn } from "../../lib/utils";
 import { DAMAGE_TYPE_LABELS_PL } from "../../lib/protocol-labels";
 import { DAMAGE_TYPES } from "../../lib/protocol-schema";
-import type { ProtocolDamageType } from "../../types";
+import { suggestBaselineDamageId } from "../../lib/return-form";
+import type { ProtocolDamageType, ReturnBaselineDamage } from "../../types";
 import type { DamageValue } from "./types";
 
 // The damage list row + its editor. The editor is a bottom sheet on mobile and a
 // 480px centred modal on desktop — one component, two layouts.
 //
 // A `Usuń` action exists because a mistyped entry on a document the customer is
-// about to sign must be removable before submit. The `istniejące | nowe` tag is
-// always `istniejące` here: at pickup every mark is pre-existing by definition,
-// and the tag is derived at return time (S-06) by diffing against this baseline.
+// about to sign must be removable before submit.
+//
+// **Two modes, one component.** Without `baselineDamages` (issue form, S-05) the
+// row shows a static `istniejące` tag — at pickup every mark is pre-existing by
+// definition. With `baselineDamages` (return form, S-06) each row is auto-tagged
+// `Istniejące` (carried over from a baseline item) or `Nowe` (fresh), suggested by
+// `suggestBaselineDamageId` and overridable via the editor's `Klasyfikacja`
+// control. The presence of the prop is the issue/return switch; issue behavior is
+// unchanged when it is absent.
 
 const LABEL_CLASS = "text-muted-foreground text-[11px] font-[650] tracking-[0.01em]";
 const FIELD_CLASS = "bg-background h-11 rounded-[11px]";
@@ -36,7 +43,18 @@ function photoCountPl(n: number): string {
   return `${n} ${few ? "zdjęcia" : "zdjęć"}`;
 }
 
-export function DamageRow({ damage, preview, onOpen }: { damage: DamageValue; preview?: string; onOpen: () => void }) {
+export function DamageRow({
+  damage,
+  preview,
+  onOpen,
+  returnMode,
+}: {
+  damage: DamageValue;
+  preview?: string;
+  onOpen: () => void;
+  /** Return form: tag `Istniejące` / `Nowe` off `baselineDamageId`. Issue form: static `istniejące`. */
+  returnMode?: boolean;
+}) {
   const title = [DAMAGE_TYPE_LABELS_PL[damage.type], damage.location].join(" — ");
   return (
     <button
@@ -58,20 +76,36 @@ export function DamageRow({ damage, preview, onOpen }: { damage: DamageValue; pr
         </span>
         <span className="text-muted-foreground block text-[12px]">{photoCountPl(damage.photos.length)}</span>
       </span>
-      <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-1 text-[11.5px] font-bold">
-        istniejące
-      </span>
+      {returnMode ? (
+        damage.baselineDamageId ? (
+          <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-1 text-[11.5px] font-bold">
+            Istniejące
+          </span>
+        ) : (
+          <span className="text-primary shrink-0 rounded-[7px] bg-[var(--flota-danger-soft)] px-2 py-1 text-[11.5px] font-bold">
+            Nowe
+          </span>
+        )
+      ) : (
+        <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-1 text-[11.5px] font-bold">
+          istniejące
+        </span>
+      )}
       <ChevronRight className="text-muted-foreground size-4 shrink-0" />
     </button>
   );
 }
 
-export function DamageEmpty() {
+export function DamageEmpty({ returnMode }: { returnMode?: boolean }) {
   return (
     <div className="border-border bg-background rounded-[14px] border border-dashed px-4 py-8 text-center">
-      <p className="text-foreground text-[14px] font-semibold">Brak uszkodzeń</p>
+      <p className="text-foreground text-[14px] font-semibold">
+        {returnMode ? "Nie dodano nowych uszkodzeń." : "Brak uszkodzeń"}
+      </p>
       <p className="text-muted-foreground mt-1 text-[12px]">
-        Dodaj każdą rysę, wgniecenie lub pęknięcie, aby zwrot mógł porównać.
+        {returnMode
+          ? "Dodaj każdy nowy ślad — zwrot porówna się z protokołem wydania."
+          : "Dodaj każdą rysę, wgniecenie lub pęknięcie, aby zwrot mógł porównać."}
       </p>
     </div>
   );
@@ -86,12 +120,49 @@ interface EditorProps {
   onSave: (value: DamageValue) => void;
   onDelete: () => void;
   onCancel: () => void;
+  /** Return form only: the issue baseline to classify against. Absent ⇒ issue mode (no `Klasyfikacja`). */
+  baselineDamages?: ReturnBaselineDamage[];
+  /** Baseline ids already claimed by other current rows, so the auto-tag does not double-claim one. */
+  takenBaselineIds?: readonly string[];
 }
 
-export function DamageEditor({ value, isNew, previews, onUploadPhoto, onSave, onDelete, onCancel }: EditorProps) {
+export function DamageEditor({
+  value,
+  isNew,
+  previews,
+  onUploadPhoto,
+  onSave,
+  onDelete,
+  onCancel,
+  baselineDamages,
+  takenBaselineIds,
+}: EditorProps) {
   const [draft, setDraft] = React.useState<DamageValue>(value);
   const [error, setError] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  // Auto-follow the type/location/size match for a fresh row; stop once the
+  // employee overrides `Klasyfikacja` (or when editing an existing row, whose
+  // stored decision must be preserved).
+  const [autoClassify, setAutoClassify] = React.useState(isNew);
+
+  // The live existing/new decision (return mode). Computed at render — never stored
+  // via an effect — so it tracks the identifying fields while `autoClassify` is on
+  // and freezes to the manual pick otherwise. `save()` persists exactly this.
+  const baselineDamageId = React.useMemo(() => {
+    if (!baselineDamages || !autoClassify) {
+      return draft.baselineDamageId ?? null;
+    }
+    return suggestBaselineDamageId(
+      baselineDamages,
+      { type: draft.type, location: draft.location, size: draft.size },
+      takenBaselineIds ?? [],
+    );
+  }, [baselineDamages, autoClassify, draft.baselineDamageId, draft.type, draft.location, draft.size, takenBaselineIds]);
+
+  function classify(next: string | null) {
+    setAutoClassify(false);
+    setDraft((prev) => ({ ...prev, baselineDamageId: next }));
+  }
 
   async function pick(file: File) {
     setUploading(true);
@@ -114,7 +185,14 @@ export function DamageEditor({ value, isNew, previews, onUploadPhoto, onSave, on
     // A blank `Rozmiar` is `null`, not `""` — the column is nullable and the PDF
     // renders `{type} — {location} ({size})` only when there is a size to render.
     const size = draft.size?.trim() ?? "";
-    onSave({ ...draft, location: draft.location.trim(), size: size === "" ? null : size });
+    // Persist the live classification (return mode); issue mode carries no baseline
+    // and keeps the draft value (undefined), which the issue schema strips.
+    onSave({
+      ...draft,
+      location: draft.location.trim(),
+      size: size === "" ? null : size,
+      baselineDamageId: baselineDamages ? baselineDamageId : draft.baselineDamageId,
+    });
   }
 
   return (
@@ -195,6 +273,60 @@ export function DamageEditor({ value, isNew, previews, onUploadPhoto, onSave, on
               }}
             />
           </div>
+
+          {/* Return form only: the existing/new classification. `Nowe` unlinks the
+              row; each baseline item links it (⇒ existing). Auto-suggested above,
+              overridable here. */}
+          {baselineDamages && (
+            <div className="flex flex-col gap-1.5">
+              <span id="damage-class-label" className={LABEL_CLASS}>
+                Klasyfikacja
+              </span>
+              <div className="flex flex-wrap gap-2" role="group" aria-labelledby="damage-class-label">
+                <button
+                  type="button"
+                  aria-pressed={baselineDamageId == null}
+                  onClick={() => {
+                    classify(null);
+                  }}
+                  className={cn(
+                    "h-[38px] rounded-[10px] border px-3.5 text-[13px] font-semibold tracking-tight transition-colors",
+                    baselineDamageId == null
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-foreground hover:bg-background",
+                  )}
+                >
+                  Nowe
+                </button>
+                {baselineDamages.map((baseline) => {
+                  const on = baselineDamageId === baseline.id;
+                  const label = [DAMAGE_TYPE_LABELS_PL[baseline.type], baseline.location].join(" — ");
+                  return (
+                    <button
+                      key={baseline.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        classify(baseline.id);
+                      }}
+                      className={cn(
+                        "h-[38px] max-w-full truncate rounded-[10px] border px-3.5 text-[13px] font-semibold tracking-tight transition-colors",
+                        on
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-card text-foreground hover:bg-background",
+                      )}
+                    >
+                      {label}
+                      {baseline.size ? ` (${baseline.size})` : ""}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-muted-foreground text-[12px]">
+                Wykryto automatycznie z protokołu wydania — zmień w razie potrzeby.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <span className={LABEL_CLASS}>Zdjęcia</span>

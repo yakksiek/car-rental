@@ -1,0 +1,106 @@
+---
+// core
+import { SUPABASE_KEY, SUPABASE_URL } from "astro:env/server";
+
+// components
+import Layout from "../../../layouts/Layout.astro";
+import ReturnProtocolForm from "../../../components/protocol/ReturnProtocolForm";
+
+// others
+import { getReturnBaseline } from "../../../lib/services/protocols";
+
+// The return-protocol screen (S-06 Phase 5). Gated to `employee` by the middleware
+// (/dashboard prefix). The form's fixed context — and the issue baseline it is
+// measured against — comes from `get_return_baseline`, the same role-gated RPC the
+// returns worklist reads, so a reservation with no issue protocol (or one this
+// caller cannot see) simply is not there and the page 404s without a second check.
+//
+// Like the issue form, the island is mounted `client:only="react"` (a `client:load`
+// island is server-rendered, dragging pdf-lib + heic2any into the Worker bundle;
+// `await import()` does not sever that edge — only `client:only` does). It renders
+// its own header, so no StaffShell — mirroring `pickups/[reservationId].astro`.
+//
+// `SUPABASE_KEY` is the publishable anon key the island needs to talk to Storage
+// directly (browser → Supabase, never through the Worker's 10 ms CPU cap). The
+// frontmatter has no early `return` (a top-level return crashes
+// `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`); the 404
+// follows the `Astro.response.status` pattern instead.
+const { supabase } = Astro.locals;
+const { reservationId } = Astro.params;
+
+const baseline = reservationId ? await getReturnBaseline(supabase, reservationId) : null;
+
+// Both are set whenever Supabase is configured; an unconfigured deployment never
+// reaches here (middleware has no session to gate on and redirects to sign-in).
+const supabaseUrl = SUPABASE_URL ?? "";
+const supabaseKey = SUPABASE_KEY ?? "";
+const configured = supabaseUrl !== "" && supabaseKey !== "";
+
+if (!baseline || !configured) {
+  Astro.response.status = 404;
+}
+
+// Already returned: `unique (reservation_id, 'return')` means there is nothing to
+// fill in here. The React conflict *screen* exists for the race (two employees, one
+// tap each); arriving at a settled URL is just a stale link, so it gets a static twin.
+const returnedProtocolId = baseline?.return_protocol_id ?? null;
+
+const ctx = baseline
+  ? {
+      reservationId: baseline.reservation_id,
+      reference: baseline.reference,
+      customerName: baseline.customer_name,
+      customerEmail: baseline.customer_email,
+      vehicle: [baseline.vehicle_make, baseline.vehicle_model].filter(Boolean).join(" "),
+      plate: baseline.vehicle_plate,
+      // The booking's fixed hotel-style return hour, not `signed_at`.
+      returnTime: "10:00",
+      baselineProtocolId: baseline.baseline_protocol_id,
+      baselineOdometerKm: baseline.baseline_odometer_km,
+      baselineFuelEighths: baseline.baseline_fuel_eighths,
+      baselineDamages: baseline.baseline_damages,
+    }
+  : null;
+---
+
+<Layout title={baseline ? `Protokół zwrotu ${baseline.reference} — Flota` : "Nie znaleziono — Flota"}>
+  {
+    !ctx || !configured ? (
+      <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono zwrotu</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">
+          Ta rezerwacja nie czeka dziś na zwrot, nie ma protokołu wydania albo nie masz do niej dostępu.
+        </p>
+        <a
+          href="/dashboard/returns"
+          class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
+        >
+          Wróć do pulpitu
+        </a>
+      </main>
+    ) : returnedProtocolId ? (
+      <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">
+          Dla tej rezerwacji istnieje już protokół zwrotu — każdy zwrot może mieć tylko jeden.
+        </p>
+        <div class="border-border bg-card shadow-card mt-5 rounded-[14px] border p-4">
+          <span class="text-foreground text-[14px] font-semibold tracking-tight">
+            {ctx.reference} · <span class="font-mono">{ctx.plate}</span>
+          </span>
+        </div>
+        <a
+          href={`/dashboard/protocols/${returnedProtocolId}`}
+          class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
+        >
+          Otwórz protokół
+        </a>
+        <a href="/dashboard/returns" class="text-muted-foreground mt-3 text-[13px] font-semibold">
+          Wróć do pulpitu
+        </a>
+      </main>
+    ) : (
+      <ReturnProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />
+    )
+  }
+</Layout>

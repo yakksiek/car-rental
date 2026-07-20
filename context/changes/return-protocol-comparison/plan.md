@@ -839,30 +839,30 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 4.1 Unit tests pass (return-PDF comparison + diacritics, `protocolReturnedEmail`)
-- [x] 4.2 Integration tests pass (`return-protocols-api`)
-- [x] 4.3 `npm run build` and `npm run lint` pass
+- [x] 4.1 Unit tests pass (return-PDF comparison + diacritics, `protocolReturnedEmail`) — 61eaa23
+- [x] 4.2 Integration tests pass (`return-protocols-api`) — 61eaa23
+- [x] 4.3 `npm run build` and `npm run lint` pass — 61eaa23
 
 #### Manual
 
-- [x] 4.4 `POST /api/return-protocols` commits a return (201); second submit returns 409
-- [x] 4.5 Return PDF opens with a correct comparison section and Polish characters intact
-- [x] 4.6 Anon / wrong-role callers get 401 / 403 from all three routes
+- [x] 4.4 `POST /api/return-protocols` commits a return (201); second submit returns 409 — 61eaa23
+- [x] 4.5 Return PDF opens with a correct comparison section and Polish characters intact — 61eaa23
+- [x] 4.6 Anon / wrong-role callers get 401 / 403 from all three routes — 61eaa23
 
 ### Phase 5: Return form island (design-gated)
 
 #### Automated
 
-- [ ] 5.1 Existing S-05 unit + integration suites stay green after the `useProtocolMedia` extraction
-- [ ] 5.2 Unit tests pass (return-form pure helpers)
-- [ ] 5.3 `npm run build` and `npm run lint` pass; island stays out of the Worker bundle
+- [x] 5.1 Existing S-05 unit + integration suites stay green after the `useProtocolMedia` extraction
+- [x] 5.2 Unit tests pass (return-form pure helpers)
+- [x] 5.3 `npm run build` and `npm run lint` pass; island stays out of the Worker bundle
 
 #### Manual
 
-- [ ] 5.4 Issue form re-verified end-to-end after the extraction (unchanged behavior)
-- [ ] 5.5 Return form opens with read-only baseline; live comparison updates; damage defaults + override work
-- [ ] 5.6 Submit commits; negative-km entry shows a soft warning but still submits
-- [ ] 5.7 Layout matches the Phase 1 design contract on mobile and desktop
+- [x] 5.4 Issue form re-verified end-to-end after the extraction (unchanged behavior)
+- [x] 5.5 Return form opens with read-only baseline; live comparison updates; damage defaults + override work
+- [x] 5.6 Submit commits; negative-km entry shows a soft warning but still submits
+- [x] 5.7 Layout matches the Phase 1 design contract on mobile and desktop
 
 ### Phase 6: Returns dispatch + view + nav (design-gated)
 
