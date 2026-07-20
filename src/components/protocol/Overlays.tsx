@@ -177,18 +177,27 @@ export function ResultOverlay({
 }
 
 /**
- * `create_protocol` answered `conflict`: this reservation already has a protocol,
- * and `unique (reservation_id)` guarantees it always will. Two employees tapping
- * at once produce one protocol and this screen, not a race and a 500.
+ * The create RPC answered `conflict`: this reservation already has a protocol of
+ * this kind, and the `unique (reservation_id, type)` constraint guarantees it
+ * always will. Two employees tapping at once produce one protocol and this screen,
+ * not a race and a 500.
+ *
+ * Copy + the back link default to the issue form (S-05); the return form (S-06)
+ * overrides `description` / `backHref` for its own worklist and wording — the
+ * `Otwórz protokół` link (`/dashboard/protocols/<id>`) is shared by both.
  */
 export function ConflictScreen({
   reference,
   plate,
   protocolId,
+  description = "Dla tej rezerwacji wydano już protokół — każde wydanie może mieć tylko jeden.",
+  backHref = "/dashboard/pickups",
 }: {
   reference: string;
   plate: string;
   protocolId: string;
+  description?: string;
+  backHref?: string;
 }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 py-10 text-center">
@@ -196,9 +205,7 @@ export function ConflictScreen({
         <TriangleAlert className="size-7" />
       </span>
       <h1 className="text-foreground mt-4 text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
-      <p className="text-muted-foreground mt-1.5 text-[13px]">
-        Dla tej rezerwacji wydano już protokół — każde wydanie może mieć tylko jeden.
-      </p>
+      <p className="text-muted-foreground mt-1.5 text-[13px]">{description}</p>
 
       <div className="border-border bg-card shadow-card mt-5 flex items-center justify-between gap-3 rounded-[14px] border p-4">
         <span className="text-foreground text-[14px] font-semibold tracking-tight">
@@ -212,7 +219,7 @@ export function ConflictScreen({
           <a href={`/dashboard/protocols/${protocolId}`}>Otwórz protokół</a>
         </Button>
         <Button asChild variant="ghost" className="h-11 w-full">
-          <a href="/dashboard/pickups">Wróć do pulpitu</a>
+          <a href={backHref}>Wróć do pulpitu</a>
         </Button>
       </div>
     </div>
