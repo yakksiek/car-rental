@@ -868,14 +868,14 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 6.1 `access.test.ts` asserts `/dashboard/returns` → `employee`
-- [x] 6.2 `npm run build` and `npm run lint` pass
+- [x] 6.1 `access.test.ts` asserts `/dashboard/returns` → `employee` — 5dc814e
+- [x] 6.2 `npm run build` and `npm run lint` pass — 5dc814e
 
 #### Manual
 
-- [ ] 6.3 `/dashboard/returns` lists open and overdue-open returns; returned rows show badge + view
-- [ ] 6.4 Return view shows the comparison and downloads a return PDF; resend works on an email-failed row
-- [ ] 6.5 "Zwroty" tab present and active-highlighted; surface matches the design contract
+- [x] 6.3 `/dashboard/returns` lists open and overdue-open returns; returned rows show badge + view — 5dc814e
+- [x] 6.4 Return view shows the comparison and downloads a return PDF; resend works on an email-failed row — 5dc814e, e91a5c1 (view + comparison verified; PDF-download 404s locally as bytes aren't seeded, and a real resend is prod-only — both deferred to Phase 7/production)
+- [x] 6.5 "Zwroty" tab present and active-highlighted; surface matches the design contract — 5dc814e
 
 ### Phase 7: Tests + send verification
 
