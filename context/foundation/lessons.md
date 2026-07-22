@@ -57,9 +57,17 @@
 - **Rule**: Never rely on `grant execute ... to authenticated` to restrict an RPC — it is a no-op against the default grants. Always `revoke execute on function ... from public, anon;` FIRST, then grant to the roles that need it — **per function, every time**. There is NO reliable schema-level "start closed" default to lean on: `alter default privileges in schema public revoke execute on functions from public, anon, authenticated;` was spike-verified a **no-op in this Supabase environment** (2026-07-14, change `rpc-execute-grant-hardening`) — a freshly-created function still gets the built-in PUBLIC execute grant (`proacl {=X/...}`), reproduced three ways. So the per-function revoke is the durable control; do it on every new RPC. Two carve-outs: (a) an intentionally-public RPC must carry an explicit `grant execute ... to anon` and say so in a comment; (b) a helper invoked from inside an RLS policy (e.g. `current_app_role()`) executes as the QUERYING role and needs its own explicit grant to `authenticated`, or every policy referencing it errors. Keep the in-RPC `current_app_role()` gate regardless — defense in depth, not either/or.
 - **Applies to**: plan, implement, impl-review
 
-## Interactive controls need an explicit `cursor-pointer` (Tailwind v4)
+## Buttons keep the default cursor (Tailwind v4 / shadcn) — restoring pointer risks a hover flicker
 
-- **Context**: Any clickable control styled with Tailwind v4 + shadcn/ui — `<button>`, `Button asChild` links, `role="button"` elements, custom clickable divs. Touches every UI slice with an interactive element.
-- **Problem**: Tailwind v4's Preflight renders `<button>` with the browser-default `cursor: default` (arrow), not `cursor: pointer`, and the shipped shadcn `buttonVariants` base carried no `cursor-pointer` either. So real `<button>`s showed the arrow while identically-styled `asChild` `<a href>` links kept the anchor's pointer — inconsistent cursors across visually-identical controls, and it's easy to miss because it only shows on hover. Confirmed 2026-07-21 on Tailwind v4.2.4.
-- **Rule**: Put `cursor-pointer` in the SHARED base (`buttonVariants` in `src/components/ui/button.tsx`), never ad-hoc per button — one place covers every variant/size and both `<button>` and `asChild` links. Keep `disabled:pointer-events-none` so disabled controls don't look clickable. Any non-`Button` clickable (a `role="button"` element, a clickable card/div) needs its own explicit `cursor-pointer`. This matches current shadcn/ui, which added it to the base for exactly this v4 change.
+- **Context**: shadcn/ui buttons on Tailwind v4 — the shared `Button` (real `<button>` + `asChild` link-buttons), across every UI slice.
+- **Problem**: Tailwind v4 + shadcn default buttons to `cursor: default` (shadcn's Feb-2025 v4 note: "buttons now use the default cursor"). It's tempting to "restore" `cursor: pointer` since users expect it — but doing so surfaced a **pointer↔default flicker while moving the mouse over buttons**: global, reproducible in Incognito on healthy hardware (GPU confirmed fine via `chrome://gpu`), and `transition-all`→`transition-colors` did NOT fix it (2026-07-21). Anchor-buttons (`asChild` → `<a>`) also carry the UA pointer, so a partial fix flickers too.
+- **Rule (project decision 2026-07-21)**: Buttons use the **default cursor** — do NOT add `cursor-pointer`; keep `button.tsx` at shadcn stock. To force the default consistently across real `<button>`s AND `asChild` links (which otherwise inherit the UA anchor pointer), use one base-layer rule on the shared slot in `src/styles/global.css`:
+  ```css
+  @layer base {
+    [data-slot="button"] {
+      cursor: default;
+    }
+  }
+  ```
+  If a future project genuinely wants pointer on buttons, know it's a UX toss-up and can flicker under some compositing paths — verify the hover-move behaviour before committing to it.
 - **Applies to**: implement, impl-review
