@@ -8,6 +8,9 @@ import { POST as protocolResendPOST } from "../../src/pages/api/protocols/[id]/r
 import { POST as reservationFunnelPOST } from "../../src/pages/api/reservations";
 import { PATCH as reservationDecidePATCH } from "../../src/pages/api/reservations/[id]";
 import { GET as calendarGET } from "../../src/pages/api/reservations/calendar";
+import { POST as returnCreatePOST } from "../../src/pages/api/return-protocols";
+import { POST as returnPdfPOST } from "../../src/pages/api/return-protocols/[id]/pdf";
+import { POST as returnResendPOST } from "../../src/pages/api/return-protocols/[id]/resend-email";
 import { POST as vehicleCreatePOST } from "../../src/pages/api/vehicles";
 import { PATCH as vehicleUpdatePATCH } from "../../src/pages/api/vehicles/[id]";
 import { POST as vehicleActivePOST } from "../../src/pages/api/vehicles/[id]/active";
@@ -414,6 +417,51 @@ describe("API authz matrix (#4)", () => {
     const body = {};
 
     it("anon → 401 (protocol routes check !locals.user first — the F2 resolution)", async () => {
+      const res = await handler(anonContext({ method: "POST", path, params, body }));
+      expect(res.status).toBe(401);
+    });
+
+    it("norole → 403", async () => {
+      const res = await handler(await asContext("norole", { method: "POST", path, params, body }));
+      expect(res.status).toBe(403);
+    });
+
+    it("CSRF: foreign Origin → 403 (before auth, runnable as anon)", async () => {
+      const res = await handler(anonContext({ method: "POST", path, params, body, origin: FOREIGN_ORIGIN }));
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The three S-06 return-protocol routes. They adopt the SAME gate order as the
+  // issue routes (F2 two-step: 401 then 403, CSRF before auth), so every deny
+  // case fires at the gate before any DB work — an empty body and a non-existent
+  // id suffice, no baseline fixture needed. The allow paths and the
+  // commit-then-email contract live in return-protocols-api.test.ts.
+  // -------------------------------------------------------------------------
+  describe.each([
+    {
+      name: "POST /api/return-protocols (submit)",
+      handler: returnCreatePOST,
+      path: "/api/return-protocols",
+      params: undefined,
+    },
+    {
+      name: "POST /api/return-protocols/[id]/pdf (finalize + send)",
+      handler: returnPdfPOST,
+      path: `/api/return-protocols/${DUMMY_ID}/pdf`,
+      params: { id: DUMMY_ID },
+    },
+    {
+      name: "POST /api/return-protocols/[id]/resend-email (recovery)",
+      handler: returnResendPOST,
+      path: `/api/return-protocols/${DUMMY_ID}/resend-email`,
+      params: { id: DUMMY_ID },
+    },
+  ])("$name", ({ handler, path, params }) => {
+    const body = {};
+
+    it("anon → 401 (return routes check !locals.user first — the F2 resolution)", async () => {
       const res = await handler(anonContext({ method: "POST", path, params, body }));
       expect(res.status).toBe(401);
     });
