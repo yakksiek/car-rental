@@ -126,8 +126,13 @@ export function useProtocolMedia({
         registerBlob(path, blob);
         onPhotoUploaded(slot, path);
         setTiles((prev) => ({ ...prev, [slot]: { state: "done", pct: 100 } }));
-      } catch {
+      } catch (err) {
         // The tile paints its `failed` / `Ponów` state; the employee retries.
+        // Surface the cause: a silent `catch {}` here is what made a broken photo
+        // upload (e.g. a `createImageBitmap` allocation failure on a no-GPU Chrome)
+        // impossible to diagnose from the tile alone.
+        // eslint-disable-next-line no-console
+        console.error(`[useProtocolMedia] photo upload failed for slot "${slot}":`, err);
         setTiles((prev) => ({ ...prev, [slot]: { state: "failed", pct: 0 } }));
       }
     },
