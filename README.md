@@ -1,185 +1,217 @@
-# 10x Astro Starter
+# Flota — Commercial-Vehicle Rental & Fleet Operations
 
-![](./public/template.png)
+A two-sided rental platform for a Warsaw commercial-vehicle rental company. The public
+side is a fast catalog-and-booking front-end where customers browse the fleet — vans,
+passenger minibuses, car trailers, refrigerated and curtain-side trucks — and request a
+reservation online. The private side is a **staff operations dashboard**: approve or
+reject bookings, see the whole fleet on a calendar, and run the physical **handover and
+return protocols** — photos, damage records, a generated PDF, and a confirmation email —
+end to end.
 
-A modern, opinionated starter template for building fast, accessible web applications.
+🔗 **Live:** [fleetrent.marcin-kulbicki.workers.dev](https://fleetrent.marcin-kulbicki.workers.dev)
 
-## Tech Stack
+> _Note: this is a portfolio/case-study README. It documents both the product and the way
+> it was built — the spec-driven, AI-assisted build process is itself part of what this
+> project demonstrates._
 
-- [Astro](https://astro.build/) v6 - Modern web framework with server-first rendering
-- [React](https://react.dev/) v19 - UI library for interactive components
-- [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4 - Utility-first CSS framework
-- [Supabase](https://supabase.com/) - Authentication and backend-as-a-service
-- [Cloudflare Workers](https://workers.cloudflare.com/) - Edge deployment runtime
+---
 
-## Prerequisites
+## Screens
 
-- Node.js v22.14.0 (as specified in `.nvmrc`)
-- npm (comes with Node.js)
+> _Most screens below are live captures of the running app. A few — the staff dashboard, reservations queue, returns queue, mobile fleet, and handover capture — are still design-reference comps pending a live swap._
 
-## Getting Started
+### Customer booking
 
-1. Clone the repository:
+**Book a vehicle** — vehicle detail with a live availability calendar; no account required.
 
-```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
+![Vehicle detail and booking](docs/screenshots/reserve.jpg)
+
+Browse and reserve on mobile:
+
+|                           Fleet                           |                           Reservation                           |
+| :-------------------------------------------------------: | :-------------------------------------------------------------: |
+| ![Mobile fleet browse](docs/screenshots/mobile-fleet.jpg) | ![Mobile reservation form](docs/screenshots/mobile-reserve.jpg) |
+
+### Staff operations
+
+**Dashboard** — the day at a glance: pickups, returns, decisions to make, overdue.
+
+![Staff dashboard](docs/screenshots/dashboard.jpg)
+
+**Reservations queue** — pending requests with approve / reject; a decision fires the customer email.
+
+![Reservations queue](docs/screenshots/dashboard-reservations.jpg)
+
+**Fleet calendar** — every booking across the fleet on one timeline.
+
+![Fleet calendar](docs/screenshots/dashboard-calendar.jpg)
+
+**Returns queue** — vehicles due back today, each carrying its email-delivery status.
+
+![Returns queue](docs/screenshots/returns.jpg)
+
+### Protocols — handover & return
+
+**Return comparison** — the return protocol auto-diffs against the pickup baseline: distance driven, fuel change, and new vs. existing damage, rolled up into a _wydanie → zwrot_ summary.
+
+![Return protocol comparison](docs/screenshots/return-comparison.jpg)
+
+**Handover capture** happens on mobile, on the lot — odometer, fuel, six photo slots, and damage notes.
+
+<p align="center"><img src="docs/screenshots/pickup-protocol.jpg" alt="Handover protocol (mobile)" width="360"></p>
+
+---
+
+## What it is
+
+Two audiences, one app, split across a hard trust boundary:
+
+- **Customers (anonymous).** Browse the catalog, filter by category, check availability
+  against real busy-ranges, and submit a reservation request. They never sign in — the
+  confirmation email carries a tokenized link to a live status page.
+- **Staff (authenticated).** A cookie-authenticated dashboard, gated by role
+  (`admin` / `employee`). Staff triage the pending-reservation queue, view the fleet
+  calendar, manage vehicles, and run the two physical protocols that bracket every rental:
+  **handover** (pickup) and **return**.
+
+The protocols are the heart of the operational side. Each captures per-slot photos (decoded
+client-side, HEIC included) and structured damage records, is rendered to a **PDF** on the
+server, and is **emailed** to the customer with delivery status tracked. The return protocol
+is compared against the pickup baseline, so the record of _new_ damage is unambiguous.
+
+The product is Polish-language (`pl-PL`), with timestamps pinned to `Europe/Warsaw` for
+SSR-stable rendering.
+
+## Tech stack
+
+| Layer         | Choice                                                                                        | Why                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Framework     | [Astro 6](https://astro.build/) — SSR (`output: "server"`)                                    | Every page server-rendered at the edge; islands only where interactivity is needed |
+| Interactivity | [React 19](https://react.dev/) islands                                                        | Booking flow, calendar, and protocol capture are the client-side surfaces          |
+| Language      | [TypeScript 5](https://www.typescriptlang.org/)                                               | DB row types generated from the Supabase schema; typed DTOs in `src/types.ts`      |
+| Styling       | [Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) ("new-york") | Utility-first layout with a handful of accessible primitives                       |
+| Backend       | [Supabase](https://supabase.com/) — Postgres + Auth + RLS + Storage                           | Cookie-based SSR auth, row-level security as the access contract, photo storage    |
+| Forms         | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)                     | One validation schema shared by the form and the API route                         |
+| Documents     | [pdf-lib](https://pdf-lib.js.org/) (+ fontkit)                                                | Server-generated PDF protocols                                                     |
+| Email         | [Resend](https://resend.com/)                                                                 | Transactional delivery — confirmations, decisions, protocol PDFs                   |
+| Hosting       | [Cloudflare Workers](https://workers.cloudflare.com/)                                         | SSR runtime at the edge (`@astrojs/cloudflare`)                                    |
+
+### Architecture at a glance
+
+- **SSR on the edge.** `output: "server"` via `@astrojs/cloudflare`; there is no static
+  prerendering. `Layout.astro` wraps every page and surfaces missing-config banners.
+- **Row-level security is the access contract.** The `reservations` table is denied to the
+  anonymous role. The public status page resolves through a `SECURITY DEFINER` RPC keyed by
+  a bearer token in the URL (`/r/[token]`) — the URL _is_ the credential, and the page is
+  `noindex`. Every table carries per-role, per-operation policies.
+- **Two trust zones in one deploy.** The public catalog/booking surface (anon) and the
+  staff dashboard live in the same app. `src/middleware.ts` resolves the user on every
+  request; which paths require which role is a declarative map in `src/lib/access.ts`
+  (`ROUTE_ROLES`), evaluated **fail-closed** with `admin ⊇ employee`. Role comes from a
+  `profiles.role` lookup, not a JWT claim. Public self-service signup is disabled — every
+  account is staff, provisioned deliberately.
+- **The protocol pipeline.** Pickup / return capture → photos (client-side HEIC decode) +
+  damage records persisted in Supabase → PDF rendered with `pdf-lib` → delivered by Resend →
+  outcome recorded in `email_deliveries`. Return protocols diff against the pickup baseline.
+- **Single locale, on purpose.** `pl-PL` copy and `Europe/Warsaw` timestamps are pinned so
+  SSR output and client hydration agree.
+
+## How it was built
+
+This project was developed **spec-first with an AI coding agent**, using a structured,
+markdown-driven workflow (the 10xDevs AI Toolkit). Rather than ad-hoc prompting, every unit
+of work flowed through durable artifacts under `context/`:
+
+```
+shape an idea  →  PRD  →  tech-stack + infra decisions  →  roadmap
+                                                              │
+            per change:  identity → plan → plan-review → implement → archive
 ```
 
-2. Install dependencies:
+- `context/foundation/` — the durable "what & why": shaping notes, PRD, tech-stack
+  rationale, and the roadmap of vertical slices.
+- `context/changes/<id>/` — one folder per change, each with a written **implementation
+  contract** (plan), research notes, and recorded progress (commit SHAs written back after
+  each phase).
+- `context/archive/` — completed changes, frozen — including a security pass that found and
+  closed an RLS PII-exposure gap on `reservations`.
+
+The result is a codebase where the _reasoning_ behind each decision is checked in alongside
+the code, and the implementation was executed one verified slice at a time.
+
+## Getting started
+
+Requires **Node.js v22.14.0** (see `.nvmrc`) and **Docker** (for local Supabase).
 
 ```bash
 npm install
+npx supabase start        # local Postgres + Auth + Storage (prints SUPABASE_URL / SUPABASE_KEY)
+npm run dev               # Astro dev server at http://localhost:4321
 ```
 
-3. Set up Supabase and configure environment variables — see [Supabase Configuration](#supabase-configuration) below.
+Auth is optional in development — with no Supabase credentials the app still runs and simply
+disables the auth-gated features. To exercise the full flow, put the values `supabase start`
+prints into `.env` / `.dev.vars`, then `supabase db reset` seeds signable staff accounts
+(`admin@fleetrent.test` / `employee@fleetrent.test`, dev-only). Add `RESEND_API_KEY` +
+`EMAIL_FROM` to enable email delivery.
 
-4. Create a `.dev.vars` file for local Cloudflare dev secrets:
+Before the first build, run `npx astro sync` to generate the `astro:env/server` virtual
+module types.
 
-```bash
-cp .env.example .dev.vars
-```
+## Scripts
 
-5. Run the development server:
+| Script                      | Does                                                    |
+| --------------------------- | ------------------------------------------------------- |
+| `npm run dev`               | Start the Astro dev server (Cloudflare workerd runtime) |
+| `npm run build`             | Production SSR build                                    |
+| `npm run preview`           | Preview the production build locally                    |
+| `npm run lint` / `lint:fix` | ESLint with type-checked rules                          |
+| `npm run format`            | Prettier (+ Astro + Tailwind class sorting)             |
+| `npm test`                  | Unit tests (Vitest, jsdom)                              |
+| `npm run test:integration`  | Integration tests (serial, against a local Supabase)    |
+| `npm run test:e2e`          | Playwright end-to-end tests                             |
+| `npm run test:watch`        | All Vitest projects in watch mode                       |
 
-```bash
-npm run dev
-```
+## Testing
 
-## Available Scripts
+Three layers, each scoped to what it tests best:
 
-- `npm run dev` - Start development server (Cloudflare workerd runtime)
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint with type-checked rules
-- `npm run lint:fix` - Auto-fix ESLint issues
-- `npm run format` - Run Prettier
+- **Unit** (`vitest`, jsdom) — pure functions and components.
+- **Integration** (`vitest`, serial) — services and API routes exercised against a **live
+  local Supabase**, so RLS policies and RPCs are tested for real, not mocked.
+- **E2E** (Playwright) — browser-level flows, following the project's `/10x-e2e` workflow
+  (risk → seed → generate → review → verify).
 
-## Project Structure
-
-```md
-.
-├── src/
-│ ├── layouts/ # Astro layouts
-│ ├── pages/ # Astro pages
-│ │ └── api/ # API endpoints
-│ ├── components/ # UI components (Astro & React)
-│ └── assets/ # Static assets
-├── public/ # Public assets
-├── wrangler.jsonc # Cloudflare Workers config
-```
-
-## Supabase Configuration
-
-This project uses [Supabase](https://supabase.com/) for authentication. Environment variables are declared via Astro's `astro:env` schema and are treated as **server-only secrets** — they are never exposed to the client.
-
-### First-time setup (local, no cloud project needed)
-
-Requires [Docker](https://www.docker.com/) and ~7 GB RAM.
-
-1. Create your `.env` file:
-
-```bash
-cp .env.example .env
-```
-
-2. Initialize the local Supabase project (creates a `supabase/` config folder):
-
-```bash
-npx supabase init
-```
-
-3. Start the local stack (downloads Docker images on first run):
-
-```bash
-npx supabase start
-```
-
-4. Copy the credentials printed by the CLI into your `.env` and `.dev.vars`:
+## Project structure
 
 ```
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_KEY=<anon key from CLI output>
+src/
+├─ pages/
+│  ├─ index.astro, fleet/, reserve.astro, r/[token].astro   # public: catalog, booking, tokenized status
+│  ├─ dashboard/          # staff: reservations, calendar, pickups, returns, vehicles
+│  └─ api/                # vehicles, reservations, protocols, return-protocols, auth (zod-validated)
+├─ components/            # React islands (fleet · reservation · protocol · vehicle) + shell + ui (shadcn)
+│  └─ hooks/
+├─ lib/
+│  ├─ services/           # reservations, vehicles, protocols, email-delivery (business logic)
+│  ├─ access.ts           # ROUTE_ROLES — the pure, fail-closed role gate
+│  └─ supabase.ts · config-status.ts · utils.ts
+├─ middleware.ts          # auth + role gate on every request
+└─ types.ts               # DB row types + DTOs
+supabase/
+├─ migrations/            # tables, enums, RLS policies, SECURITY DEFINER RPCs
+└─ seed.sql
+context/                  # spec-driven build artifacts (PRD, roadmap, change plans, archive)
 ```
-
-5. To stop the stack when done:
-
-```bash
-npx supabase stop
-```
-
-The local Studio UI is available at `http://localhost:54323`.
-
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
-
-### Using a cloud Supabase project instead
-
-If you prefer to use a hosted Supabase project, add these variables to your `.env` and `.dev.vars` files:
-
-| Variable       | Description                                                |
-| -------------- | ---------------------------------------------------------- |
-| `SUPABASE_URL` | Project URL from Supabase dashboard → Settings → API       |
-| `SUPABASE_KEY` | `anon` public key from Supabase dashboard → Settings → API |
-
-```
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_KEY=<anon-key>
-```
-
-### Email confirmation in local development
-
-By default Supabase requires email confirmation before a user can sign in. To skip this during local development:
-
-1. Open the Supabase dashboard for your project
-2. Go to **Authentication → Email → Confirm email**
-3. Toggle it **off**
-
-Users can then sign in immediately after sign-up without clicking a confirmation link.
-
-### Auth routes
-
-| Route                 | Description                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Disabled — shows a "registration is managed by an administrator" notice |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
-
-Route protection is handled in `src/middleware.ts`, which enforces a declarative
-route→role map from `src/lib/access.ts` (`ROUTE_ROLES`). Add protected paths and
-their minimum role there; `admin` satisfies any `employee`-gated route (fail-closed).
-
-### Staff accounts and roles
-
-Public self-service signup is **disabled** — every account is staff (`employee` or
-`admin`), provisioned deliberately. Locally, `supabase db reset` seeds
-`admin@fleetrent.test` / `employee@fleetrent.test` (dev-only credentials). In
-production, create the first admin with the one-time
-[first-admin runbook](context/changes/employee-admin-roles/runbook-first-admin.md).
 
 ## Deployment
 
-This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
+Deployed to **Cloudflare Workers** (SSR) via `wrangler` (worker name `fleetrent`), with
+**Supabase** as the managed backend. Set `SUPABASE_URL` / `SUPABASE_KEY` (and `RESEND_API_KEY`
+/ `EMAIL_FROM` for email) as Worker secrets. CI (GitHub Actions) runs `astro sync` + lint +
+build on every push and PR to `main`.
 
-1. Build the project:
+## Credits
 
-```bash
-npm run build
-```
-
-2. Deploy with Wrangler:
-
-```bash
-npx wrangler deploy
-```
-
-Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
-
-## CI
-
-GitHub Actions runs lint + build on every push and PR to `master`. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets in GitHub for the build step.
-
-## License
-
-MIT
+Built by **Marcin Kulbicki**. Scaffolded from the 10x Astro Starter; developed with an
+AI-assisted, spec-driven workflow (10xDevs AI Toolkit).
