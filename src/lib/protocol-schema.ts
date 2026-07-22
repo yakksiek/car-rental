@@ -1,6 +1,9 @@
 // core
 import { z } from "zod";
 
+// others
+import { isValidObjectPath } from "./protocol-storage-paths";
+
 // The single issue-protocol contract (S-05), shared by the ProtocolForm island
 // (client-side inline errors) and POST /api/protocols (the trust boundary) —
 // mirrors vehicle-schema.ts, so the client and the trust boundary cannot
@@ -93,24 +96,25 @@ export const protocolInputSchema = z
     damages: z.array(damageSchema).optional().default([]),
   })
   .superRefine((input, ctx) => {
-    // Pin every client-supplied path to this protocol's folder. Without this a
-    // caller could record a path pointing at another protocol's evidence.
-    const prefix = `issue/${input.protocolId}/`;
+    // Pin every client-supplied path to this protocol's `issue/` folder. Without
+    // this a caller could record a path pointing at another protocol's evidence.
+    // `isValidObjectPath` is the shared checker — no inline `issue/` literal.
     const flag = (path: (PropertyKey | number)[]) => {
       ctx.addIssue({ code: "custom", path: [...path], message: MSG.path });
     };
+    const valid = (path: string) => isValidObjectPath("issue", input.protocolId, path);
 
-    if (!input.signaturePath.startsWith(prefix)) {
+    if (!valid(input.signaturePath)) {
       flag(["signaturePath"]);
     }
     for (const slot of PHOTO_SLOTS) {
-      if (!input.photos[slot].startsWith(prefix)) {
+      if (!valid(input.photos[slot])) {
         flag(["photos", slot]);
       }
     }
     input.damages.forEach((damage, i) => {
       damage.photos.forEach((path, j) => {
-        if (!path.startsWith(prefix)) {
+        if (!valid(path)) {
           flag(["damages", i, "photos", j]);
         }
       });

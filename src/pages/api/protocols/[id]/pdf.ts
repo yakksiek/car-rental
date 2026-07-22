@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // others
 import { requireRole } from "../../../../lib/access";
+import { isValidObjectPath } from "../../../../lib/protocol-storage-paths";
 import { resendProtocolEmail, setProtocolPdf } from "../../../../lib/services/protocols";
 
 // Finalize an issue protocol (S-05): record where the client-generated PDF landed
@@ -50,7 +51,7 @@ function pdfPathSchema(protocolId: string) {
     path: z
       .string(MSG.badPath)
       .trim()
-      .refine((path) => path.startsWith(`issue/${protocolId}/`) && path.endsWith(".pdf"), MSG.badPath),
+      .refine((path) => isValidObjectPath("issue", protocolId, path) && path.endsWith(".pdf"), MSG.badPath),
   });
 }
 
