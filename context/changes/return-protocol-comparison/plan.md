@@ -148,7 +148,11 @@ parallel with the design review.
   commit never roll back; a PDF/email failure surfaces on the badge and is resendable.
 - **`get_protocol` is type-agnostic** (keyed by protocol id) and works for return rows unchanged; the return
   view loads the baseline with a second `get_protocol(baseline_protocol_id)` call and computes deltas via
-  the pure helper. No new read RPC is needed for the view.
+  the pure helper. No new read RPC is needed for the view. **(Addendum, impl-review 2026-07-22: no new RPC
+  was created, but `get_protocol` itself was extended additively — it gained `type` + `baseline_protocol_id`
+  OUT columns and a per-damage `baseline_damage_id` via migration `20260717120000_get_protocol_return_fields.sql`,
+  which the type-aware resend and the return view read. "Works unchanged" held for the RPC's identity/signature,
+  not its returned columns.)**
 - **The migration alters a live unique constraint.** Add `type` with `default 'issue'` (backfills existing
   rows), then `drop default`; drop `unique (reservation_id)`, add `unique (reservation_id, type)`. Today no
   reservation has two protocols, so the composite unique cannot conflict on apply. Check prod row counts
@@ -887,5 +891,5 @@ production step recorded in `change.md`.
 
 #### Manual
 
-- [ ] 7.4 In production, one real return protocol is emailed with diacritics correct in the comparison section
-- [ ] 7.5 Role-null and anonymous users can read nothing from any protocol table or return storage object
+- [x] 7.4 In production, one real return protocol is emailed with diacritics correct in the comparison section — verified 2026-07-22 (real send against prod `wujcar.com` sender; customer received the PDF, diacritics correct in the comparison section)
+- [x] 7.5 Role-null and anonymous users can read nothing from any protocol table or return storage object — proven by `returns-rls` (grants: all five tables 0 rows for norole/anon with return data present; storage-prefix parity: `return/` object staff-only, invisible to anon/null-role)
