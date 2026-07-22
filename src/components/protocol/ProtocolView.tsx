@@ -190,13 +190,18 @@ function formatSignedAt(signedAt: string): string {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  // Client island → full ICU. `pl-PL`, day + short time, e.g. "10 lip 2026, 14:08".
+  // `client:load` SSRs this on workerd (UTC) then hydrates in the browser (local
+  // zone), so the time MUST be pinned to a fixed zone — otherwise the two renders
+  // disagree and React throws a hydration mismatch. Europe/Warsaw = the company's
+  // zone; the pl-PL date part already agrees across workerd/browser ICU, only the
+  // timezone drifted. `pl-PL`, day + short time, e.g. "10 lip 2026, 14:08".
   return new Intl.DateTimeFormat("pl-PL", {
     day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Warsaw",
   }).format(date);
 }
 
