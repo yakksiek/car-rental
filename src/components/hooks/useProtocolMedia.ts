@@ -95,6 +95,9 @@ export function useProtocolMedia({
   // them from here rather than downloading back what it just uploaded.
   const blobs = React.useRef(new Map<string, Blob>());
   const [previews, setPreviews] = React.useState<Record<string, string>>({});
+  // Teardown mirror of `previews`: object URLs live until revoked or document
+  // unload, so we revoke each on unmount (and when a recaptured slot replaces it).
+  const previewUrls = React.useRef<Record<string, string>>({});
   // The last file picked per slot, so `Ponów` replays it without a second picker.
   const retryFiles = React.useRef(new Map<ProtocolPhotoSlot, File>());
   const [tiles, setTiles] = React.useState<Record<string, TileState>>({});
@@ -107,8 +110,22 @@ export function useProtocolMedia({
 
   const registerBlob = React.useCallback((path: string, blob: Blob) => {
     blobs.current.set(path, blob);
-    setPreviews((prev) => ({ ...prev, [path]: URL.createObjectURL(blob) }));
+    // Recapture: revoke the slot's previous preview before replacing it.
+    const stale = previewUrls.current[path];
+    if (stale) URL.revokeObjectURL(stale);
+    const url = URL.createObjectURL(blob);
+    previewUrls.current[path] = url;
+    setPreviews((prev) => ({ ...prev, [path]: url }));
   }, []);
+
+  // Object URLs outlive the component unless revoked; both forms normally end in a
+  // full-page navigation, but revoke on unmount so an in-app teardown can't leak.
+  React.useEffect(
+    () => () => {
+      for (const url of Object.values(previewUrls.current)) URL.revokeObjectURL(url);
+    },
+    [],
+  );
 
   // ── Photos ──────────────────────────────────────────────────────────────────
 
