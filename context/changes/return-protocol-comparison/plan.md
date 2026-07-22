@@ -853,23 +853,23 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 5.1 Existing S-05 unit + integration suites stay green after the `useProtocolMedia` extraction
-- [x] 5.2 Unit tests pass (return-form pure helpers)
-- [x] 5.3 `npm run build` and `npm run lint` pass; island stays out of the Worker bundle
+- [x] 5.1 Existing S-05 unit + integration suites stay green after the `useProtocolMedia` extraction — c0bce0e
+- [x] 5.2 Unit tests pass (return-form pure helpers) — c0bce0e
+- [x] 5.3 `npm run build` and `npm run lint` pass; island stays out of the Worker bundle — c0bce0e
 
 #### Manual
 
-- [x] 5.4 Issue form re-verified end-to-end after the extraction (unchanged behavior)
-- [x] 5.5 Return form opens with read-only baseline; live comparison updates; damage defaults + override work
-- [x] 5.6 Submit commits; negative-km entry shows a soft warning but still submits
-- [x] 5.7 Layout matches the Phase 1 design contract on mobile and desktop
+- [x] 5.4 Issue form re-verified end-to-end after the extraction (unchanged behavior) — c0bce0e
+- [x] 5.5 Return form opens with read-only baseline; live comparison updates; damage defaults + override work — c0bce0e
+- [x] 5.6 Submit commits; negative-km entry shows a soft warning but still submits — c0bce0e
+- [x] 5.7 Layout matches the Phase 1 design contract on mobile and desktop — c0bce0e
 
 ### Phase 6: Returns dispatch + view + nav (design-gated)
 
 #### Automated
 
-- [ ] 6.1 `access.test.ts` asserts `/dashboard/returns` → `employee`
-- [ ] 6.2 `npm run build` and `npm run lint` pass
+- [x] 6.1 `access.test.ts` asserts `/dashboard/returns` → `employee`
+- [x] 6.2 `npm run build` and `npm run lint` pass
 
 #### Manual
 

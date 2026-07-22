@@ -70,7 +70,7 @@ export function DamageRow({
         )}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="text-foreground block truncate text-[14px] font-semibold tracking-tight">
+        <span className="text-foreground line-clamp-2 text-[14px] font-semibold tracking-tight">
           {title}
           {damage.size ? ` (${damage.size})` : ""}
         </span>
@@ -251,6 +251,7 @@ export function DamageEditor({
             <Input
               id="damage-location"
               value={draft.location}
+              maxLength={60}
               placeholder="np. lewy tylny zderzak"
               className={FIELD_CLASS}
               onChange={(event) => {
