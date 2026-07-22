@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 // others
 import { POST as reservationFunnelPOST } from "../../src/pages/api/reservations";
 import { PATCH as reservationDecidePATCH } from "../../src/pages/api/reservations/[id]";
+import { POST as returnCreatePOST } from "../../src/pages/api/return-protocols";
 import { POST as vehicleCreatePOST } from "../../src/pages/api/vehicles";
 import { PATCH as vehicleUpdatePATCH } from "../../src/pages/api/vehicles/[id]";
 import { POST as vehicleActivePOST } from "../../src/pages/api/vehicles/[id]/active";
@@ -199,6 +200,78 @@ describe("API validation parity (#5)", () => {
       );
       expect(res.status).toBe(400);
       expect(await reservationStatus()).toBe("pending");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /api/return-protocols — staff return commit. Sufficient role: employee.
+  // The return schema pins storage paths to `return/`; no-write = no return row on
+  // the seeded baseline reservation. Uses the seeded issue baseline (R-0002 / Anna
+  // Nowak) directly — not the disposable b1 vehicle — since a return needs one.
+  // -------------------------------------------------------------------------
+  describe("POST /api/return-protocols (return commit)", () => {
+    const path = "/api/return-protocols";
+    // Seeded baseline (supabase/seed.sql): the demo issue protocol on R-0002.
+    const BASELINE_RESERVATION = "aaaaaaaa-0000-0000-0000-000000000002";
+    const BASELINE_PROTOCOL_ID = "d6000000-0000-0000-0000-000000000001";
+    // Client-minted, a distinct `…b8` tail so cleanup never hits another suite.
+    const RETURN_PROTOCOL_ID = "dddddddd-0000-0000-0000-0000000000b8";
+
+    /** A schema-valid return body; spread + override to make it client-bypassing. */
+    function validReturnBody() {
+      return {
+        protocolId: RETURN_PROTOCOL_ID,
+        reservationId: BASELINE_RESERVATION,
+        baselineProtocolId: BASELINE_PROTOCOL_ID,
+        odometerKm: "42850",
+        fuelEighths: 4,
+        customerAck: true,
+        signedAt: new Date("2026-07-17T10:08:00Z").toISOString(),
+        signaturePath: `return/${RETURN_PROTOCOL_ID}/signature.png`,
+        photos: {
+          front: `return/${RETURN_PROTOCOL_ID}/photo-front.jpg`,
+          rear: `return/${RETURN_PROTOCOL_ID}/photo-rear.jpg`,
+          left: `return/${RETURN_PROTOCOL_ID}/photo-left.jpg`,
+          right: `return/${RETURN_PROTOCOL_ID}/photo-right.jpg`,
+          interior: `return/${RETURN_PROTOCOL_ID}/photo-interior.jpg`,
+          dashboard: `return/${RETURN_PROTOCOL_ID}/photo-dashboard.jpg`,
+        },
+        damages: [],
+      };
+    }
+
+    /** Count return rows on the seeded baseline reservation (the no-write oracle). */
+    async function returnCount(): Promise<number> {
+      const { data } = await svc
+        .from("protocols")
+        .select("id")
+        .eq("reservation_id", BASELINE_RESERVATION)
+        .eq("type", "return");
+      return ((data as unknown[] | null) ?? []).length;
+    }
+
+    // Defensive: a bug that wrote past the 400 would strand a return on the shared
+    // seeded baseline and pollute every other suite. Clean the minted id either side.
+    beforeEach(async () => {
+      await svc.from("protocols").delete().eq("id", RETURN_PROTOCOL_ID);
+    });
+    afterEach(async () => {
+      await svc.from("protocols").delete().eq("id", RETURN_PROTOCOL_ID);
+    });
+
+    it("client-bypassing payload (an `issue/`-prefixed path) → 400, no return written", async () => {
+      const body = { ...validReturnBody(), signaturePath: `issue/${RETURN_PROTOCOL_ID}/signature.png` };
+      const res = await returnCreatePOST(await asContext("employee", { method: "POST", path, body }));
+      expect(res.status).toBe(400);
+      expect(await returnCount()).toBe(0);
+    });
+
+    it("malformed JSON → 400, no return written", async () => {
+      const res = await returnCreatePOST(
+        await asContext("employee", { method: "POST", path, rawBody: MALFORMED_JSON }),
+      );
+      expect(res.status).toBe(400);
+      expect(await returnCount()).toBe(0);
     });
   });
 
