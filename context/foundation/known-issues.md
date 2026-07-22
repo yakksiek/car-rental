@@ -47,3 +47,27 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   `current_app_role()` policy helper keeps its `authenticated` grant.
 - **To action:** `/10x-new rpc-execute-grant-hardening`. Full context in the archived S-05 change log
   (`context/archive/2026-07-09-issue-protocol/change.md`, Phase 1 note).
+
+## Single-locale by construction: `pl-PL` + `Europe/Warsaw` hardcoded app-wide
+
+- **Symptom:** The app assumes one locale/timezone everywhere — `Intl.DateTimeFormat("pl-PL")` /
+  `toLocaleString("pl-PL")` for numbers/dates, a pinned `Europe/Warsaw` zone for the signature
+  timestamp (`ProtocolView.tsx`), Polish month/weekday lookup tables in `returns.astro` (workerd-ICU
+  workaround), and Polish UI copy in every component. Correct for one Polish company; a wall the
+  moment there's a non-PL deployment.
+- **Cause:** No i18n layer — display locale, company timezone, currency, and copy strings are inline
+  literals scattered across components. Surfaced 2026-07-22 while fixing a signature-timestamp SSR
+  hydration mismatch (server UTC vs client-local), fixed by pinning the zone inline.
+- **Scope:** App-wide, but a **latent limitation, not a live bug** — single-tenant, single-locale is
+  the current product reality (one Polish rental company; staff-only tool).
+- **Decision:** Accepted for now (YAGNI) — no i18n built ahead of need; the hydration fix keeps the
+  inline `Europe/Warsaw`. Do NOT switch timestamps to viewer-local: it reintroduces the hydration
+  mismatch AND is semantically wrong (a signature is a company-anchored event — Warsaw is where/when
+  it happened, regardless of who views it).
+- **If it ever needs fixing (tiered):** (1) centralize `LOCALE` / `TIMEZONE` / `CURRENCY` into one
+  config module + `formatDate/Number/Currency` helpers, route the scattered `pl-PL`/`Europe/Warsaw`
+  calls through it (cheap); (2) per-tenant/env config for multi-company; (3) full copy i18n (message
+  catalogs + lib) — large, only when a non-PL deployment is real. Note **timezone ≠ locale**
+  (company-anchored events stay `Europe/Warsaw` even multi-locale) and **workerd ships a trimmed ICU**
+  (why `returns.astro` hand-rolls month names — server-side multi-locale formatting will hit this).
+  See `lessons.md` → "Locale/timezone/currency are single-locale".

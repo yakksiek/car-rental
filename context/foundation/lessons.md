@@ -71,3 +71,10 @@
   ```
   If a future project genuinely wants pointer on buttons, know it's a UX toss-up and can flicker under some compositing paths — verify the hover-move behaviour before committing to it.
 - **Applies to**: implement, impl-review
+
+## Locale/timezone/currency are single-locale (`pl-PL` / `Europe/Warsaw`) — pin the zone on SSR, centralize before multi-country
+
+- **Context**: Any code formatting a date/number/currency or rendering user-facing copy. Today every site hardcodes `pl-PL` / `Europe/Warsaw` inline; there is no i18n layer.
+- **Problem**: (a) An SSR'd component (`client:load`/`client:visible`) formatting a time with a runtime-relative formatter (no explicit `timeZone`) renders in the **server's** zone (workerd = UTC) then re-renders in the **browser's** zone → React **hydration mismatch** (seen 2026-07-22 on the return signature timestamp: server 10:49 vs client 12:49). (b) More broadly, the app is single-locale by construction, so any non-PL deployment is a wall.
+- **Rule**: For a new timestamp/number/currency display: (1) **always pass an explicit `timeZone` when the value is SSR'd** — never rely on the runtime zone. (2) A **company-anchored** event time (signature, pickup, return) is shown in the **company zone** (`Europe/Warsaw`), NOT the viewer's — viewer-local is only for personal/relative times ("your session expires…"). Viewer-local would also reintroduce the SSR mismatch (the server can't know the viewer's zone). (3) Prefer a single named constant/helper over an inline `pl-PL`/`Europe/Warsaw` string so the eventual i18n seam is one place. Do NOT build full i18n speculatively (YAGNI) — tracked in `known-issues.md` → "Single-locale by construction". Mind **workerd's trimmed ICU** for server-side locale formatting (why `returns.astro` hand-rolls Polish month names).
+- **Applies to**: plan, implement, impl-review
