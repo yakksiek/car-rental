@@ -202,9 +202,14 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-# F-02: closed alongside the top-level enable_signup (see note above).
-enable_signup = false
+# Despite the name, this knob is NOT the signup-policy switch — it is the email
+# provider's sign-IN toggle (config.toml maps it to email-provider enabled, not
+# GOTRUE_DISABLE_SIGNUP). Setting it `false` disables email LOGIN, not just signup.
+# So it stays `true`. Signup is already closed by the top-level `[auth].enable_signup
+# = false` (F-02, GOTRUE_DISABLE_SIGNUP) — that blocks new registrations while login
+# keeps working. Committed `true` on purpose; safe even if config-pushed (line 171
+# still closes prod signup). Do NOT flip this to `false`.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
