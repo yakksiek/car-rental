@@ -263,4 +263,12 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+  /* Buttons use the normal (default) cursor — shadcn's Tailwind-v4 default. We
+     deliberately do NOT restore `cursor: pointer`: trying it surfaced a
+     pointer↔default flicker on hover (2026-07-21). Targeting the shared
+     `data-slot` also neutralises the UA anchor pointer on `Button asChild` → <a>,
+     so real <button>s and link-buttons are consistent. */
+  [data-slot="button"] {
+    cursor: default;
+  }
 }
