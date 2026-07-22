@@ -261,9 +261,14 @@ export function RequestDetail({
   )}`;
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      {/* Mobile header — centered, with the list→detail back affordance */}
-      <div className="flex items-center justify-between gap-2 px-1 pb-3 md:hidden">
+    // `@container`: the vehicle/dates 2-up below keys off THIS panel's width, not
+    // the viewport — RequestDetail is shared (calendar reuses it) and renders in a
+    // narrow master-detail column, where a viewport breakpoint would clip.
+    <div className={cn("@container flex flex-col", className)}>
+      {/* Compact header — centered, with the list→detail back affordance. Shown
+          below lg, where the detail is a full-width view reached from the queue
+          (the back button is the only way back); the master-detail header is at lg+. */}
+      <div className="flex items-center justify-between gap-2 px-1 pb-3 lg:hidden">
         {withBackButton ? (
           <button
             type="button"
@@ -287,9 +292,10 @@ export function RequestDetail({
         <span className="size-9" />
       </div>
 
-      {/* Desktop header — left-aligned reference + PENDING + name, with a
-          prominent right-aligned total (L7). */}
-      <div className="hidden items-start justify-between gap-4 px-1 pb-4 md:flex">
+      {/* Master-detail header (lg+) — left-aligned reference + PENDING + name,
+          with a prominent right-aligned total (L7). No back button: the master
+          list stays visible beside it, so it renders with withBackButton={false}. */}
+      <div className="hidden items-start justify-between gap-4 px-1 pb-4 lg:flex">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <span className="text-muted-foreground font-mono text-xs font-semibold">{reservation.reference}</span>
@@ -311,8 +317,11 @@ export function RequestDetail({
       </div>
 
       <div className="flex flex-col gap-3">
-        {/* Vehicle + dates sit 2-up at md+ (L7), stacked on mobile */}
-        <div className="grid gap-3 md:grid-cols-2">
+        {/* Vehicle + dates sit 2-up once this panel is wide enough (L7), stacked
+            otherwise. Container-query, not viewport: in the master-detail column
+            the detail is ~300px even on a wide screen, so `md:` would split it in
+            half and clip the vehicle card. */}
+        <div className="grid gap-3 @min-[520px]:grid-cols-2">
           {/* Vehicle */}
           <div className={cn(cardClass, "flex items-center gap-3.5 p-4")}>
             <div className="bg-background text-foreground flex h-[60px] w-24 shrink-0 items-center justify-center rounded-xl">
@@ -529,8 +538,8 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
         </div>
       )}
 
-      {/* ── Mobile: queue → detail navigation ───────────────────────────── */}
-      <div className="md:hidden">
+      {/* ── Mobile + tablet: queue → detail navigation (below lg) ────────── */}
+      <div className="lg:hidden">
         {selected ? (
           <div className="mt-4">
             <RequestDetail
@@ -567,9 +576,11 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
       </div>
 
       {/* ── Desktop: master list + detail panel side by side ────────────── */}
-      <div className="mt-4 hidden md:grid md:grid-cols-[360px_1fr] md:gap-6">
+      {/* At lg+, not md+: below 1024px the 240px sidebar + 360px master leave the
+          detail too narrow, so sub-lg widths use the single-column queue above. */}
+      <div className="mt-4 hidden lg:grid lg:grid-cols-[360px_1fr] lg:gap-6">
         {count === 0 ? (
-          <div className="md:col-span-2">{emptyState}</div>
+          <div className="lg:col-span-2">{emptyState}</div>
         ) : (
           <>
             <div className="flex flex-col gap-3">
