@@ -881,9 +881,9 @@ production step recorded in `change.md`.
 
 #### Automated
 
-- [x] 7.1 `npm run test:integration` passes all new return suites
-- [x] 7.2 `npm test`, `npm run lint`, `npm run build` all pass
-- [x] 7.3 Full existing suite stays green (no issue-flow regression)
+- [x] 7.1 `npm run test:integration` passes all new return suites — b4b1b75
+- [x] 7.2 `npm test`, `npm run lint`, `npm run build` all pass — b4b1b75
+- [x] 7.3 Full existing suite stays green (no issue-flow regression) — b4b1b75
 
 #### Manual
 
