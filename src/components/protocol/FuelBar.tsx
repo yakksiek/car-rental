@@ -14,14 +14,23 @@ interface Props {
   value: number | undefined;
   onChange: (value: number) => void;
   invalid?: boolean;
+  /** Render the `Poziom paliwa` label uppercase + letter-spaced (the return form's condition cards). */
+  uppercaseLabel?: boolean;
 }
 
 const SEGMENTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-export function FuelBar({ value, onChange, invalid }: Props) {
+export function FuelBar({ value, onChange, invalid, uppercaseLabel }: Props) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">Poziom paliwa</span>
+      <span
+        className={cn(
+          "text-muted-foreground text-[11px] font-[650] tracking-[0.01em]",
+          uppercaseLabel && "tracking-[0.06em] uppercase",
+        )}
+      >
+        Poziom paliwa
+      </span>
       <span className="text-foreground text-[27px] leading-none font-bold tracking-tight tabular-nums">
         {value === undefined ? "—" : fuelLabelPl(value)}
       </span>

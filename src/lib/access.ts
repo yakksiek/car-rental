@@ -37,6 +37,9 @@ export const ROUTE_ROLES: { prefix: string; role: AppRole }[] = [
   // this explicit entry documents intent.
   { prefix: "/dashboard/pickups", role: "employee" },
   { prefix: "/dashboard/protocols", role: "employee" },
+  // Return-protocol worklist (S-06) — employee. Covered by /dashboard; this
+  // explicit entry documents intent (the return view reuses /dashboard/protocols).
+  { prefix: "/dashboard/returns", role: "employee" },
   // Authenticated staff area — any role with a profile.
   { prefix: "/dashboard", role: "employee" },
 ];

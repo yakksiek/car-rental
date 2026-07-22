@@ -1,3 +1,7 @@
+// core
+import { Check, TriangleAlert } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 // others
 import { cn } from "../../lib/utils";
 
@@ -17,6 +21,14 @@ const TONE: Record<Tone, string> = {
   ok: "text-success bg-[var(--flota-success-soft)]",
   warn: "text-warning bg-[var(--flota-warning-soft)]",
   bad: "text-primary bg-[var(--flota-danger-soft)]",
+};
+
+// Every design `PpBadge` carries a leading glyph (check when delivered, warning
+// otherwise), like `OverdueBadge` — so the badge does too.
+const TONE_ICON: Record<Tone, LucideIcon> = {
+  ok: Check,
+  warn: TriangleAlert,
+  bad: TriangleAlert,
 };
 
 export interface BadgeState {
@@ -44,10 +56,34 @@ export function deliveryBadge(pdfPath: string | null, deliveryStatus: string | n
   return { tone: "ok", label: "Dostarczono" };
 }
 
-export function DeliveryBadge({ pdfPath, deliveryStatus }: { pdfPath: string | null; deliveryStatus: string | null }) {
+export function DeliveryBadge({
+  pdfPath,
+  deliveryStatus,
+  fullWidthOnMobile = false,
+}: {
+  pdfPath: string | null;
+  deliveryStatus: string | null;
+  /**
+   * When set, the badge renders as a full-width tinted status *bar* on the mobile
+   * card (design RtQueueCardM returned states) and collapses back to the compact
+   * inline pill at `sm+`. Default (false) is the compact pill on every breakpoint,
+   * which is what the dispatch row and protocol view use.
+   */
+  fullWidthOnMobile?: boolean;
+}) {
   const { tone, label } = deliveryBadge(pdfPath, deliveryStatus);
+  const Icon = TONE_ICON[tone];
   return (
-    <span className={cn("inline-flex h-6 items-center rounded-[7px] px-2.5 text-[11.5px] font-bold", TONE[tone])}>
+    <span
+      className={cn(
+        "items-center font-bold",
+        fullWidthOnMobile
+          ? "flex h-9 w-full gap-2 rounded-[10px] px-3.5 text-[13px] sm:inline-flex sm:h-6 sm:w-auto sm:shrink-0 sm:gap-1 sm:rounded-[7px] sm:px-2.5 sm:text-[11.5px] sm:whitespace-nowrap"
+          : "inline-flex h-6 shrink-0 gap-1 rounded-[7px] px-2.5 text-[11.5px] whitespace-nowrap",
+        TONE[tone],
+      )}
+    >
+      <Icon className={cn("size-3.5", fullWidthOnMobile && "size-4 sm:size-3.5")} />
       {label}
     </span>
   );

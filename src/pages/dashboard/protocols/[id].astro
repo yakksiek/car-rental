@@ -5,7 +5,11 @@ import StaffShell from "../../../components/shell/StaffShell.astro";
 import ProtocolView from "../../../components/protocol/ProtocolView";
 
 // others
-import type { ProtocolViewDamage, ProtocolViewPhoto } from "../../../components/protocol/ProtocolView";
+import type {
+  ProtocolViewBaselineDamage,
+  ProtocolViewDamage,
+  ProtocolViewPhoto,
+} from "../../../components/protocol/ProtocolView";
 import { getProtocol } from "../../../lib/services/protocols";
 import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
 import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
@@ -71,6 +75,29 @@ const damages: ProtocolViewDamage[] = protocol
       location: d.location,
       size: d.size,
       photoUrls: d.photos.map((p) => sign(p)).filter((u): u is string => u !== null),
+      // The persisted existing/new decision (S-06): the return view renders the tag
+      // from it; null on issue rows, where no tag is shown.
+      baselineDamageId: d.baseline_damage_id,
+    }))
+  : [];
+
+// For a return protocol, load the issue baseline it is measured against — the same
+// type-agnostic `get_protocol`, keyed by `baseline_protocol_id` (no new read RPC).
+// The comparison block reads its odometer/fuel; the read-only baseline damage
+// reference reads its damages. Deltas are computed client-side by the same pure
+// helper the form and the PDF use, so the three surfaces cannot disagree. No baseline
+// photos are signed — the reference is metadata only.
+const isReturn = protocol?.type === "return";
+// `isReturn` narrows `protocol` to non-null in this branch (it can only be `'return'`
+// on a loaded row), so no extra `&& protocol` guard is needed.
+const baseline = isReturn ? await getProtocol(supabase, protocol.baseline_protocol_id) : null;
+
+const baselineDamages: ProtocolViewBaselineDamage[] = baseline
+  ? baseline.damages.map((d) => ({
+      id: d.id,
+      typeLabel: DAMAGE_TYPE_LABELS_PL[d.type],
+      location: d.location,
+      size: d.size,
     }))
   : [];
 
@@ -78,7 +105,7 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
 ---
 
 <Layout title={protocol ? `Protokół ${protocol.reference} — Flota` : "Nie znaleziono — Flota"}>
-  <StaffShell active="pickups" title="Protokół" user={user} role={role} showHeader={false}>
+  <StaffShell active={isReturn ? "returns" : "pickups"} title="Protokół" user={user} role={role} showHeader={false}>
     {
       protocol ? (
         <ProtocolView
@@ -100,6 +127,14 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
           signatureUrl={sign(protocol.signature)}
           photos={photos}
           damages={damages}
+          kind={protocol.type}
+          returnTime="10:00"
+          comparison={
+            baseline
+              ? { baselineOdometerKm: baseline.odometer_km, baselineFuelEighths: baseline.fuel_eighths }
+              : undefined
+          }
+          baselineDamages={baselineDamages}
         />
       ) : (
         <main class="mx-auto flex min-h-[60vh] max-w-[460px] flex-col justify-center px-5 text-center">

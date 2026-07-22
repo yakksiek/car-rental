@@ -3,7 +3,7 @@ import * as React from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Check, Plus, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, Check, Plus, TriangleAlert, Truck, X } from "lucide-react";
 
 // components
 import { Button } from "../ui/button";
@@ -86,6 +86,9 @@ const ERROR_ORDER: (keyof FormValues)[] = [
 ];
 
 const ERROR_ANCHOR: Partial<Record<keyof FormValues, string>> = { photos: "photos-grid", damages: "damages" };
+
+/** Uppercase, letter-spaced variant of the shared field label — the mockup's condition labels. */
+const UP_LABEL = cn(LABEL_CLASS, "uppercase tracking-[0.06em]");
 
 type ChipTone = "neutral" | "bad";
 
@@ -283,6 +286,14 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
     setEditing(null);
   }
 
+  /** Open the editor on a blank current-damage row (shared by the header + mobile buttons). */
+  function openNewDamage() {
+    setEditing({
+      value: { id: randomUuid(), type: "scratch", location: "", size: null, baselineDamageId: null, photos: [] },
+      isNew: true,
+    });
+  }
+
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const committed = React.useRef<ReturnProtocolInput | null>(null);
@@ -440,17 +451,19 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
         })(event)
       }
     >
-      {/* Header — back / title / close. One scrolling form, no step rail. */}
-      <header className="border-border bg-card sticky top-0 z-10 border-b">
+      {/* Header — back / title / close. One scrolling form, no step rail. On mobile it
+          is transparent + borderless + NOT sticky (the buttons float on the page bg,
+          matching the mockup); only at sm+ does it become the white sticky top bar. */}
+      <header className="sm:border-border sm:bg-card sm:sticky sm:top-0 sm:z-10 sm:border-b">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <a
             href="/dashboard/returns"
             aria-label="Wróć"
-            className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
+            className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >
             <ArrowLeft className="size-[18px]" />
           </a>
-          <div className="min-w-0 text-center sm:text-left">
+          <div className="min-w-0 flex-1 text-center">
             <h1 className="text-foreground truncate text-[17px] font-bold tracking-tight">Protokół zwrotu</h1>
             <p className="text-muted-foreground hidden truncate text-[12px] sm:block">
               {ctx.reference} · {ctx.customerName} · {ctx.vehicle} · {ctx.plate} · Zwrot {ctx.returnTime}
@@ -459,7 +472,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
           <a
             href="/dashboard/returns"
             aria-label="Zamknij"
-            className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
+            className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >
             <X className="size-[18px]" />
           </a>
@@ -467,14 +480,25 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
       </header>
 
       <div className="mx-auto max-w-[1180px] px-4 pt-5 pb-32 sm:px-6 sm:pb-8">
-        {/* Context strip — the mobile equivalent of the desktop topbar subtitle. */}
-        <div className="border-border bg-card shadow-card mb-5 rounded-[14px] border px-4 py-3 sm:hidden">
-          <p className="text-foreground text-[14px] font-semibold tracking-tight">
-            {ctx.reference} · {ctx.customerName}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[12px]">
-            {ctx.vehicle} · <span className="font-mono">{ctx.plate}</span> · Zwrot {ctx.returnTime}
-          </p>
+        {/* Context strip — the mobile equivalent of the desktop topbar subtitle.
+            Vehicle-first (silhouette + bold make/model + plate chip), the reference /
+            customer / return time on the muted line. Deliberately the inverse of the
+            customer-first queue card: on the form the vehicle is what you're inspecting. */}
+        <div className="border-border bg-card shadow-card mb-5 flex items-center gap-3 rounded-[14px] border px-4 py-3 sm:hidden">
+          <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-[10px]">
+            <Truck className="text-muted-foreground size-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="flex items-center gap-2">
+              <span className="text-foreground truncate text-[14px] font-semibold tracking-tight">{ctx.vehicle}</span>
+              <span className="text-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-1.5 py-0.5 font-mono text-[12px] font-semibold tracking-tight">
+                {ctx.plate}
+              </span>
+            </p>
+            <p className="text-muted-foreground mt-0.5 truncate text-[12px]">
+              {ctx.reference} · {ctx.customerName} · Zwrot {ctx.returnTime}
+            </p>
+          </div>
         </div>
 
         {(isSubmitted && Object.keys(errors).length > 0) || submitError ? (
@@ -490,21 +514,23 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
             <Section
               n={1}
               title="Stan techniczny"
-              sub="Licznik, paliwo i istniejące uszkodzenia. Zdjęcia można zrobić telefonem lub wgrać tutaj."
+              sub="Wartości porównane automatycznie z protokołem wydania."
               className="order-1"
             >
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {/* Odometer — current value entered fresh; baseline shown read-only. */}
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="odometerKm" className={LABEL_CLASS}>
+                {/* Odometer — current value entered fresh; baseline shown read-only.
+                    A cohesive grey card wraps label + big input + a 2-row labelled
+                    footer (baseline reference / distance-driven delta). */}
+                <div
+                  className={cn(
+                    "bg-background flex flex-col gap-3 rounded-[14px] border p-3.5",
+                    errors.odometerKm ? "border-primary" : odometerLow ? "border-warning" : "border-border",
+                  )}
+                >
+                  <Label htmlFor="odometerKm" className={UP_LABEL}>
                     Licznik
                   </Label>
-                  <div
-                    className={cn(
-                      "bg-background flex items-center gap-2 rounded-[11px] border px-3 py-2",
-                      errors.odometerKm ? "border-primary" : odometerLow ? "border-warning" : "border-transparent",
-                    )}
-                  >
+                  <div className="flex items-center gap-2">
                     <Input
                       id="odometerKm"
                       inputMode="numeric"
@@ -519,15 +545,17 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
                     />
                     <span className="text-muted-foreground text-[13px] font-semibold">km</span>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground text-[12px]">
-                      Przy wydaniu{" "}
-                      <span className="text-foreground font-mono font-semibold">
-                        {formatOdometer(String(ctx.baselineOdometerKm))}
-                      </span>{" "}
-                      km
-                    </span>
-                    <DeltaChip text={kmText} tone="neutral" />
+                  <div className="border-border flex flex-col gap-1.5 border-t pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={UP_LABEL}>Przy wydaniu</span>
+                      <span className="text-foreground font-mono text-[12px] font-semibold">
+                        {formatOdometer(String(ctx.baselineOdometerKm))} km
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={UP_LABEL}>Przejechano</span>
+                      <DeltaChip text={kmText} tone="neutral" />
+                    </div>
                   </div>
                   {odometerLow && (
                     <p className="text-warning text-[12px] font-medium">
@@ -535,31 +563,43 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
                     </p>
                   )}
                   {errors.odometerKm && (
-                    <p className="text-destructive flex items-center gap-1.5 pt-1 text-sm font-medium">
+                    <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
                       <TriangleAlert className="size-4 shrink-0" />
                       {errors.odometerKm.message}
                     </p>
                   )}
                 </div>
 
-                {/* Fuel — current level entered fresh; baseline shown read-only. */}
-                <div className="flex flex-col gap-2">
+                {/* Fuel — current level entered fresh; baseline shown read-only. Same
+                    cohesive card + 2-row labelled footer (baseline / fuel-change delta). */}
+                <div
+                  className={cn(
+                    "bg-background flex flex-col gap-3 rounded-[14px] border p-3.5",
+                    errors.fuelEighths ? "border-primary" : "border-border",
+                  )}
+                >
                   <FuelBar
                     value={fuelEighths}
                     invalid={Boolean(errors.fuelEighths)}
+                    uppercaseLabel
                     onChange={(value) => {
                       setValue("fuelEighths", value, { shouldValidate: isSubmitted });
                     }}
                   />
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground text-[12px]">
-                      Przy wydaniu{" "}
-                      <span className="text-foreground font-mono font-semibold">{ctx.baselineFuelEighths}/8</span>
-                    </span>
-                    <DeltaChip text={fuelText} tone={fuelTone} />
+                  <div className="border-border flex flex-col gap-1.5 border-t pt-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={UP_LABEL}>Przy wydaniu</span>
+                      <span className="text-foreground font-mono text-[12px] font-semibold">
+                        {ctx.baselineFuelEighths}/8
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={UP_LABEL}>Zmiana paliwa</span>
+                      <DeltaChip text={fuelText} tone={fuelTone} />
+                    </div>
                   </div>
                   {errors.fuelEighths && (
-                    <p className="text-destructive mt-auto flex items-center gap-1.5 pt-1 text-sm font-medium">
+                    <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
                       <TriangleAlert className="size-4 shrink-0" />
                       {errors.fuelEighths.message}
                     </p>
@@ -575,29 +615,25 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
               sub="Zapisz każdy ślad osobno — zwrot porówna się z tą listą."
               className="order-3"
               aside={
+                // Desktop keeps the add-button in the section header; mobile moves it
+                // to a full-width button below (rendered inside the section body).
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 shrink-0 text-[12.5px]"
-                  onClick={() => {
-                    setEditing({
-                      value: {
-                        id: randomUuid(),
-                        type: "scratch",
-                        location: "",
-                        size: null,
-                        baselineDamageId: null,
-                        photos: [],
-                      },
-                      isNew: true,
-                    });
-                  }}
+                  className="hidden h-9 shrink-0 text-[12.5px] sm:inline-flex"
+                  onClick={openNewDamage}
                 >
                   <Plus className="size-3.5" />
                   Dodaj uszkodzenie
                 </Button>
               }
             >
+              {/* Mobile add-damage — full-width, above the baseline panel (the mockup). */}
+              <Button type="button" variant="outline" onClick={openNewDamage} className="mb-3 w-full sm:hidden">
+                <Plus className="size-3.5" />
+                Dodaj uszkodzenie
+              </Button>
+
               {/* Baseline reference — read-only, never editable (FR-007). */}
               {ctx.baselineDamages.length > 0 && (
                 <div className="border-border bg-background mb-3 rounded-[14px] border p-3.5">
@@ -605,11 +641,11 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
                   <div className="flex flex-col gap-1.5">
                     {ctx.baselineDamages.map((baseline) => (
                       <div key={baseline.id} className="flex items-center justify-between gap-2">
-                        <span className="text-foreground min-w-0 truncate text-[13px]">
+                        <span className="text-foreground line-clamp-2 min-w-0 text-[13px]">
                           {[DAMAGE_TYPE_LABELS_PL[baseline.type], baseline.location].join(" — ")}
                           {baseline.size ? ` (${baseline.size})` : ""}
                         </span>
-                        <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-0.5 text-[11px] font-bold">
+                        <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-0.5 text-[11px] font-bold tracking-[0.04em] uppercase">
                           Istniejące
                         </span>
                       </div>
@@ -647,16 +683,15 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
                 flow). Supersedes the contract's original mobile-top light card —
                 user design decision 2026-07-20, recorded in design-contract.md §3/§4. */}
             <section className="bg-foreground shadow-card order-last rounded-[18px] p-5 sm:p-[22px]">
-              <h2 className="text-background text-[15px] font-bold tracking-tight">Porównanie wydanie → zwrot</h2>
-              <p className="text-background/60 mt-0.5 text-[12px]">
-                Wartości porównane automatycznie z protokołem wydania.
-              </p>
+              <h2 className="text-background/70 text-[11px] font-bold tracking-[0.06em] uppercase">
+                Porównanie wydanie → zwrot
+              </h2>
               {summaryEmpty ? (
-                <p className="text-background/70 mt-4 rounded-[12px] bg-white/5 px-4 py-3 text-[13px]">
+                <p className="text-background/70 mt-3 rounded-[12px] bg-white/5 px-4 py-3 text-[13px]">
                   Wprowadź bieżące wartości, aby zobaczyć porównanie
                 </p>
               ) : (
-                <div className="mt-4 flex flex-col gap-2.5">
+                <div className="mt-3 flex flex-col gap-2.5">
                   <SummaryRow label="Przejechano" text={kmText} tone="neutral" />
                   <SummaryRow label="Zmiana paliwa" text={fuelText} tone={fuelTone} />
                   <SummaryRow
@@ -713,16 +748,12 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
             </Section>
 
             {/* ── 4. Podpis ────────────────────────────────────────────────── */}
-            <Section
-              n={4}
-              title="Podpis"
-              sub="Klient potwierdza powyższy stan i składa podpis."
-              card={false}
-              className="order-4 px-0 sm:px-0"
-            >
+            {/* A white section card (like §1–§3), with the ack + signature as grey
+                insets inside it — matching the mockup on both breakpoints. */}
+            <Section n={4} title="Podpis" sub="Klient potwierdza powyższy stan i składa podpis." className="order-4">
               <label
                 htmlFor="customerAck"
-                className="border-border bg-card shadow-card mb-4 flex items-center gap-3 rounded-[14px] border p-4"
+                className="border-border bg-background mb-3 flex items-center gap-3 rounded-[14px] border p-4"
               >
                 <Checkbox
                   id="customerAck"
@@ -744,6 +775,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
                 signedAt={signedAt || null}
                 customerName={ctx.customerName}
                 invalid={Boolean(errors.signaturePath)}
+                inset
                 onSigned={handleSigned}
               />
             </Section>
@@ -760,17 +792,19 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
             type="submit"
             disabled={submitting || uploading}
             aria-busy={submitting}
-            className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full rounded-[13px] text-[15px] font-[650] sm:w-auto sm:px-6"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 w-full rounded-[13px] text-[15px] font-[650] sm:w-auto sm:px-6"
           >
             {submitting ? (
               <>
-                <span className="border-background/30 border-t-background size-4 animate-spin rounded-full border-2" />
+                <span className="border-primary-foreground/30 border-t-primary-foreground size-4 animate-spin rounded-full border-2" />
                 Wysyłanie…
               </>
             ) : (
               <>
                 <Check className="size-4" />
-                Potwierdź zwrot i wyślij
+                {/* Mobile submit is the long label; desktop uses the terse `Zakończ i wyślij` (contract §4). */}
+                <span className="sm:hidden">Potwierdź zwrot i wyślij</span>
+                <span className="hidden sm:inline">Zakończ i wyślij</span>
               </>
             )}
           </Button>

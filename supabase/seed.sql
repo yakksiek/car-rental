@@ -272,13 +272,107 @@ insert into protocol_damages (id, protocol_id, type, location, size) values
     'dd000000-0000-0000-0000-0000000000d1',
     'd6000000-0000-0000-0000-000000000001',
     'scratch',
-    'Lewe przednie błotnik — rysa przy klamce (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
+    'Lewe przednie błotnik — rysa przy klamce',
     '~5 cm'
   ),
   (
     'dd000000-0000-0000-0000-0000000000d2',
     'd6000000-0000-0000-0000-000000000001',
     'dent',
-    'Tylny zderzak po prawej — niewielkie wgniecenie (kontrola znaków PL: ąćęłńóśźż ĄĆĘŁŃÓŚŹŻ)',
+    'Tylny zderzak — niewielkie wgniecenie',
     '~3 cm'
+  );
+
+-- ---------------------------------------------------------------------------
+-- Returns worklist demo rows (S-06) — one of each queue state so
+-- list_returns_today() always shows variety after a `supabase db reset`.
+-- RELATIVE dates (current_date / now()) keep the rows due / overdue /
+-- returned-today whenever the seed runs. Three otherwise-unused vehicles
+-- (Master / Iveco / Scania) so no confirmed-reservation overlap check can trip.
+-- ids live in the a6… / d7… namespaces, disjoint from every test fixture and
+-- the R-0001…4 / d6… demo rows above.
+-- ---------------------------------------------------------------------------
+insert into reservations (
+  id, vehicle_id, customer_name, customer_email, customer_phone,
+  pickup_date, return_date, status, reference, access_token
+) values
+  -- DUE today (no return protocol yet) -> primary "Przyjmij zwrot".
+  (
+    'a6000000-0000-0000-0000-000000000010',
+    '22222222-2222-2222-2222-222222222222',
+    'Maria Zielińska', 'maria.zielinska@example.com', '+48600910110',
+    current_date - 4, current_date, 'confirmed',
+    'R-0010', 'cccccccc-0000-0000-0000-000000000010'
+  ),
+  -- OVERDUE (return_date in the past, no return protocol) -> red bar + "Po terminie".
+  (
+    'a6000000-0000-0000-0000-000000000011',
+    '44444444-4444-4444-4444-444444444444',
+    'Firma Trans-Bud', 'kontakt@trans-bud.example.com', '+48600920120',
+    current_date - 9, current_date - 3, 'confirmed',
+    'R-0011', 'cccccccc-0000-0000-0000-000000000011'
+  ),
+  -- RETURNED today, email SENT -> "Dostarczono" + "Otwórz protokół" (no resend).
+  (
+    'a6000000-0000-0000-0000-000000000012',
+    '66666666-6666-6666-6666-666666666666',
+    'Tomasz Wójcik', 'tomasz.wojcik@example.com', '+48600930130',
+    current_date - 5, current_date - 1, 'confirmed',
+    'R-0012', 'cccccccc-0000-0000-0000-000000000012'
+  );
+
+-- Issue baselines (required: list_returns_today INNER-joins the issue protocol).
+insert into protocols (
+  id, reservation_id, type, odometer_km, fuel_eighths,
+  signed_at, signature, customer_ack, pdf_path, created_by
+) values
+  (
+    'd7000000-0000-0000-0000-000000000010',
+    'a6000000-0000-0000-0000-000000000010',
+    'issue', 51000, 8,
+    now() - interval '4 days',
+    'issue/d7000000-0000-0000-0000-000000000010/signature.png',
+    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+  ),
+  (
+    'd7000000-0000-0000-0000-000000000011',
+    'a6000000-0000-0000-0000-000000000011',
+    'issue', 128400, 6,
+    now() - interval '9 days',
+    'issue/d7000000-0000-0000-0000-000000000011/signature.png',
+    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+  ),
+  (
+    'd7000000-0000-0000-0000-000000000012',
+    'a6000000-0000-0000-0000-000000000012',
+    'issue', 87200, 4,
+    now() - interval '5 days',
+    'issue/d7000000-0000-0000-0000-000000000012/signature.png',
+    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+  );
+
+-- The SENT row's return protocol, created TODAY (so it stays on the list), linked
+-- to its issue baseline. pdf_path is set (a delivered return has a stored PDF); the
+-- object bytes are never seeded, so the view's PDF link 404s while the deltas render.
+insert into protocols (
+  id, reservation_id, type, odometer_km, fuel_eighths,
+  signed_at, signature, customer_ack, pdf_path, baseline_protocol_id, created_by, created_at
+) values (
+  'd7000000-0000-0000-0000-0000000000f2',
+  'a6000000-0000-0000-0000-000000000012',
+  'return', 88950, 3,
+  now(),
+  'return/d7000000-0000-0000-0000-0000000000f2/signature.png',
+  true,
+  'return/d7000000-0000-0000-0000-0000000000f2/protocol.pdf',
+  'd7000000-0000-0000-0000-000000000012',
+  'e0000000-0000-0000-0000-0000000000e0',
+  now()
+);
+
+-- Delivery row status 'sent' -> the queue shows "Dostarczono", no resend button.
+insert into email_deliveries (entity_type, entity_id, template, recipient, status, created_at) values
+  (
+    'protocol', 'd7000000-0000-0000-0000-0000000000f2',
+    'return_protocol', 'tomasz.wojcik@example.com', 'sent', now()
   );

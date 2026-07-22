@@ -33,6 +33,7 @@ const MSG = {
   photos: "Wykonaj wszystkie sześć zdjęć pojazdu.",
   damageType: "Wybierz rodzaj uszkodzenia.",
   damageLocation: "Podaj lokalizację uszkodzenia.",
+  damageLocationMax: "Opis uszkodzenia może mieć maksymalnie 60 znaków.",
   path: "Nieprawidłowa ścieżka pliku.",
 } as const;
 
@@ -56,7 +57,7 @@ const storagePath = z.string(MSG.path).trim().min(1, MSG.path);
 const damageSchema = z.object({
   id: z.guid(MSG.id),
   type: z.enum(DAMAGE_TYPES, MSG.damageType),
-  location: z.string(MSG.damageLocation).trim().min(1, MSG.damageLocation),
+  location: z.string(MSG.damageLocation).trim().min(1, MSG.damageLocation).max(60, MSG.damageLocationMax),
   size: z
     .preprocess(
       (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),

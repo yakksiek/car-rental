@@ -1,0 +1,67 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import StaffShell from "../../components/shell/StaffShell.astro";
+import ReturnQueue from "../../components/dashboard/ReturnQueue";
+
+// others
+import { listReturnsToday } from "../../lib/services/protocols";
+import { listPendingReservations } from "../../lib/services/reservations";
+
+// The returns worklist (S-06 Phase 6): confirmed reservations due-or-overdue to
+// return, each awaiting a return protocol or already returned today. Gated to
+// `employee` by the middleware (/dashboard prefix); the list itself comes from the
+// role-gated `list_returns_today` RPC, so a non-staff caller would see zero rows
+// even if the page rendered. The pickups list's return sibling.
+//
+// `ReturnQueue` mounts `client:load` — it is lightweight (no pdf-lib/heic2any), so
+// unlike the form island there is no Worker-bundle reason to force `client:only`.
+// `today` is the server's UTC calendar date, matching the DB's `current_date`
+// (Supabase runs UTC), so the overdue-vs-due split the queue paints agrees with the
+// RPC's `return_date <= current_date` filter.
+const { user, role, supabase } = Astro.locals;
+
+const [rows, pending] = await Promise.all([listReturnsToday(supabase), listPendingReservations(supabase)]);
+
+const now = new Date();
+const today = now.toISOString().slice(0, 10);
+const subtitle = "Pojazdy do zwrotu na dziś";
+
+// Mobile header eyebrow — `ŚR · 16 LIPCA` (weekday abbrev · day month, uppercase).
+// Built from lookup tables, not `Intl` with a `pl-PL` locale: the Cloudflare
+// workerd runtime ships a trimmed ICU and cannot be trusted for Polish month/weekday
+// names server-side. Keyed on the same UTC calendar the `today` split uses.
+const WEEKDAYS_PL = ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"];
+const MONTHS_PL = [
+  "stycznia",
+  "lutego",
+  "marca",
+  "kwietnia",
+  "maja",
+  "czerwca",
+  "lipca",
+  "sierpnia",
+  "września",
+  "października",
+  "listopada",
+  "grudnia",
+];
+const dateEyebrow =
+  `${WEEKDAYS_PL[now.getUTCDay()]} · ${now.getUTCDate()} ${MONTHS_PL[now.getUTCMonth()]}`.toUpperCase();
+---
+
+<Layout title="Zwroty — Flota">
+  <StaffShell active="returns" title="Zwroty" subtitle={subtitle} user={user} role={role} pendingCount={pending.length}>
+    <main class="mx-auto w-full max-w-[1440px] px-4 py-6">
+      {
+        /* Mobile centered header (the desktop topbar carries this at md+). A date
+          eyebrow sits above the title, matching the mockup's `ŚR · 16 LIPCA`. */
+      }
+      <header class="mb-4 md:hidden">
+        <p class="text-muted-foreground text-[11px] font-bold tracking-[0.08em]">{dateEyebrow}</p>
+        <h1 class="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">Zwroty</h1>
+      </header>
+      <ReturnQueue client:load rows={rows} today={today} />
+    </main>
+  </StaffShell>
+</Layout>

@@ -20,6 +20,10 @@ describe("resolveRequiredRole", () => {
     expect(resolveRequiredRole("/dashboard")).toBe("employee");
   });
 
+  it("resolves the returns worklist to 'employee' (S-06)", () => {
+    expect(resolveRequiredRole("/dashboard/returns")).toBe("employee");
+  });
+
   it("inherits the prefix role on a deep sub-path", () => {
     expect(resolveRequiredRole("/dashboard/anything/deep")).toBe("employee");
   });

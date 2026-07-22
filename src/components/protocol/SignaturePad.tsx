@@ -29,6 +29,12 @@ interface FieldProps {
   signedAt: string | null;
   customerName: string;
   invalid?: boolean;
+  /**
+   * Render as a grey inset (no `Podpis` label, `bg-background` fill) for use inside a
+   * white section card — the return form's §4. Default (issue form) is the standalone
+   * white box with its own label.
+   */
+  inset?: boolean;
   /** Upload the committed PNG; resolves `true` on success. The parent owns storage + `signed_at`. */
   onSigned: (png: Blob) => Promise<boolean>;
 }
@@ -38,15 +44,20 @@ function signedTimePl(signedAt: string): string {
 }
 
 /** The inline Section-4 control: a prompt button when empty, a summary once signed. */
-export function SignatureField({ signedAt, customerName, invalid, onSigned }: FieldProps) {
+export function SignatureField({ signedAt, customerName, invalid, inset, onSigned }: FieldProps) {
   const [open, setOpen] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">Podpis</span>
+      {!inset && <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">Podpis</span>}
 
       {signedAt ? (
-        <div className="border-border bg-card shadow-card flex items-center justify-between gap-3 rounded-[14px] border p-4">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 rounded-[14px] p-4",
+            inset ? "border-border bg-background border" : "border-border bg-card shadow-card border",
+          )}
+        >
           <span className="text-success flex items-center gap-2 text-[13px] font-semibold">
             <Check className="size-4 shrink-0" />
             Podpisał(a) {customerName} · o {signedTimePl(signedAt)}
@@ -74,7 +85,9 @@ export function SignatureField({ signedAt, customerName, invalid, onSigned }: Fi
               "flex flex-col items-center justify-center gap-1.5 rounded-[14px] border border-dashed px-4 py-7 transition-colors",
               invalid
                 ? "border-primary bg-[var(--flota-danger-soft)]"
-                : "bg-card hover:bg-background border-[var(--flota-hair)]",
+                : inset
+                  ? "bg-background hover:bg-card border-[var(--flota-hair)]"
+                  : "bg-card hover:bg-background border-[var(--flota-hair)]",
             )}
           >
             <PenLine className="text-muted-foreground size-5" />
