@@ -38,12 +38,17 @@ const JPEG = "image/jpeg";
 export async function compressImage(file: File | Blob): Promise<Blob> {
   const source = (await isHeic(file)) ? await heicToJpeg(file) : file;
 
-  const bitmap = await decode(source);
+  const decoded = await decode(source);
+  // Only an `ImageBitmap` owns GPU/native memory that must be released; an
+  // `HTMLImageElement` (the createImageBitmap-free fallback) does not.
+  const bitmap = typeof ImageBitmap !== "undefined" && decoded instanceof ImageBitmap ? decoded : null;
   try {
-    const { width, height } = scaleToFit(bitmap.width, bitmap.height, MAX_EDGE);
-    return await drawToJpeg(bitmap, width, height);
+    const srcWidth = bitmap ? bitmap.width : (decoded as HTMLImageElement).naturalWidth;
+    const srcHeight = bitmap ? bitmap.height : (decoded as HTMLImageElement).naturalHeight;
+    const { width, height } = scaleToFit(srcWidth, srcHeight, MAX_EDGE);
+    return await drawToJpeg(decoded, width, height);
   } finally {
-    bitmap.close();
+    bitmap?.close();
   }
 }
 
@@ -58,39 +63,44 @@ export async function compressImage(file: File | Blob): Promise<Blob> {
  * `createImageBitmap` cannot handle the source at all. The browser applies EXIF
  * orientation by default in all three paths.
  */
-async function decode(source: Blob): Promise<ImageBitmap> {
+async function decode(source: Blob): Promise<ImageBitmap | HTMLImageElement> {
   if (typeof createImageBitmap === "function") {
     try {
       return await createImageBitmap(source, { imageOrientation: "from-image" });
     } catch {
-      try {
-        return await createImageBitmap(source);
-      } catch {
-        // Fall through to the <img> path.
-      }
+      // Ignore — older Safari rejects the `imageOrientation` option; retry without it.
+    }
+    try {
+      return await createImageBitmap(source);
+    } catch {
+      // `createImageBitmap` exists but cannot decode/allocate here. A Chrome with
+      // no working GPU (hardware acceleration disabled, GPU blocklisted, a VM /
+      // remote desktop, or a driver fault) throws "The ImageBitmap could not be
+      // allocated" on *every* createImageBitmap call — so retrying it is pointless.
+      // Fall through to the `<img>` path, which never touches createImageBitmap.
     }
   }
   return decodeViaImage(source);
 }
 
-/** Last-resort decode: an `<img>` element painted to a bitmap. Works wherever the DOM does. */
-async function decodeViaImage(source: Blob): Promise<ImageBitmap> {
+/**
+ * Last-resort decode that **never calls `createImageBitmap`**: a fully-decoded
+ * `<img>` element, handed to `ctx.drawImage` directly. This is the path that keeps
+ * working when createImageBitmap cannot allocate at all (a GPU-less / hardware-
+ * acceleration-disabled Chrome, or headless) — the failure mode that otherwise
+ * makes every photo upload impossible. The browser applies EXIF orientation to the
+ * `<img>` by default, so a portrait photo still draws upright.
+ */
+async function decodeViaImage(source: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(source);
   try {
     const image = new Image();
-    image.decoding = "async";
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => {
-        resolve();
-      };
-      image.onerror = () => {
-        reject(new Error("Nie udało się odczytać zdjęcia."));
-      };
-      image.src = url;
-    });
-    // `createImageBitmap` accepts an `HTMLImageElement` even where it rejected the
-    // Blob, and this yields the ImageBitmap the rest of the pipeline expects.
-    return await createImageBitmap(image);
+    image.src = url;
+    // `decode()` resolves once the image is fully decoded (and rejects on a format
+    // the browser cannot read), so the object URL is safe to revoke right after —
+    // the element keeps its decoded pixels for the later `drawImage`.
+    await image.decode();
+    return image;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -106,17 +116,18 @@ export function scaleToFit(width: number, height: number, max: number): { width:
   return { width: Math.round(width * ratio), height: Math.round(height * ratio) };
 }
 
-async function drawToJpeg(bitmap: ImageBitmap, width: number, height: number): Promise<Blob> {
+async function drawToJpeg(source: CanvasImageSource, width: number, height: number): Promise<Blob> {
   // `OffscreenCanvas` has no `toBlob` — that is `HTMLCanvasElement`'s
   // callback-style method. `convertToBlob` takes an options object and returns a
-  // Promise. Mixing the two up is the classic mistake here.
+  // Promise. Mixing the two up is the classic mistake here. `drawImage` accepts
+  // either an `ImageBitmap` or an `HTMLImageElement`, so both decode paths share this.
   if (typeof OffscreenCanvas !== "undefined") {
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       throw new Error("Nie udało się przygotować zdjęcia.");
     }
-    ctx.drawImage(bitmap, 0, 0, width, height);
+    ctx.drawImage(source, 0, 0, width, height);
     return asJpeg(await canvas.convertToBlob({ type: JPEG, quality: QUALITY }));
   }
 
@@ -129,7 +140,7 @@ async function drawToJpeg(bitmap: ImageBitmap, width: number, height: number): P
   if (!ctx) {
     throw new Error("Nie udało się przygotować zdjęcia.");
   }
-  ctx.drawImage(bitmap, 0, 0, width, height);
+  ctx.drawImage(source, 0, 0, width, height);
 
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
