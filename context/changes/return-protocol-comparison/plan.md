@@ -887,5 +887,5 @@ production step recorded in `change.md`.
 
 #### Manual
 
-- [ ] 7.4 In production, one real return protocol is emailed with diacritics correct in the comparison section
-- [ ] 7.5 Role-null and anonymous users can read nothing from any protocol table or return storage object
+- [x] 7.4 In production, one real return protocol is emailed with diacritics correct in the comparison section — verified 2026-07-22 (real send against prod `wujcar.com` sender; customer received the PDF, diacritics correct in the comparison section)
+- [x] 7.5 Role-null and anonymous users can read nothing from any protocol table or return storage object — proven by `returns-rls` (grants: all five tables 0 rows for norole/anon with return data present; storage-prefix parity: `return/` object staff-only, invisible to anon/null-role)
