@@ -473,26 +473,26 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 - [x] 3.1 Type checking passes: `npx astro check` — 7f1489a
 - [x] 3.2 Linting passes: `npm run lint` — 7f1489a
 - [x] 3.3 Unit tests still pass: `npm test` — 7f1489a
-- [x] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
+- [x] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`) — 38e0716
 
 #### Manual
 
-- [x] 3.5 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in
-- [x] 3.6 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE)
-- [x] 3.7 Expired/invalid `code` redirects to forgot-password (no 500)
+- [x] 3.5 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in — 38e0716
+- [x] 3.6 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE) — 38e0716
+- [x] 3.7 Expired/invalid `code` redirects to forgot-password (no 500) — 38e0716
 
 ### Phase 4: Employees Admin UI
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Unit tests pass: `npm test`
-- [ ] 4.4 E2E (Playwright): admin add → INVITED row, remove via typed-confirm, self-✕ disabled, last-admin refused (`e2e/staff-admin.spec.ts`)
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Unit tests pass: `npm test`
+- [x] 4.4 E2E (Playwright): admin add → INVITED row, remove via typed-confirm, self-✕ disabled, last-admin refused (`e2e/staff-admin.spec.ts`)
 
 #### Manual
 
-- [ ] 4.5 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee
-- [ ] 4.6 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused
-- [ ] 4.7 "Resetuj hasło" reports email sent
-- [ ] 4.8 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations)
+- [x] 4.5 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee
+- [x] 4.6 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused
+- [x] 4.7 "Resetuj hasło" reports email sent
+- [x] 4.8 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations)

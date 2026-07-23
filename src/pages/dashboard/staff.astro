@@ -1,0 +1,41 @@
+---
+// components
+import Layout from "../../layouts/Layout.astro";
+import StaffShell from "../../components/shell/StaffShell.astro";
+import StaffList from "../../components/staff/StaffList";
+
+// others
+import { listStaff } from "../../lib/services/staff";
+import { listPendingReservations } from "../../lib/services/reservations";
+import { countOverdueReturns } from "../../lib/services/protocols";
+
+// Employees admin surface (S-08 Phase 4). /dashboard/staff is gated to `admin`
+// by the middleware (src/lib/access.ts → /dashboard/staff prefix), so this page
+// simply SSR-loads the roster through the admin-gated list_staff RPC and mounts
+// the island. The shell's desktop title bar is suppressed — the island renders
+// its own title + search + add row (design-contract §3). Nav badge counts are
+// loaded for parity with the other staff pages.
+const { user, role, supabase } = Astro.locals;
+
+const [staff, pending, overdueCount] = await Promise.all([
+  listStaff(supabase),
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+]);
+---
+
+<Layout title="Pracownicy — Flota">
+  <StaffShell
+    active="staff"
+    title="Pracownicy"
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+    overdueCount={overdueCount}
+    showHeader={false}
+  >
+    <main class="mx-auto w-full max-w-5xl px-4 py-6">
+      <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} />
+    </main>
+  </StaffShell>
+</Layout>

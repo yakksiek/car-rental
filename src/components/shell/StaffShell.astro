@@ -14,7 +14,7 @@ import { staffIdentity } from "../../lib/staff-identity";
 // are intentionally omitted until those slices land.
 
 interface Props {
-  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet";
+  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -31,7 +31,7 @@ interface Props {
 const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
-type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return";
+type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
@@ -47,6 +47,11 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   },
   { id: "cal", href: "/dashboard/calendar", label: "Kalendarz", icon: "calendar" },
   { id: "fleet", href: "/dashboard/vehicles", label: "Flota", icon: "truck" },
+  // Admin-only "Zespół" tab (S-08) — the first role-gated nav entry. Rendered
+  // only for an admin; absent for a plain employee.
+  ...(role === "admin"
+    ? [{ id: "staff" as const, href: "/dashboard/staff", label: "Zespół", icon: "users" as const }]
+    : []),
 ];
 ---
 
