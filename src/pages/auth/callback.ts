@@ -1,15 +1,18 @@
 // core
 import type { APIRoute } from "astro";
 
-// PKCE recovery / invite-accept callback (S-08). GoTrue's default confirmation
-// link routes through /auth/v1/verify and redirects here with a PKCE `?code=`
-// (recovery/invite initiated server-side); a `?token_hash=&type=` variant is
-// also handled defensively. Exchanging it establishes the session cookie BEFORE
-// we redirect to /auth/reset-password, so that page sees `locals.user`.
+// Recovery / invite-accept callback (S-08). The custom email templates
+// (supabase/templates/{invite,recovery}.html) link here with a self-contained
+// `?token_hash=&type=`, which `verifyOtp` exchanges server-side with NO
+// code-verifier — the default `{{ .ConfirmationURL }}` flow fails for invites
+// (session lands in a URL hash the server never sees) and for cross-browser
+// recovery (needs a verifier cookie the recipient lacks). A PKCE `?code=` path is
+// still handled as a fallback. Either way the session cookie is established
+// BEFORE we redirect to /auth/reset-password, so that page sees `locals.user`.
 //
-// The invite link carries `?flow=invite` (set as the invite redirectTo) so the
-// reset page can pick its invite-accept mode. An expired/invalid link redirects
-// to the forgot-password expired state (R5) — never a 500.
+// The invite carries `?flow=invite` (and `type=invite`) so the reset page picks
+// its invite-accept mode. An expired/invalid link redirects to the
+// forgot-password expired state (R5) — never a 500.
 export const GET: APIRoute = async (context) => {
   const supabase = context.locals.supabase;
   if (!supabase) {

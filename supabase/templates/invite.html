@@ -1,0 +1,12 @@
+<!-- S-08 invite-accept email. Uses {{ .TokenHash }} (not {{ .ConfirmationURL }})
+     so the link lands on our server-side /auth/callback with a self-contained
+     token_hash that verifyOtp() can exchange WITHOUT a browser code-verifier
+     cookie — the default /verify?token=… flow puts the session in a URL hash the
+     server never sees, which breaks invite-accept. `flow=invite` selects the
+     invite-accept (R6/R10) mode on the reset page. -->
+<h2>Witaj w Flocie</h2>
+<p>Zaproszono Cię do panelu pracownika Flota. Kliknij poniższy przycisk, aby ustawić hasło i aktywować konto:</p>
+<p>
+  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&flow=invite">Aktywuj konto</a>
+</p>
+<p>Jeśli nie spodziewałeś się tego zaproszenia, zignoruj tę wiadomość.</p>

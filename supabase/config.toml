@@ -247,10 +247,20 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# S-08: token_hash-based invite + recovery templates. The DEFAULT
+# {{ .ConfirmationURL }} routes through /auth/v1/verify, which for an invite
+# (non-PKCE) redirects with the session in a URL *hash* the server can't read,
+# and for recovery (PKCE) needs a code-verifier cookie the recipient's browser
+# lacks on a cross-browser click. These templates instead link to our
+# /auth/callback with {{ .TokenHash }}, which verifyOtp() exchanges server-side
+# with no verifier — making invite-accept and admin-triggered reset both work.
+[auth.email.template.invite]
+subject = "Aktywuj konto w panelu Flota"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Reset hasła — Flota"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
