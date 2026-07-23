@@ -485,14 +485,14 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Unit tests pass: `npm test`
-- [x] 4.4 E2E (Playwright): admin add → INVITED row, remove via typed-confirm, self-✕ disabled, last-admin refused (`e2e/staff-admin.spec.ts`)
+- [x] 4.1 Type checking passes: `npx astro check` — 68aaeb6
+- [x] 4.2 Linting passes: `npm run lint` — 68aaeb6
+- [x] 4.3 Unit tests pass: `npm test` — 68aaeb6
+- [x] 4.4 E2E (Playwright): admin add → INVITED row, remove via typed-confirm, self-✕ disabled, last-admin refused (`e2e/staff-admin.spec.ts`) — 68aaeb6
 
 #### Manual
 
-- [x] 4.5 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee
-- [x] 4.6 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused
-- [x] 4.7 "Resetuj hasło" reports email sent
-- [x] 4.8 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations)
+- [x] 4.5 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee — 68aaeb6
+- [x] 4.6 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused — 68aaeb6
+- [x] 4.7 "Resetuj hasło" reports email sent — 68aaeb6
+- [x] 4.8 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations) — 68aaeb6
