@@ -7,6 +7,7 @@ import ReturnQueue from "../../components/dashboard/ReturnQueue";
 // others
 import { countOverdueReturns, listReturnsToday } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
+import { parseReturnsFilter } from "../../lib/returns-filter";
 
 // The returns worklist (S-06 Phase 6): confirmed reservations due-or-overdue to
 // return, each awaiting a return protocol or already returned today. Gated to
@@ -26,6 +27,11 @@ const [rows, pending, overdueCount] = await Promise.all([
   listPendingReservations(supabase),
   countOverdueReturns(supabase),
 ]);
+
+// Parse `?filter` server-side and hand the island a typed initial value, so a
+// deep-link (e.g. the nav badge's `?filter=overdue`) renders pre-filtered with no
+// client-only read → no hydration flash. Junk validates away to `null` (Wszystkie).
+const initialFilter = parseReturnsFilter(Astro.url.searchParams.get("filter"));
 
 const now = new Date();
 const today = now.toISOString().slice(0, 10);
@@ -52,6 +58,14 @@ const MONTHS_PL = [
 ];
 const dateEyebrow =
   `${WEEKDAYS_PL[now.getUTCDay()]} · ${now.getUTCDate()} ${MONTHS_PL[now.getUTCMonth()]}`.toUpperCase();
+
+// Desktop filter-bar date (design O2): `Śr, 16 lip` — title-case weekday abbrev, day,
+// 3-letter month abbrev. Replaces the cut sparkline on the bar's right. Same UTC
+// calendar as `today`/the eyebrow; lookup tables (not Intl) because workerd's trimmed
+// ICU can't be trusted for Polish server-side.
+const MONTHS_ABBR_PL = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
+const weekdayAbbr = WEEKDAYS_PL[now.getUTCDay()];
+const dateLabel = `${weekdayAbbr.charAt(0).toUpperCase()}${weekdayAbbr.slice(1)}, ${now.getUTCDate()} ${MONTHS_ABBR_PL[now.getUTCMonth()]}`;
 ---
 
 <Layout title="Zwroty — Flota">
@@ -73,7 +87,7 @@ const dateEyebrow =
         <p class="text-muted-foreground text-[11px] font-bold tracking-[0.08em]">{dateEyebrow}</p>
         <h1 class="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">Zwroty</h1>
       </header>
-      <ReturnQueue client:load rows={rows} today={today} />
+      <ReturnQueue client:load rows={rows} today={today} initialFilter={initialFilter} dateLabel={dateLabel} />
     </main>
   </StaffShell>
 </Layout>

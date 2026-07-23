@@ -540,37 +540,37 @@ by dropping the count function and recreating `list_returns_today` without the c
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly (`supabase db reset` / `migration up`)
-- [x] 1.2 DB types regenerated; `count_overdue_returns` present and `list_returns_today` has `customer_phone`
-- [x] 1.3 Type-check/build passes (`astro sync && npm run build`)
-- [x] 1.4 Linting passes (`npm run lint`)
-- [x] 1.5 Integration test: count correct for staff (overdue+open+issued+confirmed only), excludes due-today/returned/never-issued/non-confirmed, 0 for non-staff; `list_returns_today` still returns rows (with `customer_phone`) and grants survived drop+recreate
+- [x] 1.1 Migration applies cleanly (`supabase db reset` / `migration up`) — 3991554
+- [x] 1.2 DB types regenerated; `count_overdue_returns` present and `list_returns_today` has `customer_phone` — 3991554
+- [x] 1.3 Type-check/build passes (`astro sync && npm run build`) — 3991554
+- [x] 1.4 Linting passes (`npm run lint`) — 3991554
+- [x] 1.5 Integration test: count correct for staff (overdue+open+issued+confirmed only), excludes due-today/returned/never-issued/non-confirmed, 0 for non-staff; `list_returns_today` still returns rows (with `customer_phone`) and grants survived drop+recreate — 3991554
 
 #### Manual
 
-- [x] 1.6 Sidebar danger count pill equals overdue count; hidden at 0
-- [x] 1.7 Mobile tab: dot when inactive+overdue, crimson count when active+overdue; hidden at 0
-- [x] 1.8 Badge count equals ReturnQueue's on-page overdue count
-- [x] 1.9 Clicking "Zwroty" with overdue > 0 lands on `?filter=overdue`
-- [x] 1.10 No regression to the "Wnioski" pendingCount badge
+- [x] 1.6 Sidebar danger count pill equals overdue count; hidden at 0 — 3991554
+- [x] 1.7 Mobile tab: dot when inactive+overdue, crimson count when active+overdue; hidden at 0 — 3991554
+- [x] 1.8 Badge count equals ReturnQueue's on-page overdue count — 3991554
+- [x] 1.9 Clicking "Zwroty" with overdue > 0 lands on `?filter=overdue` — 3991554
+- [x] 1.10 No regression to the "Wnioski" pendingCount badge — 3991554
 
 ### Phase 2: Filter bar
 
 #### Automated
 
-- [ ] 2.1 Unit test: filter subset selection, toggle-to-null, `initialFilter` round-trip
-- [ ] 2.2 Type-check/build passes (`astro sync && npm run build`)
-- [ ] 2.3 Linting passes (`npm run lint`)
+- [x] 2.1 Unit test: filter subset selection, toggle-to-null, `initialFilter` round-trip
+- [x] 2.2 Type-check/build passes (`astro sync && npm run build`)
+- [x] 2.3 Linting passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 2.4 Clicking a segment/pill filters the list; active shows tone-specific selected state; header reflects filter
-- [ ] 2.5 Clicking the active one clears to `Wszystkie`
-- [ ] 2.6 Counts stay live regardless of active filter
-- [ ] 2.7 `?filter=overdue` deep-link renders pre-filtered, no hydration flash; toggle syncs URL
-- [ ] 2.8 Overdue filter with 0 overdue shows the positive empty state
-- [ ] 2.9 Desktop unified bar (total + 3 segments, no search/sparkline); mobile 4 scrollable pills
-- [ ] 2.10 Matches design contract (layout vs screenshots, copy vs contract); vision-diff (deferred)
+- [x] 2.4 Clicking a segment/pill filters the list; active shows tone-specific selected state; header reflects filter
+- [x] 2.5 Clicking the active one clears to `Wszystkie`
+- [x] 2.6 Counts stay live regardless of active filter
+- [x] 2.7 `?filter=overdue` deep-link renders pre-filtered, no hydration flash; toggle syncs URL
+- [x] 2.8 Overdue filter with 0 overdue shows the positive empty state
+- [x] 2.9 Desktop unified bar (total + 3 segments, no search/sparkline); mobile 4 scrollable pills
+- [x] 2.10 Matches design contract (layout vs screenshots, copy vs contract); vision-diff (deferred)
 
 ### Phase 3: Overdue-row restyle (days-overdue + Call + ordering)
 
