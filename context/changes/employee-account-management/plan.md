@@ -473,13 +473,13 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 - [x] 3.1 Type checking passes: `npx astro check` — 7f1489a
 - [x] 3.2 Linting passes: `npm run lint` — 7f1489a
 - [x] 3.3 Unit tests still pass: `npm test` — 7f1489a
-- [ ] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
+- [x] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
 
 #### Manual
 
-- [ ] 3.5 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in
-- [ ] 3.6 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE)
-- [ ] 3.7 Expired/invalid `code` redirects to forgot-password (no 500)
+- [x] 3.5 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in
+- [x] 3.6 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE)
+- [x] 3.7 Expired/invalid `code` redirects to forgot-password (no 500)
 
 ### Phase 4: Employees Admin UI
 
