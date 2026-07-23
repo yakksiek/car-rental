@@ -66,22 +66,24 @@ Before any reading, identify what kinds of upstream artifacts the user passed in
 
 **Question count and focus scale with what's provided:**
 
-| Upstream artifacts          | LOW   | MEDIUM | HIGH  | What changes vs. baseline                                                                                                              |
-| --------------------------- | ----- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Task only (baseline)        | 4–6   | 7–10   | 11–15 | Full questioning across all relevant categories.                                                                                       |
-| Task + research             | 3–5   | 5–7    | 8–11  | Skip questions whose answer is already in the research doc. Don't re-spawn sub-agents to find what research already mapped.            |
-| Task + frame                | 2–3   | 4–6    | 7–9   | Skip [D]iagnostic categories — frame settled problem framing. Treat the Reframed (or Confirmed) Problem Statement as authoritative.    |
-| Task + frame + research     | 1–2   | 3–5    | 5–7   | Skip both. Ask only [S]olution-design questions that genuinely need user input.                                                        |
+| Upstream artifacts      | LOW | MEDIUM | HIGH  | What changes vs. baseline                                                                                                           |
+| ----------------------- | --- | ------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Task only (baseline)    | 4–6 | 7–10   | 11–15 | Full questioning across all relevant categories.                                                                                    |
+| Task + research         | 3–5 | 5–7    | 8–11  | Skip questions whose answer is already in the research doc. Don't re-spawn sub-agents to find what research already mapped.         |
+| Task + frame            | 2–3 | 4–6    | 7–9   | Skip [D]iagnostic categories — frame settled problem framing. Treat the Reframed (or Confirmed) Problem Statement as authoritative. |
+| Task + frame + research | 1–2 | 3–5    | 5–7   | Skip both. Ask only [S]olution-design questions that genuinely need user input.                                                     |
 
 **Principle**: every artifact passed in is a source of decisions already made. Reading them counts as listening to the user. Don't ask the user what they already wrote down.
 
 **When a frame is present**, read it FULLY and treat as authoritative:
+
 - Copy the **Reported Observation** + **Reframed (or Confirmed) Problem Statement** as the task definition. Do not re-question the framing.
 - Lift the **Hypothesis Investigation** table and **Narrowing Signals** into your "Current State Analysis" — this work is already done.
 - If the frame **Confidence: LOW** is flagged, surface that in the plan's "Open Risks & Assumptions" and ask ONE clarifying question about how to proceed (verify first, or plan with risk acknowledged).
 - Do NOT re-investigate the framing. Frame owns problem framing; you own solution design.
 
 **When research is present**, read it FULLY and use as the codebase baseline:
+
 - "Code References" section IS your codebase grounding — don't re-spawn Explore agents to find the same files.
 - "Architecture Insights" feed directly into "Current State Analysis."
 - Spawn sub-agents only to fill specific gaps research didn't cover (e.g., the exact files this plan will modify if research was broader).
@@ -277,7 +279,7 @@ Before any reading, identify what kinds of upstream artifacts the user passed in
    - Questions with obvious answers given the context already provided
    - Preferences that don't affect the plan's structure or success
 
-   **CRITICAL**: You MUST ask the number of questions appropriate to the confirmed complexity level *and* the upstream-artifacts scaling from Step 1.0. Do not shortcut this when no upstream artifacts were provided — thorough questioning prevents costly rework. Equally, do not pad questions when a frame or research already covers the ground — re-asking erodes trust in the upstream artifact. Each question should force a real decision, not confirm something obvious.
+   **CRITICAL**: You MUST ask the number of questions appropriate to the confirmed complexity level _and_ the upstream-artifacts scaling from Step 1.0. Do not shortcut this when no upstream artifacts were provided — thorough questioning prevents costly rework. Equally, do not pad questions when a frame or research already covers the ground — re-asking erodes trust in the upstream artifact. Each question should force a real decision, not confirm something obvious.
 
 ### Step 2: Research & Discovery
 
@@ -399,7 +401,7 @@ After structure approval:
    - Update `change.md`: set `status: planned` and `updated: <today>`.
 2. **Use this template structure** (Phase blocks contain plain bullets — `- ` not `- [ ]` — and a single canonical `## Progress` section at the bottom owns the checkbox state, see `references/progress-format.md` for the contract):
 
-````markdown
+```markdown
 # [Feature/Task Name] Implementation Plan
 
 ## Overview
@@ -537,7 +539,7 @@ A code snippet appears here ONLY when the change is non-obvious — a tricky reg
 #### Automated
 
 - [ ] 2.1 <…>
-````
+```
 
 The Progress section is mechanical — emit one `### Phase N: <name>` per phase, with `#### Automated` / `#### Manual` subsections enumerating every Success Criteria bullet from that phase as `- [ ] <phase>.<index> <title>`. Omit empty subsections. The Phase blocks themselves carry plain `- ` bullets (no checkboxes); the `## Progress` section is the only place `[ ]` / `[x]` appear.
 
@@ -572,11 +574,11 @@ After writing the full plan, generate a concise brief that gives the reader the 
 
 When a frame brief or research doc was the input, mark the **Source** column to show where the decision came from. This lets readers see the lineage: what was settled upstream vs decided in this planning session.
 
-| Decision                       | Choice            | Why (1 sentence)  | Source           |
-| ------------------------------ | ----------------- | ----------------- | ---------------- |
-| [Decision area]                | [What was chosen] | [Core rationale]  | Frame / Research / Plan |
-| [Decision area]                | [Choice]          | [Rationale]       | Frame / Research / Plan |
-| ...                            | ...               | ...               | ...              |
+| Decision        | Choice            | Why (1 sentence) | Source                  |
+| --------------- | ----------------- | ---------------- | ----------------------- |
+| [Decision area] | [What was chosen] | [Core rationale] | Frame / Research / Plan |
+| [Decision area] | [Choice]          | [Rationale]      | Frame / Research / Plan |
+| ...             | ...               | ...              | ...                     |
 
 (Omit the `Source` column if no upstream artifacts were provided — every row would be `Plan`.)
 
@@ -661,7 +663,25 @@ For non-software: structure, workflow, key dependencies.]
    - Clarify success criteria (both automated and manual)
    - Add/remove scope items
 
-5. **Continue refining** until the user is satisfied
+5. **Continue refining** until the user is satisfied. For a UI-touching plan, proceed to Step 6 — the design-alignment gate — before declaring planning complete.
+
+### Step 6: Design Alignment Audit (conditional — UI-touching plans only)
+
+**Trigger.** Run this step only if the plan touches a user-facing surface — any phase that creates or edits a page, component, layout, or stylesheet (the project's rules define the exact paths and framework). For a backend-only / data / API / test-only plan, skip it: print `Design audit: N/A — this plan touches no UI surface.` and finish at Step 5.
+
+For a UI-touching plan, **planning is not complete until this gate passes.** At plan time nothing is rendered yet, so this is a _paper_ audit — design ↔ plan-spec ↔ repo-freshness — that produces the exact-values contract the build phases work from. The _rendered_ vision-vs-mockup diff stays downstream in `/10x-implement` and `/10x-impl-review` (see `context/foundation/lessons.md`, "Port the design spec … with a vision-diff gate").
+
+1. **Capture the canonical designs.** Ask the user for the final screenshots of every UI surface the plan touches, and save them under `context/changes/<change-id>/design-review/`. These are canonical for this change. Read `context/foundation/design-system.md` first; pull the editable design source from wherever it points (e.g. via `DesignSync` / `/design-sync`).
+
+2. **Freshness audit — repo vs canonical.** For every `design-system.md` catalog row and in-repo screenshot the plan relies on, classify each as `current`, `outdated (superseded)`, or `missing`, and record it. Flag which repo designs are now stale (they may need re-export or a `design-system.md` catalog update).
+
+3. **Quality audit — the new designs themselves.** The newly provided screenshots may also be incomplete. Flag gaps: missing states (empty / loading / error), missing breakpoints (mobile + desktop), ambiguous or non-canonical UI copy.
+
+4. **Write / refresh the design contract** at `context/changes/<change-id>/design-contract.md`: token map (design hex → app token), screen inventory (mockup ref → app surface), per-surface layout with **an exact value per element (px / rem / token / grid-ratio), never a range** like "15–20px", component reuse, and **verbatim UI copy strings**. Mark every spec line `exact` or `deviation(reason)`. Head the file with a short **Design Alignment Audit** block carrying the freshness table (step 2), the new-design gaps (step 3), and the alignment checklist (step 5).
+
+5. **Alignment audit — plan vs canonical.** Cross-check: every canonical UI surface has a plan phase that builds it; no plan phase contradicts the design; each UI phase's Success Criteria include "matches the design contract" and (for the eventual `/10x-implement`) a vision-diff against the canonical screenshot. On any mismatch — a surface with no phase, a phase with no design, or a design that itself needs a product decision — **loop back and revise the plan** (or record the divergence as an explicit `deviation(reason)`), then re-audit.
+
+6. **Gate + verdict.** Planning is complete only when canonical screenshots are captured, freshness is recorded, and every surface is aligned (or its divergence is a recorded deviation). Print a short verdict: `Design Alignment Audit: PASS — <N> surfaces, <M> repo designs superseded, <K> deviations recorded` (or `BLOCKED — <what's missing>`, and do not hand off to `/10x-implement` until resolved).
 
 ## Important Guidelines
 
