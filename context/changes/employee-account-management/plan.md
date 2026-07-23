@@ -440,16 +440,16 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 
 #### Automated
 
-- [ ] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [ ] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [ ] 1.3 Type checking passes: `npx astro check`
-- [ ] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
+- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
+- [x] 1.3 Type checking passes: `npx astro check`
+- [x] 1.4 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.5 `profiles` has `full_name` + `deactivated_at`; `list_staff()` admin-only + excludes deactivated; `deactivate_staff()` denies non-admin
-- [ ] 1.6 Both RPCs revoked from anon (anon call denied at grant layer)
-- [ ] 1.7 Deactivated profile resolves to `role=null` in middleware (session denied `/dashboard`)
+- [x] 1.5 `profiles` has `full_name` + `deactivated_at`; `list_staff()` admin-only + excludes deactivated; `deactivate_staff()` denies non-admin
+- [x] 1.6 Both RPCs revoked from anon (anon call denied at grant layer)
+- [x] 1.7 Deactivated profile resolves to `role=null` in middleware (session denied `/dashboard`)
 
 ### Phase 2: Staff Service & Admin API
 

@@ -225,9 +225,83 @@ insert into auth.identities (
 
 -- NOTE: norole@fleetrent.test (b0…b0) intentionally has NO profiles row below,
 -- so current_app_role() resolves to NULL (fail-closed). Do not add it here.
-insert into profiles (user_id, role) values
-  ('a0000000-0000-0000-0000-0000000000ad', 'admin'),
-  ('e0000000-0000-0000-0000-0000000000e0', 'employee');
+insert into profiles (user_id, role, full_name) values
+  ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik'),
+  ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur');
+
+-- ---------------------------------------------------------------------------
+-- staff roster (S-08) — extra employees so /dashboard/staff renders both the
+-- ACTIVE and INVITED states with Polish-diacritic names. DEV-ONLY credentials.
+-- ---------------------------------------------------------------------------
+--
+-- Status derivation (plan.md): ACTIVE = last_sign_in_at is not null; INVITED =
+-- invited_at is not null AND last_sign_in_at is null. The two F-02 accounts
+-- above have no last_sign_in_at, so backfill it here to render them ACTIVE.
+update auth.users
+  set last_sign_in_at = now() - interval '2 hours'
+  where id in ('a0000000-0000-0000-0000-0000000000ad', 'e0000000-0000-0000-0000-0000000000e0');
+
+-- Two more ACTIVE employees (signable-in: users + identities + profiles + a
+-- set last_sign_in_at) and one INVITED employee (invited_at set, last_sign_in_at
+-- null, no password/identity — mirrors an unaccepted GoTrue invite).
+--   grzegorz@fleetrent.test / Fl33tRent-Employee_2026!  -> ACTIVE  employee
+--   zofia@fleetrent.test    / Fl33tRent-Employee_2026!  -> ACTIVE  employee
+--   lukasz@fleetrent.test   (invite pending, no password) -> INVITED employee
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, last_sign_in_at, invited_at, created_at, updated_at,
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) values
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'e1000000-0000-0000-0000-0000000000e1',
+    'authenticated', 'authenticated',
+    'grzegorz@fleetrent.test', crypt('Fl33tRent-Employee_2026!', gen_salt('bf')),
+    now(), now() - interval '1 day', now() - interval '20 days', now(), now(),
+    '{"provider":"email","providers":["email"]}', '{"full_name":"Grzegorz Jabłoński"}',
+    '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'e2000000-0000-0000-0000-0000000000e2',
+    'authenticated', 'authenticated',
+    'zofia@fleetrent.test', crypt('Fl33tRent-Employee_2026!', gen_salt('bf')),
+    now(), now() - interval '3 days', now() - interval '45 days', now(), now(),
+    '{"provider":"email","providers":["email"]}', '{"full_name":"Zofia Wróbel"}',
+    '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'e3000000-0000-0000-0000-0000000000e3',
+    'authenticated', 'authenticated',
+    'lukasz@fleetrent.test', '',
+    null, null, now() - interval '2 days', now(), now(),
+    '{"provider":"email","providers":["email"]}', '{"full_name":"Łukasz Piątek"}',
+    '', '', '', ''
+  );
+
+insert into auth.identities (
+  provider_id, user_id, identity_data, provider,
+  last_sign_in_at, created_at, updated_at
+) values
+  (
+    'e1000000-0000-0000-0000-0000000000e1',
+    'e1000000-0000-0000-0000-0000000000e1',
+    '{"sub":"e1000000-0000-0000-0000-0000000000e1","email":"grzegorz@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
+  ),
+  (
+    'e2000000-0000-0000-0000-0000000000e2',
+    'e2000000-0000-0000-0000-0000000000e2',
+    '{"sub":"e2000000-0000-0000-0000-0000000000e2","email":"zofia@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
+  );
+
+insert into profiles (user_id, role, full_name) values
+  ('e1000000-0000-0000-0000-0000000000e1', 'employee', 'Grzegorz Jabłoński'),
+  ('e2000000-0000-0000-0000-0000000000e2', 'employee', 'Zofia Wróbel'),
+  ('e3000000-0000-0000-0000-0000000000e3', 'employee', 'Łukasz Piątek');
 
 -- ---------------------------------------------------------------------------
 -- issue protocol baseline (S-06) — makes the returns worklist + deltas demoable
