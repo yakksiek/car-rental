@@ -7,6 +7,7 @@ import FleetList from "../../components/fleet/FleetList";
 // others
 import { getCategoryCounts, listFleet } from "../../lib/services/vehicles";
 import { listPendingReservations } from "../../lib/services/reservations";
+import { countOverdueReturns } from "../../lib/services/protocols";
 
 // Fleet management (S-04 Phase 4). The /dashboard/vehicles route is gated to
 // `employee` by the middleware (src/lib/access.ts → /dashboard prefix); this page
@@ -14,10 +15,11 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // RLS broadening) plus the active-fleet category counts, then mounts the island.
 const { user, role, supabase } = Astro.locals;
 
-const [vehicles, counts, pending] = await Promise.all([
+const [vehicles, counts, pending, overdueCount] = await Promise.all([
   listFleet(supabase, { includeRetired: true }),
   getCategoryCounts(supabase),
   listPendingReservations(supabase),
+  countOverdueReturns(supabase),
 ]);
 
 const subtitle = `${counts.total} aktywnych pojazdów`;
@@ -31,6 +33,7 @@ const subtitle = `${counts.total} aktywnych pojazdów`;
     user={user}
     role={role}
     pendingCount={pending.length}
+    overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-5xl px-4 py-6">
       <FleetList client:load vehicles={vehicles} counts={counts} />

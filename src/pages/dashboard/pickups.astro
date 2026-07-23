@@ -5,7 +5,7 @@ import StaffShell from "../../components/shell/StaffShell.astro";
 import PickupQueue from "../../components/dashboard/PickupQueue";
 
 // others
-import { listDispatchToday } from "../../lib/services/protocols";
+import { countOverdueReturns, listDispatchToday } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 
 // The dispatch list (S-05 Phase 6): today's confirmed reservations, each awaiting
@@ -18,7 +18,11 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // form island there is no Worker-bundle reason to force `client:only`.
 const { user, role, supabase } = Astro.locals;
 
-const [rows, pending] = await Promise.all([listDispatchToday(supabase), listPendingReservations(supabase)]);
+const [rows, pending, overdueCount] = await Promise.all([
+  listDispatchToday(supabase),
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+]);
 
 const count = rows.length;
 const countLabel =
@@ -33,6 +37,7 @@ const countLabel =
     user={user}
     role={role}
     pendingCount={pending.length}
+    overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-3xl px-4 py-6">
       {/* Mobile centered header (the desktop topbar carries this at md+) */}

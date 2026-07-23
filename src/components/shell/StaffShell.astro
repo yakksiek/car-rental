@@ -18,6 +18,9 @@ interface Props {
   title: string;
   subtitle?: string;
   pendingCount?: number;
+  // Open overdue-returns count (S-07) — paints the danger badge on "Zwroty" and
+  // deep-links the nav item to the overdue filter. Threaded per page like pendingCount.
+  overdueCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
   // Full-page forms (e.g. add/edit vehicle) render their own eyebrow+title header,
@@ -25,15 +28,23 @@ interface Props {
   showHeader?: boolean;
 }
 
-const { active, title, subtitle, pendingCount = 0, user, role, showHeader = true } = Astro.props;
+const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return";
+// Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
+// the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
   { id: "dash", href: "/dashboard", label: "Pulpit", icon: "home" },
   { id: "requests", href: "/dashboard/reservations", label: "Wnioski", icon: "list", badge: pendingCount },
   { id: "pickups", href: "/dashboard/pickups", label: "Wydania", icon: "key" },
-  { id: "returns", href: "/dashboard/returns", label: "Zwroty", icon: "return" },
+  {
+    id: "returns",
+    href: `/dashboard/returns${overdueCount > 0 ? "?filter=overdue" : ""}`,
+    label: "Zwroty",
+    icon: "return",
+    badge: overdueCount,
+  },
   { id: "cal", href: "/dashboard/calendar", label: "Kalendarz", icon: "calendar" },
   { id: "fleet", href: "/dashboard/vehicles", label: "Flota", icon: "truck" },
 ];
@@ -78,6 +89,16 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
                 class:list={[
                   "ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold",
                   active === n.id ? "text-background bg-white/20" : "text-warning bg-[var(--flota-warning-soft)]",
+                ]}
+              >
+                {n.badge}
+              </span>
+            )}
+            {n.id === "returns" && (n.badge ?? 0) > 0 && (
+              <span
+                class:list={[
+                  "ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold",
+                  active === n.id ? "text-background bg-white/20" : "text-primary bg-[var(--flota-danger-soft)]",
                 ]}
               >
                 {n.badge}
@@ -147,6 +168,17 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           {active === n.id && <span>{n.label}</span>}
           {n.id === "requests" && (n.badge ?? 0) > 0 && active !== n.id && (
             <span class="bg-warning absolute top-1 right-1.5 size-2 rounded-full ring-2 ring-[#0A0A0F]" />
+          )}
+          {/* Returns overdue badge (S-07): a danger dot when the tab is inactive, a
+              crimson count pill after the label when active/expanded — deviation(design),
+              the canonical mockups show the number on the active tab. Returns-only. */}
+          {n.id === "returns" && (n.badge ?? 0) > 0 && active !== n.id && (
+            <span class="bg-primary absolute top-1 right-1.5 size-2 rounded-full ring-2 ring-[#0A0A0F]" />
+          )}
+          {n.id === "returns" && (n.badge ?? 0) > 0 && active === n.id && (
+            <span class="bg-primary text-primary-foreground flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[10.5px] font-bold">
+              {n.badge}
+            </span>
           )}
         </a>
       ))
