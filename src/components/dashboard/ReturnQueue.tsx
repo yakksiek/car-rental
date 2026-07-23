@@ -1,6 +1,6 @@
 // core
 import * as React from "react";
-import { Calendar, Check, ChevronRight, RefreshCw, TriangleAlert, Truck } from "lucide-react";
+import { Calendar, Check, ChevronRight, Phone, RefreshCw, TriangleAlert, Truck } from "lucide-react";
 
 // components
 import { Button } from "../ui/button";
@@ -9,7 +9,7 @@ import { DeliveryBadge, deliveryBadge } from "../protocol/DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { resendReturnEmail } from "../hooks/useReturnProtocolSubmit";
-import { captionOf, toggleReturnsFilter } from "../../lib/returns-filter";
+import { captionOf, overdueDaysLabel, sortReturnsByUrgency, toggleReturnsFilter } from "../../lib/returns-filter";
 import type { ReturnCaption } from "../../lib/returns-filter";
 import type { DispatchReturnRow } from "../../types";
 
@@ -48,16 +48,6 @@ function VehicleIcon() {
   return (
     <span className="bg-background flex h-[38px] w-[58px] shrink-0 items-center justify-center rounded-[9px] sm:h-11 sm:w-[70px]">
       <Truck className="text-muted-foreground size-5" />
-    </span>
-  );
-}
-
-/** The right-aligned overdue badge (design-contract §6) — red-soft, sharing DeliveryBadge's shape. */
-function OverdueBadge() {
-  return (
-    <span className="text-primary inline-flex h-6 items-center gap-1 rounded-[7px] bg-[var(--flota-danger-soft)] px-2 text-[11.5px] font-bold">
-      <TriangleAlert className="size-3.5" />
-      Po terminie
     </span>
   );
 }
@@ -271,6 +261,8 @@ function ReturnRow({
   const caption = captionOf(row, today);
   const returned = caption === "returned";
   const overdue = caption === "overdue";
+  // Plural-aware `N dni po terminie`; non-null exactly when `overdue` (design-contract §C).
+  const overdueLabel = overdueDaysLabel(row, today);
   // For returned rows, the effective delivery status is the resend override when one
   // landed this session, else the folded-in value from the RPC.
   const deliveryStatus = state.deliveryOverride ?? row.delivery_status;
@@ -292,8 +284,8 @@ function ReturnRow({
         // Overdue-open rows carry a 3px red left accent bar on both breakpoints, plus a
         // full red-soft row tint on the desktop unified list (design R1 desktop queue,
         // 2026-07-21 — reverses the earlier hover-only call). Mobile cards stay white
-        // (mobile mockup). OverdueBadge shares --flota-danger-soft, so on the tinted
-        // desktop row its pill blends into the fill and reads as plain icon+text.
+        // (mobile mockup), so the days-overdue indicator there is a red-soft pill; on the
+        // tinted desktop row it drops to plain crimson text (design-contract §C).
         overdue && "border-l-primary border-l-[3px] sm:bg-[var(--flota-danger-soft)]",
       )}
     >
@@ -361,17 +353,50 @@ function ReturnRow({
               </Button>
             </div>
           </div>
+        ) : overdue ? (
+          // Overdue-open: a `PO TERMINIE` eyebrow over a `⚠ N dni po terminie` indicator
+          // (mobile red-soft pill / desktop plain crimson text), a `Zadzwoń` tel: link,
+          // and the `Przyjmij zwrot` CTA (design-contract §C). Mobile stacks the
+          // eyebrow+indicator and the Call button on one justify-between row with Accept
+          // return right-aligned below; desktop lays all three on one right-aligned line.
+          <div className="flex shrink-0 flex-col items-stretch gap-2.5 sm:ml-auto sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              <div className="flex flex-col items-start gap-1 sm:items-end sm:gap-0.5">
+                <span className="text-muted-foreground text-[11px] font-bold tracking-[0.08em] uppercase">
+                  PO TERMINIE
+                </span>
+                <span className="text-primary inline-flex items-center gap-1 rounded-[8px] bg-[var(--flota-danger-soft)] px-2.5 py-1 text-[13px] font-bold sm:rounded-none sm:bg-transparent sm:px-0 sm:py-0">
+                  <TriangleAlert className="size-3.5" />
+                  {overdueLabel}
+                </span>
+              </div>
+              {row.customer_phone && (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="bg-card hover:bg-background h-9 shrink-0 rounded-[10px] text-[12.5px] font-[650]"
+                >
+                  <a href={`tel:${row.customer_phone}`}>
+                    <Phone className="size-4" />
+                    Zadzwoń
+                  </a>
+                </Button>
+              )}
+            </div>
+            <Button
+              asChild
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 self-end rounded-[10px] sm:self-auto"
+            >
+              <a href={`/dashboard/returns/${row.reservation_id}`}>
+                Przyjmij zwrot
+                <ChevronRight className="size-3.5" />
+              </a>
+            </Button>
+          </div>
         ) : (
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-2 sm:ml-auto",
-              // Overdue puts its badge left of the button (mobile: full-width split;
-              // desktop: both right on one line, wrapping below the info when cramped);
-              // a plain due row is button-only.
-              overdue ? "justify-between sm:justify-end" : "justify-end",
-            )}
-          >
-            {overdue && <OverdueBadge />}
+          // Plain due row — the Accept-return CTA only (no overdue indicator, no Call).
+          <div className="flex shrink-0 items-center justify-end sm:ml-auto">
             <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-[10px]">
               <a href={`/dashboard/returns/${row.reservation_id}`}>
                 Przyjmij zwrot
@@ -402,7 +427,13 @@ export default function ReturnQueue({
   // desktop filter bar's right edge.
   dateLabel?: string;
 }) {
-  const [states, setStates] = React.useState<RowState[]>(() => rows.map((row) => ({ row, deliveryOverride: null })));
+  // Group the worklist overdue → due → returned once at mount (design-contract §C); the
+  // RPC returns `reference` order, preserved within each group by the stable sort. Same
+  // deterministic input on server and client, so no hydration mismatch; counts and the
+  // active filter are order-independent, so the grouping holds across every filter view.
+  const [states, setStates] = React.useState<RowState[]>(() =>
+    sortReturnsByUrgency(rows, today).map((row) => ({ row, deliveryOverride: null })),
+  );
   const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [filter, setFilter] = React.useState<FilterKey>(initialFilter);
