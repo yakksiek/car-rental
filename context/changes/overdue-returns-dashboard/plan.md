@@ -576,12 +576,12 @@ by dropping the count function and recreating `list_returns_today` without the c
 
 #### Automated
 
-- [x] 3.1 Unit test: `1 dzień po terminie` / `N dni po terminie`, absent for non-overdue; caption-rank sort overdue→due→returned
-- [x] 3.2 Type-check/build passes (`astro sync && npm run build`)
-- [x] 3.3 Linting passes (`npm run lint`)
+- [x] 3.1 Unit test: `1 dzień po terminie` / `N dni po terminie`, absent for non-overdue; caption-rank sort overdue→due→returned — 356e6c8
+- [x] 3.2 Type-check/build passes (`astro sync && npm run build`) — 356e6c8
+- [x] 3.3 Linting passes (`npm run lint`) — 356e6c8
 
 #### Manual
 
-- [x] 3.4 Overdue rows show `PO TERMINIE` eyebrow + `N dni po terminie` + `Zadzwoń`; due/returned show neither
-- [x] 3.5 `Zadzwoń` opens the dialer; copy correct and plural-aware at the 1-day boundary
-- [x] 3.6 Rows grouped overdue → due → returned; placement matches design contract; vision-diff (deferred)
+- [x] 3.4 Overdue rows show `PO TERMINIE` eyebrow + `N dni po terminie` + `Zadzwoń`; due/returned show neither — 356e6c8
+- [x] 3.5 `Zadzwoń` opens the dialer; copy correct and plural-aware at the 1-day boundary — 356e6c8
+- [x] 3.6 Rows grouped overdue → due → returned; placement matches design contract; vision-diff (deferred) — 356e6c8

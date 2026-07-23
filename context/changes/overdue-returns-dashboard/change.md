@@ -1,7 +1,7 @@
 ---
 change_id: overdue-returns-dashboard
 title: Overdue returns dashboard
-status: implementing
+status: implemented
 created: 2026-07-23
 updated: 2026-07-23
 archived_at: null
