@@ -470,9 +470,9 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Unit tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check` — 7f1489a
+- [x] 3.2 Linting passes: `npm run lint` — 7f1489a
+- [x] 3.3 Unit tests still pass: `npm test` — 7f1489a
 - [ ] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
 
 #### Manual
