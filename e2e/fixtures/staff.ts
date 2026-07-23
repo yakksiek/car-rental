@@ -73,3 +73,14 @@ export async function deleteStaffUser(id: string): Promise<void> {
   await db.from("profiles").delete().eq("user_id", id);
   await db.auth.admin.deleteUser(id).catch(() => undefined);
 }
+
+/** Tear down by email (for the add flow, where the test never sees the id). */
+export async function deleteStaffByEmail(email: string): Promise<void> {
+  const db = admin();
+  const { data } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const target = email.trim().toLowerCase();
+  const user = data.users.find((u) => (u.email ?? "").toLowerCase() === target);
+  if (user) {
+    await deleteStaffUser(user.id);
+  }
+}
