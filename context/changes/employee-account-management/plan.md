@@ -297,6 +297,7 @@ The net-new unauthenticated recovery surface: request → GoTrue email → `?cod
 - Type checking passes: `npx astro check`
 - Linting passes: `npm run lint`
 - Unit tests still pass: `npm test`
+- **E2E (Playwright)**: the reset flow (forgot → Inbucket recovery link → set new password → sign in) and invite-accept (invite → Inbucket link → set first password → sign in) pass headless, asserting the email via Inbucket's HTTP API. Authored via `/10x-e2e` (`e2e/staff-auth.spec.ts`).
 
 #### Manual Verification:
 
@@ -372,6 +373,7 @@ The design-canonical Employees page: nav entry, SSR page, and the `StaffList` is
 - Type checking passes: `npx astro check`
 - Linting passes: `npm run lint`
 - Unit tests pass: `npm test`
+- **E2E (Playwright)**: admin add → INVITED row, remove via typed-email confirm, self-✕ disabled, last-admin refused — headless (`e2e/staff-admin.spec.ts`, via `/10x-e2e`).
 
 #### Manual Verification:
 
@@ -394,6 +396,12 @@ The design-canonical Employees page: nav entry, SSR page, and the `StaffList` is
 ### Integration Tests (`tests/integration/staff.test.ts`):
 
 - Create/invite → employee profile + auth user; reactivation on re-add; `deactivate_staff` self / last-admin / ok + roster hiding; non-admin denial of both RPCs.
+
+### E2E Tests (Playwright — via the `/10x-e2e` skill):
+
+- **Auth flows** (`e2e/staff-auth.spec.ts`) — the two flows integration can't reach because they cross email → link → session: self-service reset and invite-accept. Pull the link from **Inbucket's HTTP API** (`http://127.0.0.1:54324`), drive it, assert sign-in. Follow `e2e/e2e-rules.md` (role/label locators, `waitForIslands()` before island interaction, never `waitForTimeout`, unique per-run ids + own cleanup).
+- **Admin CRUD** (`e2e/staff-admin.spec.ts`) — add → INVITED row, remove via typed-email confirm, self-✕ disabled, last-admin refused.
+- These cover the browser paths so the unattended loop needs no manual sign-off; the Manual Testing Steps below remain a human fallback/spot-check.
 
 ### Manual Testing Steps:
 
@@ -465,12 +473,13 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 - [ ] 3.1 Type checking passes: `npx astro check`
 - [ ] 3.2 Linting passes: `npm run lint`
 - [ ] 3.3 Unit tests still pass: `npm test`
+- [ ] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
 
 #### Manual
 
-- [ ] 3.4 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in
-- [ ] 3.5 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE)
-- [ ] 3.6 Expired/invalid `code` redirects to forgot-password (no 500)
+- [ ] 3.5 Forgot-password → Inbucket email → `/auth/reset-password` → set password → sign in
+- [ ] 3.6 Invite email routes through `/auth/callback` → set first password → sign in (INVITED→ACTIVE)
+- [ ] 3.7 Expired/invalid `code` redirects to forgot-password (no 500)
 
 ### Phase 4: Employees Admin UI
 
@@ -479,10 +488,11 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 - [ ] 4.1 Type checking passes: `npx astro check`
 - [ ] 4.2 Linting passes: `npm run lint`
 - [ ] 4.3 Unit tests pass: `npm test`
+- [ ] 4.4 E2E (Playwright): admin add → INVITED row, remove via typed-confirm, self-✕ disabled, last-admin refused (`e2e/staff-admin.spec.ts`)
 
 #### Manual
 
-- [ ] 4.4 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee
-- [ ] 4.5 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused
-- [ ] 4.6 "Resetuj hasło" reports email sent
-- [ ] 4.7 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations)
+- [ ] 4.5 `/dashboard/staff` roster + filter tabs + search; "Zespół" tab shown for admin, absent for employee
+- [ ] 4.6 Add → INVITED row; remove (typed confirm) hides it; own ✕ disabled; last-admin refused
+- [ ] 4.7 "Resetuj hasło" reports email sent
+- [ ] 4.8 Vision-diff vs the canonical `design-review/` screenshots matches the design contract (minus recorded deviations)
