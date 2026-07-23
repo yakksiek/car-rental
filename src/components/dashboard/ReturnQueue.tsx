@@ -1,7 +1,6 @@
 // core
 import * as React from "react";
-import { ArrowDown, Check, ChevronRight, RefreshCw, TriangleAlert, Truck } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Calendar, Check, ChevronRight, RefreshCw, TriangleAlert, Truck } from "lucide-react";
 
 // components
 import { Button } from "../ui/button";
@@ -10,6 +9,8 @@ import { DeliveryBadge, deliveryBadge } from "../protocol/DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { resendReturnEmail } from "../hooks/useReturnProtocolSubmit";
+import { captionOf, toggleReturnsFilter } from "../../lib/returns-filter";
+import type { ReturnCaption } from "../../lib/returns-filter";
 import type { DispatchReturnRow } from "../../types";
 
 // The returns worklist (S-06 Phase 6) — the return sibling of `PickupQueue`. Every
@@ -38,16 +39,6 @@ interface RowState {
   deliveryOverride: string | null;
 }
 
-type Caption = "returned" | "overdue" | "due";
-
-/** The row's lifecycle state: returned wins, else overdue-vs-due by `return_date` against today. */
-function captionOf(row: DispatchReturnRow, today: string): Caption {
-  if (row.return_protocol_id) {
-    return "returned";
-  }
-  return row.return_date < today ? "overdue" : "due";
-}
-
 /**
  * A generic vehicle glyph in a tinted box, at the row's leading edge — the app's
  * stand-in for the design's per-type silhouette (the `list_returns_today` RPC does
@@ -71,95 +62,192 @@ function OverdueBadge() {
   );
 }
 
-type StatTone = "neutral" | "red" | "green";
+/** The active filter, `null` = "Wszystkie" (all). The three captions carry a tone. */
+type FilterKey = ReturnCaption | null;
 
-const STAT_TONE: Record<StatTone, { value: string; iconBg: string; icon: string }> = {
-  neutral: { value: "text-foreground", iconBg: "bg-[var(--flota-neutral-soft)]", icon: "text-foreground" },
-  red: { value: "text-primary", iconBg: "bg-[var(--flota-danger-soft)]", icon: "text-primary" },
-  green: { value: "text-success", iconBg: "bg-[var(--flota-success-soft)]", icon: "text-success" },
+/** Live counts by caption plus the `all` total — the badge numbers on every control. */
+interface FilterCounts {
+  all: number;
+  due: number;
+  overdue: number;
+  returned: number;
+}
+
+// "Wszystkie" (all) selected fill — navy, matching the mobile `All` pill (O5). Desktop
+// and mobile both lead with this control, so the fill is shared.
+const ALL_SELECTED_FILL = "bg-foreground text-background";
+
+// The three tone-coded controls after "Wszystkie". Selected fill is per-tone:
+// `Na dziś` neutral → navy, `Po terminie` danger → crimson, `Zwrócono` success → green
+// (design-contract §B; navy/success selected were `provisional`, resolved here to the
+// tone-solid fills the token map names).
+const SEGMENTS: { key: ReturnCaption; label: string; selectedFill: string }[] = [
+  { key: "due", label: "Na dziś", selectedFill: ALL_SELECTED_FILL },
+  { key: "overdue", label: "Po terminie", selectedFill: "bg-primary text-primary-foreground" },
+  { key: "returned", label: "Zwrócono", selectedFill: "bg-success text-white" },
+];
+
+/** Labels for the live list header, keyed by the active filter (`null` → `all`). */
+const HEADER_LABELS: Record<"all" | ReturnCaption, string> = {
+  all: "Wszystkie zwroty",
+  due: "Na dziś",
+  overdue: "Po terminie",
+  returned: "Zwrócono",
 };
 
 /**
- * One stat card of the returns worklist header — a tinted icon chip + big value +
- * label + a `Dzisiaj` caption, mirroring the design's `StatCard` (arrow-down = due,
- * triangle = overdue, check = returned). The design's `StatCard` is the desktop
- * treatment; on mobile it collapses to a compact chip (icon over value+label, no
- * `Dzisiaj`) so three fit across a 390px screen without clipping — the contract's
- * "desktop cards / mobile chips".
+ * The small live count nested in a segment/pill. On a selected (tone-filled) control
+ * it darkens the tone (`bg-black/15`) and inherits the control's light text; unselected
+ * it is a neutral-soft chip with muted digits.
  */
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  tone: StatTone;
-}) {
-  const c = STAT_TONE[tone];
+function CountBadge({ value, selected, className }: { value: number; selected: boolean; className?: string }) {
   return (
-    <div className="border-border bg-card shadow-card flex flex-col gap-1.5 rounded-[14px] border p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-[10px] sm:size-10", c.iconBg)}>
-        <Icon className={cn("size-[18px]", c.icon)} />
-      </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-          <span
-            className={cn("text-[20px] leading-none font-bold tracking-tight tabular-nums sm:text-[24px]", c.value)}
-          >
-            {value}
-          </span>
-          <span className="text-foreground text-[12.5px] font-[650] tracking-tight sm:text-[13px]">{label}</span>
-        </div>
-        <div className="text-muted-foreground mt-1 hidden text-[11.5px] sm:block">Dzisiaj</div>
-      </div>
-    </div>
-  );
-}
-
-/** A compact rounded-full stat chip — the mobile treatment (design shows two: due + overdue). */
-function StatPill({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  tone: StatTone;
-}) {
-  const c = STAT_TONE[tone];
-  // The "due today" pill is a white card chip (shadow, no fill); the overdue pill
-  // keeps the red-soft fill. Rounded rectangle (9px), not a full stadium.
-  const pillBg = tone === "red" ? "bg-[var(--flota-danger-soft)]" : "bg-card shadow-card";
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-[9px] px-3 py-1.5", pillBg)}>
-      <Icon className={cn("size-3.5", c.icon)} />
-      <span className={cn("text-[13px] font-bold tabular-nums", c.value)}>{value}</span>
-      <span className="text-foreground text-[12.5px] font-[650]">{label}</span>
+    <span
+      className={cn(
+        "flex items-center justify-center rounded-full px-1.5 font-bold tabular-nums",
+        selected ? "bg-black/15" : "text-muted-foreground bg-[var(--flota-neutral-soft)]",
+        className,
+      )}
+    >
+      {value}
     </span>
   );
 }
 
+/** One desktop segment: a tone-filled rounded pill when selected, plain text otherwise. */
+function DesktopSegment({
+  label,
+  count,
+  selected,
+  selectedFill,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  selected: boolean;
+  selectedFill: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-[650] transition-colors",
+        selected ? selectedFill : "text-foreground hover:bg-background",
+      )}
+    >
+      {label}
+      <CountBadge value={count} selected={selected} className="min-w-[20px] text-[12px]" />
+    </button>
+  );
+}
+
+/** One mobile pill: tone-filled when selected, a white card chip otherwise. */
+function MobilePill({
+  label,
+  count,
+  selected,
+  selectedFill,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  selected: boolean;
+  selectedFill: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-[650] transition-colors",
+        selected ? selectedFill : "text-foreground bg-card shadow-card",
+      )}
+    >
+      {label}
+      <CountBadge value={count} selected={selected} className="min-w-[18px] text-[11px]" />
+    </button>
+  );
+}
+
 /**
- * The returns worklist header stats (design-contract §6). Desktop keeps the three
- * `StatCard`s (due · overdue · returned); mobile collapses to two compact chips
- * (due + overdue only — `Zwrócono` is dropped below `sm`), matching the mockup.
+ * The stat area rebuilt as a filter bar (design-contract §B). Both breakpoints lead
+ * with a "Wszystkie" (all/`null`) control followed by the three tone-coded captions.
+ * Desktop (≥ sm) is one unified white bar of four segments; mobile (< sm) is four
+ * pills that wrap to a second row (no horizontal scroll). Counts stay live (from all
+ * rows); the search field and sparkline in the EN artboards are cut (out of scope).
  */
-function Stats({ due, overdue, returned }: { due: number; overdue: number; returned: number }) {
+function FilterBar({
+  filter,
+  counts,
+  dateLabel,
+  onSelect,
+}: {
+  filter: FilterKey;
+  counts: FilterCounts;
+  dateLabel?: string;
+  onSelect: (next: FilterKey) => void;
+}) {
   return (
     <>
-      <div className="mb-5 flex flex-wrap gap-2 sm:hidden">
-        <StatPill icon={ArrowDown} label="Na dziś" value={due} tone="neutral" />
-        <StatPill icon={TriangleAlert} label="Po terminie" value={overdue} tone="red" />
+      <div className="bg-card shadow-card mb-4 hidden items-center gap-1 rounded-[18px] p-2 sm:flex">
+        <DesktopSegment
+          label="Wszystkie"
+          count={counts.all}
+          selected={filter === null}
+          selectedFill={ALL_SELECTED_FILL}
+          onClick={() => {
+            onSelect(null);
+          }}
+        />
+        {SEGMENTS.map((seg) => (
+          <DesktopSegment
+            key={seg.key}
+            label={seg.label}
+            count={counts[seg.key]}
+            selected={filter === seg.key}
+            selectedFill={seg.selectedFill}
+            onClick={() => {
+              onSelect(toggleReturnsFilter(filter, seg.key));
+            }}
+          />
+        ))}
+        {/* Today's date on the bar's right — replaces the cut sparkline (design O2). */}
+        {dateLabel && (
+          <span className="text-muted-foreground mr-2 ml-auto flex items-center gap-1.5 text-[13px] font-[540]">
+            <Calendar className="size-4" />
+            {dateLabel}
+          </span>
+        )}
       </div>
-      <div className="mb-6 hidden grid-cols-3 gap-4 sm:grid">
-        <StatCard icon={ArrowDown} label="Na dziś" value={due} tone="neutral" />
-        <StatCard icon={TriangleAlert} label="Po terminie" value={overdue} tone="red" />
-        <StatCard icon={Check} label="Zwrócono" value={returned} tone="green" />
+
+      {/* Four pills that wrap to a second row on a narrow screen (design O5/O6). */}
+      <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
+        <MobilePill
+          label="Wszystkie"
+          count={counts.all}
+          selected={filter === null}
+          selectedFill={ALL_SELECTED_FILL}
+          onClick={() => {
+            onSelect(null);
+          }}
+        />
+        {SEGMENTS.map((seg) => (
+          <MobilePill
+            key={seg.key}
+            label={seg.label}
+            count={counts[seg.key]}
+            selected={filter === seg.key}
+            selectedFill={seg.selectedFill}
+            onClick={() => {
+              onSelect(toggleReturnsFilter(filter, seg.key));
+            }}
+          />
+        ))}
       </div>
     </>
   );
@@ -298,10 +386,39 @@ function ReturnRow({
   );
 }
 
-export default function ReturnQueue({ rows, today }: { rows: DispatchReturnRow[]; today: string }) {
+export default function ReturnQueue({
+  rows,
+  today,
+  initialFilter = null,
+  dateLabel,
+}: {
+  rows: DispatchReturnRow[];
+  today: string;
+  // Seeded server-side from `?filter` (parsed in returns.astro) so a deep-link renders
+  // pre-filtered with no hydration flash — a client-only `window.location` read would
+  // differ from the SSR'd HTML and mismatch/flash. `null` = "Wszystkie" (all).
+  initialFilter?: ReturnCaption | null;
+  // Today's date, pre-formatted server-side (workerd ICU can't do Polish) for the
+  // desktop filter bar's right edge.
+  dateLabel?: string;
+}) {
   const [states, setStates] = React.useState<RowState[]>(() => rows.map((row) => ({ row, deliveryOverride: null })));
   const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [filter, setFilter] = React.useState<FilterKey>(initialFilter);
+
+  // Toggle the active filter and mirror it into the URL — `history.replaceState`, not a
+  // navigation, so reloads/deep-links are stable and the back button is untouched.
+  const applyFilter = React.useCallback((next: FilterKey) => {
+    setFilter(next);
+    const url = new URL(window.location.href);
+    if (next === null) {
+      url.searchParams.delete("filter");
+    } else {
+      url.searchParams.set("filter", next);
+    }
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
 
   const handleResend = React.useCallback(async (returnProtocolId: string) => {
     setResendingId(returnProtocolId);
@@ -328,32 +445,61 @@ export default function ReturnQueue({ rows, today }: { rows: DispatchReturnRow[]
     );
   }
 
-  const due = states.filter((s) => captionOf(s.row, today) === "due").length;
-  const overdue = states.filter((s) => captionOf(s.row, today) === "overdue").length;
-  const returned = states.filter((s) => captionOf(s.row, today) === "returned").length;
+  const counts: FilterCounts = {
+    all: states.length,
+    due: states.filter((s) => captionOf(s.row, today) === "due").length,
+    overdue: states.filter((s) => captionOf(s.row, today) === "overdue").length,
+    returned: states.filter((s) => captionOf(s.row, today) === "returned").length,
+  };
+  const visibleStates = states.filter((s) => filter === null || captionOf(s.row, today) === filter);
 
   return (
     <>
-      <Stats due={due} overdue={overdue} returned={returned} />
-      {/* Mobile = separate cards with a gap. Desktop = one rounded card whose rows
-          are split by internal hairlines (`divide-y`); `overflow-hidden` clips the
-          rows' corners and overdue tints to the outer radius. Shadow only, no border
-          (design ScreenReturnsQueue card). */}
-      <ul className="sm:divide-border sm:bg-card sm:shadow-card flex flex-col gap-3 sm:gap-0 sm:divide-y sm:overflow-hidden sm:rounded-[18px]">
-        {states.map((state) => {
-          const returnProtocolId = state.row.return_protocol_id;
-          return (
-            <ReturnRow
-              key={state.row.reservation_id}
-              state={state}
-              today={today}
-              resending={resendingId !== null && resendingId === returnProtocolId}
-              error={returnProtocolId ? (errors[returnProtocolId] ?? null) : null}
-              onResend={() => returnProtocolId && handleResend(returnProtocolId)}
-            />
-          );
-        })}
-      </ul>
+      <FilterBar filter={filter} counts={counts} dateLabel={dateLabel} onSelect={applyFilter} />
+      {/* Live list header — desktop only; on mobile the per-filter counts live inside
+          the pills, so the mockups drop this line there (deviation(screenshot)). */}
+      <p className="text-foreground mb-3 hidden text-[14px] font-[650] tracking-tight sm:block">
+        {HEADER_LABELS[filter ?? "all"]} <span className="text-muted-foreground">· {visibleStates.length}</span>
+      </p>
+      {visibleStates.length === 0 ? (
+        filter === "overdue" ? (
+          // The reassuring overdue-clear state (design-contract §D, O3/O7): a green-soft
+          // check chip over the positive copy. Shown only when the overdue filter is on
+          // and nothing is overdue (there are still due/returned rows on the list).
+          <div className="border-border bg-card shadow-card rounded-2xl border p-10 text-center">
+            <span className="mx-auto flex size-16 items-center justify-center rounded-[18px] bg-[var(--flota-success-soft)]">
+              <Check className="text-success size-7" />
+            </span>
+            <h2 className="text-foreground mt-4 text-[16px] font-[650] tracking-tight">Brak zwrotów po terminie</h2>
+            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
+              Wszystkie pojazdy wróciły na czas.
+            </p>
+          </div>
+        ) : (
+          // `Na dziś` / `Zwrócono` filter with no matches — a neutral line (design-contract §D).
+          <p className="text-muted-foreground py-10 text-center text-[13px]">Brak pozycji dla tego filtra.</p>
+        )
+      ) : (
+        // Mobile = separate cards with a gap. Desktop = one rounded card whose rows
+        // are split by internal hairlines (`divide-y`); `overflow-hidden` clips the
+        // rows' corners and overdue tints to the outer radius. Shadow only, no border
+        // (design ScreenReturnsQueue card).
+        <ul className="sm:divide-border sm:bg-card sm:shadow-card flex flex-col gap-3 sm:gap-0 sm:divide-y sm:overflow-hidden sm:rounded-[18px]">
+          {visibleStates.map((state) => {
+            const returnProtocolId = state.row.return_protocol_id;
+            return (
+              <ReturnRow
+                key={state.row.reservation_id}
+                state={state}
+                today={today}
+                resending={resendingId !== null && resendingId === returnProtocolId}
+                error={returnProtocolId ? (errors[returnProtocolId] ?? null) : null}
+                onResend={() => returnProtocolId && handleResend(returnProtocolId)}
+              />
+            );
+          })}
+        </ul>
+      )}
     </>
   );
 }

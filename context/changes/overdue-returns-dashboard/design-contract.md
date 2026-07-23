@@ -44,21 +44,22 @@ The EN artboards include elements outside FR-012; resolved with the user:
 - **`Call` action** — **KEEP** as a plain `tel:` link (design-brief §4). Requires
   `customer_phone` added to `list_returns_today` (data-layer change). No logging.
 - **Header search bar + calendar icon** — **CUT** (out of scope, new logic).
-- **Trend sparkline** — **CUT** (no data source; out of flag-only S-07).
+- **Trend sparkline** — **CUT** (no data source; out of flag-only S-07). Its bar-right
+  slot now holds **today's date** (`Śr, 16 lip`) instead (decision 2026-07-23).
 - **Sidebar nav labels/set** (EN, 4 items, `Dispatch`, missing `Wydania`/`Flota`) —
   **reference-only**; the app keeps its 6 Polish nav items, only the badge is added.
 
 ### 4. Alignment checklist — plan phases ↔ surfaces
 
-| Canonical surface                                                                   | Phase | Aligned?           |
-| ----------------------------------------------------------------------------------- | ----- | ------------------ |
-| Zwroty nav badge (desktop pill · mobile dot/count)                                  | 1     | ✅                 |
-| `customer_phone` for the Call link                                                  | 1     | ✅ (added to plan) |
-| Filter bar (desktop unified · mobile 4-pill scroll) + selected states + live header | 2     | ✅                 |
-| Empty-overdue + whole-list-empty states                                             | 2     | ✅                 |
-| Overdue-row restyle: `PO TERMINIE` eyebrow + `⚠ N dni po terminie` pill             | 3     | ✅                 |
-| Call `tel:` button (overdue rows)                                                   | 3     | ✅ (added to plan) |
-| Overdue-first ordering                                                              | 3     | ✅ (added to plan) |
+| Canonical surface                                                                 | Phase | Aligned?           |
+| --------------------------------------------------------------------------------- | ----- | ------------------ |
+| Zwroty nav badge (desktop pill · mobile dot/count)                                | 1     | ✅                 |
+| `customer_phone` for the Call link                                                | 1     | ✅ (added to plan) |
+| Filter bar (desktop unified · mobile 4-pill wrap) + selected states + live header | 2     | ✅                 |
+| Empty-overdue + whole-list-empty states                                           | 2     | ✅                 |
+| Overdue-row restyle: `PO TERMINIE` eyebrow + `⚠ N dni po terminie` pill           | 3     | ✅                 |
+| Call `tel:` button (overdue rows)                                                 | 3     | ✅ (added to plan) |
+| Overdue-first ordering                                                            | 3     | ✅ (added to plan) |
 
 ### 5. Verdict
 
@@ -109,33 +110,43 @@ px-1.5 text-[10.5px] font-bold`). Returns-only; **Wnioski unchanged** (it shows 
 
 ### Desktop (≥ sm) — unified filter bar
 
-- Container: white bar `rounded-[18px] bg-card shadow-card` with `flex items-center`
-  padding `p-3`. `provisional(screenshot)`.
-- **Leading total chip:** big `N` `text-[28px] font-bold tabular-nums` + `dziś`
-  `text-[12px] text-muted-foreground`, in a light inset chip. `N` = total rows.
-  Non-interactive summary (clear = re-click active segment). `provisional(screenshot)`.
-- Vertical divider `h-8 w-px bg-border`. `provisional`.
-- **Three segments** (buttons): `Na dziś` (neutral) · `Po terminie` (danger) ·
-  `Zwrócono` (success). Each: label `text-[14px] font-[650]` + count badge
-  `rounded-full px-2 text-[12px]`. Counts stay live (from all rows).
-- **Selected segment:** solid fill in its tone — `Po terminie` →
-  `bg-primary text-primary-foreground rounded-full px-4 py-1.5` (`exact` intent from
-  O3). `Na dziś`/`Zwrócono` selected → `provisional(inferred)` (tone-solid: navy /
-  success). **No sparkline, no search.**
+- Container: white bar `rounded-[18px] bg-card shadow-card` with `flex items-center
+gap-1`, padding `p-2`. `provisional(screenshot)`.
+- **Four segments** (buttons), led by **`Wszystkie`** (the all/`null` state), then
+  `Na dziś` (neutral) · `Po terminie` (danger) · `Zwrócono` (success). **No leading
+  number chip, no divider** — the `All N` segment is the total (decision 2026-07-23).
+  The earlier `N dziś` number chip is **superseded**; the R1/O2/O3 desktop artboards
+  were re-exported 2026-07-23 to the `All N` pill + date. Each: label `text-[14px]
+font-[650]` + count badge `rounded-full
+px-1.5 text-[12px]`. Counts stay live (from all rows).
+- **Unselected segment:** plain text `text-foreground` (no fill) + a neutral-soft count
+  badge (`bg-[var(--flota-neutral-soft)] text-muted-foreground`). `exact` intent, O2.
+- **Selected segment:** solid tone fill, `rounded-full px-4 py-2` — `Wszystkie` /
+  `Na dziś` → navy `bg-foreground text-background`; `Po terminie` →
+  `bg-primary text-primary-foreground` (`exact` from O2); `Zwrócono` →
+  `bg-success text-white`. Nested count badge darkens the tone (`bg-black/15`,
+  inherits the pill's light text). **No search.**
+- **Right edge — date** (`ml-auto`): a `Calendar size-4` icon + today's date
+  **`Śr, 16 lip`** (title-case weekday abbrev, day, 3-letter month),
+  `text-muted-foreground text-[13px] font-[540]`. Replaces the cut sparkline (decision
+  2026-07-23). Formatted server-side in `returns.astro` (workerd ICU can't do Polish),
+  passed as the `dateLabel` prop. `exact` copy/format from O2.
 
-### Mobile (< sm) — 4-pill horizontal scroll
+### Mobile (< sm) — 4-pill wrap
 
-- Row: `flex gap-2 overflow-x-auto` (hidden scrollbar), 4 pills in order:
+- Row: `flex flex-wrap gap-2`, 4 pills that **wrap to a second row** (no horizontal
+  scroll — O5/O6 show `Zwrócono` wrapping below), in order:
   **`Wszystkie N` · `Na dziś N` · `Po terminie N` · `Zwrócono N`**.
 - Pill: `rounded-full px-4 py-2 text-[13px] font-[650]` + inner count badge
   `rounded-full px-1.5 text-[11px]`. Unselected `bg-card shadow-card text-foreground`.
-- **Selected:** `Wszystkie` → `bg-foreground text-background` (navy, `exact` from O5);
-  `Po terminie` → `bg-primary text-primary-foreground` (crimson, `exact` from O6);
-  `Na dziś` / `Zwrócono` selected → `provisional(inferred)` (navy / success).
+- **Selected:** `Wszystkie` / `Na dziś` → `bg-foreground text-background` (navy, `exact`
+  from O5); `Po terminie` → `bg-primary text-primary-foreground` (crimson, `exact`
+  from O6); `Zwrócono` → `bg-success text-white` (success).
 
-### List header (both) — `exact` copy
+### List header (desktop only) — `exact` copy
 
-`{Filtr} · {N}` above the list: default **`Wszystkie zwroty · N`**; filtered
+`{Filtr} · {N}` above the list, **desktop only** — mobile drops it (the per-filter
+counts live inside the pills, O5-O8). Default **`Wszystkie zwroty · N`**; filtered
 **`Na dziś · N`** / **`Po terminie · N`** / **`Zwrócono · N`**. Style
 `text-[14px] font-[650]` + muted count. `provisional(screenshot)` for exact spacing.
 
@@ -190,5 +201,5 @@ protocol` = reference.)
 - Reuse tokens/components (nav badge, `OverdueBadge`→days pill, `Button`, empty card).
 - Exact values, not ranges — every `provisional` line resolves to one value at
   implement (prefer `DesignSync` JSX; else the shipped-code value + design scale).
-- Mobile-first; mobile filter row scrolls horizontally; overdue badge = count when the
-  tab is active, dot when inactive.
+- Mobile-first; mobile filter row wraps to a second row (no horizontal scroll); overdue
+  badge = count when the tab is active, dot when inactive.
