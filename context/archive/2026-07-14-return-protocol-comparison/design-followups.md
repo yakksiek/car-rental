@@ -150,7 +150,7 @@ Impl: `src/components/dashboard/ReturnQueue.tsx`.
 - [ ] **Right cluster on ONE line (desktop).** Mockup: the `Po terminie` badge sits **side-by-side** with
       `Przyjmij zwrot` on one horizontal line (right-aligned); likewise returned rows put the delivery badge +
       resend + `Otwórz protokół` on one line. Mine stacks them in a **column** (`flex shrink-0 flex-col
-    items-end`) — a regression introduced when overdue moved to a right badge. → make the right block
+  items-end`) — a regression introduced when overdue moved to a right badge. → make the right block
       `sm:flex-row sm:items-center` (badge left of the button). File: `ReturnQueue.tsx` right block (~176).
       (Mobile `RtQueueCardM` uses badge-left / button-right on its own divided action row — separate item.)
 - [ ] **Per-type silhouette** vs generic `Truck` — data-blocked (needs the vehicle category in `list_returns_today`).
@@ -181,7 +181,7 @@ Fixed this session: Section 1 now shows `Przy wydaniu` baseline + per-card delta
       Photos + Signature + summary. Mine is **single-column** (`max-w-3xl`, stacked). Diverges from the shipped
       **issue** view (also single-column) — decision (same family as the StaffShell/standalone call).
 - [ ] **Header = form-style.** Mockup: back ‹ / `Protokół zwrotu` + `R-2401 · Anna Nowak · Ford Transit ·
-    WX 5519M · Zwrot 10:00` / close × (circular buttons). Mine uses the issue-view pattern: a text back-link
+  WX 5519M · Zwrot 10:00` / close × (circular buttons). Mine uses the issue-view pattern: a text back-link
       (`Wróć do zwrotów`) + a header card with title + badge + buttons.
 - [ ] **Delivery + actions as a distinct row.** Mockup: `✓ Dostarczono` + `<email> · <time>` on the left;
       `Wyślij ponownie` + `Pobierz PDF` on the right — a row under the header. Mine folds these into the header card.
@@ -208,7 +208,7 @@ needs auth + a live baseline). This is Phase-5 form work.
 
 - [ ] **Header icon buttons are circular, not rounded-squares.** Mockup: back (‹) + close (×) are **circles**
       (`rounded-full`, white, subtle shadow, no border). Mine (ReturnProtocolForm ~446–465): `size-10
-    rounded-[11px] border` rounded-squares. → `rounded-full` + shadow instead of the border. (The return
+  rounded-[11px] border` rounded-squares. → `rounded-full` + shadow instead of the border. (The return
       VIEW header uses circular back + download buttons in the mockup too, but mine uses a text back-link —
       tracked separately under the view surface.)
 - [ ] **Context strip — invert + add silhouette.** Mockup: vehicle silhouette + **bold `Ford Transit`** +
@@ -229,7 +229,7 @@ needs auth + a live baseline). This is Phase-5 form work.
 - [ ] **`E` / `F` markers** under the fuel bar (mockup has them; shared `FuelBar` in `src/components/protocol/FuelBar.tsx` likely lacks them). Minor.
 - [ ] **Section 1 sub — wrong string.** Mockup uses `Wartości porównane automatycznie z protokołem wydania.`;
       mine (ReturnProtocolForm.tsx ~493) uses `Licznik, paliwo i istniejące uszkodzenia. Zdjęcia można zrobić
-    telefonem lub wgrać tutaj.` **Contract conflict:** contract §9 lists the longer string for mobile, but the
+  telefonem lub wgrać tutaj.` **Contract conflict:** contract §9 lists the longer string for mobile, but the
       actual mockup uses the comparison sub — decide which wins.
 - [ ] **Submit button — crimson + disabled-when-empty.** Mockup: crimson CTA (`chrome.cta`), greyed/disabled
       in the empty state. Mine (ReturnProtocolForm.tsx ~757–778): dark `bg-foreground`, disabled only while
@@ -249,7 +249,7 @@ Impl: `src/components/protocol/ReturnProtocolForm.tsx`.
       (Filled `RtMobileBody` had it in the header; the empty-state `ScreenReturnStart` lives in the un-fetched
       `return-flow.jsx` and shows full-width — confirm there before implementing.)
 - [ ] **§3 baseline rows: thumbnail.** Mockup shows a dark camera thumbnail per `Uszkodzenia z protokołu
-    wydania` row; mine (~602–618) is text + `Istniejące` tag only. **Data-blocked:** baseline photos aren't
+  wydania` row; mine (~602–618) is text + `Istniejące` tag only. **Data-blocked:** baseline photos aren't
       loaded in v1 (plan decision) — add a placeholder icon box to match, or accept the difference.
 - [ ] **§3 `Istniejące` tag uppercase.** Mockup tag = uppercase (`EXISTING`); mine is sentence-case. Same
       uppercase-label theme as the condition labels.
