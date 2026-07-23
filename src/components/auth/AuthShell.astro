@@ -1,0 +1,82 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+// Shared card-centered "Strefa pracownika" shell for the recovery / invite-accept
+// surfaces (S-08, designs R1–R10). Mirrors the SignInForm auth-card idiom: a dark
+// mobile brand band + a centered desktop modal card, minus the login page's
+// decorative dispatch backdrop. The page slots its form/state panel inside.
+interface Props {
+  pageTitle: string;
+}
+const { pageTitle } = Astro.props;
+---
+
+<Layout title={pageTitle}>
+  <div class="relative flex min-h-screen flex-col md:items-center md:justify-center md:p-10">
+    <div aria-hidden="true" class="absolute inset-0 hidden bg-[rgba(15,23,42,0.55)] md:block"></div>
+
+    {/* ── Mobile: dark ink brand band ─────────────────────────────────── */}
+    <div class="relative overflow-hidden bg-[var(--flota-ink)] px-6 pt-14 pb-7 text-white md:hidden">
+      <a
+        href="/auth/signin"
+        class="mb-7 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white/70 transition-colors hover:text-white"
+      >
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m15 6-6 6 6 6"></path>
+        </svg>
+        Logowanie
+      </a>
+      <div class="relative flex items-center gap-3">
+        <span
+          class="bg-primary text-primary-foreground flex size-[42px] shrink-0 items-center justify-center rounded-[13px] font-serif text-[27px] leading-none shadow-[0_6px_16px_rgba(180,54,56,0.30)]"
+          >F</span
+        >
+        <div class="leading-none">
+          <div class="text-[18px] font-bold tracking-[-0.3px]">Flota</div>
+          <div class="mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] text-white/65 uppercase">
+            Strefa pracownika
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Card / form panel (mobile: white sheet · desktop: modal) ────── */}
+    <div
+      class="bg-card md:shadow-overlay relative z-10 flex flex-1 flex-col px-6 py-7 md:w-[440px] md:flex-none md:rounded-[20px] md:px-10 md:py-9"
+    >
+      <div class="mb-6 hidden items-center gap-3 md:flex">
+        <span
+          class="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl font-serif text-[26px] leading-none shadow-[0_6px_16px_rgba(180,54,56,0.30)]"
+          >F</span
+        >
+        <div class="leading-none">
+          <div class="text-foreground text-[17px] font-bold tracking-[-0.3px]">Flota</div>
+          <div class="text-muted-foreground mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] uppercase">
+            Strefa pracownika
+          </div>
+        </div>
+      </div>
+
+      <slot />
+
+      <div
+        class="text-muted-foreground border-border/60 mt-auto flex items-center justify-center gap-1.5 border-t pt-[18px] text-[12.5px] md:mt-6"
+      >
+        <svg class="text-success size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="12" cy="12" r="9"></circle>
+        </svg>
+        <span>Połączenie szyfrowane · tylko personel</span>
+      </div>
+    </div>
+  </div>
+</Layout>

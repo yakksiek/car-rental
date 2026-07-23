@@ -455,24 +455,24 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 
 #### Automated
 
-- [x] 2.1 Integration tests pass: `npm run test:integration`
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Integration tests pass: `npm run test:integration` — 00863c8
+- [x] 2.2 Type checking passes: `npx astro check` — 00863c8
+- [x] 2.3 Linting passes: `npm run lint` — 00863c8
 
 #### Manual
 
-- [x] 2.4 `POST /api/staff` invites as admin (Inbucket email); 403 as employee; 401 anon
-- [x] 2.5 Deactivate refuses self (403) + last-admin (409); wrong `confirmEmail`→400; valid hides row
-- [x] 2.6 Re-inviting a deactivated email reactivates it
-- [x] 2.7 `POST /api/staff/[id]/reset-password` sends recovery email to Inbucket
+- [x] 2.4 `POST /api/staff` invites as admin (Inbucket email); 403 as employee; 401 anon — 00863c8
+- [x] 2.5 Deactivate refuses self (403) + last-admin (409); wrong `confirmEmail`→400; valid hides row — 00863c8
+- [x] 2.6 Re-inviting a deactivated email reactivates it — 00863c8
+- [x] 2.7 `POST /api/staff/[id]/reset-password` sends recovery email to Inbucket — 00863c8
 
 ### Phase 3: Self-Service Reset & PKCE Callback
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Unit tests still pass: `npm test`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Unit tests still pass: `npm test`
 - [ ] 3.4 E2E (Playwright): reset flow + invite-accept flow pass headless, Inbucket-asserted (`e2e/staff-auth.spec.ts`)
 
 #### Manual
