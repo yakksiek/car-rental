@@ -2,7 +2,14 @@
 import { describe, expect, it } from "vitest";
 
 // others
-import { captionOf, parseReturnsFilter, selectReturns, toggleReturnsFilter } from "./returns-filter";
+import {
+  captionOf,
+  overdueDaysLabel,
+  parseReturnsFilter,
+  selectReturns,
+  sortReturnsByUrgency,
+  toggleReturnsFilter,
+} from "./returns-filter";
 import type { ReturnCaption } from "./returns-filter";
 import type { DispatchReturnRow } from "../types";
 
@@ -73,5 +80,44 @@ describe("toggleReturnsFilter", () => {
 
   it("clears to null (all) when the active caption is re-clicked", () => {
     expect(toggleReturnsFilter("overdue", "overdue")).toBeNull();
+  });
+});
+
+describe("overdueDaysLabel", () => {
+  it("reads `1 dzień po terminie` at the 1-day boundary", () => {
+    // TODAY − return_date = 1 → singular `dzień`.
+    expect(overdueDaysLabel(row({ return_protocol_id: null, return_date: "2026-07-22" }), TODAY)).toBe(
+      "1 dzień po terminie",
+    );
+  });
+
+  it("reads `N dni po terminie` beyond one day", () => {
+    // `overdue` is 2026-07-20, i.e. 3 calendar days before TODAY.
+    expect(overdueDaysLabel(overdue, TODAY)).toBe("3 dni po terminie");
+  });
+
+  it("is null for due and returned rows (they carry no overdue label)", () => {
+    expect(overdueDaysLabel(dueToday, TODAY)).toBeNull();
+    expect(overdueDaysLabel(returned, TODAY)).toBeNull();
+  });
+});
+
+describe("sortReturnsByUrgency", () => {
+  it("orders overdue → due → returned regardless of input order", () => {
+    const sorted = sortReturnsByUrgency([returned, dueToday, overdue], TODAY);
+    expect(sorted.map((r) => captionOf(r, TODAY))).toEqual(["overdue", "due", "returned"]);
+  });
+
+  it("keeps the input (reference) order stable within a caption group", () => {
+    const first = row({ return_protocol_id: null, return_date: "2026-07-20", reference: "R-1" });
+    const second = row({ return_protocol_id: null, return_date: "2026-07-18", reference: "R-2" });
+    // Both overdue; a stable sort must preserve their input order.
+    expect(sortReturnsByUrgency([first, second], TODAY).map((r) => r.reference)).toEqual(["R-1", "R-2"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [returned, overdue];
+    sortReturnsByUrgency(input, TODAY);
+    expect(input).toEqual([returned, overdue]);
   });
 });

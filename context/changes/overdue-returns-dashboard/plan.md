@@ -558,30 +558,30 @@ by dropping the count function and recreating `list_returns_today` without the c
 
 #### Automated
 
-- [x] 2.1 Unit test: filter subset selection, toggle-to-null, `initialFilter` round-trip
-- [x] 2.2 Type-check/build passes (`astro sync && npm run build`)
-- [x] 2.3 Linting passes (`npm run lint`)
+- [x] 2.1 Unit test: filter subset selection, toggle-to-null, `initialFilter` round-trip — 90c0fd5
+- [x] 2.2 Type-check/build passes (`astro sync && npm run build`) — 90c0fd5
+- [x] 2.3 Linting passes (`npm run lint`) — 90c0fd5
 
 #### Manual
 
-- [x] 2.4 Clicking a segment/pill filters the list; active shows tone-specific selected state; header reflects filter
-- [x] 2.5 Clicking the active one clears to `Wszystkie`
-- [x] 2.6 Counts stay live regardless of active filter
-- [x] 2.7 `?filter=overdue` deep-link renders pre-filtered, no hydration flash; toggle syncs URL
-- [x] 2.8 Overdue filter with 0 overdue shows the positive empty state
-- [x] 2.9 Desktop unified bar (total + 3 segments, no search/sparkline); mobile 4 scrollable pills
-- [x] 2.10 Matches design contract (layout vs screenshots, copy vs contract); vision-diff (deferred)
+- [x] 2.4 Clicking a segment/pill filters the list; active shows tone-specific selected state; header reflects filter — 90c0fd5
+- [x] 2.5 Clicking the active one clears to `Wszystkie` — 90c0fd5
+- [x] 2.6 Counts stay live regardless of active filter — 90c0fd5
+- [x] 2.7 `?filter=overdue` deep-link renders pre-filtered, no hydration flash; toggle syncs URL — 90c0fd5
+- [x] 2.8 Overdue filter with 0 overdue shows the positive empty state — 90c0fd5
+- [x] 2.9 Desktop unified bar (total + 3 segments, no search/sparkline); mobile 4 scrollable pills — 90c0fd5
+- [x] 2.10 Matches design contract (layout vs screenshots, copy vs contract); vision-diff (deferred) — 90c0fd5
 
 ### Phase 3: Overdue-row restyle (days-overdue + Call + ordering)
 
 #### Automated
 
-- [ ] 3.1 Unit test: `1 dzień po terminie` / `N dni po terminie`, absent for non-overdue; caption-rank sort overdue→due→returned
-- [ ] 3.2 Type-check/build passes (`astro sync && npm run build`)
-- [ ] 3.3 Linting passes (`npm run lint`)
+- [x] 3.1 Unit test: `1 dzień po terminie` / `N dni po terminie`, absent for non-overdue; caption-rank sort overdue→due→returned
+- [x] 3.2 Type-check/build passes (`astro sync && npm run build`)
+- [x] 3.3 Linting passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 3.4 Overdue rows show `PO TERMINIE` eyebrow + `N dni po terminie` + `Zadzwoń`; due/returned show neither
-- [ ] 3.5 `Zadzwoń` opens the dialer; copy correct and plural-aware at the 1-day boundary
-- [ ] 3.6 Rows grouped overdue → due → returned; placement matches design contract; vision-diff (deferred)
+- [x] 3.4 Overdue rows show `PO TERMINIE` eyebrow + `N dni po terminie` + `Zadzwoń`; due/returned show neither
+- [x] 3.5 `Zadzwoń` opens the dialer; copy correct and plural-aware at the 1-day boundary
+- [x] 3.6 Rows grouped overdue → due → returned; placement matches design contract; vision-diff (deferred)

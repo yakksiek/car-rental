@@ -1,10 +1,11 @@
 // others
+import { formatDuration, rentalDays } from "./format";
 import type { DispatchReturnRow } from "../types";
 
-// Pure, DOM-free helpers for the returns worklist's client-side filter (S-07 Phase 2).
-// They live here rather than inside the `ReturnQueue` island so the `unit` project
-// (node, no DOM) can exercise the caption classification, the `?filter` URL parse,
-// and the toggle-to-all semantics — mirroring `return-form.ts` for the return form.
+// Pure, DOM-free helpers for the returns worklist (S-07 Phases 2–3). They live here
+// rather than inside the `ReturnQueue` island so the `unit` project (node, no DOM) can
+// exercise the caption classification, the `?filter` URL parse, the toggle-to-all
+// semantics, the urgency sort, and the days-overdue label — mirroring `return-form.ts`.
 //
 // The four filter states are the three row captions plus `null` ("Wszystkie" / all).
 // A row's caption keys off `return_protocol_id` (returned wins) then the
@@ -43,4 +44,30 @@ export function selectReturns(
   filter: ReturnCaption | null,
 ): DispatchReturnRow[] {
   return filter === null ? rows : rows.filter((row) => captionOf(row, today) === filter);
+}
+
+// Worklist ordering: overdue first, then due, then returned — the mockups' grouping
+// (design-contract §C). The RPC returns `reference` order; this rank regroups it.
+const CAPTION_RANK: Record<ReturnCaption, number> = { overdue: 0, due: 1, returned: 2 };
+
+/**
+ * Stable-sort the worklist by urgency — overdue → due → returned — preserving the
+ * RPC's `reference` order within each caption group (`Array.prototype.sort` is stable
+ * on Node ≥ 11 and every modern browser). Returns a new array; the input is untouched.
+ */
+export function sortReturnsByUrgency(rows: DispatchReturnRow[], today: string): DispatchReturnRow[] {
+  return [...rows].sort((a, b) => CAPTION_RANK[captionOf(a, today)] - CAPTION_RANK[captionOf(b, today)]);
+}
+
+/**
+ * The plural-aware days-overdue label for an overdue row — `1 dzień po terminie` /
+ * `N dni po terminie`. `null` for due/returned rows (they carry no such label). The
+ * count is the calendar span `today − return_date` (`rentalDays`), ≥ 1 exactly when
+ * the row classifies as `overdue`.
+ */
+export function overdueDaysLabel(row: DispatchReturnRow, today: string): string | null {
+  if (captionOf(row, today) !== "overdue") {
+    return null;
+  }
+  return `${formatDuration(rentalDays(row.return_date, today))} po terminie`;
 }
