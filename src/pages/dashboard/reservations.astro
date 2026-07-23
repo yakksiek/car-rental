@@ -12,9 +12,11 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
 // pending list through the role-gated definer RPC and mounts the decision island.
 const { user, role, supabase } = Astro.locals;
-const reservations = await listPendingReservations(supabase);
+const [reservations, overdueCount] = await Promise.all([
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+]);
 const count = reservations.length;
-const overdueCount = await countOverdueReturns(supabase);
 const countLabel = `${count} oczekuje na decyzję`;
 ---
 
