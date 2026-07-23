@@ -12,11 +12,10 @@ interface Props {
   redirectTo: string;
 }
 
-// Staff sign-in form ("Strefa pracownika"). The designed login also shows a
-// "remember me" checkbox and a "forgot password" link; both are intentionally
-// omitted — neither has a backing flow yet (sessions persist via Supabase
-// cookies; password reset is a separate, unbuilt slice), and inert controls
-// read as broken. They can be added when those flows land.
+// Staff sign-in form ("Strefa pracownika"). The "forgot password" link now
+// routes to the S-08 self-service reset flow (/auth/forgot-password). The
+// designed "remember me" checkbox stays omitted — sessions persist via Supabase
+// cookies, so an inert control would read as broken.
 export default function SignInForm({ serverError, redirectTo }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,6 +106,15 @@ export default function SignInForm({ serverError, redirectTo }: Props) {
             />
           }
         />
+      </div>
+
+      <div className="-mt-1 flex justify-end">
+        <a
+          href="/auth/forgot-password"
+          className="text-muted-foreground hover:text-foreground text-[13px] transition-colors"
+        >
+          Zapomniałeś hasła?
+        </a>
       </div>
 
       <ServerError message={serverError} />
