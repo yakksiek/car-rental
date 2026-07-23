@@ -1,10 +1,10 @@
 ---
 change_id: return-protocol-comparison
 title: Return protocol with auto-computed deltas vs. issue baseline, emailed to customer
-status: implemented
+status: archived
 created: 2026-07-14
-updated: 2026-07-22
-archived_at: null
+updated: 2026-07-23
+archived_at: 2026-07-23T08:34:08Z
 ---
 
 ## Notes
