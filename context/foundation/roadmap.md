@@ -37,7 +37,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done     |
 | S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | done     |
 | S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | done     |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | proposed |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | done     |
 | S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed |
 
 ## Streams
@@ -197,7 +197,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Read-only over reservation data (flag only — no late-fee calculation in v1), so low-risk and highly parallelizable. Sequenced after reservations exist (S-02); does not depend on the protocol chain.
-- **Status:** proposed
+- **Status:** done
 
 ### S-08: Employee account management
 
@@ -262,3 +262,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02a: On the per-vehicle booking calendar, a booked range's changeover days are shown half-available instead of fully greyed — the booking's pickup day stays selectable as a new return, and its return day as a new pickup — so back-to-back rentals can be booked from the UI, matching the half-open EXCLUDE window.** — Archived 2026-07-09 → `context/archive/2026-06-16-changeover-day-availability/`. Lesson: —.
 - **S-05: A logged-in employee can fill an issue protocol at pickup — mileage, fuel level, damage notes, photos, and a digital signature — on a phone or tablet, and the completed protocol is auto-emailed to the customer.** — Archived 2026-07-14 → `context/archive/2026-07-09-issue-protocol/`. Lesson: —.
 - **S-06: A logged-in employee can fill a return protocol — the issue baseline shown as reference, all current values entered fresh — and the system auto-computes and displays deltas (km driven, fuel change, new damage); the protocol is auto-emailed to the customer.** — Archived 2026-07-23 → `context/archive/2026-07-14-return-protocol-comparison/`. Lesson: —.
+- **S-07: see overdue returns flagged automatically on the dashboard** — Archived 2026-07-23 → `context/archive/2026-07-23-overdue-returns-dashboard/`. Lesson: —.
