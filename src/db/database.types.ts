@@ -70,18 +70,24 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deactivated_at: string | null
+          full_name: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          deactivated_at?: string | null
+          full_name?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          deactivated_at?: string | null
+          full_name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
@@ -496,6 +502,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      deactivate_staff: { Args: { target: string }; Returns: string }
       decide_reservation: {
         Args: {
           p_decision: string
@@ -667,6 +674,19 @@ export type Database = {
           vehicle_make: string
           vehicle_model: string
           vehicle_plate: string
+        }[]
+      }
+      list_staff: {
+        Args: never
+        Returns: {
+          created_at: string
+          deactivated_at: string
+          email: string
+          full_name: string
+          invited_at: string
+          last_sign_in_at: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }[]
       }
       record_email_delivery: {
