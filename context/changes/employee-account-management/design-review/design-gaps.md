@@ -39,8 +39,9 @@ canonical source, and the contract is derived from them (not from the stale June
 
 ## Residual gaps (the only open items)
 
-1. **PL-copy localization approval (#8)** — the contract ships best-fidelity Polish for the
-   English surfaces, each marked `needs-copy-confirm`. Groups awaiting user sign-off:
+1. **PL-copy localization approval (#8)** — **CLOSED 2026-07-23.** User approved all
+   `needs-copy-confirm` Polish and delegated English→Polish translation; the §5 Polish is final.
+   No copy sign-off remains. _(Original groups, now approved, kept below for reference:)_
    - **Add-modal:** subtitle, `FULL NAME`/`EMAIL ADDRESS` labels, `Send invite`, duplicate-email
      error, pending label (contract §5.4 #32–#38).
    - **Mobile roster:** eyebrow `4 STAFF`, chips `Active/Invited/Admin`, role `ADMIN/EMPLOYEE`,
@@ -50,7 +51,7 @@ canonical source, and the contract is derived from them (not from the stale June
 2. **Tablet / in-between widths (#7)** — not drawn; specify/validate the `md` table→cards switch
    at build (a real past bug on embedded/in-between widths).
 
-Everything else (#1–#6, #9–#15) is **CLOSED** against a canonical screenshot.
+Everything else (#1–#6, **#8**, #9–#15) is **CLOSED**. The only open residual is **#7** (tablet / in-between width), a build-time watch.
 
 ## Note on the stale `design-source/` June-03 export
 

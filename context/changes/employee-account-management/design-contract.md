@@ -7,6 +7,11 @@ screenshot set** the user supplied directly into
 rewrite** — it supersedes the earlier "source inaccessible / DesignSync-blocked" draft. Every
 canonical surface now has a finished screenshot; nothing below is invented-because-undrawn.
 
+> **✅ Copy approved 2026-07-23 (user), translation authority delegated.** Every `needs-copy-confirm`
+> marker in this contract is **resolved** — the §5 Polish is final and canonical. Implement the §5
+> strings as-is; do not re-ask for copy sign-off. (Where the mockup was English, the Polish in §5
+> is the string to ship.)
+
 Per the repo design lesson: values are ported **exact** (px / rem / token / grid), never ranges,
 never copied mockup code. Every spec line is marked `exact` (transcribed from a screenshot, or
 ported from a shipped idiom that matches it 1:1) or `deviation(reason)`. Two blanket rules apply
