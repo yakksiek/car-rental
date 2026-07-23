@@ -5,6 +5,7 @@ import StaffShell from "../../components/shell/StaffShell.astro";
 import PendingQueue from "../../components/dashboard/PendingQueue";
 
 // others
+import { countOverdueReturns } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 
 // Employee pending-request queue (S-03). The /dashboard/reservations route is
@@ -13,6 +14,7 @@ import { listPendingReservations } from "../../lib/services/reservations";
 const { user, role, supabase } = Astro.locals;
 const reservations = await listPendingReservations(supabase);
 const count = reservations.length;
+const overdueCount = await countOverdueReturns(supabase);
 const countLabel = `${count} oczekuje na decyzję`;
 ---
 
@@ -24,6 +26,7 @@ const countLabel = `${count} oczekuje na decyzję`;
     user={user}
     role={role}
     pendingCount={count}
+    overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-5xl px-4 py-6">
       {/* Mobile centered header (the desktop topbar carries this at md+) — L4 */}

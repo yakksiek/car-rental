@@ -5,7 +5,7 @@ import StaffShell from "../../components/shell/StaffShell.astro";
 import ReturnQueue from "../../components/dashboard/ReturnQueue";
 
 // others
-import { listReturnsToday } from "../../lib/services/protocols";
+import { countOverdueReturns, listReturnsToday } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 
 // The returns worklist (S-06 Phase 6): confirmed reservations due-or-overdue to
@@ -21,7 +21,11 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // RPC's `return_date <= current_date` filter.
 const { user, role, supabase } = Astro.locals;
 
-const [rows, pending] = await Promise.all([listReturnsToday(supabase), listPendingReservations(supabase)]);
+const [rows, pending, overdueCount] = await Promise.all([
+  listReturnsToday(supabase),
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+]);
 
 const now = new Date();
 const today = now.toISOString().slice(0, 10);
@@ -51,7 +55,15 @@ const dateEyebrow =
 ---
 
 <Layout title="Zwroty — Flota">
-  <StaffShell active="returns" title="Zwroty" subtitle={subtitle} user={user} role={role} pendingCount={pending.length}>
+  <StaffShell
+    active="returns"
+    title="Zwroty"
+    subtitle={subtitle}
+    user={user}
+    role={role}
+    pendingCount={pending.length}
+    overdueCount={overdueCount}
+  >
     <main class="mx-auto w-full max-w-[1440px] px-4 py-6">
       {
         /* Mobile centered header (the desktop topbar carries this at md+). A date

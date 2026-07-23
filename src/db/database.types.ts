@@ -437,6 +437,7 @@ export type Database = {
         }
       }
       base36_encode: { Args: { p_value: number }; Returns: string }
+      count_overdue_returns: { Args: never; Returns: number }
       create_protocol: {
         Args: {
           p_customer_ack: boolean
@@ -653,6 +654,7 @@ export type Database = {
           baseline_protocol_id: string
           customer_email: string
           customer_name: string
+          customer_phone: string
           delivery_created_at: string
           delivery_status: string
           pdf_path: string

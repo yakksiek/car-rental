@@ -10,7 +10,7 @@ import type {
   ProtocolViewDamage,
   ProtocolViewPhoto,
 } from "../../../components/protocol/ProtocolView";
-import { getProtocol } from "../../../lib/services/protocols";
+import { countOverdueReturns, getProtocol } from "../../../lib/services/protocols";
 import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
 import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
 
@@ -27,6 +27,10 @@ import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protoc
 // follows the `Astro.response.status` pattern used elsewhere.
 const { user, role, supabase } = Astro.locals;
 const { id } = Astro.params;
+
+// Overdue-returns badge count for the shell nav (S-07) — consistent with every
+// other staff page (this route previously passed no nav badge at all).
+const overdueCount = await countOverdueReturns(supabase);
 
 const protocol = id ? await getProtocol(supabase, id) : null;
 
@@ -105,7 +109,14 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
 ---
 
 <Layout title={protocol ? `Protokół ${protocol.reference} — Flota` : "Nie znaleziono — Flota"}>
-  <StaffShell active={isReturn ? "returns" : "pickups"} title="Protokół" user={user} role={role} showHeader={false}>
+  <StaffShell
+    active={isReturn ? "returns" : "pickups"}
+    title="Protokół"
+    user={user}
+    role={role}
+    overdueCount={overdueCount}
+    showHeader={false}
+  >
     {
       protocol ? (
         <ProtocolView
