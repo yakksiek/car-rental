@@ -440,31 +440,31 @@ Additive over F-02: two nullable `profiles` columns + two definer RPCs; no chang
 
 #### Automated
 
-- [x] 1.1 Migration + seed apply cleanly: `supabase db reset`
-- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration + seed apply cleanly: `supabase db reset` — 018b94a
+- [x] 1.2 Types generate without error: `supabase gen types typescript --local > src/db/database.types.ts` — 018b94a
+- [x] 1.3 Type checking passes: `npx astro check` — 018b94a
+- [x] 1.4 Linting passes: `npm run lint` — 018b94a
 
 #### Manual
 
-- [x] 1.5 `profiles` has `full_name` + `deactivated_at`; `list_staff()` admin-only + excludes deactivated; `deactivate_staff()` denies non-admin
-- [x] 1.6 Both RPCs revoked from anon (anon call denied at grant layer)
-- [x] 1.7 Deactivated profile resolves to `role=null` in middleware (session denied `/dashboard`)
+- [x] 1.5 `profiles` has `full_name` + `deactivated_at`; `list_staff()` admin-only + excludes deactivated; `deactivate_staff()` denies non-admin — 018b94a
+- [x] 1.6 Both RPCs revoked from anon (anon call denied at grant layer) — 018b94a
+- [x] 1.7 Deactivated profile resolves to `role=null` in middleware (session denied `/dashboard`) — 018b94a
 
 ### Phase 2: Staff Service & Admin API
 
 #### Automated
 
-- [ ] 2.1 Integration tests pass: `npm run test:integration`
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
+- [x] 2.1 Integration tests pass: `npm run test:integration`
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 `POST /api/staff` invites as admin (Inbucket email); 403 as employee; 401 anon
-- [ ] 2.5 Deactivate refuses self (403) + last-admin (409); wrong `confirmEmail`→400; valid hides row
-- [ ] 2.6 Re-inviting a deactivated email reactivates it
-- [ ] 2.7 `POST /api/staff/[id]/reset-password` sends recovery email to Inbucket
+- [x] 2.4 `POST /api/staff` invites as admin (Inbucket email); 403 as employee; 401 anon
+- [x] 2.5 Deactivate refuses self (403) + last-admin (409); wrong `confirmEmail`→400; valid hides row
+- [x] 2.6 Re-inviting a deactivated email reactivates it
+- [x] 2.7 `POST /api/staff/[id]/reset-password` sends recovery email to Inbucket
 
 ### Phase 3: Self-Service Reset & PKCE Callback
 
