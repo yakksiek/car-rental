@@ -14,8 +14,7 @@ import { listPendingReservations } from "../../../lib/services/reservations";
 // The pending queue is loaded only for the shell's nav badge (consistency with
 // the other staff pages).
 const { user, role, supabase } = Astro.locals;
-const pending = await listPendingReservations(supabase);
-const overdueCount = await countOverdueReturns(supabase);
+const [pending, overdueCount] = await Promise.all([listPendingReservations(supabase), countOverdueReturns(supabase)]);
 ---
 
 <Layout title="Dodaj pojazd — Flota">
