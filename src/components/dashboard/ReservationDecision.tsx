@@ -75,7 +75,7 @@ export function ReasonSheet({
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
+        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-xl"
       >
         <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
         <div className="text-foreground text-xl font-bold tracking-tight">{DECISION_COPY.reasonTitle}</div>
@@ -145,7 +145,7 @@ export function ResultOverlay({ status, onDone }: { status: "confirmed" | "rejec
   const confirmed = status === "confirmed";
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center">
-      <div className="bg-card shadow-overlay w-full rounded-t-[28px] p-7 pb-8 md:max-w-sm md:rounded-2xl">
+      <div className="bg-card shadow-overlay w-full rounded-t-[28px] p-7 pb-8 md:max-w-sm md:rounded-xl">
         <div
           className={cn(
             "mx-auto mb-4 flex size-16 items-center justify-center rounded-full",
@@ -224,7 +224,7 @@ export function CalendarDecision({
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
+        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-xl"
       >
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground font-mono text-[11px] font-semibold">{reservation.reference}</span>

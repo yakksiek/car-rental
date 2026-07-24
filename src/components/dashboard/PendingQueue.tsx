@@ -91,7 +91,7 @@ function vehicleName(r: PendingReservation): string {
 
 // ── subcomponents ────────────────────────────────────────────────────────────
 
-const cardClass = "rounded-2xl border border-border bg-card shadow-card";
+const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 function QueueCard({
   reservation,

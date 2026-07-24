@@ -188,7 +188,7 @@ export default function BookingWidget({
   );
 
   return (
-    <div className="bg-card shadow-card rounded-2xl p-5 lg:sticky lg:top-8 lg:p-6">
+    <div className="bg-card shadow-card rounded-lg p-5 lg:sticky lg:top-8 lg:p-6">
       {/* Price header */}
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-foreground text-2xl font-bold tracking-tight">

@@ -86,10 +86,7 @@ const BADGE: Record<StepState, string> = {
     {
       steps.map((step, i) => (
         <li
-          class:list={cn(
-            "bg-card shadow-card rounded-2xl p-5",
-            step.state === "current" && "ring-foreground/10 ring-1",
-          )}
+          class:list={cn("bg-card shadow-card rounded-lg p-5", step.state === "current" && "ring-foreground/10 ring-1")}
         >
           <div class="flex items-start justify-between">
             <span class="bg-background text-foreground flex size-9 items-center justify-center rounded-full">
