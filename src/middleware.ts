@@ -18,9 +18,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // Role read piggybacks on the already-authenticated request: one indexed PK
     // lookup. A missing profile resolves to `null` (no access) — never granted.
+    // A deactivated profile (S-08: deactivated_at set) also resolves to `null`,
+    // so a soft-removed staffer is denied every gated route on their next
+    // request even while their auth.users row persists.
     if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("user_id", user.id).maybeSingle();
-      context.locals.role = profile?.role ?? null;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, deactivated_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      context.locals.role = profile && profile.deactivated_at == null ? profile.role : null;
     } else {
       context.locals.role = null;
     }

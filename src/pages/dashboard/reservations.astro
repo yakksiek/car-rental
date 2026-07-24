@@ -5,13 +5,17 @@ import StaffShell from "../../components/shell/StaffShell.astro";
 import PendingQueue from "../../components/dashboard/PendingQueue";
 
 // others
+import { countOverdueReturns } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 
 // Employee pending-request queue (S-03). The /dashboard/reservations route is
 // gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
 // pending list through the role-gated definer RPC and mounts the decision island.
 const { user, role, supabase } = Astro.locals;
-const reservations = await listPendingReservations(supabase);
+const [reservations, overdueCount] = await Promise.all([
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+]);
 const count = reservations.length;
 const countLabel = `${count} oczekuje na decyzję`;
 ---
@@ -24,6 +28,7 @@ const countLabel = `${count} oczekuje na decyzję`;
     user={user}
     role={role}
     pendingCount={count}
+    overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-5xl px-4 py-6">
       {/* Mobile centered header (the desktop topbar carries this at md+) — L4 */}

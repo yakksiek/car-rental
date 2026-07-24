@@ -65,7 +65,7 @@ function PickupRow({
   const canResend = issued && Boolean(pdfPath) && badge.tone !== "ok";
 
   return (
-    <li className="border-border bg-card shadow-card rounded-2xl border p-4">
+    <li className="border-border bg-card shadow-card rounded-lg border p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export default function PickupQueue({ rows }: { rows: DispatchRow[] }) {
 
   if (states.length === 0) {
     return (
-      <div className={cn("border-border bg-card shadow-card rounded-2xl border p-10 text-center")}>
+      <div className={cn("border-border bg-card shadow-card rounded-lg border p-10 text-center")}>
         <h2 className="text-foreground text-[16px] font-[650] tracking-tight">Brak wydań na dziś</h2>
         <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
           Gdy rezerwacja będzie gotowa do wydania, pojawi się tutaj.

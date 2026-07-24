@@ -69,6 +69,8 @@ Plans are carefully designed, but reality can be messy. Your job is to:
 
 When things don't match the plan exactly, think about why and communicate clearly. The plan is your guide, but your judgment matters too.
 
+**UI phases build to the design contract's exact values.** When a phase implements a user-facing surface and the change folder has a `design-contract.md`, take every dimension — spacing, radius, font size/weight, letter-spacing, color (as a token), grid ratio, breakpoint — from the contract's specified value, and write the exact value per element, not an eyeballed approximation. A value written as a range ("15–20px", "roughly 1rem") is **not** a license to pick freely: resolve it to the one exact value from the design source before writing the code. The only acceptable range is one the contract explicitly marks intentional — a responsive `deviation(reason)` or a stated fluid range — which you implement with the exact breakpoints/values the contract names. If the contract is silent or self-contradictory on a value, STOP and treat it as a mismatch (flow below) rather than inventing a number; never introduce a magic value absent from both the contract and the project's established design tokens.
+
 If you encounter a mismatch:
 
 - STOP and think deeply about why the plan can't be followed
@@ -125,7 +127,6 @@ After implementing a phase:
 - Update your progress in your todos and in the plan's `## Progress` section
 - **Mutate ONLY the `## Progress` section.** Phase blocks (Overview, Changes Required, Success Criteria) are read-only. Use Edit to flip `- [ ] N.M <title>` → `- [x] N.M <title>` in Progress as each step completes. Do NOT edit Phase block bullets, do NOT add HTML comment progress markers at the bottom of the plan, and do NOT write any state-file sidecar.
 - **Run the phase-end commit ritual**: After all automated checks pass for the phase, walk through this sequenced ritual to author one Conventional-Commits commit and write the closing short SHA back into every Progress row flipped during the phase.
-
   1. **Manual confirmation gate.** Inform the human that automated verification passed and list the manual verification items from the plan. Pause here. Do not proceed until the human confirms manual testing succeeded. Use this format:
 
      ```
@@ -151,8 +152,7 @@ After implementing a phase:
 
   2. **Compute the staging set.** Take the touched-file set maintained during the phase (see "Tracking files touched during a phase" above) and union it with `{context/changes/<change-id>/plan.md}`. The plan file is always staged because each phase produces at least one Edit to its `## Progress` section.
 
-  3. **Detect unrelated dirty paths.** Run `git status --porcelain` and intersect with paths *outside* the staging set. If the dirty-but-untouched set is non-empty, present the offending paths and use `AskUserQuestion`:
-
+  3. **Detect unrelated dirty paths.** Run `git status --porcelain` and intersect with paths _outside_ the staging set. If the dirty-but-untouched set is non-empty, present the offending paths and use `AskUserQuestion`:
      - question: "<N> unrelated path(s) are dirty. How should I handle them?"
        header: "Dirty paths"
        options:
@@ -162,7 +162,7 @@ After implementing a phase:
          description: "Add the unrelated paths to this commit. You take responsibility for the broader scope."
        - label: "Abort"
          description: "Stop the phase commit. Resolve the dirty paths first, then re-run the ritual."
-       multiSelect: false
+         multiSelect: false
 
      If the dirty-but-untouched set is empty, skip this step.
 
@@ -177,7 +177,6 @@ After implementing a phase:
      Set `SHA=""` and skip to step 8.
 
   6. **Propose a Conventional-Commits message.** Build a subject line in the form `<type>(<change-id>): <phase title> (p<N>)`, where `<type>` is one of `feat / fix / chore / refactor / docs` chosen from the phase's nature (e.g., `feat` for new user-visible behavior, `chore` for prompt/doc edits, `refactor` for restructuring without behavior change). The phase title is the meaningful part and leads; the `(p<N>)` suffix carries the phase index. Build a short body listing the touched files, plus the `Refs:` line from "Tracking issue/task references for commits" when applicable. Use `AskUserQuestion`:
-
      - question: "Approve commit message?"
        header: "Commit msg"
        options:
@@ -187,7 +186,7 @@ After implementing a phase:
          description: "Override the subject; keep the body."
        - label: "Override entirely"
          description: "Replace both subject and body."
-       multiSelect: false
+         multiSelect: false
 
   7. **Commit via heredoc.** Run `git commit` per the global commit-message protocol:
 
@@ -206,7 +205,6 @@ After implementing a phase:
   8. **Capture the short SHA.** Run `git rev-parse --short HEAD` and store as `SHA`. Skip this step if `SHA=""` was set by step 5.
 
   9. **Write the SHA back into Progress.** For every Progress row flipped during this phase, run a targeted Edit:
-
      - Find: `- [x] N.M <title>` (no existing ` — <sha>` suffix at end of line)
      - Replace with: `- [x] N.M <title> — <SHA>`
 
@@ -238,6 +236,7 @@ After implementing a phase:
 
   **If user chooses to clear**: Copy the resume command to clipboard and display it:
   1. Copy:
+
      ```bash
      echo -n "/10x-implement <change-id> phase [next-phase-number]" | pbcopy 2>/dev/null || echo -n "/10x-implement <change-id> phase [next-phase-number]" | clip.exe 2>/dev/null || echo -n "/10x-implement <change-id> phase [next-phase-number]" | xclip -selection clipboard 2>/dev/null || true
      ```
@@ -246,6 +245,7 @@ After implementing a phase:
      # PowerShell (Windows)
      Set-Clipboard "/10x-implement <change-id> phase [next-phase-number]"
      ```
+
   2. Display:
      ```
      → /10x-implement <change-id> phase [next-phase-number] (✓ copied)
@@ -282,7 +282,6 @@ Empty-diff phases (manual-verification-only or no-op adapted phases) commit noth
 When every `- [ ]` in the entire `## Progress` section is now `- [x]`:
 
 1. **Defensive pending-items surface.** Re-scan the entire `## Progress` section one last time for any `- [ ]` rows. Under normal flow this is a no-op — the trigger condition for "After all phases" is already "every `- [ ]` is `- [x]`", so the surface should find nothing. It exists to make any unexpected stragglers explicit rather than silently lost (e.g., if a partial run, a manual edit, or a resume path bypassed the trigger). If the count is non-zero, list each row as `<phase>.<index> <title>` grouped by Automated vs Manual subsection in document order, then ask via `AskUserQuestion`:
-
    - question: "<N> Progress item(s) still pending. How to proceed?"
      header: "Stragglers"
      options:
@@ -290,7 +289,7 @@ When every `- [ ]` in the entire `## Progress` section is now `- [x]`:
        description: "STOP without flipping change.md.status. Address the stragglers manually, then re-enter the epilogue path."
      - label: "Proceed to epilogue"
        description: "Flip status: implemented and run the epilogue commit anyway. Stragglers will surface as warnings under /10x-archive."
-     multiSelect: false
+       multiSelect: false
 
    On "Pause": STOP immediately. Do NOT update `change.md`, do NOT run the epilogue commit. On "Proceed to epilogue": continue with steps 2–4 below. If the count is zero, skip this step and continue.
 

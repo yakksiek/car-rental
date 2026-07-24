@@ -151,9 +151,22 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# S-08: the real dev origin (npm run dev serves :4321). GoTrue drops any recovery
+# /invite redirectTo not on this allow-list, so both dev origins and the prod app
+# origins are listed. The `/**` globs let the callback carry query params
+# (e.g. ?flow=invite). Reloads only on `supabase stop && supabase start`.
+site_url = "http://localhost:4321"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://localhost:4321",
+  "http://localhost:4321/**",
+  "http://127.0.0.1:4321",
+  "http://127.0.0.1:4321/**",
+  "https://fleetrent.marcin-kulbicki.workers.dev",
+  "https://fleetrent.marcin-kulbicki.workers.dev/**",
+  "https://wujcar.com",
+  "https://wujcar.com/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -234,10 +247,20 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# S-08: token_hash-based invite + recovery templates. The DEFAULT
+# {{ .ConfirmationURL }} routes through /auth/v1/verify, which for an invite
+# (non-PKCE) redirects with the session in a URL *hash* the server can't read,
+# and for recovery (PKCE) needs a code-verifier cookie the recipient's browser
+# lacks on a cross-browser click. These templates instead link to our
+# /auth/callback with {{ .TokenHash }}, which verifyOtp() exchanges server-side
+# with no verifier — making invite-accept and admin-triggered reset both work.
+[auth.email.template.invite]
+subject = "Aktywuj konto w panelu Flota"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Reset hasła — Flota"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

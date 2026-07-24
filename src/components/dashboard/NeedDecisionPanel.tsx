@@ -39,7 +39,7 @@ const COPY = {
 // How many cards to preview before deferring to the full queue.
 const PREVIEW_LIMIT = 4;
 
-const cardClass = "rounded-2xl border border-border bg-card shadow-card";
+const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 function formatRange(pickup: string, returnDate: string): string {
   const from = fromIsoDate(pickup);

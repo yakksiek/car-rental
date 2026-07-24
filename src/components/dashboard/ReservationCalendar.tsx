@@ -312,7 +312,7 @@ export default function ReservationCalendar({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border-border bg-card shadow-card overflow-x-auto rounded-2xl border p-2">
+      <div className="border-border bg-card shadow-card overflow-x-auto rounded-lg border p-2">
         <IlamyResourceCalendar
           resources={displayResources}
           events={events}

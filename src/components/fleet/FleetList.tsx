@@ -53,7 +53,7 @@ const CATEGORY_ORDER: VehicleCategory[] = [
   "flatbed_truck",
 ];
 
-const cardClass = "rounded-2xl border border-border bg-card shadow-card";
+const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 /** `2021 · Diesel · Manualna` — only the present fields, dot-separated. */
 function specLine(vehicle: Vehicle): string {
@@ -144,7 +144,7 @@ function RetireDialog({
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
+        className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-xl"
       >
         <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
         <div className="text-foreground text-xl font-bold tracking-tight">{COPY.retireTitle}</div>
