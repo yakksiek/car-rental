@@ -49,6 +49,14 @@ describe("formatLastActive (invited)", () => {
       "zaproszenie · dziś",
     );
   });
+
+  it("drops the 'zaproszenie' prefix when invitePrefix is false (next to the badge)", () => {
+    const m = { status: "invited" as const, lastSignInAt: null, invitedAt: ago(2 * 86_400_000) };
+    expect(formatLastActive(m, NOW, { invitePrefix: false })).toBe("2 dni temu");
+    expect(
+      formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(60_000) }, NOW, { invitePrefix: false }),
+    ).toBe("dziś");
+  });
 });
 
 describe("staffInitials", () => {

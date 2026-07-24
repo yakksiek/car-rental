@@ -34,8 +34,6 @@ const [staff, pending, overdueCount] = await Promise.all([
     overdueCount={overdueCount}
     showHeader={false}
   >
-    <main class="mx-auto w-full max-w-5xl px-4 py-6">
-      <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} />
-    </main>
+    <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} />
   </StaffShell>
 </Layout>

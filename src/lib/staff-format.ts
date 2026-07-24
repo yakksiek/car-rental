@@ -39,13 +39,18 @@ function daysWord(n: number): string {
  * client render can agree (pass a stable value until mounted, then Date.now()).
  *   active:  przed chwilą / {n} min temu / {n} godz. temu / wczoraj / {n} dni temu
  *   invited: zaproszenie · dziś / zaproszenie · {n} dni temu
+ *
+ * `opts.invitePrefix: false` drops the leading "zaproszenie · " for invited rows —
+ * used when the string sits next to the ZAPROSZONY status badge, where the word
+ * would be redundant (→ just "2 dni temu" / "dziś").
  */
-export function formatLastActive(m: LastActiveInput, nowMs: number): string {
+export function formatLastActive(m: LastActiveInput, nowMs: number, opts?: { invitePrefix?: boolean }): string {
   if (m.status === "invited") {
-    if (!m.invitedAt) return "zaproszenie";
+    const withPrefix = opts?.invitePrefix !== false;
+    if (!m.invitedAt) return withPrefix ? "zaproszenie" : "—";
     const days = Math.max(0, Math.floor((nowMs - new Date(m.invitedAt).getTime()) / DAY));
-    if (days === 0) return "zaproszenie · dziś";
-    return `zaproszenie · ${days} ${daysWord(days)} temu`;
+    const rel = days === 0 ? "dziś" : `${days} ${daysWord(days)} temu`;
+    return withPrefix ? `zaproszenie · ${rel}` : rel;
   }
 
   if (!m.lastSignInAt) return "przed chwilą";
