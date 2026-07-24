@@ -467,7 +467,7 @@ export default function ReturnQueue({
 
   if (states.length === 0) {
     return (
-      <div className={cn("border-border bg-card shadow-card rounded-2xl border p-10 text-center")}>
+      <div className={cn("border-border bg-card shadow-card rounded-lg border p-10 text-center")}>
         <h2 className="text-foreground text-[16px] font-[650] tracking-tight">Brak zwrotów na dziś</h2>
         <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
           Gdy wynajęty pojazd będzie do zwrotu, pojawi się tutaj.
@@ -497,7 +497,7 @@ export default function ReturnQueue({
           // The reassuring overdue-clear state (design-contract §D, O3/O7): a green-soft
           // check chip over the positive copy. Shown only when the overdue filter is on
           // and nothing is overdue (there are still due/returned rows on the list).
-          <div className="border-border bg-card shadow-card rounded-2xl border p-10 text-center">
+          <div className="border-border bg-card shadow-card rounded-lg border p-10 text-center">
             <span className="mx-auto flex size-16 items-center justify-center rounded-[18px] bg-[var(--flota-success-soft)]">
               <Check className="text-success size-7" />
             </span>

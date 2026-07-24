@@ -155,7 +155,9 @@
   --radius-md: var(--flota-radius-md);
   --radius-lg: var(--flota-radius-lg);
   --radius-xl: var(--flota-radius-xl);
-  --radius-2xl: var(--flota-radius-2xl);
+  /* No --radius-2xl utility: the design tokens.css deliberately omits it — 28px
+     (--flota-radius-2xl) is a sheet/large-modal primitive applied as an explicit
+     rounded-t-[28px], never a `rounded-2xl` class. Content cards are rounded-lg (16px). */
   --radius-button: var(--flota-radius-button);
 
   /* App shell max width — header, footer, and page bodies share this cap. */
