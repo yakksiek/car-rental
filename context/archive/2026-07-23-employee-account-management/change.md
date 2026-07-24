@@ -1,10 +1,10 @@
 ---
 change_id: employee-account-management
 title: Admin-managed employee accounts with self-service password reset
-status: implemented
+status: archived
 created: 2026-07-23
-updated: 2026-07-23
-archived_at: null
+updated: 2026-07-24
+archived_at: 2026-07-24T12:45:54Z
 ---
 
 ## Notes

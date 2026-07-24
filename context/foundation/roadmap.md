@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-07-23
+updated: 2026-07-24
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -27,18 +27,18 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status   |
-| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | -------- |
-| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done     |
-| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done     |
-| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done     |
-| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done     |
-| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done     |
-| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done     |
-| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | done     |
-| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | done     |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | done     |
-| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | proposed |
+| ID   | Change ID                   | Outcome (user can …)                                                        | Prerequisites | PRD refs               | Status |
+| ---- | --------------------------- | --------------------------------------------------------------------------- | ------------- | ---------------------- | ------ |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule  | —             | FR-005, Guardrails     | done   |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated    | —             | Access Control         | done   |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card               | F-01          | US-01, FR-001/002/003  | done   |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit    | F-01, S-01    | US-01, FR-004/005      | done   |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                             | F-02, S-02    | US-01, FR-009/010      | done   |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)  | F-01, F-02    | FR-011                 | done   |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed | F-02, S-03    | US-02, FR-006/008, NFR | done   |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | done   |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | done   |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | done   |
 
 ## Streams
 
@@ -209,7 +209,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Admin-only and fully independent once roles exist — the most freely schedulable slice, which is why it's parked toward the end of the must-have path under the speed goal but can be picked up anytime after F-02 to fill capacity gaps.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -263,3 +263,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: A logged-in employee can fill an issue protocol at pickup — mileage, fuel level, damage notes, photos, and a digital signature — on a phone or tablet, and the completed protocol is auto-emailed to the customer.** — Archived 2026-07-14 → `context/archive/2026-07-09-issue-protocol/`. Lesson: —.
 - **S-06: A logged-in employee can fill a return protocol — the issue baseline shown as reference, all current values entered fresh — and the system auto-computes and displays deltas (km driven, fuel change, new damage); the protocol is auto-emailed to the customer.** — Archived 2026-07-23 → `context/archive/2026-07-14-return-protocol-comparison/`. Lesson: —.
 - **S-07: see overdue returns flagged automatically on the dashboard** — Archived 2026-07-23 → `context/archive/2026-07-23-overdue-returns-dashboard/`. Lesson: —.
+- **S-08: An admin can add and remove employee accounts; employees can self-service reset their own password via email.** — Archived 2026-07-24 → `context/archive/2026-07-23-employee-account-management/`. Lesson: —.
