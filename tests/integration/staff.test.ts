@@ -98,9 +98,10 @@ describe("staff account lifecycle (S-08)", () => {
     expect(isBanned(bannedUser.user)).toBe(true);
 
     // Re-invite the same email → reactivated: deactivated_at cleared, unbanned,
-    // name refreshed.
+    // name refreshed. This user never signed in, so it stays INVITED.
     const react = await createEmployee(svc, { email, full_name: "Ola Reakt II", origin: ORIGIN });
     expect(react.status).toBe("reactivated");
+    if (react.status === "reactivated") expect(react.member.status).toBe("invited");
 
     const { data: afterReact } = await svc
       .from("profiles")
@@ -111,6 +112,26 @@ describe("staff account lifecycle (S-08)", () => {
     expect(afterReact?.full_name).toBe("Ola Reakt II");
     const { data: unbannedUser } = await svc.auth.admin.getUserById(id);
     expect(isBanned(unbannedUser.user)).toBe(false);
+  });
+
+  it("reactivating a previously-ACTIVE user restores them as active (not a phantom invite)", async () => {
+    const email = uniqueEmail("react-active");
+    const password = "Fl0ta-ReactActive-2026!";
+    // An account that HAS signed in (last_sign_in_at is stamped).
+    const created = await svc.auth.admin.createUser({ email, password, email_confirm: true });
+    const id = created.data.user?.id;
+    if (!id) throw new Error("createUser failed");
+    createdIds.push(id);
+    await svc.from("profiles").insert({ user_id: id, role: "employee", full_name: "Aktywny Wraca" });
+    expect((await anonClient().auth.signInWithPassword({ email, password })).error).toBeNull();
+
+    const admin = await as("admin");
+    expect((await deactivateStaff(svc, admin, id)).status).toBe("ok");
+
+    const react = await createEmployee(svc, { email, full_name: "Aktywny Wraca", origin: ORIGIN });
+    expect(react.status).toBe("reactivated");
+    // The fix: not hardcoded "invited" — a returning active user is ACTIVE again.
+    if (react.status === "reactivated") expect(react.member.status).toBe("active");
   });
 });
 

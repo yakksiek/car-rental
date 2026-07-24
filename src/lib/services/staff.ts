@@ -108,7 +108,10 @@ export async function listStaff(client: Client | null): Promise<StaffMember[]> {
 }
 
 /** Find an existing auth user by (case-insensitive) email, or null. */
-async function findAuthUserByEmail(admin: Client, email: string): Promise<{ id: string } | null> {
+async function findAuthUserByEmail(
+  admin: Client,
+  email: string,
+): Promise<{ id: string; lastSignInAt: string | null } | null> {
   const target = email.trim().toLowerCase();
   // Single-tenant scale (a handful of staff): one large page suffices. If a
   // deployment ever outgrows this, page through `nextPage`.
@@ -117,7 +120,7 @@ async function findAuthUserByEmail(admin: Client, email: string): Promise<{ id: 
     throw error;
   }
   const match = data.users.find((u) => (u.email ?? "").toLowerCase() === target);
-  return match ? { id: match.id } : null;
+  return match ? { id: match.id, lastSignInAt: match.last_sign_in_at ?? null } : null;
 }
 
 /**
@@ -168,7 +171,20 @@ export async function createEmployee(
     if (upsertErr) {
       throw upsertErr;
     }
-    return { status: "reactivated", member: buildMember(existing.id, email, fullName) };
+    // Reflect the person's REAL state, not a hardcoded "invited":
+    //   • signed in before → ACTIVE again immediately; their existing password
+    //     still works, so no email is sent (an "invited" label with no mail was
+    //     the confusing bug).
+    //   • never accepted the original invite (no password) → stay INVITED and
+    //     send a fresh activation (recovery) email so the label is honest.
+    const wasActive = existing.lastSignInAt != null;
+    if (!wasActive) {
+      await admin.auth.resetPasswordForEmail(email, { redirectTo }).catch(() => undefined);
+    }
+    return {
+      status: "reactivated",
+      member: buildMember(existing.id, email, fullName, wasActive ? "active" : "invited", existing.lastSignInAt),
+    };
   }
 
   // Net-new: GoTrue invite (email lands in Inbucket/Mailpit locally), then the
@@ -190,20 +206,26 @@ export async function createEmployee(
   return { status: "created", member: buildMember(userId, email, fullName) };
 }
 
-// A freshly invited/reactivated employee is always INVITED at this instant (no
-// sign-in yet). The service-role admin client can't read the admin-gated
-// list_staff, so synthesize the member from what we know; the roster reloads
-// with authoritative timestamps on the next page load.
-function buildMember(id: string, email: string, fullName: string): StaffMember {
+// The service-role admin client can't read the admin-gated list_staff, so
+// synthesize the optimistic member from what we know; the roster reloads with
+// authoritative timestamps on the next page load. `status`/`lastSignInAt` default
+// to a fresh INVITED (net-new invite); reactivation passes the real values.
+function buildMember(
+  id: string,
+  email: string,
+  fullName: string,
+  status: StaffMember["status"] = "invited",
+  lastSignInAt: string | null = null,
+): StaffMember {
   return {
     id,
     email,
     fullName,
     role: "employee",
-    status: "invited",
+    status,
     deactivatedAt: null,
     invitedAt: new Date().toISOString(),
-    lastSignInAt: null,
+    lastSignInAt,
     createdAt: new Date().toISOString(),
   };
 }
