@@ -1,0 +1,10 @@
+<!-- S-08 password-recovery email. Uses {{ .TokenHash }} → /auth/callback so
+     verifyOtp() establishes the recovery session server-side, no code-verifier
+     cookie required. This makes admin-triggered "Resetuj hasło" (recipient's
+     browser never saw the PKCE challenge) work the same as self-service reset. -->
+<h2>Reset hasła</h2>
+<p>Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta w panelu Flota. Kliknij poniższy przycisk, aby ustawić nowe hasło:</p>
+<p>
+  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery">Ustaw nowe hasło</a>
+</p>
+<p>Link jest ważny 60 minut. Jeśli to nie Ty prosiłeś o reset, zignoruj tę wiadomość.</p>

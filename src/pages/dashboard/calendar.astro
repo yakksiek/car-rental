@@ -7,6 +7,7 @@ import ReservationCalendar from "../../components/dashboard/ReservationCalendar"
 // others
 import { listPendingReservations, listReservationsForCalendar } from "../../lib/services/reservations";
 import { listVehicles } from "../../lib/services/vehicles";
+import { countOverdueReturns } from "../../lib/services/protocols";
 import { vehiclesToResources } from "../../lib/calendar/map";
 
 // Reservation calendar (S-03 Phase 7). Employee-gated by the middleware. SSR the
@@ -15,6 +16,7 @@ import { vehiclesToResources } from "../../lib/calendar/map";
 // navigation via GET /api/reservations/calendar.
 const { user, role, supabase } = Astro.locals;
 const pendingCount = (await listPendingReservations(supabase)).length;
+const overdueCount = await countOverdueReturns(supabase);
 
 // Optional focus deep-link (L5): /dashboard/calendar?view=week&date=YYYY-MM-DD&vehicle=<id>.
 // Sent by a request's "Daty zarezerwowane" card so the calendar opens on that
@@ -55,6 +57,7 @@ const reservations = await listReservationsForCalendar(supabase, isoDate(windowS
     user={user}
     role={role}
     pendingCount={pendingCount}
+    overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-6xl px-4 py-6">
       {/* Mobile centered header (the desktop topbar carries this at md+) */}

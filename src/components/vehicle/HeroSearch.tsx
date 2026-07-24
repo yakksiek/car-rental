@@ -77,7 +77,7 @@ export default function HeroSearch({ category = null }: Props) {
 
   return (
     <div className="max-w-2xl">
-      <div className="bg-card shadow-pop flex flex-col gap-1 rounded-2xl p-2 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full">
+      <div className="bg-card shadow-pop flex flex-col gap-1 rounded-lg p-2 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full">
         {/* Typ */}
         <div className="min-w-0 flex-1 px-4 py-2">
           <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Typ</div>

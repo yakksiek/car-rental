@@ -63,7 +63,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
           role="group"
           aria-roledescription="karuzela"
           aria-label={alt}
-          className="focus-visible:ring-foreground/25 flex snap-x snap-mandatory overflow-x-auto rounded-2xl outline-none [scrollbar-width:none] focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
+          className="focus-visible:ring-foreground/25 flex snap-x snap-mandatory overflow-x-auto rounded-lg outline-none [scrollbar-width:none] focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
         >
           {photos.map((src, i) => (
             <div key={src} className="flex w-full shrink-0 snap-center items-center justify-center">
@@ -71,7 +71,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
                 src={src}
                 alt={`${alt} — zdjęcie ${String(i + 1)}`}
                 loading={i === 0 ? "eager" : "lazy"}
-                className="h-[240px] w-full rounded-2xl object-cover lg:h-[340px]"
+                className="h-[240px] w-full rounded-lg object-cover lg:h-[340px]"
               />
             </div>
           ))}

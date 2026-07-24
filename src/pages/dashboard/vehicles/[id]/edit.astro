@@ -7,6 +7,7 @@ import VehicleForm from "../../../../components/fleet/VehicleForm";
 // others
 import { getVehicleById } from "../../../../lib/services/vehicles";
 import { listPendingReservations } from "../../../../lib/services/reservations";
+import { countOverdueReturns } from "../../../../lib/services/protocols";
 
 // Edit-vehicle route (S-04 Phase 5). Gated to `employee` by the middleware; SSR
 // resolves the vehicle by id and renders the shared VehicleForm in edit mode.
@@ -22,6 +23,7 @@ if (!vehicle) {
 }
 
 const pending = await listPendingReservations(supabase);
+const overdueCount = await countOverdueReturns(supabase);
 const title = vehicle ? "Edytuj pojazd" : "Nie znaleziono pojazdu";
 ---
 
@@ -33,6 +35,7 @@ const title = vehicle ? "Edytuj pojazd" : "Nie znaleziono pojazdu";
     user={user}
     role={role}
     pendingCount={pending.length}
+    overdueCount={overdueCount}
     showHeader={false}
   >
     {

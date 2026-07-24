@@ -371,6 +371,30 @@ export async function listReturnsToday(client: ProtocolClient | null): Promise<D
 }
 
 /**
+ * The number of open overdue rentals (S-07), via the role-gated
+ * `count_overdue_returns` definer RPC — a cheap, PII-free scalar every staff page
+ * reads to paint the "Zwroty" nav danger badge. It counts EXACTLY the rows
+ * `ReturnQueue` classifies as `overdue` (strictly-overdue + still-open + issued +
+ * confirmed), so the badge can never disagree with the on-page count.
+ *
+ * A `null` client degrades to `0` (matching `listReturnsToday`'s null-client → `[]`
+ * "cannot act" value); a non-staff caller gets `0` from the RPC's inline role gate.
+ * The RPC's scalar `count(*)::int` is always a number (0 when nothing matches), so
+ * `data` is non-null once the error is cleared. An unexpected DB error rethrows.
+ */
+export async function countOverdueReturns(client: ProtocolClient | null): Promise<number> {
+  if (!client) {
+    return 0;
+  }
+
+  const { data, error } = await client.rpc("count_overdue_returns");
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+/**
  * Commit a return via the `create_return_protocol` definer RPC — the only way a
  * return protocol row is ever created.
  *

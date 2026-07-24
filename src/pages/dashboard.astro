@@ -5,6 +5,7 @@ import StaffShell from "../components/shell/StaffShell.astro";
 import NeedDecisionPanel from "../components/dashboard/NeedDecisionPanel";
 
 // others
+import { countOverdueReturns } from "../lib/services/protocols";
 import { listPendingReservations } from "../lib/services/reservations";
 import { staffIdentity } from "../lib/staff-identity";
 
@@ -12,7 +13,7 @@ const { user, role, supabase } = Astro.locals;
 
 // The pending queue feeds both the shell badge and the dashboard "Wymaga decyzji"
 // mini-list (L3) — the in-scope slice of the design's dispatch dashboard.
-const pending = await listPendingReservations(supabase);
+const [pending, overdueCount] = await Promise.all([listPendingReservations(supabase), countOverdueReturns(supabase)]);
 const pendingCount = pending.length;
 
 const { initials } = staffIdentity(user?.email, role);
@@ -39,7 +40,14 @@ const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.
 ---
 
 <Layout title="Pulpit — Flota">
-  <StaffShell active="dash" title="Pulpit" user={user} role={role} pendingCount={pendingCount}>
+  <StaffShell
+    active="dash"
+    title="Pulpit"
+    user={user}
+    role={role}
+    pendingCount={pendingCount}
+    overdueCount={overdueCount}
+  >
     <main class="mx-auto w-full max-w-2xl px-4 py-8">
       {/* Mobile hero (the desktop topbar carries the title at md+) */}
       <header class="mb-6 flex items-start justify-between gap-4 px-1 md:hidden">
@@ -64,7 +72,7 @@ const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.
 
         <a
           href="/dashboard/calendar"
-          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
         >
           <div>
             <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
@@ -75,7 +83,7 @@ const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.
 
         <a
           href="/dashboard/vehicles"
-          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-2xl border p-5 transition-colors"
+          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
         >
           <div>
             <div class="text-foreground text-base font-[650] tracking-tight">Zarządzanie flotą</div>

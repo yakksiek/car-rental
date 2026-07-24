@@ -432,7 +432,7 @@ export default function ReservationForm(props: Props) {
 
       <div className="lg:grid lg:grid-cols-[7fr_3fr] lg:items-start lg:gap-10">
         {/* Order summary — sticky right on desktop, on top on mobile (D9, D23). */}
-        <aside className="bg-card shadow-card mb-6 rounded-2xl p-6 lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1 lg:mb-0">
+        <aside className="bg-card shadow-card mb-6 rounded-lg p-6 lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1 lg:mb-0">
           <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{COPY.summary}</h2>
 
           <div className="mt-3 flex items-center gap-3">
@@ -470,7 +470,7 @@ export default function ReservationForm(props: Props) {
         {/* Main: step 2 fields OR step 3 review. */}
         <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           {step === "details" ? (
-            <section className="bg-card shadow-card rounded-2xl p-5 sm:p-6">
+            <section className="bg-card shadow-card rounded-lg p-5 sm:p-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {textFields.map((field) => (
                   <div key={field.id} className={cn("flex flex-col gap-1.5", field.full && "sm:col-span-2")}>
@@ -573,7 +573,7 @@ export default function ReservationForm(props: Props) {
               </div>
             </section>
           ) : (
-            <section className="bg-card shadow-card rounded-2xl p-5 sm:p-6">
+            <section className="bg-card shadow-card rounded-lg p-5 sm:p-6">
               {/* Booking details — dates change on step 1 (the detail page). */}
               <div className="flex items-center justify-between">
                 <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
