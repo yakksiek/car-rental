@@ -80,7 +80,10 @@ const COPY = {
   footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
 } as const;
 
-const cardClass = "rounded-2xl border border-border bg-card shadow-card";
+// 16px content cards (design source = borderRadius:16 = rounded-lg). The project
+// remaps the Tailwind radius scale in global.css: rounded-lg=16px, rounded-xl=20px.
+// (28px is sheet-only — applied as an explicit rounded-t-[28px], not a utility.)
+const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 type Filter = "all" | "active" | "invited" | "admin";
 
@@ -141,6 +144,47 @@ function StatusBadge({ status }: { status: StaffMember["status"] }) {
   );
 }
 
+// Filter pill — shared by the desktop white bar (bare=false) and the
+// mobile/tablet wrapping row (bare=true → inactive pills get a white card+border
+// so they read on the grey background).
+function TabButton({
+  t,
+  active,
+  onClick,
+  bare = false,
+}: {
+  t: { key: Filter; label: string; count: number };
+  active: boolean;
+  onClick: () => void;
+  bare?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-[540] tracking-tight transition-colors",
+        active
+          ? "bg-foreground text-background"
+          : bare
+            ? "border-border bg-card shadow-card text-foreground border"
+            : "text-foreground hover:bg-background",
+      )}
+    >
+      {t.label}
+      <span
+        className={cn(
+          "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+          active ? "text-background bg-white/20" : "bg-muted text-muted-foreground",
+        )}
+      >
+        {t.count}
+      </span>
+    </button>
+  );
+}
+
 // ── modal shell (mirrors RetireDialog) ────────────────────────────────────────
 
 function ModalShell({
@@ -161,7 +205,7 @@ function ModalShell({
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className="bg-card shadow-overlay relative w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-2xl"
+        className="bg-card shadow-overlay relative w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-xl"
       >
         <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
         {showClose && (
@@ -312,7 +356,7 @@ function RemoveModal({
   const matches = typed.trim().toLowerCase() === member.email.toLowerCase();
   return (
     <ModalShell onClose={onClose}>
-      <div className="text-destructive flex size-12 items-center justify-center rounded-2xl bg-[var(--flota-danger-soft)]">
+      <div className="text-destructive flex size-12 items-center justify-center rounded-lg bg-[var(--flota-danger-soft)]">
         <AlertTriangle className="size-6" />
       </div>
       <div className="text-foreground mt-4 text-xl font-bold tracking-tight">{COPY.removeTitle}</div>
@@ -362,7 +406,7 @@ function RemoveModal({
 function LastAdminModal({ onClose }: { onClose: () => void }) {
   return (
     <ModalShell onClose={onClose}>
-      <div className="text-warning flex size-12 items-center justify-center rounded-2xl bg-[var(--flota-warning-soft)]">
+      <div className="text-warning flex size-12 items-center justify-center rounded-lg bg-[var(--flota-warning-soft)]">
         <ShieldCheck className="size-6" />
       </div>
       <div className="text-foreground mt-4 text-xl leading-snug font-bold tracking-tight">{COPY.lastAdminTitle}</div>
@@ -502,24 +546,61 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
   return (
     <div>
-      {/* ── Header (§3.1) ─────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase md:hidden">
-            {COPY.eyebrowMobileWord(total)}
-          </div>
-          <div className="text-muted-foreground hidden text-xs font-semibold tracking-wide uppercase md:block">
-            {staffCountLabel(total, adminCount)}
-          </div>
-          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
-            <span className="md:hidden">{COPY.titleMobile}</span>
-            <span className="hidden md:inline">{COPY.title}</span>
-          </h1>
-        </div>
+      {/* ── Header band (full-width white, flush top — aligned with other sections) ── */}
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto w-full max-w-[1024px] px-4 py-5 md:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase md:hidden">
+                {COPY.eyebrowMobileWord(total)}
+              </div>
+              <div className="text-muted-foreground hidden text-xs font-semibold tracking-wide uppercase md:block">
+                {staffCountLabel(total, adminCount)}
+              </div>
+              <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
+                <span className="md:hidden">{COPY.titleMobile}</span>
+                <span className="hidden md:inline">{COPY.title}</span>
+              </h1>
+            </div>
 
-        {/* Desktop: search + dark add button */}
-        <div className="hidden items-center gap-3 md:flex">
-          <div className="relative w-64">
+            <div className="flex items-center gap-3">
+              {/* Search inline only at lg+ (moves to its own row below on tablet/mobile) */}
+              <div className="relative hidden w-64 lg:block">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                  }}
+                  placeholder={COPY.searchPlaceholder}
+                  className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
+                />
+              </div>
+              {/* Add employee — labeled dark button at md+ (tablet + desktop), circular FAB below md */}
+              <Button
+                className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 px-4 md:inline-flex"
+                onClick={() => {
+                  setAddOpen(true);
+                }}
+              >
+                <Plus className="size-4" />
+                {COPY.add}
+              </Button>
+              <Button
+                className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full md:hidden"
+                aria-label={COPY.add}
+                onClick={() => {
+                  setAddOpen(true);
+                }}
+              >
+                <Plus className="size-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Search full-width — mobile + tablet (below lg) */}
+          <div className="relative mt-4 lg:hidden">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
             <input
               type="search"
@@ -528,325 +609,258 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 setSearch(e.target.value);
               }}
               placeholder={COPY.searchPlaceholder}
-              className="border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-xl border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
+              className="border-border bg-background text-foreground placeholder:text-muted-foreground h-12 w-full rounded-[10px] border pr-4 pl-11 text-sm outline-none"
             />
           </div>
-          <Button
-            className="bg-foreground text-background hover:bg-foreground/90 h-11 px-4"
-            onClick={() => {
-              setAddOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            {COPY.add}
-          </Button>
         </div>
+      </header>
 
-        {/* Mobile: circular FAB */}
-        <Button
-          className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full md:hidden"
-          aria-label={COPY.add}
-          onClick={() => {
-            setAddOpen(true);
-          }}
-        >
-          <Plus className="size-5" />
-        </Button>
-      </div>
-
-      {/* Mobile: full-width search */}
-      <div className="relative mt-4 md:hidden">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-          }}
-          placeholder={COPY.searchPlaceholder}
-          className="border-border bg-card shadow-card text-foreground placeholder:text-muted-foreground h-12 w-full rounded-2xl border pr-4 pl-11 text-sm outline-none"
-        />
-      </div>
-
-      {/* Mutation banner (§3.12) — above the filter card */}
-      {banner && (
-        <div
-          className={cn(
-            "mt-5 flex items-center justify-between gap-3 rounded-2xl border px-5 py-3.5",
-            banner.kind === "error"
-              ? "border-destructive/30 bg-[var(--flota-danger-soft)]"
-              : "border-success/30 bg-[var(--flota-success-soft)]",
-          )}
-        >
-          <span
+      {/* ── Content (grey) ─────────────────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
+        {/* Mutation banner (§3.12) — above the filter card */}
+        {banner && (
+          <div
             className={cn(
-              "flex items-center gap-2.5 text-sm font-[540]",
-              banner.kind === "error" ? "text-destructive" : "text-success",
+              "mb-5 flex items-center justify-between gap-3 rounded-lg border px-5 py-3.5",
+              banner.kind === "error"
+                ? "border-destructive/30 bg-[var(--flota-danger-soft)]"
+                : "border-success/30 bg-[var(--flota-success-soft)]",
             )}
           >
-            {banner.kind === "error" ? (
-              <AlertTriangle className="size-4 shrink-0" />
-            ) : (
-              <ShieldCheck className="size-4 shrink-0" />
-            )}
-            {banner.msg}
-          </span>
-          {banner.kind === "error" && banner.retry && (
-            <Button
-              variant="outline"
-              className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
-              onClick={() => {
-                const r = banner.retry;
-                setBanner(null);
-                r?.();
-              }}
+            <span
+              className={cn(
+                "flex items-center gap-2.5 text-sm font-[540]",
+                banner.kind === "error" ? "text-destructive" : "text-success",
+              )}
             >
-              {COPY.retry}
-            </Button>
-          )}
-        </div>
-      )}
+              {banner.kind === "error" ? (
+                <AlertTriangle className="size-4 shrink-0" />
+              ) : (
+                <ShieldCheck className="size-4 shrink-0" />
+              )}
+              {banner.msg}
+            </span>
+            {banner.kind === "error" && banner.retry && (
+              <Button
+                variant="outline"
+                className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
+                onClick={() => {
+                  const r = banner.retry;
+                  setBanner(null);
+                  r?.();
+                }}
+              >
+                {COPY.retry}
+              </Button>
+            )}
+          </div>
+        )}
 
-      {/* ── Filter tabs + avatar stack (desktop, §3.2) ────────────────── */}
-      <div className={cn(cardClass, "mt-5 hidden items-center gap-1 px-3 py-2.5 md:flex")}>
-        {tabs.map((t) => {
-          const active = filter === t.key;
-          return (
-            <button
+        {/* ── Filter tabs — white bar + avatar stack at lg+; bare wrapping pills below lg (§3.2/§3.13) ── */}
+        <div className={cn(cardClass, "hidden items-center gap-1 px-3 py-2.5 lg:flex")}>
+          {tabs.map((t) => (
+            <TabButton
               key={t.key}
-              type="button"
+              t={t}
+              active={filter === t.key}
               onClick={() => {
                 setFilter(t.key);
               }}
-              aria-pressed={active}
-              className={cn(
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-[540] tracking-tight transition-colors",
-                active ? "bg-foreground text-background" : "text-foreground hover:bg-background",
-              )}
-            >
-              {t.label}
-              <span
-                className={cn(
-                  "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold",
-                  active ? "text-background bg-white/20" : "bg-muted text-muted-foreground",
-                )}
-              >
-                {t.count}
-              </span>
-            </button>
-          );
-        })}
-        <div className="ml-auto flex items-center pr-1">
-          {orderedStaff.slice(0, 4).map((m) => (
-            <Avatar key={m.id} member={m} className="ring-card -ml-2 size-9 text-[13px] ring-2 first:ml-0" />
+            />
           ))}
-          {orderedStaff.length > 4 && (
-            <span className="bg-muted text-muted-foreground ring-card -ml-2 flex size-9 items-center justify-center rounded-full text-xs font-bold ring-2">
-              +{orderedStaff.length - 4}
-            </span>
-          )}
+          <div className="ml-auto flex items-center pr-1">
+            {orderedStaff.slice(0, 4).map((m) => (
+              <Avatar key={m.id} member={m} className="ring-card -ml-2 size-9 text-[13px] ring-2 first:ml-0" />
+            ))}
+            {orderedStaff.length > 4 && (
+              <span className="bg-muted text-muted-foreground ring-card -ml-2 flex size-9 items-center justify-center rounded-full text-xs font-bold ring-2">
+                +{orderedStaff.length - 4}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* ── Mobile filter chips (§3.13) ───────────────────────────────── */}
-      <div className="mt-3 flex flex-wrap gap-2 md:hidden">
-        {(
-          [
-            { key: "active", label: COPY.chipActive, count: activeCount, dot: "bg-success" },
-            { key: "invited", label: COPY.chipInvited, count: invitedCount, dot: "bg-warning" },
-            { key: "admin", label: COPY.chipAdmin, count: adminCount, dot: "bg-primary" },
-          ] as const
-        ).map((c) => {
-          const active = filter === c.key;
-          return (
-            <button
-              key={c.key}
-              type="button"
+        <div className="flex flex-wrap gap-2 lg:hidden">
+          {tabs.map((t) => (
+            <TabButton
+              key={t.key}
+              t={t}
+              active={filter === t.key}
+              bare
               onClick={() => {
-                setFilter(active ? "all" : c.key);
+                setFilter(t.key);
               }}
-              aria-pressed={active}
-              className={cn(
-                "shadow-card inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm",
-                active ? "bg-foreground text-background border-transparent" : "border-border bg-card",
-              )}
-            >
-              <span className={cn("size-1.5 rounded-full", active ? "bg-background" : c.dot)} />
-              <span className={cn("font-[540]", active ? "text-background" : "text-foreground")}>{c.label}</span>
-              <span className={cn("font-bold", active ? "text-background" : "text-foreground")}>{c.count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Roster ────────────────────────────────────────────────────── */}
-      {isEmpty ? (
-        <EmptyState
-          onAdd={() => {
-            setAddOpen(true);
-          }}
-        />
-      ) : noResults ? (
-        <NoResults />
-      ) : (
-        <>
-          {/* Desktop table (§3.3) */}
-          <div className={cn(cardClass, "mt-5 hidden overflow-hidden md:block")}>
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="text-muted-foreground border-border border-b text-[11px] font-bold tracking-wide uppercase">
-                  <th className="px-5 py-3 font-bold">{COPY.colName}</th>
-                  <th className="px-5 py-3 font-bold">{COPY.colRole}</th>
-                  <th className="px-5 py-3 font-bold">{COPY.colStatus}</th>
-                  <th className="px-5 py-3 font-bold">{COPY.colLastActive}</th>
-                  <th className="px-5 py-3" aria-label="Akcje" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((m) => {
-                  const isSelf = m.id === currentUserId;
-                  return (
-                    <tr key={m.id} className="border-b border-[var(--flota-hair-2)] last:border-0">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <Avatar member={m} className="size-9 text-[13px]" />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-foreground truncate text-sm font-[650] tracking-tight">
-                                {m.fullName ?? m.email}
-                              </span>
-                              {isSelf && (
-                                <span className="text-muted-foreground text-sm font-normal">{COPY.selfSuffix}</span>
-                              )}
-                            </div>
-                            <div className="text-muted-foreground mt-0.5 truncate text-xs">{m.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <RoleBadge role={m.role} />
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <StatusBadge status={m.status} />
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-foreground text-sm" suppressHydrationWarning>
-                          {formatLastActive(m, nowMs)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
-                            disabled={busyId === m.id}
-                            onClick={() => resetPassword(m)}
-                          >
-                            <KeyRound className="size-3.5" />
-                            {COPY.reset}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className={cn(
-                              "size-9",
-                              isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
-                            )}
-                            disabled={isSelf || busyId === m.id}
-                            aria-label={COPY.removeAria}
-                            onClick={() => {
-                              setRemoveFor(m);
-                            }}
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile cards (§3.13) */}
-          <div className="mt-4 flex flex-col gap-3 md:hidden">
-            {filtered.map((m) => {
-              const isSelf = m.id === currentUserId;
-              return (
-                <div key={m.id} className={cn(cardClass, "flex items-center gap-3.5 p-4")}>
-                  <Avatar member={m} className="size-14 text-[15px]" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-foreground text-[17px] font-bold tracking-tight">
-                        {m.fullName ?? m.email}
-                      </span>
-                      <RoleBadge role={m.role} mobile />
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 truncate text-sm">{m.email}</div>
-                    <div className="mt-1 flex items-center gap-1.5 text-[13px]">
-                      <span
-                        className={cn("size-1.5 rounded-full", m.status === "active" ? "bg-success" : "bg-warning")}
-                      />
-                      <span className={cn("font-[540]", m.status === "active" ? "text-success" : "text-warning")}>
-                        {m.status === "active" ? COPY.statusActiveMobile : COPY.statusInvitedMobile}
-                      </span>
-                      <span className="text-muted-foreground" suppressHydrationWarning>
-                        · {formatLastActive(m, nowMs)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-auto flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="text-foreground size-11 rounded-xl"
-                      disabled={busyId === m.id}
-                      aria-label={COPY.resetAria}
-                      onClick={() => resetPassword(m)}
-                    >
-                      <KeyRound className="size-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={cn(
-                        "size-11 rounded-xl",
-                        isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
-                      )}
-                      disabled={isSelf || busyId === m.id}
-                      aria-label={COPY.removeAria}
-                      onClick={() => {
-                        setRemoveFor(m);
-                      }}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* Desktop footer note (§3.5) */}
-      {!isEmpty && (
-        <div className={cn(cardClass, "mt-4 hidden items-center gap-3 px-5 py-4 md:flex")}>
-          <User className="text-muted-foreground size-5 shrink-0" />
-          <p className="text-sm">
-            <span className="text-foreground font-[650]">{COPY.footerBold}</span>
-            <span className="text-muted-foreground">{COPY.footerRest}</span>
-          </p>
+            />
+          ))}
         </div>
-      )}
 
-      {/* Mobile footer note (§3.13) */}
-      {!isEmpty && (
-        <p className="text-muted-foreground mt-4 px-2 text-center text-sm leading-relaxed md:hidden">
-          {COPY.footerMobile}
-        </p>
-      )}
+        {/* ── Roster ────────────────────────────────────────────────────── */}
+        {isEmpty ? (
+          <EmptyState
+            onAdd={() => {
+              setAddOpen(true);
+            }}
+          />
+        ) : noResults ? (
+          <NoResults />
+        ) : (
+          <>
+            {/* Desktop table (§3.3) — lg+ only (tablet uses cards) */}
+            <div className={cn(cardClass, "mt-5 hidden overflow-hidden lg:block")}>
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="text-muted-foreground border-border border-b text-[11px] font-bold tracking-wide uppercase">
+                    <th className="px-4 py-3 font-bold">{COPY.colName}</th>
+                    <th className="px-4 py-3 font-bold">{COPY.colRole}</th>
+                    <th className="px-4 py-3 font-bold">{COPY.colStatus}</th>
+                    <th className="px-4 py-3" aria-label="Akcje" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((m) => {
+                    const isSelf = m.id === currentUserId;
+                    return (
+                      <tr key={m.id} className="border-b border-[var(--flota-hair-2)] last:border-0">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <Avatar member={m} className="size-9 text-[13px]" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-foreground truncate text-sm font-[650] tracking-tight">
+                                  {m.fullName ?? m.email}
+                                </span>
+                                {isSelf && (
+                                  <span className="text-muted-foreground text-sm font-normal">{COPY.selfSuffix}</span>
+                                )}
+                              </div>
+                              <div className="text-muted-foreground mt-0.5 truncate text-xs">{m.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <RoleBadge role={m.role} />
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusBadge status={m.status} />
+                            <span className="text-muted-foreground text-xs" suppressHydrationWarning>
+                              {formatLastActive(m, nowMs, { invitePrefix: false })}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
+                              disabled={busyId === m.id}
+                              onClick={() => resetPassword(m)}
+                            >
+                              <KeyRound className="size-3.5" />
+                              {COPY.reset}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={cn(
+                                "size-9",
+                                isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
+                              )}
+                              disabled={isSelf || busyId === m.id}
+                              aria-label={COPY.removeAria}
+                              onClick={() => {
+                                setRemoveFor(m);
+                              }}
+                            >
+                              <X className="size-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cards — mobile + tablet (below lg) */}
+            <div className="mt-4 flex flex-col gap-3 lg:hidden">
+              {filtered.map((m) => {
+                const isSelf = m.id === currentUserId;
+                return (
+                  <div key={m.id} className={cn(cardClass, "flex items-center gap-3.5 p-4")}>
+                    <Avatar member={m} className="size-14 text-[15px]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-foreground text-[17px] font-bold tracking-tight">
+                          {m.fullName ?? m.email}
+                        </span>
+                        <RoleBadge role={m.role} mobile />
+                      </div>
+                      <div className="text-muted-foreground mt-0.5 truncate text-sm">{m.email}</div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[13px]">
+                        <span
+                          className={cn("size-1.5 rounded-full", m.status === "active" ? "bg-success" : "bg-warning")}
+                        />
+                        <span className={cn("font-[540]", m.status === "active" ? "text-success" : "text-warning")}>
+                          {m.status === "active" ? COPY.statusActiveMobile : COPY.statusInvitedMobile}
+                        </span>
+                        <span className="text-muted-foreground" suppressHydrationWarning>
+                          · {formatLastActive(m, nowMs, { invitePrefix: false })}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ml-auto flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-foreground size-11 rounded-xl"
+                        disabled={busyId === m.id}
+                        aria-label={COPY.resetAria}
+                        onClick={() => resetPassword(m)}
+                      >
+                        <KeyRound className="size-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={cn(
+                          "size-11 rounded-xl",
+                          isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
+                        )}
+                        disabled={isSelf || busyId === m.id}
+                        aria-label={COPY.removeAria}
+                        onClick={() => {
+                          setRemoveFor(m);
+                        }}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Desktop footer note (§3.5) */}
+        {!isEmpty && (
+          <div className={cn(cardClass, "mt-4 hidden items-center gap-3 px-5 py-4 md:flex")}>
+            <User className="text-muted-foreground size-5 shrink-0" />
+            <p className="text-sm">
+              <span className="text-foreground font-[650]">{COPY.footerBold}</span>
+              <span className="text-muted-foreground">{COPY.footerRest}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Mobile footer note (§3.13) */}
+        {!isEmpty && (
+          <p className="text-muted-foreground mt-4 px-2 text-center text-sm leading-relaxed md:hidden">
+            {COPY.footerMobile}
+          </p>
+        )}
+      </div>
 
       {/* ── Modals ────────────────────────────────────────────────────── */}
       {addOpen && (
@@ -884,7 +898,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
-      <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-2xl">
+      <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-lg">
         <User className="size-7" />
       </div>
       <div className="text-foreground mt-4 text-xl font-bold tracking-tight">{COPY.emptyTitle}</div>
@@ -900,7 +914,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 function NoResults() {
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
-      <div className="bg-muted flex size-16 items-center justify-center rounded-2xl">
+      <div className="bg-muted flex size-16 items-center justify-center rounded-lg">
         <Search className="text-muted-foreground size-7" />
       </div>
       <div className="text-foreground mt-4 text-xl font-bold tracking-tight">{COPY.noResultsTitle}</div>
