@@ -108,7 +108,18 @@ function DecisionCard({
   );
 }
 
-export default function NeedDecisionPanel({ reservations: initial }: { reservations: PendingReservation[] }) {
+export default function NeedDecisionPanel({
+  reservations: initial,
+  showHeader = true,
+}: {
+  reservations: PendingReservation[];
+  /**
+   * The mobile cockpit wraps this panel in a tinted section whose band already
+   * carries the title and the "Otwórz" link, so it suppresses the panel's own
+   * header rather than stacking two. Desktop keeps it (default).
+   */
+  showHeader?: boolean;
+}) {
   const [reservations, setReservations] = React.useState<PendingReservation[]>(initial);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
@@ -152,18 +163,20 @@ export default function NeedDecisionPanel({ reservations: initial }: { reservati
 
   return (
     <div className="relative">
-      <div className="mb-3 flex items-center justify-between px-1">
-        <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
-        {count > 0 && (
-          <a
-            href="/dashboard/reservations"
-            className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
-          >
-            {COPY.open}
-            <ArrowRight className="size-3.5" />
-          </a>
-        )}
-      </div>
+      {showHeader && (
+        <div className="mb-3 flex items-center justify-between px-1">
+          <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
+          {count > 0 && (
+            <a
+              href="/dashboard/reservations"
+              className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
+            >
+              {COPY.open}
+              <ArrowRight className="size-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {banner && (
         <div className="border-border mb-3 rounded-xl border bg-[var(--flota-warning-soft)] px-4 py-3 text-sm text-[var(--flota-ink-2)]">

@@ -1,5 +1,7 @@
 // core
+import type * as React from "react";
 import { ArrowDown, Check, ChevronRight, Key, Truck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
@@ -71,14 +73,20 @@ export function toReturnItem(row: DispatchReturnRow, today: string, origin: stri
   };
 }
 
-/** Open: a hairline ring. Done: a filled green disc with a check. */
-export function StatusCircle({ done }: { done: boolean }) {
+/**
+ * Open: a hairline ring. Done: a filled green disc with a check.
+ *
+ * Two sizes, both from the design source: the desktop row's `size-6` / 1.5px ring
+ * (§C) and the mobile `ActionRow`'s 30px / 2px one.
+ */
+export function StatusCircle({ done, size = "sm" }: { done: boolean; size?: "sm" | "md" }) {
+  const box = size === "sm" ? "size-6" : "size-[30px]";
   return done ? (
-    <span className="bg-success flex size-6 shrink-0 items-center justify-center rounded-full">
-      <Check className="size-[13px] text-white" />
+    <span className={cn("bg-success flex shrink-0 items-center justify-center rounded-full", box)}>
+      <Check className={cn("text-white", size === "sm" ? "size-[13px]" : "size-[14px]")} />
     </span>
   ) : (
-    <span className="border-border size-6 shrink-0 rounded-full border-[1.5px]" />
+    <span className={cn("border-border shrink-0 rounded-full", box, size === "sm" ? "border-[1.5px]" : "border-2")} />
   );
 }
 
@@ -196,11 +204,14 @@ export const EMPTY_COPY: Record<ScheduleKind, string> = {
   returns: "Brak zwrotów na dziś",
 };
 
-/** Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie` / done text. */
+/**
+ * Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie`.
+ *
+ * A DONE row keeps its CTA unchanged — the design dims the whole row instead of
+ * swapping in a `Zakończone` label (that swap was our earlier adaptation, made
+ * when the mobile mockup had no done sample; the source now specifies one).
+ */
 function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
-  if (item.done) {
-    return <span className="text-success shrink-0 text-[12.5px] font-[650]">Zakończone</span>;
-  }
   const cta =
     kind === "pickups"
       ? { label: "Protokół", tone: "bg-foreground text-background" }
@@ -222,10 +233,10 @@ function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
       href={item.href}
       className={cn(
         "bg-card shadow-card mb-2 flex items-center gap-3 rounded-[16px] px-3.5 py-3",
-        item.done && "opacity-55",
+        item.done && "opacity-60",
       )}
     >
-      <StatusCircle done={item.done} />
+      <StatusCircle done={item.done} size="md" />
       <div className="min-w-0 flex-1">
         <div className="text-foreground truncate text-[14px] leading-[1.15] font-[650] tracking-[-0.2px]">
           {item.customerName}
@@ -242,9 +253,45 @@ function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
 }
 
 /**
- * One mobile section: an uppercase `WYDANIA · {total}` header with its glyph, then
- * the row cards (or the quiet-day line).
+ * The tinted section panel that now wraps each mobile group (design `Section`,
+ * pulled 2026-07-27). Header and rows sit INSIDE one rounded tint; the three
+ * tints are deliberate one-offs in the JSX, like the desktop band's `#E6EAF0`.
  */
+const SECTION_TINTS = {
+  ink: "bg-[#E4E6EA]",
+  green: "bg-[#E2EAE3]",
+  amber: "bg-[#EFE9DD]",
+} as const;
+
+export function MobileSection({
+  title,
+  icon: Icon,
+  tint,
+  action,
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  tint: keyof typeof SECTION_TINTS;
+  /** Optional right-hand affordance in the header band (e.g. the Wnioski "Otwórz"). */
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cn("mb-4 rounded-[18px] px-2 pt-2.5 pb-1", SECTION_TINTS[tint])}>
+      <div className="mx-1.5 mb-2.5 flex items-center gap-2 px-1.5">
+        <h2 className="text-foreground flex flex-1 items-center gap-2 text-[13px] font-extrabold tracking-[0.4px] uppercase">
+          <Icon className="size-3.5" aria-hidden="true" />
+          {title}
+        </h2>
+        {action}
+      </div>
+      <div className="px-1">{children}</div>
+    </section>
+  );
+}
+
+/** One mobile schedule section: the tinted panel plus its row cards. */
 export function MobileScheduleSection({
   kind,
   label,
@@ -256,21 +303,20 @@ export function MobileScheduleSection({
   total: number;
   items: ScheduleItem[];
 }) {
-  const Icon = kind === "pickups" ? Key : ArrowDown;
   return (
-    <section className="mb-[18px]">
-      <h2 className="text-muted-foreground flex items-center gap-2 px-1 pb-2 text-[13px] font-bold tracking-[0.4px] uppercase">
-        <Icon className="size-3.5" aria-hidden="true" />
-        {label} · {total}
-      </h2>
+    <MobileSection
+      title={`${label} · ${total}`}
+      icon={kind === "pickups" ? Key : ArrowDown}
+      tint={kind === "pickups" ? "ink" : "green"}
+    >
       {items.length === 0 ? (
-        <p className="bg-card shadow-card text-muted-foreground rounded-[16px] px-3.5 py-6 text-center text-[13px]">
+        <p className="bg-card shadow-card text-muted-foreground mb-2 rounded-[16px] px-3.5 py-6 text-center text-[13px]">
           {EMPTY_COPY[kind]}
         </p>
       ) : (
         items.map((item) => <MobileRow key={item.key} item={item} kind={kind} />)
       )}
-    </section>
+    </MobileSection>
   );
 }
 
