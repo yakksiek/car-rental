@@ -138,10 +138,22 @@ function DoneDivider({ tone = "card" }: { tone?: "card" | "panel" }) {
   );
 }
 
-/** Desktop right affordance: outline `Protokół ›`, the overdue chip, or `Zakończone`. */
+/**
+ * Desktop right affordance: outline `Protokół ›`, the overdue chip, or — on a done
+ * row — the quieter `Protokół ›` that opens the FILED protocol.
+ *
+ * A done row used to show a `Zakończone` status label here. That wasted the slot:
+ * the row already links to the protocol, and the filled check circle plus the
+ * `ZAKOŃCZONE` divider state the outcome. The affordance names the action instead.
+ */
 function DesktopAction({ item }: { item: ScheduleItem }) {
   if (item.done) {
-    return <span className="text-success shrink-0 text-[12.5px] font-[650]">Zakończone</span>;
+    return (
+      <span className="border-border bg-background text-foreground inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[9px] border px-3.5 text-[12.5px] font-[650]">
+        Protokół
+        <ChevronRight className="size-[13px] text-[var(--flota-ink-2)]" />
+      </span>
+    );
   }
   if (item.overdue) {
     return (
@@ -246,12 +258,18 @@ export const EMPTY_COPY: Record<ScheduleKind, string> = {
 /**
  * Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie`.
  *
- * A done row drops to quiet success text — with the dim gone, a primary-filled
- * button would make finished work look as actionable as open work.
+ * A done row keeps a real affordance — the ghost `Protokół`, opening the filed
+ * protocol — rather than a `Zakończone` status label; the check circle and the
+ * `ZAKOŃCZONE` divider already carry the outcome. Ghost, not filled, so finished
+ * work does not compete with open work now that the dim is gone.
  */
 function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
   if (item.done) {
-    return <span className="text-success shrink-0 text-[12.5px] font-[650]">Zakończone</span>;
+    return (
+      <span className="bg-background text-foreground border-border inline-flex h-8 shrink-0 items-center rounded-[10px] border px-3 text-[12px] font-[650]">
+        Protokół
+      </span>
+    );
   }
   const cta =
     kind === "pickups"

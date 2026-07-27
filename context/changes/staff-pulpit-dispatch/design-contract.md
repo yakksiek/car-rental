@@ -118,7 +118,7 @@ pulled (exact values), 11 deviations recorded.**
   - Vehicle box: `w-[70px] h-11 rounded-[9px] bg-background flex items-center justify-center shrink-0` + `Truck size-5 text-muted-foreground` — `deviation(generic glyph — RPC returns no vehicle type/photo; JSX draws a per-type Silhouette w=62)`
   - Text: name `text-[14px] font-[650] tracking-[-0.2px] text-foreground truncate`; sub `mt-0.5 text-[12px] text-muted-foreground truncate` = `{make} {model} · ` + `font-mono` `{reference}` — `exact`
   - Open CTA: `Protokół` + `ChevronRight size-[13px] text-[var(--flota-ink-2)]` in `h-[34px] px-3.5 rounded-[9px] border border-border bg-card text-[12.5px] font-[650] text-foreground inline-flex items-center gap-1.5` — `exact` (both groups use `Protokół` on desktop, per v3)
-  - Done: `Zakończone` `text-[12.5px] font-[650] text-success` — `exact`
+  - Done: the quieter `Protokół` + `ChevronRight size-[13px]` in `h-[34px] px-3.5 rounded-[9px] border border-border bg-background` (same shape as the open CTA, `bg-background` instead of `bg-card`) — `deviation(14 — see register)`
   - Link target — open pickup → `/dashboard/pickups/{reservation_id}`; open return → `/dashboard/returns/{reservation_id}`; done → `/dashboard/protocols/{protocol_id | return_protocol_id}` — `exact` (decision Q2)
   - Overdue-open return: CTA slot shows the mobile danger chip `Po terminie` (`h-8 px-3 rounded-[10px] bg-[var(--flota-danger-soft)] text-primary text-[12px] font-[650]`), still linking to the return flow — `deviation(desktop overdue not sampled; adapted from mobile ActionRow danger CTA)`
 
@@ -160,7 +160,7 @@ sampled the done row; values below are from that pull.
   - Text: name `text-[14px] font-[650] tracking-[-0.2px] leading-[1.15] text-foreground`; sub `mt-0.5 text-[12px] text-muted-foreground truncate` = `{make} {model} · {reference}` — `exact` (JSX sub shows plate; ours shows mono reference — `deviation(consistency with desktop row + queue pages)`)
   - CTA button: `h-8 px-3 rounded-[10px] text-[12px] font-[650] shrink-0` — pickups: `Protokół` `bg-foreground text-background`; returns open: `Zwrot` `bg-background text-foreground border border-border`; returns overdue: `Po terminie` `bg-[var(--flota-danger-soft)] text-primary` — `exact`
   - Whole row is the link (same targets as §C) — `deviation(interaction — decision Q2)`
-  - **Done row**: no dim; the row sinks below a `ZAKOŃCZONE` divider and its CTA drops to `Zakończone` `text-[12.5px] font-[650] text-success`. Diverges from the JSX (`opacity: done ? 0.6 : 1`, interleaved order, `cta="Protokół"` kept) — `deviation(14 — see register)`
+  - **Done row**: no dim; the row sinks below a `ZAKOŃCZONE` divider and keeps a real affordance — the **ghost `Protokół`** (`h-8 px-3 rounded-[10px] bg-background text-foreground border border-border`) opening the FILED protocol. Diverges from the JSX (`opacity: done ? 0.6 : 1`, interleaved order, `ctaStyle="primary"`) — `deviation(14 — see register)`
 - Wnioski section = `NeedDecisionPanel` with `showHeader={false}` inside the amber panel (JSX pending card: `rounded-[16px] p-3.5 mb-2.5`, buttons `h-[38px] rounded-[10px]`, approve `flex-2`) — `deviation(NeedDecisionPanel reused as-is)`
 - Empty states: Wydania `Brak wydań na dziś`; Zwroty `Brak zwrotów na dziś`; Wnioski = NeedDecisionPanel's own `Brak oczekujących wniosków` — `exact` (copy from queue pages; not sampled in mockup)
 
@@ -213,10 +213,13 @@ sampled the done row; values below are from that pull.
     opacity treatment reads as DISABLED, but these rows are live links to the filed
     protocol, so the dim is dropped and position carries the meaning instead: open rows
     first, then a `text-[10.5px] font-bold uppercase tracking-[0.4px] text-muted-foreground`
-    `ZAKOŃCZONE` label + hairline, then the finished block. The done CTA drops to quiet
-    `text-success` `Zakończone` at BOTH breakpoints (with no dim, a primary-filled button
-    would make finished work look as actionable as open work). Ordering lives in
-    `scheduleGroups`, so both breakpoints and any future consumer inherit it.
+    `ZAKOŃCZONE` label + hairline, then the finished block. The done row keeps an ACTION,
+    not a status: a ghost `Protokół` opening the filed protocol at both breakpoints. A
+    `Zakończone` status label there wasted the slot — the row already links to the
+    protocol, and the filled check circle plus the divider state the outcome. Ghost
+    rather than filled, so finished work does not compete with open work now the dim is
+    gone. Ordering lives in `scheduleGroups`, so both breakpoints and any future
+    consumer inherit it.
 13. **Mobile `WNIOSKI` section header not stacked** — `NeedDecisionPanel` is reused as-is
     (deviation 8) and carries its own `Wymaga decyzji` + `Otwórz →` header, so §G's
     section header is not rendered a second time above it.
