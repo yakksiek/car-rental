@@ -8,6 +8,7 @@ import ProtocolForm from "../../../components/protocol/ProtocolForm";
 
 // others
 import { listDispatchToday } from "../../../lib/services/protocols";
+import { resolveBackTarget } from "../../../lib/back-target";
 
 // The issue-protocol screen (S-05 Phase 5). Gated to `employee` by the middleware
 // (/dashboard prefix). The form's fixed context comes from `list_dispatch_today`
@@ -30,6 +31,10 @@ import { listDispatchToday } from "../../../lib/services/protocols";
 // The 404 follows the catalog detail page's `Astro.response.status` pattern instead.
 const { supabase } = Astro.locals;
 const { reservationId } = Astro.params;
+
+// Reachable from the dispatch worklist AND from the cockpit, so "back" follows
+// `?from` when the caller supplied one; absent, it stays the worklist.
+const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/pickups");
 
 const row = (await listDispatchToday(supabase)).find((dispatch) => dispatch.reservation_id === reservationId);
 
@@ -72,10 +77,10 @@ const ctx = row
           Ta rezerwacja nie czeka dziś na wydanie albo nie masz do niej dostępu.
         </p>
         <a
-          href="/dashboard/pickups"
+          href={back.href}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
         >
-          Wróć do pulpitu
+          {back.label}
         </a>
       </main>
     ) : issuedProtocolId ? (
@@ -95,12 +100,12 @@ const ctx = row
         >
           Otwórz protokół
         </a>
-        <a href="/dashboard/pickups" class="text-muted-foreground mt-3 text-[13px] font-semibold">
-          Wróć do pulpitu
+        <a href={back.href} class="text-muted-foreground mt-3 text-[13px] font-semibold">
+          {back.label}
         </a>
       </main>
     ) : (
-      <ProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />
+      <ProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} back={back} />
     )
   }
 </Layout>

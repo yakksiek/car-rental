@@ -13,6 +13,7 @@ import { computeReturnDeltas } from "../../lib/protocol-delta";
 import { formatFuelDelta, formatKmDriven, formatNewDamageCount } from "../../lib/return-form";
 import { useResendEmail } from "../hooks/useResendEmail";
 import type { ProtocolKind, ProtocolDamageType, ProtocolPhotoSlot } from "../../types";
+import type { BackTarget } from "../../lib/back-target";
 
 // The read-only issue-protocol view (S-05 Phase 6). Reached from the dispatch
 // list and from the conflict screen's `Otwórz protokół`. Its reason to exist is
@@ -60,6 +61,8 @@ export interface ProtocolViewBaselineDamage {
 }
 
 export interface ProtocolViewProps {
+  /** Where the back affordance returns to; omitted ⇒ the kind-matched worklist. */
+  back?: BackTarget;
   protocolId: string;
   reference: string;
   customerName: string;
@@ -216,8 +219,10 @@ export default function ProtocolView(props: ProtocolViewProps) {
   // ── Return-view specifics (S-06). Absent `kind` ⇒ the issue view, unchanged. ──
   const isReturn = props.kind === "return";
   const title = isReturn ? "Protokół zwrotu" : "Protokół wydania";
-  const backHref = isReturn ? "/dashboard/returns" : "/dashboard/pickups";
-  const backLabel = isReturn ? "Wróć do zwrotów" : "Wróć do wydań";
+  // Resolved by the page from `?from` (the cockpit is a second entry point), with
+  // the kind-matched worklist as its fallback — see `lib/back-target.ts`.
+  const backHref = props.back?.href ?? (isReturn ? "/dashboard/returns" : "/dashboard/pickups");
+  const backLabel = props.back?.label ?? (isReturn ? "Wróć do zwrotów" : "Wróć do wydań");
   const contextLabel = isReturn ? "Zwrot" : "Odbiór";
   const contextTime = isReturn ? (props.returnTime ?? "10:00") : props.pickupTime;
   const pdfFilename = `protokol-${isReturn ? "zwrotu" : "wydania"}-${props.reference}.pdf`;
