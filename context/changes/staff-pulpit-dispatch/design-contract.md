@@ -201,3 +201,10 @@ pulled (exact values), 11 deviations recorded.**
 12. **Mobile `WNIOSKI` section header not stacked** — `NeedDecisionPanel` is reused as-is
     (deviation 8) and carries its own `Wymaga decyzji` + `Otwórz →` header, so §G's
     section header is not rendered a second time above it.
+13. **Schedule row drops its CTA below at a narrow column** — under a **500px card
+    width** the row becomes `flex-wrap` and the affordance (`Protokół` / `Zakończone` /
+    `Po terminie`) moves to its own right-aligned line, so the customer name stops
+    colliding with it between `lg` and ~1157px viewport. Driven by `@container` +
+    `@min-[500px]:` on the card, NOT a viewport breakpoint — the panel is sized by the
+    `1.5fr` column (embeddable-panels lesson + the plan's container-width guardrail).
+    At the design's canonical 1440px width the row renders exactly as §C specifies.
