@@ -1,5 +1,5 @@
 // core
-import { Check, ChevronRight, Truck } from "lucide-react";
+import { ArrowDown, Check, ChevronRight, Key, Truck } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
@@ -176,6 +176,84 @@ export const EMPTY_COPY: Record<ScheduleKind, string> = {
   pickups: "Brak wydań na dziś",
   returns: "Brak zwrotów na dziś",
 };
+
+/** Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie` / done text. */
+function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
+  if (item.done) {
+    return <span className="text-success shrink-0 text-[12.5px] font-[650]">Zakończone</span>;
+  }
+  const cta =
+    kind === "pickups"
+      ? { label: "Protokół", tone: "bg-foreground text-background" }
+      : item.overdue
+        ? { label: "Po terminie", tone: "text-primary bg-[var(--flota-danger-soft)]" }
+        : { label: "Zwrot", tone: "bg-background text-foreground border border-border" };
+
+  return (
+    <span className={cn("inline-flex h-8 shrink-0 items-center rounded-[10px] px-3 text-[12px] font-[650]", cta.tone)}>
+      {cta.label}
+    </span>
+  );
+}
+
+/** One mobile row — a standalone white card; the whole card is the link. */
+function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
+  return (
+    <a
+      href={item.href}
+      className={cn(
+        "bg-card shadow-card mb-2 flex items-center gap-3 rounded-[16px] px-3.5 py-3",
+        item.done && "opacity-55",
+      )}
+    >
+      <StatusCircle done={item.done} />
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground truncate text-[14px] leading-[1.15] font-[650] tracking-[-0.2px]">
+          {item.customerName}
+        </div>
+        <div className="text-muted-foreground mt-0.5 truncate text-[12px]">
+          {item.vehicle}
+          {" · "}
+          <span className="font-mono">{item.reference}</span>
+        </div>
+      </div>
+      <MobileAction item={item} kind={kind} />
+    </a>
+  );
+}
+
+/**
+ * One mobile section: an uppercase `WYDANIA · {total}` header with its glyph, then
+ * the row cards (or the quiet-day line).
+ */
+export function MobileScheduleSection({
+  kind,
+  label,
+  total,
+  items,
+}: {
+  kind: ScheduleKind;
+  label: string;
+  total: number;
+  items: ScheduleItem[];
+}) {
+  const Icon = kind === "pickups" ? Key : ArrowDown;
+  return (
+    <section className="mb-[18px]">
+      <h2 className="text-muted-foreground flex items-center gap-2 px-1 pb-2 text-[13px] font-bold tracking-[0.4px] uppercase">
+        <Icon className="size-3.5" aria-hidden="true" />
+        {label} · {total}
+      </h2>
+      {items.length === 0 ? (
+        <p className="bg-card shadow-card text-muted-foreground rounded-[16px] px-3.5 py-6 text-center text-[13px]">
+          {EMPTY_COPY[kind]}
+        </p>
+      ) : (
+        items.map((item) => <MobileRow key={item.key} item={item} kind={kind} />)
+      )}
+    </section>
+  );
+}
 
 /**
  * The desktop schedule: one card, two groups. Rows carry their own hairline, so

@@ -388,9 +388,9 @@ None — no schema, data, or type changes.
 
 #### Automated
 
-- [x] 2.1 Type-check + lint pass (`npm run lint`)
-- [x] 2.2 Build passes (`npm run build`)
-- [x] 2.3 `dashboard.astro` imports `listDispatchToday` + `listReturnsToday`
+- [x] 2.1 Type-check + lint pass (`npm run lint`) — 490800e
+- [x] 2.2 Build passes (`npm run build`) — 490800e
+- [x] 2.3 `dashboard.astro` imports `listDispatchToday` + `listReturnsToday` — 490800e
 
 #### Manual
 
@@ -402,8 +402,8 @@ None — no schema, data, or type changes.
 
 #### Automated
 
-- [ ] 3.1 Type-check + lint pass (`npm run lint`)
-- [ ] 3.2 Build passes (`npm run build`)
+- [x] 3.1 Type-check + lint pass (`npm run lint`)
+- [x] 3.2 Build passes (`npm run build`)
 
 #### Manual
 
