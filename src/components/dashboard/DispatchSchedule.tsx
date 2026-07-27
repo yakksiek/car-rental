@@ -124,7 +124,7 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
       <a
         href={item.href}
         className={cn(
-          "border-border hover:bg-background flex items-center gap-4 border-b px-5 py-3.5 transition-colors",
+          "border-border hover:bg-background flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b px-5 py-3.5 transition-colors",
           "last:border-b-0",
           item.done && "opacity-55",
         )}
@@ -132,7 +132,14 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
         <StatusCircle done={item.done} />
         <VehicleGlyph />
         <ScheduleItemText item={item} />
-        <DesktopAction item={item} />
+        {/* Below a ~500px COLUMN width the affordance drops to its own right-aligned
+            line so the customer name stops colliding with it. Keyed on the card's
+            container width, not the viewport: this panel is sized by the 1.5fr grid
+            column, so a `lg:` breakpoint would measure the wrong box (see the
+            embeddable-panels lesson). 500px ≈ a 1157px viewport at the desktop grid. */}
+        <span className="flex w-full shrink-0 justify-end @min-[500px]:w-auto">
+          <DesktopAction item={item} />
+        </span>
       </a>
     </li>
   );
@@ -264,7 +271,9 @@ export default function DispatchSchedule({ groups, today }: { groups: ScheduleGr
   const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today));
 
   return (
-    <div className="bg-card shadow-card overflow-hidden rounded-[18px]">
+    // `@container`: the rows' action-drop below keys off THIS card's width — it is
+    // sized by the 1.5fr schedule column, never by the viewport.
+    <div className="bg-card shadow-card @container overflow-hidden rounded-[18px]">
       <GroupHeader kind="pickups" label="WYDANIA" progressLabel={groups.pickups.progressLabel} first />
       {pickupItems.length === 0 ? (
         <p className="text-muted-foreground px-5 py-6 text-[13px]">{EMPTY_COPY.pickups}</p>
