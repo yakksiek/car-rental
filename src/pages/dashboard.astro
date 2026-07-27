@@ -2,41 +2,50 @@
 // components
 import Layout from "../layouts/Layout.astro";
 import StaffShell from "../components/shell/StaffShell.astro";
+import NavIcon from "../components/shell/NavIcon.astro";
 import NeedDecisionPanel from "../components/dashboard/NeedDecisionPanel";
+import DispatchBoard from "../components/dashboard/DispatchBoard";
 
 // others
-import { countOverdueReturns } from "../lib/services/protocols";
+import { countOverdueReturns, listDispatchToday, listReturnsToday } from "../lib/services/protocols";
 import { listPendingReservations } from "../lib/services/reservations";
 import { staffIdentity } from "../lib/staff-identity";
+import { dayCounts, scheduleGroups } from "../lib/dispatch-board";
+import { dateEyebrowPl } from "../lib/pl-date";
 
+// The staff pulpit — the dispatch cockpit. Everything the board renders is fetched
+// here in one server-side `Promise.all` (no client fetching): today's dispatch and
+// return worklists (mirroring `pickups.astro` / `returns.astro`), the pending
+// requests that feed both the shell badge and the Need-a-decision rail, and the
+// overdue count the urgency card shows.
+//
+// `today` is the server's UTC calendar date, matching the DB's `current_date`
+// (Supabase runs UTC), so the overdue split the board paints agrees with the
+// `return_date <= current_date` filter the RPC applied.
 const { user, role, supabase } = Astro.locals;
 
-// The pending queue feeds both the shell badge and the dashboard "Wymaga decyzji"
-// mini-list (L3) — the in-scope slice of the design's dispatch dashboard.
-const [pending, overdueCount] = await Promise.all([listPendingReservations(supabase), countOverdueReturns(supabase)]);
-const pendingCount = pending.length;
+const [pending, overdueCount, pickupRows, returnRows] = await Promise.all([
+  listPendingReservations(supabase),
+  countOverdueReturns(supabase),
+  listDispatchToday(supabase),
+  listReturnsToday(supabase),
+]);
 
-const { initials } = staffIdentity(user?.email, role);
-
-// Mobile hero date — "Czw · 18 czerwca". Formatted from PL arrays (workerd ICU is
-// not guaranteed for toLocaleDateString).
 const now = new Date();
-const PL_DAYS = ["Niedz", "Pon", "Wt", "Śr", "Czw", "Pt", "Sob"];
-const PL_MONTHS = [
-  "stycznia",
-  "lutego",
-  "marca",
-  "kwietnia",
-  "maja",
-  "czerwca",
-  "lipca",
-  "sierpnia",
-  "września",
-  "października",
-  "listopada",
-  "grudnia",
-];
-const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.getMonth()]}`;
+const today = now.toISOString().slice(0, 10);
+
+const counts = dayCounts(pickupRows, returnRows, pending, overdueCount);
+const groups = scheduleGroups(pickupRows, returnRows, today);
+
+const { initials, displayName } = staffIdentity(user?.email, role);
+// The greeting is deliberately STATIC ("Dzień dobry"), not time-of-day derived:
+// the server runs UTC while the depot lives in Europe/Warsaw, so an hour-based
+// greeting would read wrong for up to two hours a day (design-contract deviation 3).
+const firstName = displayName.split(" ")[0];
+
+// Mobile header eyebrow — `PT · 25 LIPCA`, from `pl-date`'s lookup tables (workerd's
+// trimmed ICU can't be trusted for Polish server-side), on the same UTC calendar.
+const dateEyebrow = dateEyebrowPl(now);
 ---
 
 <Layout title="Pulpit — Flota">
@@ -45,53 +54,78 @@ const dateLabel = `${PL_DAYS[now.getDay()]} · ${now.getDate()} ${PL_MONTHS[now.
     title="Pulpit"
     user={user}
     role={role}
-    pendingCount={pendingCount}
+    pendingCount={pending.length}
     overdueCount={overdueCount}
+    showHeader={false}
   >
-    <main class="mx-auto w-full max-w-2xl px-4 py-8">
-      {/* Mobile hero (the desktop topbar carries the title at md+) */}
-      <header class="mb-6 flex items-start justify-between gap-4 px-1 md:hidden">
-        <div>
-          <div class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{dateLabel}</div>
-          <h1 class="text-foreground mt-1 text-[32px] leading-none font-bold tracking-tight">Pulpit</h1>
-          <p class="text-muted-foreground mt-1.5 text-sm">{user?.email}</p>
+    {
+      /* Desktop greeting header — replaces the shell's generic title bar
+        (`showHeader={false}`), full-bleed like it. Search is deferred, so the
+        band carries only the calendar button (design-contract §A). */
+    }
+    <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
+      <div>
+        <div class="text-foreground text-[21px] leading-[1.1] font-bold tracking-[-0.5px]">
+          Dzień dobry, {firstName}
         </div>
-        <span
-          class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-base font-medium"
-        >
-          {initials}
-        </span>
-      </header>
-
-      <div class="flex flex-col gap-6">
-        {
-          /* In-scope L3 slice: the pending queue surfaced as a quick-action
-            mini-list with inline decide + an "Otwórz →" link to the full queue. */
-        }
-        <NeedDecisionPanel client:load reservations={pending} />
-
-        <a
-          href="/dashboard/calendar"
-          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
-        >
-          <div>
-            <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
-            <div class="text-muted-foreground mt-0.5 text-sm">Oś czasu rezerwacji według pojazdów</div>
-          </div>
-          <span class="text-muted-foreground" aria-hidden="true">→</span>
-        </a>
-
-        <a
-          href="/dashboard/vehicles"
-          class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
-        >
-          <div>
-            <div class="text-foreground text-base font-[650] tracking-tight">Zarządzanie flotą</div>
-            <div class="text-muted-foreground mt-0.5 text-sm">Dodawaj, edytuj i wycofuj pojazdy</div>
-          </div>
-          <span class="text-muted-foreground" aria-hidden="true">→</span>
-        </a>
+        <div class="text-muted-foreground mt-[3px] text-[13px]">Oto Twój dzień w oddziale Warszawa</div>
       </div>
+      <a
+        href="/dashboard/calendar"
+        aria-label="Kalendarz"
+        class="border-border bg-card flex size-[38px] items-center justify-center rounded-[10px] border text-[var(--flota-ink-2)]"
+      >
+        <NavIcon glyph="calendar" size={16} />
+      </a>
+    </header>
+
+    <main class="mx-auto w-full max-w-[1440px] px-4 py-6 lg:p-8">
+      {
+        /* Mobile/tablet (< lg) keeps the pre-cockpit column until Phase 3 replaces
+          it with the chip-filtered sections. */
+      }
+      <div class="mx-auto w-full max-w-2xl lg:hidden">
+        <header class="mb-6 flex items-start justify-between gap-4 px-1 md:hidden">
+          <div>
+            <div class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{dateEyebrow}</div>
+            <h1 class="text-foreground mt-1 text-[32px] leading-none font-bold tracking-tight">Pulpit</h1>
+            <p class="text-muted-foreground mt-1.5 text-sm">{user?.email}</p>
+          </div>
+          <span
+            class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-base font-medium"
+          >
+            {initials}
+          </span>
+        </header>
+
+        <div class="flex flex-col gap-6">
+          <NeedDecisionPanel client:load reservations={pending} />
+
+          <a
+            href="/dashboard/calendar"
+            class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
+          >
+            <div>
+              <div class="text-foreground text-base font-[650] tracking-tight">Kalendarz</div>
+              <div class="text-muted-foreground mt-0.5 text-sm">Oś czasu rezerwacji według pojazdów</div>
+            </div>
+            <span class="text-muted-foreground" aria-hidden="true">→</span>
+          </a>
+
+          <a
+            href="/dashboard/vehicles"
+            class="border-border bg-card shadow-card hover:bg-background flex items-center justify-between gap-4 rounded-lg border p-5 transition-colors"
+          >
+            <div>
+              <div class="text-foreground text-base font-[650] tracking-tight">Zarządzanie flotą</div>
+              <div class="text-muted-foreground mt-0.5 text-sm">Dodawaj, edytuj i wycofuj pojazdy</div>
+            </div>
+            <span class="text-muted-foreground" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+
+      <DispatchBoard client:load pending={pending} counts={counts} groups={groups} today={today} />
     </main>
   </StaffShell>
 </Layout>
