@@ -77,17 +77,18 @@ function DecisionCard({
         <span className="text-muted-foreground font-mono text-[11px] font-semibold">{reservation.reference}</span>
         <Badge className="text-warning bg-[var(--flota-warning-soft)]">PENDING</Badge>
       </div>
-      <div className="mt-2 flex items-baseline justify-between gap-3">
-        <div className="text-foreground truncate text-[15px] font-[650] tracking-tight">
-          {reservation.customer_name}
-        </div>
-        <div className="text-foreground shrink-0 text-sm font-bold tracking-tight">{total}</div>
+      {/* The name owns its line: sat beside the total it read as a price ON the
+          person, and a long Polish surname crowded the figure. The total moves to
+          the meta line instead, where it sits next to the period it derives from. */}
+      <div className="text-foreground mt-2 truncate text-[15px] font-[650] tracking-tight">
+        {reservation.customer_name}
       </div>
       <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
         <Calendar className="size-3.5 shrink-0" />
         <span className="truncate">
           {formatRange(reservation.pickup_date, reservation.return_date)} · {vehicleName(reservation)}
         </span>
+        <span className="text-foreground ml-auto shrink-0 text-sm font-bold tracking-tight">{total}</span>
       </div>
       <div className="mt-3.5 flex gap-2">
         <Button
