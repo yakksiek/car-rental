@@ -189,8 +189,11 @@ pulled (exact values), 11 deviations recorded.**
 6. **Mobile done-row state adapted from desktop** (opacity 0.55 + `Zakończone`) — not
    sampled in the mobile mockup.
 7. **Copy PL canonical** (mockups mix EN lang-keys).
-8. **`NeedDecisionPanel` reused as-is** — minor deltas vs JSX cards (h-10 vs h-9/h-[38px]
-   buttons, its own date/price layout); kept for the one shared decision mechanism.
+8. **`NeedDecisionPanel` reused near-as-is** — minor deltas vs JSX cards (h-10 vs
+   h-9/h-[38px] buttons, its own date/price layout); kept for the one shared decision
+   mechanism. One layout fix applied 2026-07-27: the estimated total moved off the
+   customer-name row onto the right of the date/vehicle meta line — beside the name it
+   read as a price ON the person, and a long Polish surname crowded the figure.
 9. **Desktop overdue-open return adapted from mobile** (`Po terminie` danger chip in the
    CTA slot) — not sampled in the desktop mockup.
 10. **Mobile Profile tab not added** (nav unchanged; deferred).
