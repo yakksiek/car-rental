@@ -1,5 +1,5 @@
 // core
-import type * as React from "react";
+import * as React from "react";
 import { ArrowDown, Check, ChevronRight, Key, Truck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -117,6 +117,27 @@ export function ScheduleItemText({ item }: { item: ScheduleItem }) {
   );
 }
 
+/** Index of the first done row; `-1` when the group has none. Rows arrive pre-sorted. */
+function firstDoneIndex(items: ScheduleItem[]): number {
+  return items.findIndex((item) => item.done);
+}
+
+/**
+ * The rule that opens a group's finished block.
+ *
+ * Done rows sink to the bottom and are separated by this instead of being dimmed:
+ * an `opacity` treatment reads as DISABLED, but these rows are live links to the
+ * filed protocol. Position + this divider carry "done" without implying inert.
+ */
+function DoneDivider({ tone = "card" }: { tone?: "card" | "panel" }) {
+  return (
+    <div className={cn("flex items-center gap-2", tone === "card" ? "px-5 pt-3.5 pb-2" : "mt-3 mb-2 px-1.5")}>
+      <span className="text-muted-foreground text-[10.5px] font-bold tracking-[0.4px] uppercase">Zakończone</span>
+      <span className={cn("flex-1 border-t", tone === "card" ? "border-border" : "border-black/10")} />
+    </div>
+  );
+}
+
 /** Desktop right affordance: outline `Protokół ›`, the overdue chip, or `Zakończone`. */
 function DesktopAction({ item }: { item: ScheduleItem }) {
   if (item.done) {
@@ -146,7 +167,6 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
         className={cn(
           "border-border hover:bg-background flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b px-5 py-3.5 transition-colors",
           "last:border-b-0",
-          item.done && "opacity-55",
         )}
       >
         <StatusCircle done={item.done} />
@@ -162,6 +182,25 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
         </span>
       </a>
     </li>
+  );
+}
+
+/** A group's rows, with the finished block fenced off by its divider. */
+function DesktopRows({ items }: { items: ScheduleItem[] }) {
+  const doneAt = firstDoneIndex(items);
+  return (
+    <ul>
+      {items.map((item, i) => (
+        <React.Fragment key={item.key}>
+          {i === doneAt && (
+            <li>
+              <DoneDivider />
+            </li>
+          )}
+          <DesktopRow item={item} />
+        </React.Fragment>
+      ))}
+    </ul>
   );
 }
 
@@ -207,11 +246,13 @@ export const EMPTY_COPY: Record<ScheduleKind, string> = {
 /**
  * Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie`.
  *
- * A DONE row keeps its CTA unchanged — the design dims the whole row instead of
- * swapping in a `Zakończone` label (that swap was our earlier adaptation, made
- * when the mobile mockup had no done sample; the source now specifies one).
+ * A done row drops to quiet success text — with the dim gone, a primary-filled
+ * button would make finished work look as actionable as open work.
  */
 function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
+  if (item.done) {
+    return <span className="text-success shrink-0 text-[12.5px] font-[650]">Zakończone</span>;
+  }
   const cta =
     kind === "pickups"
       ? { label: "Protokół", tone: "bg-foreground text-background" }
@@ -229,13 +270,7 @@ function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }
 /** One mobile row — a standalone white card; the whole card is the link. */
 function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
   return (
-    <a
-      href={item.href}
-      className={cn(
-        "bg-card shadow-card mb-2 flex items-center gap-3 rounded-[16px] px-3.5 py-3",
-        item.done && "opacity-60",
-      )}
-    >
+    <a href={item.href} className="bg-card shadow-card mb-2 flex items-center gap-3 rounded-[16px] px-3.5 py-3">
       <StatusCircle done={item.done} size="md" />
       <div className="min-w-0 flex-1">
         <div className="text-foreground truncate text-[14px] leading-[1.15] font-[650] tracking-[-0.2px]">
@@ -314,7 +349,12 @@ export function MobileScheduleSection({
           {EMPTY_COPY[kind]}
         </p>
       ) : (
-        items.map((item) => <MobileRow key={item.key} item={item} kind={kind} />)
+        items.map((item, i) => (
+          <React.Fragment key={item.key}>
+            {i === firstDoneIndex(items) && <DoneDivider tone="panel" />}
+            <MobileRow item={item} kind={kind} />
+          </React.Fragment>
+        ))
       )}
     </MobileSection>
   );
@@ -345,22 +385,14 @@ export default function DispatchSchedule({
       {pickupItems.length === 0 ? (
         <p className="text-muted-foreground px-5 py-6 text-[13px]">{EMPTY_COPY.pickups}</p>
       ) : (
-        <ul>
-          {pickupItems.map((item) => (
-            <DesktopRow key={item.key} item={item} />
-          ))}
-        </ul>
+        <DesktopRows items={pickupItems} />
       )}
 
       <GroupHeader kind="returns" label="ZWROTY" progressLabel={groups.returns.progressLabel} first={false} />
       {returnItems.length === 0 ? (
         <p className="text-muted-foreground px-5 py-6 text-[13px]">{EMPTY_COPY.returns}</p>
       ) : (
-        <ul>
-          {returnItems.map((item) => (
-            <DesktopRow key={item.key} item={item} />
-          ))}
-        </ul>
+        <DesktopRows items={returnItems} />
       )}
     </div>
   );

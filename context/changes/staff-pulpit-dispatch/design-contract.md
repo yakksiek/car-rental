@@ -113,7 +113,7 @@ pulled (exact values), 11 deviations recorded.**
 - Group header band: `flex items-center justify-between bg-[#E6EAF0] px-5 pt-3 pb-2.5 border-b border-border` (+ `border-t` on the second group; the `#E6EAF0` band tint is a deliberate one-off in the JSX — darker than `bg-background` so the band reads inside the white card) — `exact`
   - Left: `flex items-center gap-2` — `size-[7px] rounded-full` dot (Wydania `bg-foreground`, Zwroty `bg-success`) + `text-[11.5px] font-bold uppercase tracking-[0.4px] text-[var(--flota-ink-2)]` label `WYDANIA` / `ZWROTY` — `exact` (design updated 2026-07-26: depot hours removed at source)
   - Right: `text-[11.5px] font-[650] text-muted-foreground` = `{done} z {total} zakończone` — `exact`
-- Row (`<a>`): `flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-b-0 hover:bg-background transition-colors`; done row `opacity-55` — `exact` (whole-row link is `deviation(interaction — decision Q2; JSX rows are static with a button)`)
+- Row (`<a>`): `flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-b-0 hover:bg-background transition-colors`; done rows are NOT dimmed and sink below a `ZAKOŃCZONE` divider — `deviation(14 — see register)` (whole-row link is `deviation(interaction — decision Q2; JSX rows are static with a button)`)
   - Status circle: `size-6 rounded-full shrink-0` — open: `border-[1.5px] border-border`; done: `bg-success flex items-center justify-center` + `Check size-[13px] text-white` — `exact`
   - Vehicle box: `w-[70px] h-11 rounded-[9px] bg-background flex items-center justify-center shrink-0` + `Truck size-5 text-muted-foreground` — `deviation(generic glyph — RPC returns no vehicle type/photo; JSX draws a per-type Silhouette w=62)`
   - Text: name `text-[14px] font-[650] tracking-[-0.2px] text-foreground truncate`; sub `mt-0.5 text-[12px] text-muted-foreground truncate` = `{make} {model} · ` + `font-mono` `{reference}` — `exact`
@@ -160,7 +160,7 @@ sampled the done row; values below are from that pull.
   - Text: name `text-[14px] font-[650] tracking-[-0.2px] leading-[1.15] text-foreground`; sub `mt-0.5 text-[12px] text-muted-foreground truncate` = `{make} {model} · {reference}` — `exact` (JSX sub shows plate; ours shows mono reference — `deviation(consistency with desktop row + queue pages)`)
   - CTA button: `h-8 px-3 rounded-[10px] text-[12px] font-[650] shrink-0` — pickups: `Protokół` `bg-foreground text-background`; returns open: `Zwrot` `bg-background text-foreground border border-border`; returns overdue: `Po terminie` `bg-[var(--flota-danger-soft)] text-primary` — `exact`
   - Whole row is the link (same targets as §C) — `deviation(interaction — decision Q2)`
-  - **Done row**: the whole row dims to `opacity-60` (JSX `opacity: done ? 0.6 : 1`) and the circle fills; the **CTA is unchanged** — no `Zakończone` swap on mobile — `exact` for pickups (JSX samples `status: 'done'` with `cta="Protokół"` / `ctaStyle="primary"`). A done RETURN is still unsampled (the JSX returns fixture has no `status`), so it keeps `Zwrot` by extrapolation — `deviation(done-return CTA unsampled; extrapolated from the done-pickup row)`
+  - **Done row**: no dim; the row sinks below a `ZAKOŃCZONE` divider and its CTA drops to `Zakończone` `text-[12.5px] font-[650] text-success`. Diverges from the JSX (`opacity: done ? 0.6 : 1`, interleaved order, `cta="Protokół"` kept) — `deviation(14 — see register)`
 - Wnioski section = `NeedDecisionPanel` with `showHeader={false}` inside the amber panel (JSX pending card: `rounded-[16px] p-3.5 mb-2.5`, buttons `h-[38px] rounded-[10px]`, approve `flex-2`) — `deviation(NeedDecisionPanel reused as-is)`
 - Empty states: Wydania `Brak wydań na dziś`; Zwroty `Brak zwrotów na dziś`; Wnioski = NeedDecisionPanel's own `Brak oczekujących wniosków` — `exact` (copy from queue pages; not sampled in mockup)
 
@@ -207,10 +207,20 @@ sampled the done row; values below are from that pull.
     the row count of the view each opens, matching the mockups; the earlier remaining-only
     call was reverted. Whole-card/row/chip links and functional chips remain interaction
     additions over the static JSX (decisions Q2/Q4).
-12. **Mobile `WNIOSKI` section header not stacked** — `NeedDecisionPanel` is reused as-is
+12. **Done rows sink to the bottom of their group under a `ZAKOŃCZONE` divider, and are
+    NOT dimmed** (product decision 2026-07-27) — the source interleaves finished work in
+    RPC order and de-emphasises it with `opacity` (mobile `0.6`, desktop `0.55`). An
+    opacity treatment reads as DISABLED, but these rows are live links to the filed
+    protocol, so the dim is dropped and position carries the meaning instead: open rows
+    first, then a `text-[10.5px] font-bold uppercase tracking-[0.4px] text-muted-foreground`
+    `ZAKOŃCZONE` label + hairline, then the finished block. The done CTA drops to quiet
+    `text-success` `Zakończone` at BOTH breakpoints (with no dim, a primary-filled button
+    would make finished work look as actionable as open work). Ordering lives in
+    `scheduleGroups`, so both breakpoints and any future consumer inherit it.
+13. **Mobile `WNIOSKI` section header not stacked** — `NeedDecisionPanel` is reused as-is
     (deviation 8) and carries its own `Wymaga decyzji` + `Otwórz →` header, so §G's
     section header is not rendered a second time above it.
-13. **Schedule row drops its CTA below at a narrow column** — under a **500px card
+14. **Schedule row drops its CTA below at a narrow column** — under a **500px card
     width** the row becomes `flex-wrap` and the affordance (`Protokół` / `Zakończone` /
     `Po terminie`) moves to its own right-aligned line, so the customer name stops
     colliding with it between `lg` and ~1157px viewport. Driven by `@container` +
