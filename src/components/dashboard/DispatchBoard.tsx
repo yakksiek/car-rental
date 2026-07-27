@@ -109,8 +109,14 @@ export default function DispatchBoard({
     wnioski: counts.wnioski,
   };
 
-  const pickupItems = groups.pickups.rows.map(toPickupItem);
-  const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today));
+  // What a row hands the destination as its `?from`. Derived from the section STATE,
+  // not `window.location`, so the SSR'd href and the first client render agree (no
+  // hydration mismatch) and the active chip survives the round trip: leave the
+  // cockpit on "Zwroty", press back on the protocol screen, land back on "Zwroty".
+  const origin = section === "wszystko" ? "/dashboard" : `/dashboard?section=${section}`;
+
+  const pickupItems = groups.pickups.rows.map((row) => toPickupItem(row, origin));
+  const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today, origin));
 
   return (
     <>
@@ -122,7 +128,7 @@ export default function DispatchBoard({
             <h2 className="text-muted-foreground mb-3 text-[13px] font-bold tracking-[0.4px] uppercase">
               Harmonogram na dziś
             </h2>
-            <DispatchSchedule groups={groups} today={today} />
+            <DispatchSchedule groups={groups} today={today} origin={origin} />
           </div>
           <NeedDecisionPanel reservations={pending} />
         </div>

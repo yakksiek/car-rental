@@ -47,7 +47,11 @@ export function resolveBackTarget(raw: string | null | undefined, fallback: stri
   // is not what a screen whose default is a worklist wants — so only trust it when a
   // value was actually supplied AND it survived unchanged.
   const href = raw && safeRedirectPath(raw) === raw ? raw : fallback;
-  return { href, label: BACK_LABELS[href] ?? "Wróć" };
+  // The origin may carry state in its query (the cockpit sends back the active
+  // `?section` so the chip survives the round trip), so key the wording on the
+  // PATH alone — otherwise every stateful origin degrades to a bare "Wróć".
+  const pathname = href.split(/[?#]/)[0];
+  return { href, label: BACK_LABELS[pathname] ?? "Wróć" };
 }
 
 /** Append `?from=<origin>` to a link so the destination can find its way back. */
