@@ -96,7 +96,7 @@ pulled (exact values), 11 deviations recorded.**
 
 - Row: `flex gap-4` (JSX `gap: 16`), each card `flex-1` — `exact`
 - Each card is an `<a>`. Targets: Wydania → `/dashboard/pickups`; Zwroty → `/dashboard/returns`; Wnioski → `/dashboard/reservations`; Po terminie → `/dashboard/returns?filter=overdue` — `exact` (whole-card click; JSX tiles are static)
-- Numbers = **open** counts — `deviation(remaining-only — product decision Q3; mockup shows day totals)`
+- Numbers = **day totals** — the row count of the view each card opens — `exact` (decision Q3 revised 2026-07-26: remaining-only reverted to day totals, matching the mockups and the `ReturnQueue` badge convention; "what's left" lives only in the schedule's progress label)
 - Card box: `relative overflow-hidden min-h-[148px] rounded-[18px] pt-[18px] px-5 pb-4 shadow-card flex flex-col justify-between` — `exact`
 - Cards 1–3 (`bg-card`), top accent bar: `absolute top-0 inset-x-0 h-1 opacity-90` — Wydania `bg-foreground`, Zwroty `bg-success`, Wnioski `bg-warning` — `exact`
 - Watermark glyph: `absolute -right-5 -bottom-[26px] size-32 opacity-[0.06] pointer-events-none`, tone color — Wydania `Key`, Zwroty `ArrowRight`, Wnioski `List` — `exact`
@@ -143,7 +143,7 @@ pulled (exact values), 11 deviations recorded.**
 - Chip: `inline-flex items-center gap-[7px] h-[38px] px-3.5 rounded-full text-[13px] font-[650] whitespace-nowrap` — unselected: `bg-card text-foreground border border-border`; selected: tone fill + white text — `exact`
 - **Per-chip selected fills** (JSX): `Wszystko` → `bg-foreground`; `Wydania` → `bg-primary`; `Zwroty` → `bg-foreground`; `Wnioski` → `bg-warning` — `exact`
 - Count badge: `min-w-[19px] h-[19px] rounded-full px-[5px] flex items-center justify-center text-[10.5px] font-bold` — selected: `bg-white/25 text-white`; unselected: `bg-[var(--flota-neutral-soft)] text-muted-foreground` — `exact`
-- Badge values = **open** counts — `deviation(remaining-only — decision Q3; JSX shows day totals, All 7 = 3+2+2)`
+- Badge values = **day totals** — `exact` (decision Q3 revised 2026-07-26; JSX All 7 = 3+2+2, same semantics)
 - Single-select; `wszystko` default; selection mirrors to `?section` via `history.replaceState`; `initialSection` parsed server-side (no hydration flash; mirrors `ReturnQueue.tsx:443-452` / `returns.astro:34`) — `deviation(interaction — chips are functional filters, decision Q4; JSX chips are static)`
 
 ## §G · Mobile sections (`DispatchBoard` mobile branch; JSX `Section` + `ActionRow`)
@@ -194,6 +194,10 @@ pulled (exact values), 11 deviations recorded.**
 9. **Desktop overdue-open return adapted from mobile** (`Po terminie` danger chip in the
    CTA slot) — not sampled in the desktop mockup.
 10. **Mobile Profile tab not added** (nav unchanged; deferred).
-11. **Remaining-only counts** (decision Q3) — KPI numbers + chip badges show open counts,
-    so live values can differ from the mockup's day totals; whole-card/row/chip links and
-    functional chips are interaction additions over the static JSX (decisions Q2/Q4).
+11. **Day-total counts** (decision Q3, revised 2026-07-26) — KPI numbers + chip badges are
+    the row count of the view each opens, matching the mockups; the earlier remaining-only
+    call was reverted. Whole-card/row/chip links and functional chips remain interaction
+    additions over the static JSX (decisions Q2/Q4).
+12. **Mobile `WNIOSKI` section header not stacked** — `NeedDecisionPanel` is reused as-is
+    (deviation 8) and carries its own `Wymaga decyzji` + `Otwórz →` header, so §G's
+    section header is not rendered a second time above it.

@@ -402,8 +402,8 @@ None — no schema, data, or type changes.
 
 #### Automated
 
-- [x] 3.1 Type-check + lint pass (`npm run lint`)
-- [x] 3.2 Build passes (`npm run build`)
+- [x] 3.1 Type-check + lint pass (`npm run lint`) — 7ed9a21
+- [x] 3.2 Build passes (`npm run build`) — 7ed9a21
 
 #### Manual
 
