@@ -70,13 +70,19 @@ function progressLabel(doneCount: number, total: number): string {
  * pickups keep the RPC's `reference` order.
  */
 export function scheduleGroups(pickups: DispatchRow[], returns: DispatchReturnRow[], today: string): ScheduleGroups {
+  // Done work sinks to the bottom of its group so the open rows — the only ones
+  // that still need a person — read as the list, and the schedule shortens from
+  // the top as the day progresses. `sortReturnsByUrgency` already ends on
+  // `returned`, so only pickups need partitioning. Both sorts are stable, so the
+  // RPC's `reference` order survives inside each block.
   const sortedReturns = sortReturnsByUrgency(returns, today);
+  const sortedPickups = [...pickups].sort((a, b) => Number(Boolean(a.protocol_id)) - Number(Boolean(b.protocol_id)));
   const pickupsDone = pickups.filter((row) => Boolean(row.protocol_id)).length;
   const returnsDone = sortedReturns.filter((row) => captionOf(row, today) === "returned").length;
 
   return {
     pickups: {
-      rows: pickups,
+      rows: sortedPickups,
       doneCount: pickupsDone,
       total: pickups.length,
       progressLabel: progressLabel(pickupsDone, pickups.length),
