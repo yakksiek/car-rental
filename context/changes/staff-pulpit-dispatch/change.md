@@ -1,9 +1,9 @@
 ---
 change_id: staff-pulpit-dispatch
 title: Rebuild the staff pulpit into the full dispatch cockpit (desktop + mobile)
-status: planned
+status: implementing
 created: 2026-07-24
-updated: 2026-07-25
+updated: 2026-07-27
 archived_at: null
 ---
 
