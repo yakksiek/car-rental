@@ -377,8 +377,8 @@ None — no schema, data, or type changes.
 
 #### Automated
 
-- [ ] 1.1 Lint passes (`npm run lint`)
-- [ ] 1.2 Build passes (`npm run build`)
+- [x] 1.1 Lint passes (`npm run lint`)
+- [x] 1.2 Build passes (`npm run build`)
 
 #### Manual
 
