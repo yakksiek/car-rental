@@ -32,6 +32,7 @@ import * as paths from "../../lib/protocol-storage-paths";
 import { resendReturnEmail, useReturnProtocolSubmit } from "../hooks/useReturnProtocolSubmit";
 import { IDLE, useProtocolMedia } from "../hooks/useProtocolMedia";
 import type { ProtocolPhotoSlot } from "../../types";
+import type { BackTarget } from "../../lib/back-target";
 import { uploadObject } from "./storage";
 import type { DamageValue, ReturnProtocolContext } from "./types";
 
@@ -53,6 +54,8 @@ import type { DamageValue, ReturnProtocolContext } from "./types";
 // the amber warning and shows a negative km, but submit stays enabled.
 
 interface Props {
+  /** Where "back" returns to; resolved by the page from `?from`. */
+  back?: BackTarget;
   ctx: ReturnProtocolContext;
   supabaseUrl: string;
   supabaseKey: string;
@@ -130,7 +133,8 @@ function SummaryRow({ label, text, tone }: { label: string; text: string; tone: 
   );
 }
 
-export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
+export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Props) {
+  const backHref = back?.href ?? "/dashboard/returns";
   // Minted once, before the first byte is uploaded — RHF needs it in defaultValues
   // at construction (before any media callback that reads the form could exist).
   const [protocolId] = React.useState(() => randomUuid());
@@ -412,7 +416,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
   // ── Overlay actions ─────────────────────────────────────────────────────────
 
   const backToDispatch = () => {
-    window.location.assign("/dashboard/returns");
+    window.location.assign(backHref);
   };
 
   async function overlayPrimary() {
@@ -438,7 +442,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
         plate={ctx.plate}
         protocolId={conflictId}
         description="Dla tej rezerwacji istnieje już protokół zwrotu — każdy zwrot może mieć tylko jeden."
-        backHref="/dashboard/returns"
+        backHref={backHref}
       />
     );
   }
@@ -457,7 +461,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
       <header className="sm:border-border sm:bg-card sm:sticky sm:top-0 sm:z-10 sm:border-b">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <a
-            href="/dashboard/returns"
+            href={backHref}
             aria-label="Wróć"
             className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >
@@ -470,7 +474,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey }: Pr
             </p>
           </div>
           <a
-            href="/dashboard/returns"
+            href={backHref}
             aria-label="Zamknij"
             className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >

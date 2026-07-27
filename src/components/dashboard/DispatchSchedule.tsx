@@ -4,6 +4,7 @@ import { ArrowDown, Check, ChevronRight, Key, Truck } from "lucide-react";
 // others
 import { cn } from "../../lib/utils";
 import { captionOf } from "../../lib/returns-filter";
+import { withFrom } from "../../lib/back-target";
 import type { ScheduleGroups } from "../../lib/dispatch-board";
 import type { DispatchReturnRow, DispatchRow } from "../../types";
 
@@ -32,11 +33,19 @@ export interface ScheduleItem {
 /** Which group a row belongs to — drives the CTA copy and the band tone. */
 export type ScheduleKind = "pickups" | "returns";
 
+// Rows carry `?from=/dashboard` so the screen they open sends the user back HERE
+// rather than to its own worklist — the cockpit is a second entry point to pages
+// that used to have only one (see `lib/back-target.ts`).
+const ORIGIN = "/dashboard";
+
 export function toPickupItem(row: DispatchRow): ScheduleItem {
   const done = Boolean(row.protocol_id);
   return {
     key: row.reservation_id,
-    href: done ? `/dashboard/protocols/${row.protocol_id}` : `/dashboard/pickups/${row.reservation_id}`,
+    href: withFrom(
+      done ? `/dashboard/protocols/${row.protocol_id}` : `/dashboard/pickups/${row.reservation_id}`,
+      ORIGIN,
+    ),
     customerName: row.customer_name,
     vehicle: [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" "),
     reference: row.reference,
@@ -50,7 +59,10 @@ export function toReturnItem(row: DispatchReturnRow, today: string): ScheduleIte
   const done = caption === "returned";
   return {
     key: row.reservation_id,
-    href: done ? `/dashboard/protocols/${row.return_protocol_id}` : `/dashboard/returns/${row.reservation_id}`,
+    href: withFrom(
+      done ? `/dashboard/protocols/${row.return_protocol_id}` : `/dashboard/returns/${row.reservation_id}`,
+      ORIGIN,
+    ),
     customerName: row.customer_name,
     vehicle: [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" "),
     reference: row.reference,
