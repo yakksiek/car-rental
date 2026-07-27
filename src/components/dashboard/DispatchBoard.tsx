@@ -1,10 +1,11 @@
 // core
 import * as React from "react";
+import { ArrowRight, Bell } from "lucide-react";
 
 // components
 import NeedDecisionPanel from "./NeedDecisionPanel";
 import StatCards from "./StatCards";
-import DispatchSchedule, { MobileScheduleSection, toPickupItem, toReturnItem } from "./DispatchSchedule";
+import DispatchSchedule, { MobileScheduleSection, MobileSection, toPickupItem, toReturnItem } from "./DispatchSchedule";
 
 // others
 import { cn } from "../../lib/utils";
@@ -70,7 +71,7 @@ function Chip({
       <span
         className={cn(
           "flex h-[19px] min-w-[19px] items-center justify-center rounded-full px-[5px] text-[10.5px] font-bold tabular-nums",
-          selected ? "bg-white/25 text-white" : "text-muted-foreground bg-[var(--flota-neutral-soft)]",
+          selected ? "bg-white/24 text-white" : "text-muted-foreground bg-[var(--flota-neutral-soft)]",
         )}
       >
         {count}
@@ -158,13 +159,30 @@ export default function DispatchBoard({
           {isSectionVisible(section, "zwroty") && (
             <MobileScheduleSection kind="returns" label="Zwroty" total={counts.returns} items={returnItems} />
           )}
-          {/* Wnioski = `NeedDecisionPanel` reused as-is (deviation 8) — it carries its
-              own `Wymaga decyzji` section header + `Otwórz →` link and its own empty
-              state, so no second header is stacked on top of it. */}
+          {/* Wnioski sits in the amber tinted panel like the other two sections; the
+              band carries the title and the "Otwórz" link, so `NeedDecisionPanel`
+              renders its cards without its own header (its empty state is kept). */}
           {isSectionVisible(section, "wnioski") && (
-            <section className="mb-[18px]">
-              <NeedDecisionPanel reservations={pending} />
-            </section>
+            <MobileSection
+              title={`Wnioski · ${counts.wnioski}`}
+              icon={Bell}
+              tint="amber"
+              action={
+                counts.wnioski > 0 && (
+                  <a
+                    href="/dashboard/reservations"
+                    className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
+                  >
+                    Otwórz
+                    <ArrowRight className="size-3.5" />
+                  </a>
+                )
+              }
+            >
+              <div className="mb-2">
+                <NeedDecisionPanel reservations={pending} showHeader={false} />
+              </div>
+            </MobileSection>
           )}
         </div>
       </div>

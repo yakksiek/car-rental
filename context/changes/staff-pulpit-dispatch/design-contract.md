@@ -22,7 +22,7 @@ Canonical mockups: `design-review/target-staff-desktop-dashboard.jpg` (desktop *
 | ------------------------------------------------------------------------------- | ------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `screenshots/09-staff-mobile-dashboard.png` (`design-system.md` catalog row 09) | Staff · mobile dashboard  | **outdated (superseded)** | Superseded by `design-review/target-staff-mobile-dashboard.jpg`. On ship: re-export the shipped surface to `context/foundation/design/screenshots/` + update catalog row 09. |
 | `screenshots/20-staff-desktop-dashboard.jpg` (catalog row 20)                   | Staff · desktop dashboard | **outdated (superseded)** | Superseded by `design-review/target-staff-desktop-dashboard.jpg`. Update catalog row 20 on ship.                                                                             |
-| Live JSX `staff-desktop.jsx` / `staff-screens.jsx` (Claude Design `352d78a6-…`) | Screen source             | **current**               | Source of the exact values below (pulled 2026-07-26).                                                                                                                        |
+| Live JSX `staff-desktop.jsx` / `staff-screens.jsx` (Claude Design `352d78a6-…`) | Screen source             | **current**               | Source of the exact values below (`staff-desktop.jsx` pulled 2026-07-26; `staff-screens.jsx` re-pulled 2026-07-27 — §G tinted section panels + sampled done row).            |
 | `src/styles/global.css` tokens                                                  | Design tokens             | **current**               | Reused as-is.                                                                                                                                                                |
 
 ### New-design quality gaps
@@ -33,8 +33,8 @@ Canonical mockups: `design-review/target-staff-desktop-dashboard.jpg` (desktop *
 - **Breakpoints**: desktop (v3) + mobile provided ✓. No tablet mockup — the `md`–`lg`
   icon-rail sidebar is `StaffShell`'s existing behavior; the body uses the desktop
   layout from `lg`. Acceptable.
-- **Mobile done-row state** not sampled (all mobile rows are open) → adapted from the
-  desktop done treatment (deviation 6).
+- **Mobile done-row state** now sampled for PICKUPS (2026-07-27 pull): the row dims to
+  `opacity-60` and keeps its CTA. A done RETURN row is still unsampled (deviation 6).
 - **Desktop overdue-open return** not sampled → adapted from the mobile danger CTA
   (deviation 9).
 - **Copy**: mockups mix EN lang-keys with PL → **PL is canonical** (mapped below).
@@ -142,21 +142,26 @@ pulled (exact values), 11 deviations recorded.**
 - Row: `flex flex-wrap gap-2 mt-4` — `exact`
 - Chip: `inline-flex items-center gap-[7px] h-[38px] px-3.5 rounded-full text-[13px] font-[650] whitespace-nowrap` — unselected: `bg-card text-foreground border border-border`; selected: tone fill + white text — `exact`
 - **Per-chip selected fills** (JSX): `Wszystko` → `bg-foreground`; `Wydania` → `bg-primary`; `Zwroty` → `bg-foreground`; `Wnioski` → `bg-warning` — `exact`
-- Count badge: `min-w-[19px] h-[19px] rounded-full px-[5px] flex items-center justify-center text-[10.5px] font-bold` — selected: `bg-white/25 text-white`; unselected: `bg-[var(--flota-neutral-soft)] text-muted-foreground` — `exact`
+- Count badge: `min-w-[19px] h-[19px] rounded-full px-[5px] flex items-center justify-center text-[10.5px] font-bold` — selected: `bg-white/24 text-white`; unselected: `bg-[var(--flota-neutral-soft)] text-muted-foreground` — `exact`
 - Badge values = **day totals** — `exact` (decision Q3 revised 2026-07-26; JSX All 7 = 3+2+2, same semantics)
 - Single-select; `wszystko` default; selection mirrors to `?section` via `history.replaceState`; `initialSection` parsed server-side (no hydration flash; mirrors `ReturnQueue.tsx:443-452` / `returns.astro:34`) — `deviation(interaction — chips are functional filters, decision Q4; JSX chips are static)`
 
 ## §G · Mobile sections (`DispatchBoard` mobile branch; JSX `Section` + `ActionRow`)
 
+**Re-pulled 2026-07-27** — the source moved each section into a tinted panel and
+sampled the done row; values below are from that pull.
+
 - Visible sections per active chip: `wszystko` → all three; else only the matching one — decision Q4
-- Section block: `mb-[18px]`; header: `flex items-center gap-2 px-1 pb-2 text-[13px] font-bold uppercase tracking-[0.4px] text-muted-foreground` + leading icon `size-3.5` (`Key` / `ArrowDown` / `Bell`) = `WYDANIA · {open}` / `ZWROTY · {open}` / `WNIOSKI · {pending}` — `exact` (JSX paddings `0 22px` / `0 18px` are the phone-frame gutters → the page's own `px-4` gutter)
-- Row card (adapted `ActionRow`): `flex items-center gap-3 rounded-[16px] bg-card shadow-card px-3.5 py-3 mb-2` — `exact`
-  - Leading slot: JSX has a `w-[50px]` time column + `w-px h-[38px]` divider → replaced by the desktop **status circle** (`size-6`, §C spec) — `deviation(time dropped — decision Q1; circle adapted from desktop row)`
+- **Section panel** (JSX `Section`): `mb-4 rounded-[18px] px-2 pt-2.5 pb-1` (JSX `margin: '0 16px 16px'`, `padding: '10px 8px 4px'`) + a tint — Wydania `bg-[#E4E6EA]`, Zwroty `bg-[#E2EAE3]`, Wnioski `bg-[#EFE9DD]`. The three tints are deliberate JSX one-offs, like the desktop band's `#E6EAF0` — `exact`. The JSX `0 16px` side margin IS the page gutter, already supplied by `main`'s `px-4`, so the panel adds none.
+- **Section header, inside the panel**: `mx-1.5 mb-2.5 px-1.5 flex items-center gap-2 text-[13px] font-extrabold tracking-[0.4px] uppercase text-foreground` (JSX `margin: '0 6px 10px'`, `padding: '0 6px'`, `fontWeight: 800`, `color: ink`) + leading icon `size-3.5` (`Key` / `ArrowDown` / `Bell`) = `WYDANIA · {total}` / `ZWROTY · {total}` / `WNIOSKI · {total}` — `exact`. Rows wrapper `px-1` (JSX `padding: '0 4px'`) — `exact`.
+  - Wnioski header carries a right-aligned `Otwórz →` link — `deviation(kept from NeedDecisionPanel's own header, which the panel suppresses here; the JSX band has no action)`
+- Row card (`ActionRow`): `flex items-center gap-3 rounded-[16px] bg-card shadow-card px-3.5 py-3 mb-2` (JSX `padding: '12px 14px'`, `marginBottom: 8`, `gap: 12`) — `exact`
+  - Leading slot: JSX has no time column any more — a `size-[30px]` status circle, `border-2 border-border` when open, `bg-success` + `Check size-[14px]` when done — `exact` (the time column and its divider are gone at source; our earlier circle adaptation is now canon, closing deviation 1)
   - Text: name `text-[14px] font-[650] tracking-[-0.2px] leading-[1.15] text-foreground`; sub `mt-0.5 text-[12px] text-muted-foreground truncate` = `{make} {model} · {reference}` — `exact` (JSX sub shows plate; ours shows mono reference — `deviation(consistency with desktop row + queue pages)`)
   - CTA button: `h-8 px-3 rounded-[10px] text-[12px] font-[650] shrink-0` — pickups: `Protokół` `bg-foreground text-background`; returns open: `Zwrot` `bg-background text-foreground border border-border`; returns overdue: `Po terminie` `bg-[var(--flota-danger-soft)] text-primary` — `exact`
   - Whole row is the link (same targets as §C) — `deviation(interaction — decision Q2)`
-  - Done row: `opacity-55`, circle filled, CTA slot `Zakończone` `text-[12.5px] font-[650] text-success` — `deviation(mobile done state not sampled; adapted from desktop)`
-- Wnioski section = `NeedDecisionPanel` (JSX pending card: `rounded-[16px] p-3.5 mb-2.5`, buttons `h-[38px] rounded-[10px]`, approve `flex-2`) — `deviation(NeedDecisionPanel reused as-is)`
+  - **Done row**: the whole row dims to `opacity-60` (JSX `opacity: done ? 0.6 : 1`) and the circle fills; the **CTA is unchanged** — no `Zakończone` swap on mobile — `exact` for pickups (JSX samples `status: 'done'` with `cta="Protokół"` / `ctaStyle="primary"`). A done RETURN is still unsampled (the JSX returns fixture has no `status`), so it keeps `Zwrot` by extrapolation — `deviation(done-return CTA unsampled; extrapolated from the done-pickup row)`
+- Wnioski section = `NeedDecisionPanel` with `showHeader={false}` inside the amber panel (JSX pending card: `rounded-[16px] p-3.5 mb-2.5`, buttons `h-[38px] rounded-[10px]`, approve `flex-2`) — `deviation(NeedDecisionPanel reused as-is)`
 - Empty states: Wydania `Brak wydań na dziś`; Zwroty `Brak zwrotów na dziś`; Wnioski = NeedDecisionPanel's own `Brak oczekujących wniosków` — `exact` (copy from queue pages; not sampled in mockup)
 
 ---
@@ -178,16 +183,17 @@ pulled (exact values), 11 deviations recorded.**
 
 ## Deviations register
 
-1. **Mobile per-row clock times dropped** (decision Q1) — the mobile `ActionRow` time
-   column + divider are replaced by the status circle. _(Desktop is no longer a
-   deviation: the design itself removed the group-header depot hours on 2026-07-26.)_
+1. ~~**Mobile per-row clock times dropped** (decision Q1)~~ — **CLOSED 2026-07-27**: the
+   source itself dropped the `ActionRow` time column and divider in favour of a status
+   circle, so our adaptation is now canon at both breakpoints.
 2. **Search omitted** (deferred; no backend) — desktop 220×38 field + mobile 44px icon
    button both cut.
 3. **Greeting static** `Dzień dobry` (not time-based) — workerd TZ hazard.
 4. **Depot subtitle static** `Warszawa` (no branch model).
 5. **Generic vehicle glyph** (`Truck`) in the 70×44 box — RPC returns no type/photo.
-6. **Mobile done-row state adapted from desktop** (opacity 0.55 + `Zakończone`) — not
-   sampled in the mobile mockup.
+6. **Done-RETURN row CTA extrapolated** — the 2026-07-27 pull samples a done PICKUP
+   (dim to `opacity-60`, keep `Protokół`), which we now follow exactly; the JSX returns
+   fixture carries no `status`, so a done return keeps `Zwrot` by extrapolation.
 7. **Copy PL canonical** (mockups mix EN lang-keys).
 8. **`NeedDecisionPanel` reused near-as-is** — minor deltas vs JSX cards (h-10 vs
    h-9/h-[38px] buttons, its own date/price layout); kept for the one shared decision
