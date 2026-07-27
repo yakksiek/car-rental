@@ -33,18 +33,18 @@ export interface ScheduleItem {
 /** Which group a row belongs to — drives the CTA copy and the band tone. */
 export type ScheduleKind = "pickups" | "returns";
 
-// Rows carry `?from=/dashboard` so the screen they open sends the user back HERE
-// rather than to its own worklist — the cockpit is a second entry point to pages
-// that used to have only one (see `lib/back-target.ts`).
-const ORIGIN = "/dashboard";
+// Rows carry `?from=<the cockpit's current URL>` so the screen they open sends the
+// user back HERE rather than to its own worklist — the cockpit is a second entry
+// point to pages that used to have only one (see `lib/back-target.ts`). `origin`
+// includes the active `?section`, so the mobile chip survives the round trip.
 
-export function toPickupItem(row: DispatchRow): ScheduleItem {
+export function toPickupItem(row: DispatchRow, origin: string): ScheduleItem {
   const done = Boolean(row.protocol_id);
   return {
     key: row.reservation_id,
     href: withFrom(
       done ? `/dashboard/protocols/${row.protocol_id}` : `/dashboard/pickups/${row.reservation_id}`,
-      ORIGIN,
+      origin,
     ),
     customerName: row.customer_name,
     vehicle: [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" "),
@@ -54,14 +54,14 @@ export function toPickupItem(row: DispatchRow): ScheduleItem {
   };
 }
 
-export function toReturnItem(row: DispatchReturnRow, today: string): ScheduleItem {
+export function toReturnItem(row: DispatchReturnRow, today: string, origin: string): ScheduleItem {
   const caption = captionOf(row, today);
   const done = caption === "returned";
   return {
     key: row.reservation_id,
     href: withFrom(
       done ? `/dashboard/protocols/${row.return_protocol_id}` : `/dashboard/returns/${row.reservation_id}`,
-      ORIGIN,
+      origin,
     ),
     customerName: row.customer_name,
     vehicle: [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" "),
@@ -278,9 +278,18 @@ export function MobileScheduleSection({
  * The desktop schedule: one card, two groups. Rows carry their own hairline, so
  * the group bands and rows share a single divider rhythm.
  */
-export default function DispatchSchedule({ groups, today }: { groups: ScheduleGroups; today: string }) {
-  const pickupItems = groups.pickups.rows.map(toPickupItem);
-  const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today));
+export default function DispatchSchedule({
+  groups,
+  today,
+  origin,
+}: {
+  groups: ScheduleGroups;
+  today: string;
+  /** The cockpit's current URL, threaded onto each row as `?from`. */
+  origin: string;
+}) {
+  const pickupItems = groups.pickups.rows.map((row) => toPickupItem(row, origin));
+  const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today, origin));
 
   return (
     // `@container`: the rows' action-drop below keys off THIS card's width — it is
