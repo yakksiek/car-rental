@@ -8,6 +8,7 @@ import ReturnProtocolForm from "../../../components/protocol/ReturnProtocolForm"
 
 // others
 import { getReturnBaseline } from "../../../lib/services/protocols";
+import { resolveBackTarget } from "../../../lib/back-target";
 
 // The return-protocol screen (S-06 Phase 5). Gated to `employee` by the middleware
 // (/dashboard prefix). The form's fixed context — and the issue baseline it is
@@ -27,6 +28,10 @@ import { getReturnBaseline } from "../../../lib/services/protocols";
 // follows the `Astro.response.status` pattern instead.
 const { supabase } = Astro.locals;
 const { reservationId } = Astro.params;
+
+// Reachable from the returns worklist AND from the dispatch cockpit, so "back"
+// follows `?from` when the caller supplied one; absent, it stays the worklist.
+const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/returns");
 
 const baseline = reservationId ? await getReturnBaseline(supabase, reservationId) : null;
 
@@ -72,10 +77,10 @@ const ctx = baseline
           Ta rezerwacja nie czeka dziś na zwrot, nie ma protokołu wydania albo nie masz do niej dostępu.
         </p>
         <a
-          href="/dashboard/returns"
+          href={back.href}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
         >
-          Wróć do pulpitu
+          {back.label}
         </a>
       </main>
     ) : returnedProtocolId ? (
@@ -95,12 +100,18 @@ const ctx = baseline
         >
           Otwórz protokół
         </a>
-        <a href="/dashboard/returns" class="text-muted-foreground mt-3 text-[13px] font-semibold">
-          Wróć do pulpitu
+        <a href={back.href} class="text-muted-foreground mt-3 text-[13px] font-semibold">
+          {back.label}
         </a>
       </main>
     ) : (
-      <ReturnProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} />
+      <ReturnProtocolForm
+        client:only="react"
+        ctx={ctx}
+        supabaseUrl={supabaseUrl}
+        supabaseKey={supabaseKey}
+        back={back}
+      />
     )
   }
 </Layout>

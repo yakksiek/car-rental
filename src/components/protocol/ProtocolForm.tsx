@@ -28,6 +28,7 @@ import { allSlotsFilled, formatOdometer, parseOdometer, randomUuid } from "../..
 import { resendProtocolEmail, useProtocolSubmit } from "../hooks/useProtocolSubmit";
 import { IDLE, useProtocolMedia } from "../hooks/useProtocolMedia";
 import type { ProtocolPhotoSlot } from "../../types";
+import type { BackTarget } from "../../lib/back-target";
 import { pdfPath, uploadObject } from "./storage";
 import type { DamageValue, ProtocolContext } from "./types";
 
@@ -58,6 +59,8 @@ import type { DamageValue, ProtocolContext } from "./types";
 // be far worse than the re-renders.
 
 interface Props {
+  /** Where "back" returns to; resolved by the page from `?from`. */
+  back?: BackTarget;
   ctx: ProtocolContext;
   supabaseUrl: string;
   supabaseKey: string;
@@ -91,7 +94,8 @@ const ERROR_ORDER: (keyof FormValues)[] = [
 
 const ERROR_ANCHOR: Partial<Record<keyof FormValues, string>> = { photos: "photos-grid", damages: "damages" };
 
-export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
+export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Props) {
+  const backHref = back?.href ?? "/dashboard/pickups";
   // Minted once, before the first byte is uploaded: this id keys every storage
   // object, and an id generated inside `create_protocol` would arrive too late.
   // Minted here (not in `useProtocolMedia`) because RHF needs it in `defaultValues`
@@ -316,7 +320,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
   // ── Overlay actions ─────────────────────────────────────────────────────────
 
   const backToDispatch = () => {
-    window.location.assign("/dashboard/pickups");
+    window.location.assign(backHref);
   };
 
   async function overlayPrimary() {
@@ -337,7 +341,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
   }
 
   if (conflictId) {
-    return <ConflictScreen reference={ctx.reference} plate={ctx.plate} protocolId={conflictId} />;
+    return <ConflictScreen backHref={backHref} reference={ctx.reference} plate={ctx.plate} protocolId={conflictId} />;
   }
 
   const odometerDigits = parseOdometer(odometer);
@@ -355,7 +359,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
       <header className="border-border bg-card sticky top-0 z-10 border-b">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <a
-            href="/dashboard/pickups"
+            href={backHref}
             aria-label="Wróć"
             className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
           >
@@ -368,7 +372,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey }: Props) {
             </p>
           </div>
           <a
-            href="/dashboard/pickups"
+            href={backHref}
             aria-label="Zamknij"
             className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
           >

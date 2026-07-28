@@ -11,6 +11,7 @@ import type {
   ProtocolViewPhoto,
 } from "../../../components/protocol/ProtocolView";
 import { countOverdueReturns, getProtocol } from "../../../lib/services/protocols";
+import { resolveBackTarget } from "../../../lib/back-target";
 import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
 import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
 
@@ -37,6 +38,13 @@ const protocol = id ? await getProtocol(supabase, id) : null;
 if (!protocol) {
   Astro.response.status = 404;
 }
+
+// Reachable from either worklist AND from the cockpit. Absent a `?from`, fall back
+// to the worklist that matches the protocol kind — the view's previous behaviour.
+const back = resolveBackTarget(
+  Astro.url.searchParams.get("from"),
+  protocol?.type === "return" ? "/dashboard/returns" : "/dashboard/pickups",
+);
 
 const BUCKET = "protocols";
 const SIGNED_URL_TTL_SECONDS = 300;
@@ -120,6 +128,7 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
     {
       protocol ? (
         <ProtocolView
+          back={back}
           client:load
           protocolId={protocol.id}
           reference={protocol.reference}
@@ -154,10 +163,10 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
             Ten protokół nie istnieje albo nie masz do niego dostępu.
           </p>
           <a
-            href="/dashboard/pickups"
+            href={back.href}
             class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
           >
-            Wróć do wydań
+            {back.label}
           </a>
         </main>
       )

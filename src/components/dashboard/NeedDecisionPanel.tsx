@@ -77,17 +77,18 @@ function DecisionCard({
         <span className="text-muted-foreground font-mono text-[11px] font-semibold">{reservation.reference}</span>
         <Badge className="text-warning bg-[var(--flota-warning-soft)]">PENDING</Badge>
       </div>
-      <div className="mt-2 flex items-baseline justify-between gap-3">
-        <div className="text-foreground truncate text-[15px] font-[650] tracking-tight">
-          {reservation.customer_name}
-        </div>
-        <div className="text-foreground shrink-0 text-sm font-bold tracking-tight">{total}</div>
+      {/* The name owns its line: sat beside the total it read as a price ON the
+          person, and a long Polish surname crowded the figure. The total moves to
+          the meta line instead, where it sits next to the period it derives from. */}
+      <div className="text-foreground mt-2 truncate text-[15px] font-[650] tracking-tight">
+        {reservation.customer_name}
       </div>
       <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
         <Calendar className="size-3.5 shrink-0" />
         <span className="truncate">
           {formatRange(reservation.pickup_date, reservation.return_date)} · {vehicleName(reservation)}
         </span>
+        <span className="text-foreground ml-auto shrink-0 text-sm font-bold tracking-tight">{total}</span>
       </div>
       <div className="mt-3.5 flex gap-2">
         <Button
@@ -107,7 +108,18 @@ function DecisionCard({
   );
 }
 
-export default function NeedDecisionPanel({ reservations: initial }: { reservations: PendingReservation[] }) {
+export default function NeedDecisionPanel({
+  reservations: initial,
+  showHeader = true,
+}: {
+  reservations: PendingReservation[];
+  /**
+   * The mobile cockpit wraps this panel in a tinted section whose band already
+   * carries the title and the "Otwórz" link, so it suppresses the panel's own
+   * header rather than stacking two. Desktop keeps it (default).
+   */
+  showHeader?: boolean;
+}) {
   const [reservations, setReservations] = React.useState<PendingReservation[]>(initial);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
@@ -151,18 +163,20 @@ export default function NeedDecisionPanel({ reservations: initial }: { reservati
 
   return (
     <div className="relative">
-      <div className="mb-3 flex items-center justify-between px-1">
-        <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
-        {count > 0 && (
-          <a
-            href="/dashboard/reservations"
-            className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
-          >
-            {COPY.open}
-            <ArrowRight className="size-3.5" />
-          </a>
-        )}
-      </div>
+      {showHeader && (
+        <div className="mb-3 flex items-center justify-between px-1">
+          <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
+          {count > 0 && (
+            <a
+              href="/dashboard/reservations"
+              className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
+            >
+              {COPY.open}
+              <ArrowRight className="size-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {banner && (
         <div className="border-border mb-3 rounded-xl border bg-[var(--flota-warning-soft)] px-4 py-3 text-sm text-[var(--flota-ink-2)]">
