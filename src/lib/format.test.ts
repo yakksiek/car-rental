@@ -12,6 +12,7 @@ import {
   formatPln,
   fuelLabelPl,
   rentalDays,
+  totalDueAtPickup,
   transmissionLabelPl,
 } from "./format";
 
@@ -108,6 +109,25 @@ describe("estimatedTotal", () => {
 
   it("falls back to zero for an unparseable rate", () => {
     expect(estimatedTotal("abc", 3)).toBe(0);
+  });
+});
+
+describe("totalDueAtPickup", () => {
+  it("sums the rental estimate and the deposit (the RAZEM DZIŚ line)", () => {
+    // 7 dni × 340 = 2380, + 2500 kaucja = 4880 (the mockup's canonical total)
+    expect(totalDueAtPickup("340.00", 7, "2500.00")).toBe(4880);
+  });
+
+  it("accepts numeric inputs", () => {
+    expect(totalDueAtPickup(320, 3, 2500)).toBe(3460);
+  });
+
+  it("stays cent-exact for fractional rates", () => {
+    expect(totalDueAtPickup("1.10", 3, "0.50")).toBe(3.8);
+  });
+
+  it("falls back to zero parts for unparseable inputs", () => {
+    expect(totalDueAtPickup("abc", 3, "xyz")).toBe(0);
   });
 });
 

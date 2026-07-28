@@ -636,6 +636,7 @@ export type Database = {
           vehicle_id: string
           vehicle_make: string
           vehicle_model: string
+          vehicle_plate: string
           vehicle_production_year: number
         }[]
       }
