@@ -382,7 +382,7 @@ None — no schema, data, or type changes.
 
 #### Manual
 
-- [ ] 1.3 `/dashboard/returns` date eyebrow + filter-bar date unchanged after the helper extraction
+- [x] 1.3 `/dashboard/returns` date eyebrow + filter-bar date unchanged after the helper extraction — 1150e19
 
 ### Phase 2: Desktop cockpit
 
@@ -394,9 +394,9 @@ None — no schema, data, or type changes.
 
 #### Manual
 
-- [ ] 2.4 Desktop `/dashboard` shows greeting + 4 KPI cards + two-column schedule/need-a-decision, matching the desktop mockup
-- [ ] 2.5 KPI cards + schedule rows navigate correctly (open → handover, done → protocol view); empty right half gone
-- [ ] 2.6 No regression to sidebar or the pickups/returns pages; matches `design-contract.md`
+- [x] 2.4 Desktop `/dashboard` shows greeting + 4 KPI cards + two-column schedule/need-a-decision, matching the desktop mockup — 490800e
+- [x] 2.5 KPI cards + schedule rows navigate correctly (open → handover, done → protocol view); empty right half gone — 490800e
+- [x] 2.6 No regression to sidebar or the pickups/returns pages; matches `design-contract.md` — 490800e
 
 ### Phase 3: Mobile cockpit + cleanup
 
@@ -407,7 +407,7 @@ None — no schema, data, or type changes.
 
 #### Manual
 
-- [ ] 3.3 Mobile `/dashboard` shows eyebrow + "Pulpit" + avatar, chips, and Wydania/Zwroty/Wnioski sections, matching the mobile mockup
-- [ ] 3.4 Chips single-select + filter; `Wszystko` shows all; `?section` deep-link renders pre-filtered with no flash
-- [ ] 3.5 Link cards removed; overdue returns show "Po terminie"; quiet-day empty states render
-- [ ] 3.6 No sign-out/nav regression; matches `design-contract.md`
+- [x] 3.3 Mobile `/dashboard` shows eyebrow + "Pulpit" + avatar, chips, and Wydania/Zwroty/Wnioski sections, matching the mobile mockup — 7ed9a21
+- [x] 3.4 Chips single-select + filter; `Wszystko` shows all; `?section` deep-link renders pre-filtered with no flash — 7ed9a21
+- [x] 3.5 Link cards removed; overdue returns show "Po terminie"; quiet-day empty states render — 7ed9a21
+- [x] 3.6 No sign-out/nav regression; matches `design-contract.md` — 7ed9a21
