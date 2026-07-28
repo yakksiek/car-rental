@@ -15,12 +15,12 @@ whole `design/` folder into context; this index exists so you don't have to.
 
 ## What's where
 
-| Artifact | Path | Role |
-| --- | --- | --- |
-| **Live tokens** | `src/styles/global.css` | ✅ applied — the source of truth that ships. Tailwind 4 `@theme` + shadcn vars. |
-| Token source | `context/foundation/design/tokens.css` | Reference copy of the export (3-layer: primitives → shadcn → `@theme`). |
-| Screenshots | `context/foundation/design/screenshots/*.png` | Rendered screens — the cheap visual reference. **Prefer these.** |
-| S-02 flow set | `context/foundation/design/screenshots/s-02-reservation-flow/*.png` | High-fidelity reservation-funnel pass (mobile + desktop). Screenshot-only — see catalog below. |
+| Artifact            | Path                                                                                                                                                            | Role                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Live tokens**     | `src/styles/global.css`                                                                                                                                         | ✅ applied — the source of truth that ships. Tailwind 4 `@theme` + shadcn vars.                                                                                                                                                                                                                                                                           |
+| Token source        | `context/foundation/design/tokens.css`                                                                                                                          | Reference copy of the export (3-layer: primitives → shadcn → `@theme`).                                                                                                                                                                                                                                                                                   |
+| Screenshots         | `context/foundation/design/screenshots/*.png`                                                                                                                   | Rendered screens — the cheap visual reference. **Prefer these.**                                                                                                                                                                                                                                                                                          |
+| S-02 flow set       | `context/foundation/design/screenshots/s-02-reservation-flow/*.png`                                                                                             | High-fidelity reservation-funnel pass (mobile + desktop). Screenshot-only — see catalog below.                                                                                                                                                                                                                                                            |
 | Screen source (JSX) | **Live** — Claude Design project `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`, https://claude.ai/design/p/352d78a6-84fd-49a2-8b38-2fe289691fc3) | The prototype JSX (`*-screens.jsx`, `staff-desktop.jsx`, `admin-mobile.jsx`, `shared.jsx`) was **removed from the repo** (2026-06-18) in favour of the live project. Pull on demand with the `DesignSync` tool (`get_file --project 352d78a6-… --path <file>`) or `/design-sync`. Reference for spacing/structure only — **not** app code; do not import. |
 
 > The composed HTML exports (`Flota Rental.html`, `Design tokens.html`) and the
@@ -48,34 +48,39 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 > from the repo (2026-06-18); they now live in the Claude Design project
 > `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`). Pull a file with
 > `DesignSync get_file --project 352d78a6-… --path <name>`. Screenshots remain in-repo.
+>
+> Screenshots are the **shipped surface**, re-exported when a slice changes it — not
+> the design mockup. Rows 09/20 were re-exported 2026-07-28 from the merged
+> `staff-pulpit-dispatch` cockpit (PR #14); the per-change target mockups for that
+> slice live in `context/archive/2026-07-24-staff-pulpit-dispatch/`.
 
-| # | Screen | Role / device | Slice | Source file |
-| --- | --- | --- | --- | --- |
-| 01 | Home | Customer · mobile | S-01 | `customer-screens.jsx` |
-| 02 | Fleet listing | Customer · mobile | S-01 | `customer-screens.jsx` |
-| 03 | Vehicle detail | Customer · mobile | S-01 | `customer-screens.jsx` |
-| 04 | Reservation form | Customer · mobile | S-02 | `customer-screens.jsx` |
-| 05 | Request summary | Customer · mobile | S-02 | `customer-screens.jsx` |
-| 06 | Request received | Customer · mobile | S-02 | `customer-screens.jsx` |
-| 07 | Landing page | Customer · desktop | S-01 | `customer-desktop.jsx` |
-| 08 | Fleet browse | Customer · desktop | S-01 | `customer-desktop.jsx` |
-| 09 | Worker dashboard | Staff · mobile | S-03 / S-07 | `staff-screens.jsx` |
-| 10 | Pending requests | Staff · mobile | S-03 | `staff-screens.jsx` |
-| 11 | Request detail | Staff · mobile | S-03 | `staff-screens.jsx` |
-| 12 | Pickup protocol (condition) | Staff · mobile | S-05 | `staff-screens.jsx` |
-| 13 | Pickup protocol (signature & email) | Staff · mobile | S-05 | `staff-screens.jsx` |
-| 14 | Return protocol (comparison) | Staff · mobile | S-06 | `staff-screens.jsx` |
-| 15 | My reservations | Customer · mobile | **v2 — deferred** (needs accounts; PRD §Non-Goals) | `customer-screens.jsx` |
-| 16 | Calendar timeline | Admin · desktop | S-03 / S-07 | `desktop-screens.jsx` |
-| 17 | Fleet management | Admin · desktop | S-04 | `desktop-screens.jsx` |
-| 18 | Overdue returns | Admin · desktop | S-07 | `desktop-screens.jsx` |
-| 19 | Employees | Admin · desktop | S-08 | `desktop-screens.jsx` |
-| 20 | Worker dashboard | Staff · desktop | S-03 / S-07 | — (jpg export only) |
-| 21 | Pending requests | Staff · desktop | S-03 | — (jpg export only) |
-| 22 | Calendar · agenda | Admin · mobile | S-03 / S-07 | — (jpg export only) |
-| 23 | Fleet management | Admin · mobile | **S-04** | — (jpg export only) |
-| 24 | Overdue returns | Admin · mobile | S-07 | — (jpg export only) |
-| 25 | Employees | Admin · mobile | S-08 | — (jpg export only) |
+| #   | Screen                              | Role / device      | Slice                                              | Source file            |
+| --- | ----------------------------------- | ------------------ | -------------------------------------------------- | ---------------------- |
+| 01  | Home                                | Customer · mobile  | S-01                                               | `customer-screens.jsx` |
+| 02  | Fleet listing                       | Customer · mobile  | S-01                                               | `customer-screens.jsx` |
+| 03  | Vehicle detail                      | Customer · mobile  | S-01                                               | `customer-screens.jsx` |
+| 04  | Reservation form                    | Customer · mobile  | S-02                                               | `customer-screens.jsx` |
+| 05  | Request summary                     | Customer · mobile  | S-02                                               | `customer-screens.jsx` |
+| 06  | Request received                    | Customer · mobile  | S-02                                               | `customer-screens.jsx` |
+| 07  | Landing page                        | Customer · desktop | S-01                                               | `customer-desktop.jsx` |
+| 08  | Fleet browse                        | Customer · desktop | S-01                                               | `customer-desktop.jsx` |
+| 09  | Dispatch cockpit (Pulpit)           | Staff · mobile     | S-03 / S-07 / `staff-pulpit-dispatch`              | `staff-screens.jsx`    |
+| 10  | Pending requests                    | Staff · mobile     | S-03                                               | `staff-screens.jsx`    |
+| 11  | Request detail                      | Staff · mobile     | S-03                                               | `staff-screens.jsx`    |
+| 12  | Pickup protocol (condition)         | Staff · mobile     | S-05                                               | `staff-screens.jsx`    |
+| 13  | Pickup protocol (signature & email) | Staff · mobile     | S-05                                               | `staff-screens.jsx`    |
+| 14  | Return protocol (comparison)        | Staff · mobile     | S-06                                               | `staff-screens.jsx`    |
+| 15  | My reservations                     | Customer · mobile  | **v2 — deferred** (needs accounts; PRD §Non-Goals) | `customer-screens.jsx` |
+| 16  | Calendar timeline                   | Admin · desktop    | S-03 / S-07                                        | `desktop-screens.jsx`  |
+| 17  | Fleet management                    | Admin · desktop    | S-04                                               | `desktop-screens.jsx`  |
+| 18  | Overdue returns                     | Admin · desktop    | S-07                                               | `desktop-screens.jsx`  |
+| 19  | Employees                           | Admin · desktop    | S-08                                               | `desktop-screens.jsx`  |
+| 20  | Dispatch cockpit (Pulpit)           | Staff · desktop    | S-03 / S-07 / `staff-pulpit-dispatch`              | `staff-desktop.jsx`    |
+| 21  | Pending requests                    | Staff · desktop    | S-03                                               | — (jpg export only)    |
+| 22  | Calendar · agenda                   | Admin · mobile     | S-03 / S-07                                        | — (jpg export only)    |
+| 23  | Fleet management                    | Admin · mobile     | **S-04**                                           | — (jpg export only)    |
+| 24  | Overdue returns                     | Admin · mobile     | S-07                                               | — (jpg export only)    |
+| 25  | Employees                           | Admin · mobile     | S-08                                               | — (jpg export only)    |
 
 Screenshot filenames are numbered to match this table, e.g.
 `screenshots/04-customer-mobile-reservation-form.png`.
@@ -94,30 +99,31 @@ component code isn't recoverable as JSX, so there is no `*-screens.jsx` source f
 
 Folder: `screenshots/s-02-reservation-flow/`
 
-| File | Screen | Device |
-| --- | --- | --- |
-| `mobile-1-vehicle-detail.png` | Vehicle detail → "Check availability" | Customer · mobile (390×844) |
-| `mobile-2-reservation-form.png` | Reservation form + date-range picker (see date-picker note below) | Customer · mobile |
-| `mobile-3-request-summary.png` | Review request (booking + customer details) | Customer · mobile |
-| `mobile-4-request-received.png` | Request received confirmation | Customer · mobile |
-| `desktop-1-vehicle-detail-dates.png` | Vehicle detail + booking widget (pickup/return date range, estimated total) | Customer · desktop (1440w) |
-| `desktop-2-your-details.png` | Your details (3-step: Dates → Your details → Confirm; B2B company/VAT optional; terms) | Customer · desktop |
-| `desktop-3-request-received.png` | Request received confirmation | Customer · desktop |
+| File                                 | Screen                                                                                 | Device                      |
+| ------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------- |
+| `mobile-1-vehicle-detail.png`        | Vehicle detail → "Check availability"                                                  | Customer · mobile (390×844) |
+| `mobile-2-reservation-form.png`      | Reservation form + date-range picker (see date-picker note below)                      | Customer · mobile           |
+| `mobile-3-request-summary.png`       | Review request (booking + customer details)                                            | Customer · mobile           |
+| `mobile-4-request-received.png`      | Request received confirmation                                                          | Customer · mobile           |
+| `desktop-1-vehicle-detail-dates.png` | Vehicle detail + booking widget (pickup/return date range, estimated total)            | Customer · desktop (1440w)  |
+| `desktop-2-your-details.png`         | Your details (3-step: Dates → Your details → Confirm; B2B company/VAT optional; terms) | Customer · desktop          |
+| `desktop-3-request-received.png`     | Request received confirmation                                                          | Customer · desktop          |
 
 > **Date picker — the per-vehicle booking calendar greys out booked dates.** `mobile-2` and
-> `desktop-1` render individual dates struck-out with a *"booked or requested"* legend, and the
+> `desktop-1` render individual dates struck-out with a _"booked or requested"_ legend, and the
 > shipped app now does this on the **per-vehicle** booking widget (`BookingWidget.tsx`): the
 > range calendar (`src/components/ui/calendar.tsx`, `mode="range"`) disables past dates **and**
 > the vehicle's taken dates — both **pending and confirmed** — Booking.com style, so a visitor
 > never picks an unavailable range.
 >
-> *(History: S-02 originally shipped a plain past-dates-only picker — the "no greying" divergence.
+> _(History: S-02 originally shipped a plain past-dates-only picker — the "no greying" divergence.
 > The product owner reversed that call in **Phase 6: Availability Transparency**, which is what the
 > per-vehicle greying above reflects. The catalog hero/filter calendars — `HeroSearch.tsx` (screen
 > 07), `FilterBar.tsx` (screen 08) — are unaffected: they search across the fleet via
-> `available_vehicles`, not per-vehicle, so they stay past-dates-only.)*
+> `available_vehicles`, not per-vehicle, so they stay past-dates-only.)_
 >
 > No-double-booking is enforced at three points (greying is UX sugar, not the authority):
+>
 > 1. **Catalog** — the `available_vehicles` RPC excludes vehicles that overlap the chosen range,
 >    so a vehicle reached from the filtered catalog is known-free for those dates.
 > 2. **Per-vehicle calendar (S-02, Phase 6)** — `get_vehicle_busy_ranges` (PII-safe definer RPC)
@@ -125,8 +131,8 @@ Folder: `screenshots/s-02-reservation-flow/`
 >    `available_vehicles` re-check still runs before the request is created.
 > 3. **Backstop** — the DB `EXCLUDE` constraint (migration `20260603155136`) is the atomic guard.
 >
-> Roadmap S-02 *"blocks overlapping dates before submission"* = greyed unavailable dates + the
-> pre-submit re-check + the constraint. Copy stays Polish-canonical (e.g. *kaucja* = deposit).
+> Roadmap S-02 _"blocks overlapping dates before submission"_ = greyed unavailable dates + the
+> pre-submit re-check + the constraint. Copy stays Polish-canonical (e.g. _kaucja_ = deposit).
 
 ## Notes for implementation
 
