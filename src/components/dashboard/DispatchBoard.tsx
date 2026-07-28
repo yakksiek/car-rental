@@ -170,7 +170,7 @@ export default function DispatchBoard({
               action={
                 counts.wnioski > 0 && (
                   <a
-                    href="/dashboard/reservations"
+                    href="/dashboard/reservations?from=pulpit"
                     className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
                   >
                     Otwórz
