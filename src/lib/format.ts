@@ -71,6 +71,17 @@ export function estimatedTotal(dailyRate: string | number, days: number): number
 }
 
 /**
+ * Cash due at pickup: the rental estimate PLUS the refundable deposit
+ * (`estimatedTotal + deposit`), e.g. `(320, 3, 2500) -> 3460`. This is the one
+ * place the two are summed — the approval screen's `RAZEM DZIŚ` line shows the
+ * single amount the customer pays on collection (`płatne przy odbiorze`), unlike
+ * `estimatedTotal`, which deliberately keeps the deposit separate.
+ */
+export function totalDueAtPickup(dailyRate: string | number, days: number, deposit: string | number): number {
+  return Math.round((estimatedTotal(dailyRate, days) + toNumber(deposit)) * 100) / 100;
+}
+
+/**
  * Polish duration label, plural-aware: `1 -> "1 dzień"`, otherwise `"N dni"`.
  */
 export function formatDuration(days: number): string {

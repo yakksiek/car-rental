@@ -95,7 +95,7 @@ export default function StatCards({ counts }: { counts: DayCounts }) {
       Icon: ArrowRight,
     },
     {
-      href: "/dashboard/reservations",
+      href: "/dashboard/reservations?from=pulpit",
       label: "Wnioski",
       subLabel: "OCZEKUJĄCE",
       value: counts.wnioski,
