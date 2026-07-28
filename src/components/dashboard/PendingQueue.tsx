@@ -347,14 +347,16 @@ export function RequestDetail({
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-foreground text-[15px] font-[650] tracking-tight">{vehicleName(reservation)}</div>
+              {/* First sub-line: registration plate — the fleet's practical
+                  differentiator (falls back to nothing until the RPC returns it). */}
               {reservation.vehicle_plate ? (
                 <div className="text-muted-foreground mt-0.5 font-mono text-xs tracking-wide">
                   {reservation.vehicle_plate}
                 </div>
               ) : null}
-              {/* Daily rate shows only when stacked (mobile, design 09); the wide
-                  master-detail vehicle card carries the plate alone (design 14). */}
-              <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)] @min-[520px]:hidden">
+              {/* Daily rate: always visible (product preference — the design only
+                  showed it stacked; kept on the wide master-detail card too). */}
+              <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)]">
                 {formatPln(reservation.vehicle_daily_rate)}/doba
               </div>
             </div>
