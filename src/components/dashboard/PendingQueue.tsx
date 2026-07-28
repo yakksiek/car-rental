@@ -2,7 +2,7 @@
 import * as React from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
-import { ArrowRight, Check, ChevronLeft, Mail, Phone, Truck, User } from "lucide-react";
+import { ArrowRight, Calendar, Check, ChevronLeft, Mail, Phone, Truck, User } from "lucide-react";
 
 // components
 import { Badge } from "../ui/badge";
@@ -12,7 +12,7 @@ import { ReasonSheet, ResultOverlay } from "./ReservationDecision";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, rentalDays, totalDueAtPickup } from "../../lib/format";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { PendingReservation, RejectionReason } from "../../types";
 
@@ -24,9 +24,13 @@ import type { PendingReservation, RejectionReason } from "../../types";
 
 const COPY = {
   pending: "Oczekujące",
+  queueTitle: "Oczekujące wnioski",
   awaitingDecision: "oczekuje na decyzję",
   empty: "Brak oczekujących wniosków",
   emptyHint: "Nowe zgłoszenia pojawią się tutaj.",
+  sortLabel: "Sortuj:",
+  sortNewest: "Najnowsze zgłoszenia",
+  sortPickup: "Data odbioru",
   approve: "Zatwierdź",
   reject: "Odrzuć",
   review: "Sprawdź",
@@ -48,7 +52,10 @@ const COPY = {
   company: "Firma",
   vatId: "NIP",
   notes: "Uwagi klienta",
+  payment: "Płatność",
   deposit: "Kaucja",
+  grandTotal: "Razem dziś",
+  grandTotalNote: "Najem + kaucja · płatne przy odbiorze",
   confirmedTitle: "Rezerwacja potwierdzona",
   rejectedTitle: "Wniosek odrzucony",
   notifiedSub: "Klient powiadomiony e-mailem.",
@@ -135,7 +142,8 @@ function QueueCard({
           <div className="text-foreground truncate text-[13px] font-[650] tracking-tight">
             {vehicleName(reservation)}
           </div>
-          <div className="text-muted-foreground mt-0.5 text-xs">
+          <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+            <Calendar className="size-3 shrink-0" />
             {formatRange(reservation.pickup_date, reservation.return_date)}
           </div>
         </div>
@@ -144,7 +152,7 @@ function QueueCard({
       <div className="mt-3.5 flex gap-2">
         <Button
           variant="outline"
-          className="text-destructive hover:text-destructive h-10 flex-1"
+          className="text-destructive hover:text-destructive bg-card h-10 flex-1"
           disabled={busy}
           onClick={onReject}
         >
@@ -212,14 +220,18 @@ function InfoRow({
   label,
   value,
   last,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   last?: boolean;
+  className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-3 px-3.5 py-3", !last && "border-b border-[var(--flota-hair-2)]")}>
+    <div
+      className={cn("flex items-center gap-3 px-3.5 py-3", !last && "border-b border-[var(--flota-hair-2)]", className)}
+    >
       <span className="text-muted-foreground">{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="text-muted-foreground text-[11px] font-semibold">{label}</div>
@@ -273,7 +285,7 @@ export function RequestDetail({
           <button
             type="button"
             onClick={onBack}
-            className="text-foreground hover:bg-background flex size-9 items-center justify-center rounded-full"
+            className="text-foreground border-border bg-card shadow-card hover:bg-background flex size-9 items-center justify-center rounded-full border"
             aria-label="Wróć"
           >
             <ChevronLeft className="size-[18px]" />
@@ -289,13 +301,25 @@ export function RequestDetail({
             {COPY.submitted} · {submittedAgo(reservation.created_at)}
           </div>
         </div>
-        <span className="size-9" />
+        {/* Call the customer — the detail header's right affordance (design 09).
+            Only meaningful on touch/mobile, so it lives in this lg:hidden header. */}
+        {reservation.customer_phone ? (
+          <a
+            href={`tel:${reservation.customer_phone.replace(/\s+/g, "")}`}
+            className="text-foreground border-border bg-card shadow-card hover:bg-background flex size-9 items-center justify-center rounded-full border"
+            aria-label={`Zadzwoń do: ${reservation.customer_name}`}
+          >
+            <Phone className="size-[18px]" />
+          </a>
+        ) : (
+          <span className="size-9" />
+        )}
       </div>
 
-      {/* Master-detail header (lg+) — left-aligned reference + PENDING + name,
-          with a prominent right-aligned total (L7). No back button: the master
-          list stays visible beside it, so it renders with withBackButton={false}. */}
-      <div className="hidden items-start justify-between gap-4 px-1 pb-4 lg:flex">
+      {/* Master-detail header (lg+) — left-aligned reference + PENDING + name.
+          The price lives only in the crimson payment card below, so no total sits
+          here. No back button: the master list stays visible beside it (withBackButton={false}). */}
+      <div className="hidden px-1 pb-4 lg:block">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <span className="text-muted-foreground font-mono text-xs font-semibold">{reservation.reference}</span>
@@ -306,12 +330,6 @@ export function RequestDetail({
           </h2>
           <div className="text-muted-foreground mt-1 text-[13px]">
             {COPY.submitted} · {submittedAgo(reservation.created_at)}
-          </div>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className="text-foreground text-[26px] font-bold tracking-tight">{total}</div>
-          <div className="text-muted-foreground mt-1 text-xs">
-            {formatDuration(days)} · + kaucja {formatPln(reservation.vehicle_deposit)}
           </div>
         </div>
       </div>
@@ -329,12 +347,14 @@ export function RequestDetail({
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-foreground text-[15px] font-[650] tracking-tight">{vehicleName(reservation)}</div>
-              {reservation.vehicle_production_year ? (
-                <div className="text-muted-foreground mt-0.5 text-xs">
-                  Rocznik {reservation.vehicle_production_year}
+              {reservation.vehicle_plate ? (
+                <div className="text-muted-foreground mt-0.5 font-mono text-xs tracking-wide">
+                  {reservation.vehicle_plate}
                 </div>
               ) : null}
-              <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)]">
+              {/* Daily rate shows only when stacked (mobile, design 09); the wide
+                  master-detail vehicle card carries the plate alone (design 14). */}
+              <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)] @min-[520px]:hidden">
                 {formatPln(reservation.vehicle_daily_rate)}/doba
               </div>
             </div>
@@ -398,7 +418,14 @@ export function RequestDetail({
           {COPY.customer}
         </div>
         <div className={cn(cardClass, "p-1.5")}>
-          <InfoRow icon={<User className="size-4" />} label={COPY.name} value={reservation.customer_name} />
+          {/* Name repeats the lg+ master-detail heading, so drop it there (design
+              14); mobile keeps it — the compact header shows only the reference. */}
+          <InfoRow
+            icon={<User className="size-4" />}
+            label={COPY.name}
+            value={reservation.customer_name}
+            className="lg:hidden"
+          />
           <InfoRow icon={<Mail className="size-4" />} label={COPY.email} value={reservation.customer_email} />
           <InfoRow
             icon={<Phone className="size-4" />}
@@ -423,19 +450,43 @@ export function RequestDetail({
           ) : null}
         </div>
 
-        {/* Pricing */}
-        <div className={cn(cardClass, "p-4")}>
-          <div className="flex items-center justify-between border-b border-[var(--flota-hair-2)] py-2">
-            <span className="text-muted-foreground text-[13px] font-[540]">
-              {formatDuration(days)} × {formatPln(reservation.vehicle_daily_rate)}
-            </span>
-            <span className="text-foreground text-sm font-[650] tracking-tight">{total}</span>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-muted-foreground text-[13px] font-[540]">{COPY.deposit}</span>
-            <span className="text-foreground text-sm font-[650] tracking-tight">
-              {formatPln(reservation.vehicle_deposit)}
-            </span>
+        {/* Payment (design 09/14) — the crimson summary. The `RAZEM DZIŚ` line is
+            the one place rent + deposit are summed (totalDueAtPickup): the single
+            amount taken on collection. 2-up on a wide panel, stacked on mobile. */}
+        <div className="text-muted-foreground mx-1 mt-1 text-[13px] font-bold tracking-wide uppercase">
+          {COPY.payment}
+        </div>
+        <div className="bg-primary text-primary-foreground shadow-accent relative overflow-hidden rounded-lg bg-[linear-gradient(150deg,var(--flota-accent)_0%,var(--flota-accent-dark)_100%)]">
+          {/* corner circle highlight — exact values from the design source
+              (staff-desktop.jsx): a CRISP 7%-white disc, no blur. The hard edge is
+              what makes it read as a circle; blurring it smears it into nothing. */}
+          <div className="pointer-events-none absolute -top-10 -right-[30px] size-[130px] rounded-full bg-white/[0.07] @min-[520px]:size-[150px]" />
+          <div className="relative grid gap-3 p-4 @min-[520px]:grid-cols-[1fr_auto] @min-[520px]:items-center @min-[520px]:gap-6 @min-[520px]:p-5">
+            <div className="@min-[520px]:border-r @min-[520px]:border-white/15 @min-[520px]:pr-6">
+              <div className="flex items-center justify-between gap-4 border-b border-white/15 py-2">
+                <span className="text-primary-foreground/85 text-[13px] font-[540]">
+                  {formatDuration(days)} × {formatPln(reservation.vehicle_daily_rate)}
+                </span>
+                <span className="text-sm font-[650] tracking-tight">{total}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <span className="text-primary-foreground/85 text-[13px] font-[540]">{COPY.deposit}</span>
+                <span className="text-sm font-[650] tracking-tight">{formatPln(reservation.vehicle_deposit)}</span>
+              </div>
+            </div>
+            <div className="border-t border-white/15 pt-3 @min-[520px]:border-t-0 @min-[520px]:pt-0">
+              <div className="flex items-baseline justify-between gap-3 @min-[520px]:flex-col @min-[520px]:items-end @min-[520px]:gap-0">
+                <div className="text-primary-foreground/75 text-[10.5px] font-bold tracking-wide uppercase">
+                  {COPY.grandTotal}
+                </div>
+                <div className="text-[26px] leading-none font-bold tracking-tight @min-[520px]:mt-1">
+                  {formatPln(totalDueAtPickup(reservation.vehicle_daily_rate, days, reservation.vehicle_deposit))}
+                </div>
+              </div>
+              <div className="text-primary-foreground/75 mt-2 hidden text-[11px] @min-[520px]:block @min-[520px]:text-right">
+                {COPY.grandTotalNote}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -445,7 +496,7 @@ export function RequestDetail({
         <div className="mt-4 flex gap-2.5">
           <Button
             variant="outline"
-            className="text-destructive hover:text-destructive h-12 flex-1"
+            className="text-destructive hover:text-destructive bg-card h-12 flex-1"
             disabled={busy}
             onClick={onReject}
           >
@@ -463,7 +514,13 @@ export function RequestDetail({
 
 // ── main island ──────────────────────────────────────────────────────────────
 
-export default function PendingQueue({ reservations: initial }: { reservations: PendingReservation[] }) {
+export default function PendingQueue({
+  reservations: initial,
+  fromDashboard = false,
+}: {
+  reservations: PendingReservation[];
+  fromDashboard?: boolean;
+}) {
   const [reservations, setReservations] = React.useState<PendingReservation[]>(initial);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
@@ -473,6 +530,8 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   // selection (selectedId still null).
   const [decidedId, setDecidedId] = React.useState<string | null>(null);
   const [banner, setBanner] = React.useState<string | null>(null);
+  // Mobile queue sort (design 08). Desktop keeps the RPC's newest-first order.
+  const [sort, setSort] = React.useState<"newest" | "pickup">("newest");
   // The one decision mechanism, shared with the calendar.
   const { busy, decide: runDecision } = useReservationDecision();
 
@@ -521,6 +580,44 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
   // fall back to the first pending one (and advance to the next after a decision).
   const desktopSelected = selected ?? reservations.at(0) ?? null;
 
+  // Newest-first by submission, or ascending by pickup date — for the mobile
+  // list only; the desktop master list stays in the RPC's order.
+  const mobileList = React.useMemo(() => {
+    const rows = [...reservations];
+    return sort === "pickup"
+      ? rows.sort((a, b) => a.pickup_date.localeCompare(b.pickup_date))
+      : rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }, [reservations, sort]);
+
+  const sortControl = (
+    <div className="mb-3 flex items-center gap-2">
+      <span className="text-muted-foreground text-xs font-semibold">{COPY.sortLabel}</span>
+      {(
+        [
+          ["newest", COPY.sortNewest],
+          ["pickup", COPY.sortPickup],
+        ] as const
+      ).map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => {
+            setSort(key);
+          }}
+          aria-pressed={sort === key}
+          className={cn(
+            "flex h-9 items-center rounded-full border px-3.5 text-[13px] font-[650] tracking-tight transition-colors",
+            sort === key
+              ? "border-foreground bg-foreground text-background"
+              : "border-border bg-card text-foreground hover:bg-background",
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   const emptyState = (
     <div className={cn(cardClass, "flex flex-col items-center justify-center px-6 py-16 text-center")}>
       <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
@@ -528,10 +625,36 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
     </div>
   );
 
+  // Mobile list header (design 08) — the desktop topbar carries the title at md+,
+  // so this is `md:hidden`; and it renders only in the queue state below (not on
+  // the detail, where the compact request header takes over). The back button is
+  // absolutely placed so the title stays centered, and only appears when the user
+  // arrived from the dashboard.
+  const mobileHeader = (
+    <header className="relative mb-4 md:hidden">
+      {fromDashboard && (
+        <a
+          href="/dashboard"
+          aria-label="Wróć do pulpitu"
+          className="text-foreground hover:bg-background absolute top-1/2 left-0 flex size-9 -translate-y-1/2 items-center justify-center rounded-full"
+        >
+          <ChevronLeft className="size-[18px]" />
+        </a>
+      )}
+      <div className="text-center">
+        <h1 className="text-foreground text-xl font-bold tracking-tight">{COPY.queueTitle}</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {count} {COPY.awaitingDecision}
+        </p>
+      </div>
+    </header>
+  );
+
   return (
     <div className="relative min-h-[60vh]">
-      {/* The count header lives in the shell topbar (desktop) + page header
-          (mobile); the queue only owns the re-sync banner + the list/detail. */}
+      {/* The count header lives in the shell topbar (desktop) + this island's
+          mobile header below (list state only); the queue owns the re-sync
+          banner + the list/detail. */}
       {banner && (
         <div className="border-border rounded-xl border bg-[var(--flota-warning-soft)] px-4 py-3 text-sm text-[var(--flota-ink-2)]">
           {banner}
@@ -555,22 +678,30 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
             />
           </div>
         ) : (
-          <div className="mt-4 flex flex-col gap-3">
-            {count === 0
-              ? emptyState
-              : reservations.map((r) => (
-                  <QueueCard
-                    key={r.id}
-                    reservation={r}
-                    busy={busy}
-                    onReview={() => {
-                      setSelectedId(r.id);
-                    }}
-                    onReject={() => {
-                      setReasonForId(r.id);
-                    }}
-                  />
-                ))}
+          <div className="mt-4">
+            {mobileHeader}
+            {count === 0 ? (
+              emptyState
+            ) : (
+              <>
+                {sortControl}
+                <div className="flex flex-col gap-3">
+                  {mobileList.map((r) => (
+                    <QueueCard
+                      key={r.id}
+                      reservation={r}
+                      busy={busy}
+                      onReview={() => {
+                        setSelectedId(r.id);
+                      }}
+                      onReject={() => {
+                        setReasonForId(r.id);
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -595,7 +726,7 @@ export default function PendingQueue({ reservations: initial }: { reservations: 
                 />
               ))}
             </div>
-            <div>
+            <div className="lg:border-border lg:border-l lg:pl-6">
               {desktopSelected && (
                 <RequestDetail
                   reservation={desktopSelected}

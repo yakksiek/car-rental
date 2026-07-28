@@ -168,7 +168,7 @@ export default function NeedDecisionPanel({
           <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
           {count > 0 && (
             <a
-              href="/dashboard/reservations"
+              href="/dashboard/reservations?from=pulpit"
               className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
             >
               {COPY.open}
@@ -204,7 +204,7 @@ export default function NeedDecisionPanel({
           ))}
           {overflow > 0 && (
             <a
-              href="/dashboard/reservations"
+              href="/dashboard/reservations?from=pulpit"
               className="text-muted-foreground hover:text-foreground py-1 text-center text-sm font-medium"
             >
               {COPY.more} ({count}) →
