@@ -52,7 +52,7 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 > Screenshots are the **shipped surface**, re-exported when a slice changes it — not
 > the design mockup. Rows 09/20 were re-exported 2026-07-28 from the merged
 > `staff-pulpit-dispatch` cockpit (PR #14); the per-change target mockups for that
-> slice live in `context/archive/staff-pulpit-dispatch/`.
+> slice live in `context/archive/2026-07-24-staff-pulpit-dispatch/`.
 
 | #   | Screen                              | Role / device      | Slice                                              | Source file            |
 | --- | ----------------------------------- | ------------------ | -------------------------------------------------- | ---------------------- |
