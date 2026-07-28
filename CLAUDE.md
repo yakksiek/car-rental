@@ -53,6 +53,14 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 - **Shared types**: `src/types.ts` (entities, DTOs).
 - **Supabase migrations**: `supabase/migrations/` with format `YYYYMMDDHHmmss_short_description.sql`. Always enable RLS on new tables with per-operation, per-role policies.
 
+### Design (UI slices)
+
+**Read `context/foundation/design-system.md` before building or changing any user-facing surface** (`src/pages/**` non-API, `src/components/**`, `src/layouts/**`, `src/styles/**`) — it's the design-system index and is **not** auto-loaded into context.
+
+- **Source of truth is the live Claude Design project** `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`), pulled with the `DesignSync` tool (`get_file`). Screenshots in `context/foundation/design/screenshots/` are the cheap visual reference; design tokens ship from `src/styles/global.css`. **Never import from `context/foundation/design/`** (static prototype, not app code).
+- **Port exact values from the design JSX — never tune by eye.** Transcribe radii / spacing / colors (→ token names) / font size + weight / breakpoints / component states + verbatim **Polish** copy (canonical); re-author in our idioms (Astro + React islands, `cn()`, shadcn). Screenshots are for the glance and the final vision-diff, not for measurements.
+- Full per-slice workflow (plan-time Design Alignment Audit → `design-contract.md` with `exact` / `deviation(reason)` lines → rendered vision-diff gate) lives in `context/foundation/lessons.md`.
+
 ### Environment
 
 - Node.js v22.14.0 (`.nvmrc`)
