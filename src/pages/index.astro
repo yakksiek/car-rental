@@ -4,6 +4,8 @@ import { Picture } from "astro:assets";
 import Layout from "../layouts/Layout.astro";
 import LandingNav from "../components/LandingNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import HeroSearch from "../components/vehicle/HeroSearch.tsx";
+import TrustCard from "../components/landing/TrustCard.astro";
 import VehicleCard from "../components/vehicle/VehicleCard.astro";
 import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
 
@@ -45,78 +47,108 @@ const CATEGORIES: VehicleCategory[] = [
 ---
 
 <Layout title="Flota — wynajem pojazdów użytkowych">
-  <!-- Dark hero (S2) — full-bleed. Positioning context for the floating <LandingNav>. -->
-  <section class="relative w-full overflow-hidden bg-[#0A0D14] xl:bg-[#080B12]">
-    <!-- Photo (z-0) — the LCP element: eager + high priority, optimized to AVIF/WebP. -->
-    <Picture
-      src={heroImg}
-      formats={["avif", "webp"]}
-      alt=""
-      loading="eager"
-      fetchpriority="high"
-      width={1376}
-      height={768}
-      class="absolute inset-0 z-0 h-full w-full object-cover object-[center_46%] xl:object-center"
-    />
-
-    <!-- Top scrim (z-1). -->
-    <div
-      class="absolute inset-x-0 top-0 z-[1] h-[130px] [background:linear-gradient(180deg,rgba(8,11,18,0.55)_0%,rgba(8,11,18,0)_100%)] xl:h-[300px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0.6)_0%,rgba(10,10,18,0)_100%)]"
-    >
-    </div>
-    <!-- Bottom scrim (z-2) — fades the photo into the dark canvas. -->
-    <div
-      class="absolute inset-x-0 bottom-0 z-[2] h-[120px] [background:linear-gradient(180deg,rgba(10,13,20,0)_0%,#0A0D14_94%)] xl:top-[420px] xl:h-[460px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0)_0%,rgba(10,10,18,0.95)_100%)]"
-    >
-    </div>
-
-    <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip fading UP to transparent. -->
-    <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
-      <span
-        class="[background-image:linear-gradient(0deg,#FFFFFF_0%,#FFFFFF_40%,rgba(238,242,255,0)_82%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:text-[258px] xl:tracking-[-10px] xl:opacity-70"
-      >
-        FLOTA
-      </span>
-    </div>
-
-    <!-- Van cutout (z-4) — SAME crop/position as the photo, so it lands over the van. -->
-    <Picture
-      src={vanImg}
-      formats={["avif", "webp"]}
-      alt=""
-      loading="eager"
-      width={1376}
-      height={768}
-      class="pointer-events-none absolute inset-0 z-[4] h-full w-full object-cover object-[center_46%] xl:object-center"
-    />
-
+  <!-- Dark hero (S2) — full-bleed. Positioning context for the floating <LandingNav>
+       and (on desktop) the absolutely-composed content column + trust card. -->
+  <section class="relative w-full overflow-hidden bg-[#0A0D14] xl:h-[880px] xl:bg-[#080B12]">
     <LandingNav active="home" />
 
-    <!-- Hero content column + trust card + search island land in Phase 2. Shell height
-         keeps the composition (photo/wordmark/van) visible until then. -->
-    <div class="relative z-[5] h-[336px] xl:h-[880px]"></div>
-  </section>
+    <!-- Photo stage: a 336px band on mobile; full-fill on the 880px desktop canvas.
+         Holds the photo → wordmark → van z-order. -->
+    <div class="relative h-[336px] w-full xl:absolute xl:inset-0 xl:h-auto">
+      <!-- Photo (z-0) — the LCP element: eager + high priority, optimized to AVIF/WebP. -->
+      <Picture
+        src={heroImg}
+        formats={["avif", "webp"]}
+        alt=""
+        loading="eager"
+        fetchpriority="high"
+        width={1376}
+        height={768}
+        class="absolute inset-0 z-0 h-full w-full object-cover object-[center_46%] xl:object-center"
+      />
 
-  <!-- Category quick-links -->
-  <section id="kategorie" class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
-    <div class="mb-7 flex items-end justify-between gap-4">
-      <div>
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">5 kategorii</p>
-        <h2 class="text-foreground mt-1.5 text-3xl font-bold tracking-tight sm:text-4xl">
-          Wybierz typ pojazdu<span class="text-primary">.</span>
-        </h2>
+      <!-- Top scrim (z-1). -->
+      <div
+        class="absolute inset-x-0 top-0 z-[1] h-[130px] [background:linear-gradient(180deg,rgba(8,11,18,0.55)_0%,rgba(8,11,18,0)_100%)] xl:h-[300px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0.6)_0%,rgba(10,10,18,0)_100%)]"
+      >
       </div>
+      <!-- Bottom scrim (z-2) — fades the photo into the dark canvas. -->
+      <div
+        class="absolute inset-x-0 bottom-0 z-[2] h-[120px] [background:linear-gradient(180deg,rgba(10,13,20,0)_0%,#0A0D14_94%)] xl:top-[420px] xl:h-[460px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0)_0%,rgba(10,10,18,0.95)_100%)]"
+      >
+      </div>
+
+      <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip fading UP to transparent. -->
+      <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
+        <span
+          class="[background-image:linear-gradient(0deg,#FFFFFF_0%,#FFFFFF_40%,rgba(238,242,255,0)_82%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:text-[258px] xl:tracking-[-10px] xl:opacity-70"
+        >
+          FLOTA
+        </span>
+      </div>
+
+      <!-- Van cutout (z-4) — SAME crop/position as the photo, so it lands over the van. -->
+      <Picture
+        src={vanImg}
+        formats={["avif", "webp"]}
+        alt=""
+        loading="eager"
+        width={1376}
+        height={768}
+        class="pointer-events-none absolute inset-0 z-[4] h-full w-full object-cover object-[center_46%] xl:object-center"
+      />
+    </div>
+
+    <!-- Mobile hero content (below the photo stage, on solid dark). Copy is intentionally
+         different from desktop; the eyebrow is mobile-only (fixed genitive, deviation). -->
+    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[34px] xl:hidden">
+      <p class="text-[11px] font-bold tracking-[1.4px] text-white/60 uppercase">
+        {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
+      </p>
+      <h1 class="font-serif text-[46px] leading-[1.02] tracking-[-1.8px] text-white">
+        Pojazdy<br />użytkowe<span class="text-primary">.</span>
+      </h1>
+      <p class="text-[15px] leading-[23px] text-white/72">
+        Wynajem długoterminowy i na dobę, w pełni online, z fakturą VAT.
+      </p>
+      <ul class="flex flex-col gap-2.5">
+        {
+          [
+            "Darmowe podstawienie i odbiór w mieście",
+            "Bezpłatne odwołanie rezerwacji",
+            "Wynajem średnioterminowy już od 1 miesiąca",
+          ].map((text) => (
+            <li class="flex items-center gap-2.5 text-[14px] font-medium text-white/[0.92]">
+              <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/10">
+                <svg
+                  class="text-primary size-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              {text}
+            </li>
+          ))
+        }
+      </ul>
       <a
         href="/fleet"
-        class="text-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+        class="bg-primary text-primary-foreground mt-1.5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[16px] text-[16px] font-bold [box-shadow:0_14px_30px_-10px_rgba(180,54,56,0.55)]"
       >
-        Cała flota
+        Zarezerwuj online
         <svg
           class="size-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.7"
+          stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
@@ -125,57 +157,137 @@ const CATEGORIES: VehicleCategory[] = [
         </svg>
       </a>
     </div>
-    <div
-      class="-mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden"
-    >
-      {
-        CATEGORIES.map((category) => (
-          <a
-            href={`/fleet?category=${category}`}
-            class="group bg-card shadow-card hover:shadow-pop flex min-h-[180px] w-44 shrink-0 flex-col justify-between rounded-xl p-5 transition hover:-translate-y-0.5 sm:w-auto"
-          >
-            <div class="text-foreground flex flex-1 items-center justify-center py-3">
-              <VehicleSilhouette category={category} alt={categoryLabelPl(category)} class="max-w-[150px]" />
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-foreground font-semibold tracking-tight">{categoryLabelPl(category)}</span>
-              <svg
-                class="text-muted-foreground group-hover:text-foreground size-4 transition"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </div>
-          </a>
-        ))
-      }
+
+    <!-- Desktop hero content — absolutely composed on the 880px canvas. -->
+    <div class="hidden xl:block">
+      <div class="absolute top-[418px] left-16 z-[5] w-[560px]">
+        <h1 class="font-serif text-[56px] leading-[56px] tracking-[-2px] text-white">
+          Pojazdy<br />użytkowe<span class="text-primary">.</span>
+        </h1>
+        <p class="mt-5 max-w-[440px] text-[15.5px] leading-[24px] text-white/80">
+          Nowe samochody dla Twojej firmy. Dostępne od ręki!
+        </p>
+        <ul class="mt-6 flex flex-col gap-3">
+          {
+            [
+              "Darmowe podstawienie i odbiór na terenie miasta",
+              "Bezpłatne odwołanie rezerwacji",
+              "Wynajem średnioterminowy już od 1 miesiąca",
+            ].map((text) => (
+              <li class="flex items-center gap-3 text-[15.5px] font-medium text-white/95">
+                <span class="bg-primary size-[7px] shrink-0 rounded-full" />
+                {text}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <!-- Trust card floats bottom-right of the hero, bottom-aligned with the search pill. -->
+      <div class="absolute top-[556px] right-16 z-[6] w-[340px]">
+        <TrustCard count={vehicles.length} />
+      </div>
     </div>
   </section>
 
-  <!-- Popular -->
-  {
-    featured.length > 0 && (
-      <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
-        <div class="mb-6 flex items-end justify-between gap-4">
-          <h2 class="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">Popularne</h2>
-          <a href="/fleet" class="text-primary text-sm font-semibold hover:underline">
-            Wszystkie
-          </a>
-        </div>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((vehicle) => (
-            <VehicleCard vehicle={vehicle} />
-          ))}
-        </div>
-      </section>
-    )
-  }
+  <!-- Light body sheet (S5) — rises over the dark hero with an upward shadow. -->
+  <div
+    class="bg-background relative z-10 -mt-16 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-40 xl:rounded-t-[40px]"
+  >
+    <!-- Search island — SINGLE mount. Mobile: a white card at the top of the sheet.
+         Desktop (≥xl): absolutely lifted up into the dark hero's content column
+         (bottom-left). It is never duplicated (a second mount = a second island state). -->
+    <div
+      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-64px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[600px] xl:max-w-none xl:px-0"
+    >
+      <HeroSearch client:load />
+    </div>
 
-  <SiteFooter />
+    <!-- Mobile trust card (desktop's copy floats in the hero above). -->
+    <div class="mx-auto mt-4 w-full max-w-[560px] px-4 sm:px-6 xl:hidden">
+      <TrustCard count={vehicles.length} />
+    </div>
+
+    <!-- Category quick-links -->
+    <section id="kategorie" class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
+      <div class="mb-7 flex items-end justify-between gap-4">
+        <div>
+          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">5 kategorii</p>
+          <h2 class="text-foreground mt-1.5 text-3xl font-bold tracking-tight sm:text-4xl">
+            Wybierz typ pojazdu<span class="text-primary">.</span>
+          </h2>
+        </div>
+        <a
+          href="/fleet"
+          class="text-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+        >
+          Cała flota
+          <svg
+            class="size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14M13 6l6 6-6 6"></path>
+          </svg>
+        </a>
+      </div>
+      <div
+        class="-mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden"
+      >
+        {
+          CATEGORIES.map((category) => (
+            <a
+              href={`/fleet?category=${category}`}
+              class="group bg-card shadow-card hover:shadow-pop flex min-h-[180px] w-44 shrink-0 flex-col justify-between rounded-xl p-5 transition hover:-translate-y-0.5 sm:w-auto"
+            >
+              <div class="text-foreground flex flex-1 items-center justify-center py-3">
+                <VehicleSilhouette category={category} alt={categoryLabelPl(category)} class="max-w-[150px]" />
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-foreground font-semibold tracking-tight">{categoryLabelPl(category)}</span>
+                <svg
+                  class="text-muted-foreground group-hover:text-foreground size-4 transition"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- Popular -->
+    {
+      featured.length > 0 && (
+        <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
+          <div class="mb-6 flex items-end justify-between gap-4">
+            <h2 class="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">Popularne</h2>
+            <a href="/fleet" class="text-primary text-sm font-semibold hover:underline">
+              Wszystkie
+            </a>
+          </div>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((vehicle) => (
+              <VehicleCard vehicle={vehicle} />
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <SiteFooter />
+  </div>
 </Layout>
