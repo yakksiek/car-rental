@@ -1,0 +1,77 @@
+---
+// components
+import CategoryIcon from "./CategoryIcon.astro";
+
+// others
+import { cn } from "../../lib/utils";
+import type { VehicleCategory } from "../../types";
+import { categoryLabelPl } from "../../lib/format";
+
+// Category selector (S7) — five click-to-route pills into `/fleet?category=<cat>`.
+// Furgon is the active (accent) pill per the mock; there is no hover-preview this
+// slice (click-to-route only — the hover-hint copy is dropped, deviation(scope)).
+
+interface Props {
+  active?: VehicleCategory;
+}
+
+const { active = "cargo_van" } = Astro.props;
+
+const CATEGORIES: VehicleCategory[] = [
+  "cargo_van",
+  "passenger_van",
+  "car_transporter",
+  "refrigerated_truck",
+  "flatbed_truck",
+];
+---
+
+<section class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <h2 class="text-foreground font-serif text-[28px] leading-none xl:text-[44px]">
+      Wybierz typ pojazdu<span class="text-primary">.</span>
+    </h2>
+    <a
+      href="/fleet"
+      class="bg-foreground text-background hidden shrink-0 items-center gap-2 rounded-full px-5 py-3 text-[14.5px] font-semibold transition hover:opacity-90 xl:inline-flex"
+    >
+      Cała flota
+      <svg
+        class="size-[15px]"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.9"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 12h14M13 6l6 6-6 6"></path>
+      </svg>
+    </a>
+  </div>
+
+  <div
+    class="xl:bg-card flex flex-wrap gap-2 xl:inline-flex xl:flex-nowrap xl:gap-1 xl:rounded-full xl:border xl:border-[#E7EAF0] xl:px-2 xl:py-[7px]"
+  >
+    {
+      CATEGORIES.map((category) => {
+        const isActive = category === active;
+        return (
+          <a
+            href={`/fleet?category=${category}`}
+            class:list={cn(
+              "inline-flex items-center gap-2 rounded-full border px-[13px] py-[11px] text-[14px] transition xl:border-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px]",
+              isActive
+                ? "bg-primary text-primary-foreground border-transparent font-semibold xl:[box-shadow:0_4px_12px_-2px_rgba(180,54,56,0.30)]"
+                : "border-[#E7EAF0] font-medium text-[#5B6474] hover:text-[#0E1524]",
+            )}
+          >
+            <CategoryIcon category={category} class:list={isActive ? "text-primary-foreground" : "text-[#5B6474]"} />
+            {categoryLabelPl(category)}
+          </a>
+        );
+      })
+    }
+  </div>
+</section>

@@ -6,11 +6,12 @@ import LandingNav from "../components/LandingNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import HeroSearch from "../components/vehicle/HeroSearch.tsx";
 import TrustCard from "../components/landing/TrustCard.astro";
-import VehicleCard from "../components/vehicle/VehicleCard.astro";
-import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
+import ProcessSteps from "../components/landing/ProcessSteps.astro";
+import TypeSelector from "../components/landing/TypeSelector.astro";
+import LandingVehicleCard from "../components/vehicle/LandingVehicleCard.astro";
 
 // others
-import type { VehicleCategory, VehicleFilters } from "../types";
+import type { VehicleFilters } from "../types";
 import { listVehicles } from "../lib/services/vehicles";
 import { categoryLabelPl } from "../lib/format";
 import heroImg from "../assets/hero-airfield.jpg";
@@ -37,13 +38,14 @@ const NO_FILTERS: VehicleFilters = {
 const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
 const featured = vehicles.slice(0, 3);
 
-const CATEGORIES: VehicleCategory[] = [
-  "cargo_van",
-  "passenger_van",
-  "car_transporter",
-  "refrigerated_truck",
-  "flatbed_truck",
-];
+// "Furgony" chip (S8) — derived from the shown set so it never misdescribes the data:
+// the top-3 are any-category, so the chip reads the category only when all three share
+// one, else a neutral label. deviation(static label decoupled from data — flagged).
+const firstFeaturedCategory = featured.length > 0 ? featured[0].category : null;
+const popularChipLabel =
+  firstFeaturedCategory && featured.every((vehicle) => vehicle.category === firstFeaturedCategory)
+    ? categoryLabelPl(firstFeaturedCategory)
+    : "Polecane";
 ---
 
 <Layout title="Flota — wynajem pojazdów użytkowych">
@@ -208,80 +210,49 @@ const CATEGORIES: VehicleCategory[] = [
       <TrustCard count={vehicles.length} />
     </div>
 
-    <!-- Category quick-links -->
-    <section id="kategorie" class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
-      <div class="mb-7 flex items-end justify-between gap-4">
-        <div>
-          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">5 kategorii</p>
-          <h2 class="text-foreground mt-1.5 text-3xl font-bold tracking-tight sm:text-4xl">
-            Wybierz typ pojazdu<span class="text-primary">.</span>
-          </h2>
-        </div>
-        <a
-          href="/fleet"
-          class="text-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
-        >
-          Cała flota
-          <svg
-            class="size-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.7"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M5 12h14M13 6l6 6-6 6"></path>
-          </svg>
-        </a>
-      </div>
-      <div
-        class="-mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden"
-      >
-        {
-          CATEGORIES.map((category) => (
-            <a
-              href={`/fleet?category=${category}`}
-              class="group bg-card shadow-card hover:shadow-pop flex min-h-[180px] w-44 shrink-0 flex-col justify-between rounded-xl p-5 transition hover:-translate-y-0.5 sm:w-auto"
-            >
-              <div class="text-foreground flex flex-1 items-center justify-center py-3">
-                <VehicleSilhouette category={category} alt={categoryLabelPl(category)} class="max-w-[150px]" />
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-foreground font-semibold tracking-tight">{categoryLabelPl(category)}</span>
+    <!-- Proces wynajmu (S6) -->
+    <ProcessSteps />
+
+    <!-- Wybierz typ pojazdu (S7) — click-to-route category selector -->
+    <TypeSelector active="cargo_van" />
+
+    <!-- Popularne (S8) — forked LandingVehicleCard over live top-3 -->
+    {
+      featured.length > 0 && (
+        <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
+          <div class="mb-6 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <h2 class="text-foreground font-serif text-[26px] leading-none xl:text-[38px]">Popularne</h2>
+              <span class="bg-accent text-accent-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold">
                 <svg
-                  class="text-muted-foreground group-hover:text-foreground size-4 transition"
+                  class="text-primary size-[13px]"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.7"
+                  stroke-width="1.8"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M5 12h14M13 6l6 6-6 6" />
+                  <path d="M14 18V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1" />
+                  <path d="M15 18H9" />
+                  <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+                  <circle cx="7" cy="18" r="2" />
+                  <circle cx="17" cy="18" r="2" />
                 </svg>
-              </div>
-            </a>
-          ))
-        }
-      </div>
-    </section>
-
-    <!-- Popular -->
-    {
-      featured.length > 0 && (
-        <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
-          <div class="mb-6 flex items-end justify-between gap-4">
-            <h2 class="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">Popularne</h2>
-            <a href="/fleet" class="text-primary text-sm font-semibold hover:underline">
+                {popularChipLabel}
+              </span>
+            </div>
+            <a
+              href="/fleet"
+              class="text-primary xl:bg-accent text-sm font-semibold hover:underline xl:rounded-full xl:px-4 xl:py-2 xl:no-underline"
+            >
               Wszystkie
             </a>
           </div>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((vehicle) => (
-              <VehicleCard vehicle={vehicle} />
+              <LandingVehicleCard vehicle={vehicle} />
             ))}
           </div>
         </section>
