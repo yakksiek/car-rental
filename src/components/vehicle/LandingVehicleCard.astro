@@ -6,7 +6,7 @@ import SpecIcon from "./SpecIcon.astro";
 
 // others
 import type { Vehicle } from "../../types";
-import { categoryLabelPl, formatPln, fuelLabelPl, formatPayloadKg, transmissionLabelPl } from "../../lib/format";
+import { formatPln, fuelLabelPl, formatPayloadKg, transmissionLabelPl } from "../../lib/format";
 import { vehicleSlug } from "../../lib/slug";
 
 // Landing-only "Popularne" card (S8) — a FORK of the shared VehicleCard (which backs
@@ -25,10 +25,16 @@ interface Props {
 
 const { vehicle } = Astro.props;
 
-const title = vehicle.make ?? vehicle.name;
-const subtitle = [vehicle.model, vehicle.production_year].filter(Boolean).join(" · ");
+// Title = make + model on one line (e.g. "Renault Master"); subtitle = year, matching
+// the canonical (no category eyebrow — the type reads from the silhouette + status).
+const title = [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ");
+const subtitle = vehicle.production_year ? String(vehicle.production_year) : "";
 const slug = vehicleSlug(vehicle.make ?? vehicle.name, vehicle.model ?? "");
 const href = `/fleet/${vehicle.id}/${slug}`;
+
+// A real photo fills the image block edge-to-edge (object-cover, full-bleed like the
+// canonical); with none, the geometric silhouette sits centered on the gradient.
+const photo = vehicle.photos.length > 0 ? vehicle.photos[0] : null;
 
 const specs = [
   { icon: "seats" as const, value: vehicle.seats === null ? "—" : String(vehicle.seats) },
@@ -40,69 +46,69 @@ const specs = [
 
 <a
   href={href}
-  class="group bg-card @container flex flex-col rounded-xl border border-[#E7EAF0] p-4 transition hover:-translate-y-0.5 hover:[box-shadow:0_18px_40px_-16px_rgba(0,0,0,0.30)] @min-[400px]:rounded-[18px] @min-[400px]:p-[18px]"
+  class="group bg-card @container flex flex-col overflow-hidden rounded-xl border border-[#E7EAF0] transition hover:-translate-y-0.5 hover:[box-shadow:0_18px_40px_-16px_rgba(0,0,0,0.30)] @min-[400px]:rounded-[18px]"
 >
-  <!-- Image: gradient placeholder → silhouette/photo; status pill top-left. -->
-  <div
-    class="relative flex h-[150px] items-center justify-center overflow-hidden rounded-[14px] [background:linear-gradient(135deg,#EEF1F5_0%,#E3E7EC_100%)]"
-  >
-    <div class="text-[#B7C0CE]">
-      <VehicleSilhouette
-        category={vehicle.category}
-        photos={vehicle.photos}
-        alt={`${title} ${vehicle.model ?? ""}`.trim()}
-        class="max-w-[220px]"
-      />
-    </div>
+  <!-- Image: full-bleed to the card's top edge (gradient placeholder → silhouette/photo);
+       status pill top-left. -->
+  <div class="relative h-[150px] overflow-hidden [background:linear-gradient(135deg,#EEF1F5_0%,#E3E7EC_100%)]">
+    {
+      photo ? (
+        <img src={photo} alt={title} class="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <div class="flex h-full items-center justify-center text-[#B7C0CE]">
+          <VehicleSilhouette category={vehicle.category} alt={title} class="max-w-[220px]" />
+        </div>
+      )
+    }
     <StatusPill class="absolute top-3 left-3" />
   </div>
 
-  <!-- Type overline + title/sub. -->
-  <div class="mt-3.5">
-    <div class="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-      {categoryLabelPl(vehicle.category)}
+  <!-- Padded content. -->
+  <div class="flex flex-1 flex-col p-4 @min-[400px]:p-[18px]">
+    <!-- Title (make + model) / sub (year). -->
+    <div>
+      <div class="text-foreground truncate text-[19px] font-bold tracking-tight @min-[400px]:text-[18px]">
+        {title}
+      </div>
+      {subtitle && <div class="truncate text-[13px] text-[var(--flota-ink-2)]">{subtitle}</div>}
     </div>
-    <div class="text-foreground mt-1 truncate text-[19px] font-bold tracking-tight @min-[400px]:text-[18px]">
-      {title}
-    </div>
-    {subtitle && <div class="truncate text-[13px] text-[var(--flota-ink-2)]">{subtitle}</div>}
-  </div>
 
-  <!-- 4-up spec row. -->
-  <div class="mt-3 grid grid-cols-4 gap-2 border-y border-[#EEF1F5] py-3">
-    {
-      specs.map((spec) => (
-        <div class="flex flex-col items-center gap-1 text-center">
-          <SpecIcon name={spec.icon} class="text-muted-foreground" />
-          <span class="text-foreground truncate text-[11px] font-medium">{spec.value}</span>
-        </div>
-      ))
-    }
-  </div>
-
-  <!-- Price + CTA (no monthly/deposit line — that is why this card is forked). -->
-  <div class="mt-3.5 flex items-end justify-between gap-3">
-    <div class="text-foreground text-[22px] leading-none font-bold tracking-tight">
-      <span class="text-muted-foreground hidden text-[15px] font-medium @min-[400px]:inline">od </span>{
-        formatPln(vehicle.daily_rate)
-      }<span class="text-muted-foreground text-[13px] font-medium">&nbsp;/dzień</span>
+    <!-- 4-up spec row. -->
+    <div class="mt-3 grid grid-cols-4 gap-2 border-y border-[#EEF1F5] py-3">
+      {
+        specs.map((spec) => (
+          <div class="flex flex-col items-center gap-1 text-center">
+            <SpecIcon name={spec.icon} class="text-muted-foreground" />
+            <span class="text-foreground truncate text-[11px] font-medium">{spec.value}</span>
+          </div>
+        ))
+      }
     </div>
-    <span
-      class="bg-foreground text-background inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[12px] px-3.5 text-xs font-semibold @min-[400px]:rounded-[11px]"
-    >
-      Rezerwuj
-      <svg
-        class="size-3.5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.9"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
+
+    <!-- Price + CTA (no monthly/deposit line — that is why this card is forked). -->
+    <div class="mt-3.5 flex items-end justify-between gap-3">
+      <div class="text-foreground text-[22px] leading-none font-bold tracking-tight">
+        <span class="text-muted-foreground hidden text-[15px] font-medium @min-[400px]:inline">od </span>{
+          formatPln(vehicle.daily_rate)
+        }<span class="text-muted-foreground text-[13px] font-medium">&nbsp;/dzień</span>
+      </div>
+      <span
+        class="bg-foreground text-background inline-flex h-9 shrink-0 items-center gap-1.5 rounded-[12px] px-3.5 text-xs font-semibold @min-[400px]:rounded-[11px]"
       >
-        <path d="M5 12h14M13 6l6 6-6 6"></path>
-      </svg>
-    </span>
+        Rezerwuj
+        <svg
+          class="size-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12h14M13 6l6 6-6 6"></path>
+        </svg>
+      </span>
+    </div>
   </div>
 </a>
