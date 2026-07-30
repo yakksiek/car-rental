@@ -454,30 +454,30 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Automated
 
-- [x] 1.1 `npx astro check` passes (incl. `astro:assets` imports)
-- [x] 1.2 `npm run lint` passes
-- [x] 1.3 `npm run build` succeeds; hero emits AVIF/WebP sources
-- [x] 1.4 `npm test` (unit) green
+- [x] 1.1 `npx astro check` passes (incl. `astro:assets` imports) — 83bbcc6
+- [x] 1.2 `npm run lint` passes — 83bbcc6
+- [x] 1.3 `npm run build` succeeds; hero emits AVIF/WebP sources — 83bbcc6
+- [x] 1.4 `npm test` (unit) green — 83bbcc6
 
 #### Manual
 
-- [x] 1.5 `LandingNav` desktop pill + mobile hamburger render; links + phone correct; dropped items absent
-- [x] 1.6 Hero images load optimized; no layout shift
-- [x] 1.7 `/fleet` + other `SiteHeader` pages unchanged
+- [x] 1.5 `LandingNav` desktop pill + mobile hamburger render; links + phone correct; dropped items absent — 83bbcc6
+- [x] 1.6 Hero images load optimized; no layout shift — 83bbcc6
+- [x] 1.7 `/fleet` + other `SiteHeader` pages unchanged — 83bbcc6
 
 ### Phase 2: Dark hero (both breakpoints)
 
 #### Automated
 
-- [ ] 2.1 `npx astro check`, `npm run lint`, `npm run build` pass
-- [ ] 2.2 `npm test` green incl. new `pluralPl` unit test
+- [x] 2.1 `npx astro check`, `npm run lint`, `npm run build` pass
+- [x] 2.2 `npm test` green incl. new `pluralPl` unit test
 
 #### Manual
 
 - [ ] 2.3 Hero vision-diff (1440 vs desktop canonical, 390 vs mobile part1) empty minus deviations; van lands over wordmark
 - [ ] 2.4 `HeroSearch` commits to `/fleet` with filters; date error still shows
-- [ ] 2.5 Eyebrow + trust-card show real count with correct Polish plural
-- [ ] 2.6 Dark→light sheet reads as designed; no horizontal scroll 320–1440px
+- [x] 2.5 Eyebrow + trust-card show real count with correct Polish plural
+- [x] 2.6 Dark→light sheet reads as designed; no horizontal scroll 320–1440px
 
 ### Phase 3: Light body — stepper, category selector, Popularne
 

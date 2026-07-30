@@ -88,6 +88,28 @@ export function formatDuration(days: number): string {
   return days === 1 ? "1 dzień" : `${days} dni`;
 }
 
+/**
+ * Select the correct Polish plural form of a noun for a count. Polish inflects a
+ * counted noun into three forms: singular (n = 1), "few" (n = 2–4, but NOT the
+ * teens 12–14), and "many"/genitive (0, 5+, and the teens). Returns only the noun
+ * form — the caller renders the number separately, e.g.
+ * `${n} ${pluralPl(n, ["pojazd", "pojazdy", "pojazdów"])}`.
+ *
+ * `pluralPl(1, …) -> "pojazd"`, `pluralPl(2, …) -> "pojazdy"`, `pluralPl(5, …) -> "pojazdów"`.
+ */
+export function pluralPl(n: number, forms: [one: string, few: string, many: string]): string {
+  const abs = Math.abs(Math.trunc(n));
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (abs === 1) {
+    return forms[0];
+  }
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return forms[1];
+  }
+  return forms[2];
+}
+
 /** Format one cm dimension as metres (`440 -> "4.40"`), or the dash when absent. */
 function formatDimM(cm: string | number | null | undefined): string {
   if (cm === null || cm === undefined || cm === "") {
