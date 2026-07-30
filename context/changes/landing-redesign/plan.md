@@ -454,16 +454,16 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Automated
 
-- [ ] 1.1 `npx astro check` passes (incl. `astro:assets` imports)
-- [ ] 1.2 `npm run lint` passes
-- [ ] 1.3 `npm run build` succeeds; hero emits AVIF/WebP sources
-- [ ] 1.4 `npm test` (unit) green
+- [x] 1.1 `npx astro check` passes (incl. `astro:assets` imports)
+- [x] 1.2 `npm run lint` passes
+- [x] 1.3 `npm run build` succeeds; hero emits AVIF/WebP sources
+- [x] 1.4 `npm test` (unit) green
 
 #### Manual
 
-- [ ] 1.5 `LandingNav` desktop pill + mobile hamburger render; links + phone correct; dropped items absent
-- [ ] 1.6 Hero images load optimized; no layout shift
-- [ ] 1.7 `/fleet` + other `SiteHeader` pages unchanged
+- [x] 1.5 `LandingNav` desktop pill + mobile hamburger render; links + phone correct; dropped items absent
+- [x] 1.6 Hero images load optimized; no layout shift
+- [x] 1.7 `/fleet` + other `SiteHeader` pages unchanged
 
 ### Phase 2: Dark hero (both breakpoints)
 
