@@ -474,7 +474,7 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Manual
 
-- [x] 2.3 Hero vision-diff (1440 vs desktop canonical, 390 vs mobile part1) empty minus deviations; van lands over wordmark
+- [x] 2.3 Hero vision-diff (1440 vs desktop canonical, 390 vs mobile part1) empty minus deviations; van lands over wordmark — 8397137
 - [x] 2.4 `HeroSearch` commits to `/fleet` with filters; date error still shows — 1de1bb5
 - [x] 2.5 Eyebrow + trust-card show real count with correct Polish plural — 1de1bb5
 - [x] 2.6 Dark→light sheet reads as designed; no horizontal scroll 320–1440px — 1de1bb5
@@ -488,7 +488,7 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Manual
 
-- [x] 3.3 Light-body vision-diff (1440 vs desktop, 390 vs mobile part2) empty minus deviations
+- [x] 3.3 Light-body vision-diff (1440 vs desktop, 390 vs mobile part2) empty minus deviations — 8397137
 - [x] 3.4 Category pills + "Cała flota"/"Wszystkie" route correctly — aa45115
 - [x] 3.5 Popular strip shows real top-3 with correct specs/price; card links to detail — aa45115
 - [x] 3.6 `/fleet` listing (shared `VehicleCard`) unchanged — aa45115
@@ -497,10 +497,10 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Automated
 
-- [x] 4.1 Full suite green: `astro check`, `lint`, `build`, `test`, `test:integration`
+- [x] 4.1 Full suite green: `astro check`, `lint`, `build`, `test`, `test:integration` — 8397137
 
 #### Manual
 
-- [x] 4.2 Both-breakpoint vision-diffs empty minus deviations; `/fleet` diff shows no change
-- [x] 4.3 Keyboard/focus through nav, search, pills, cards; hamburger a11y
-- [x] 4.4 Hero LCP is eager image; no CLS; wordmark gradient + backdrop-blur verified in Chromium + WebKit
+- [x] 4.2 Both-breakpoint vision-diffs empty minus deviations; `/fleet` diff shows no change — 8397137
+- [x] 4.3 Keyboard/focus through nav, search, pills, cards; hamburger a11y — 8397137
+- [x] 4.4 Hero LCP is eager image; no CLS; wordmark gradient + backdrop-blur verified in Chromium + WebKit — 8397137
