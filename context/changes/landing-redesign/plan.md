@@ -474,7 +474,7 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Manual
 
-- [ ] 2.3 Hero vision-diff (1440 vs desktop canonical, 390 vs mobile part1) empty minus deviations; van lands over wordmark
+- [x] 2.3 Hero vision-diff (1440 vs desktop canonical, 390 vs mobile part1) empty minus deviations; van lands over wordmark
 - [x] 2.4 `HeroSearch` commits to `/fleet` with filters; date error still shows — 1de1bb5
 - [x] 2.5 Eyebrow + trust-card show real count with correct Polish plural — 1de1bb5
 - [x] 2.6 Dark→light sheet reads as designed; no horizontal scroll 320–1440px — 1de1bb5
@@ -483,24 +483,24 @@ mobile-landing-part1-hero-search-trust.jpg, mobile-landing-part2-process-popular
 
 #### Automated
 
-- [x] 3.1 `npx astro check`, `npm run lint`, `npm run build` pass; `npm test` green
-- [x] 3.2 Category pill hrefs serialize to valid `/fleet?category=<cat>`
+- [x] 3.1 `npx astro check`, `npm run lint`, `npm run build` pass; `npm test` green — aa45115
+- [x] 3.2 Category pill hrefs serialize to valid `/fleet?category=<cat>` — aa45115
 
 #### Manual
 
-- [ ] 3.3 Light-body vision-diff (1440 vs desktop, 390 vs mobile part2) empty minus deviations
-- [x] 3.4 Category pills + "Cała flota"/"Wszystkie" route correctly
-- [x] 3.5 Popular strip shows real top-3 with correct specs/price; card links to detail
-- [x] 3.6 `/fleet` listing (shared `VehicleCard`) unchanged
+- [x] 3.3 Light-body vision-diff (1440 vs desktop, 390 vs mobile part2) empty minus deviations
+- [x] 3.4 Category pills + "Cała flota"/"Wszystkie" route correctly — aa45115
+- [x] 3.5 Popular strip shows real top-3 with correct specs/price; card links to detail — aa45115
+- [x] 3.6 `/fleet` listing (shared `VehicleCard`) unchanged — aa45115
 
 ### Phase 4: Fidelity gate + a11y/perf polish
 
 #### Automated
 
-- [ ] 4.1 Full suite green: `astro check`, `lint`, `build`, `test`, `test:integration`
+- [x] 4.1 Full suite green: `astro check`, `lint`, `build`, `test`, `test:integration`
 
 #### Manual
 
-- [ ] 4.2 Both-breakpoint vision-diffs empty minus deviations; `/fleet` diff shows no change
-- [ ] 4.3 Keyboard/focus through nav, search, pills, cards; hamburger a11y
-- [ ] 4.4 Hero LCP is eager image; no CLS; wordmark gradient + backdrop-blur verified in Chromium + WebKit
+- [x] 4.2 Both-breakpoint vision-diffs empty minus deviations; `/fleet` diff shows no change
+- [x] 4.3 Keyboard/focus through nav, search, pills, cards; hamburger a11y
+- [x] 4.4 Hero LCP is eager image; no CLS; wordmark gradient + backdrop-blur verified in Chromium + WebKit

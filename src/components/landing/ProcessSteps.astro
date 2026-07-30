@@ -33,16 +33,16 @@ const STEPS = [
 ---
 
 <section class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
-  <!-- Section header. -->
-  <div class="mb-8 max-w-[560px]">
-    <p class="text-muted-foreground text-[11px] font-bold tracking-[1.2px] uppercase">Jak to działa</p>
-    <h2 class="text-foreground mt-2 font-serif text-[27px] leading-none xl:text-[38px]">
-      Proces wynajmu pojazdu<span class="text-primary">.</span>
-    </h2>
-    <p class="mt-3 text-[15px] text-[#5B6474]">Online albo telefonicznie — wybór należy do Ciebie.</p>
-  </div>
-
   <div class="bg-card rounded-[24px] border border-[#E7EAF0] p-[26px] xl:rounded-[28px] xl:p-16">
+    <!-- Section header (inside the card, top-left). -->
+    <div class="mb-8 max-w-[560px]">
+      <p class="text-muted-foreground text-[11px] font-bold tracking-[1.2px] uppercase">Jak to działa</p>
+      <h2 class="text-foreground mt-2 font-serif text-[27px] leading-none xl:text-[38px]">
+        Proces wynajmu pojazdu<span class="text-primary">.</span>
+      </h2>
+      <p class="mt-3 text-[15px] text-[#5B6474]">Online albo telefonicznie — wybór należy do Ciebie.</p>
+    </div>
+
     <!-- Desktop: branching lanes → horizontal track. -->
     <div class="hidden xl:block">
       <p class="text-muted-foreground mb-3 text-[12.5px]">Ty wybierasz, jak zaczynasz:</p>
@@ -86,10 +86,10 @@ const STEPS = [
         </span>
       </div>
 
-      <!-- Two connectors converging into circle 1. -->
-      <svg class="h-9 w-[280px]" viewBox="0 0 280 40" fill="none" aria-hidden="true">
-        <path d="M70 0 L70 20 Q70 34 40 34 L30 34" stroke="#99A2B2" stroke-width="2"></path>
-        <path d="M210 0 L210 20 Q210 34 50 34 L30 34" stroke="#99A2B2" stroke-width="2"></path>
+      <!-- Two connectors funneling down and converging over circle 1 (bottom-left). -->
+      <svg class="h-11 w-[520px]" viewBox="0 0 520 44" fill="none" aria-hidden="true">
+        <path d="M95 0 L95 14 Q95 30 145 30 L160 44" stroke="#99A2B2" stroke-width="2"></path>
+        <path d="M330 0 L330 14 Q330 30 178 30 L160 44" stroke="#99A2B2" stroke-width="2"></path>
       </svg>
 
       <!-- Horizontal 4-circle track. -->

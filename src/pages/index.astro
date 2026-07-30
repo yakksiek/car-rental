@@ -103,7 +103,7 @@ const popularChipLabel =
 
     <!-- Mobile hero content (below the photo stage, on solid dark). Copy is intentionally
          different from desktop; the eyebrow is mobile-only (fixed genitive, deviation). -->
-    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[34px] xl:hidden">
+    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[56px] xl:hidden">
       <p class="text-[11px] font-bold tracking-[1.4px] text-white/60 uppercase">
         {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
       </p>
@@ -162,7 +162,7 @@ const popularChipLabel =
 
     <!-- Desktop hero content — absolutely composed on the 880px canvas. -->
     <div class="hidden xl:block">
-      <div class="absolute top-[418px] left-16 z-[5] w-[560px]">
+      <div class="absolute top-[376px] left-16 z-[5] w-[560px]">
         <h1 class="font-serif text-[56px] leading-[56px] tracking-[-2px] text-white">
           Pojazdy<br />użytkowe<span class="text-primary">.</span>
         </h1>
@@ -194,13 +194,13 @@ const popularChipLabel =
 
   <!-- Light body sheet (S5) — rises over the dark hero with an upward shadow. -->
   <div
-    class="bg-background relative z-10 -mt-16 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-40 xl:rounded-t-[40px]"
+    class="bg-background relative z-10 -mt-8 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-24 xl:rounded-t-[40px]"
   >
     <!-- Search island — SINGLE mount. Mobile: a white card at the top of the sheet.
          Desktop (≥xl): absolutely lifted up into the dark hero's content column
          (bottom-left). It is never duplicated (a second mount = a second island state). -->
     <div
-      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-64px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[600px] xl:max-w-none xl:px-0"
+      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-96px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[600px] xl:max-w-none xl:px-0"
     >
       <HeroSearch client:load />
     </div>
@@ -245,9 +245,21 @@ const popularChipLabel =
             </div>
             <a
               href="/fleet"
-              class="text-primary xl:bg-accent text-sm font-semibold hover:underline xl:rounded-full xl:px-4 xl:py-2 xl:no-underline"
+              class="text-primary xl:bg-primary xl:text-primary-foreground inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold hover:underline xl:rounded-full xl:px-4 xl:py-2 xl:no-underline xl:transition xl:hover:opacity-90"
             >
               Wszystkie
+              <svg
+                class="hidden size-[15px] xl:inline"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </a>
           </div>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
