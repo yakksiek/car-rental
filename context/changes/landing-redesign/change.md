@@ -1,7 +1,7 @@
 ---
 change_id: landing-redesign
 title: Implement the restyled customer landing page (desktop home)
-status: planned
+status: implementing
 created: 2026-07-28
 updated: 2026-07-30
 ---

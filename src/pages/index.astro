@@ -1,22 +1,28 @@
 ---
 // components
+import { Picture } from "astro:assets";
 import Layout from "../layouts/Layout.astro";
-import SiteHeader from "../components/SiteHeader.astro";
+import LandingNav from "../components/LandingNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import VehicleCard from "../components/vehicle/VehicleCard.astro";
 import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
-import HeroSearch from "../components/vehicle/HeroSearch.tsx";
 
 // others
 import type { VehicleCategory, VehicleFilters } from "../types";
 import { listVehicles } from "../lib/services/vehicles";
 import { categoryLabelPl } from "../lib/format";
+import heroImg from "../assets/hero-airfield.jpg";
+import vanImg from "../assets/van-cutout.png";
 
-// Public landing — a marketing entry point adapted from design screens 07/01 with
-// NO account chrome (no greeting, no deposit card; those are logged-in-customer
-// surfaces deferred to v2). Server-rendered: a hero with the <HeroSearch> island
-// (Typ/Daty → `/fleet`), category quick-links into `/fleet?category=…`, and a
-// "Popularne" featured strip (first few active vehicles via `listVehicles`).
+// Public landing (restyled — `customer-desktop.jsx` → ScreenDesktopHome / ScreenMobileHome).
+// A dark immersive hero (full-bleed photo → translucent FLOTA wordmark → van-cutout
+// z-order → glass search pill + trust card) rising into a light sheet that carries the
+// "Proces wynajmu" stepper, a click-to-route category selector, and a "Popularne" strip.
+// Built over existing data + tokens (no global.css edit) and existing fonts. NO account
+// chrome (logged-in surfaces are deferred to v2).
+//
+// Dark hero palette is landing-local arbitrary hex (`#080B12` desktop / `#0A0D14` mobile);
+// no token layer added. The forked <LandingNav> replaces the shared <SiteHeader>.
 
 const NO_FILTERS: VehicleFilters = {
   category: null,
@@ -39,51 +45,56 @@ const CATEGORIES: VehicleCategory[] = [
 ---
 
 <Layout title="Flota — wynajem pojazdów użytkowych">
-  <SiteHeader active="home" />
+  <!-- Dark hero (S2) — full-bleed. Positioning context for the floating <LandingNav>. -->
+  <section class="relative w-full overflow-hidden bg-[#0A0D14] xl:bg-[#080B12]">
+    <!-- Photo (z-0) — the LCP element: eager + high priority, optimized to AVIF/WebP. -->
+    <Picture
+      src={heroImg}
+      formats={["avif", "webp"]}
+      alt=""
+      loading="eager"
+      fetchpriority="high"
+      width={1376}
+      height={768}
+      class="absolute inset-0 z-0 h-full w-full object-cover object-[center_46%] xl:object-center"
+    />
 
-  <!-- Hero -->
-  <section class="max-w-app mx-auto grid items-center gap-12 px-5 pt-12 pb-8 sm:px-8 xl:grid-cols-2 xl:pt-20">
-    <div>
-      <p class="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
-        <span class="bg-success size-1.5 rounded-full"></span>
-        {vehicles.length} pojazdów dostępnych
-      </p>
-      <h1 class="text-foreground mt-4 font-serif text-6xl leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">
-        Pojazdy<br />użytkowe<span class="text-primary">.</span>
-        <span class="text-muted-foreground mt-2 block text-4xl sm:text-5xl">
-          Na dzień. <span class="text-primary">Na miesiąc.</span>
-        </span>
-      </h1>
-      <p class="mt-6 max-w-md text-lg text-[var(--flota-ink-2)]">
-        Furgony, busy osobowe, lawety, izotermy i plandeki — od warszawskiej firmy z 14-letnim doświadczeniem.
-        Rezerwacja online, bez ukrytych opłat.
-      </p>
-      <div class="mt-8">
-        <HeroSearch client:load />
-      </div>
-      <dl class="mt-10 flex flex-wrap gap-x-9 gap-y-4">
-        {
-          [
-            { n: `${vehicles.length}`, l: "pojazdów" },
-            { n: "14 lat", l: "na rynku" },
-            { n: "24/7", l: "odbiór" },
-          ].map((stat) => (
-            <div>
-              <dt class="text-foreground text-2xl font-bold tracking-tight">{stat.n}</dt>
-              <dd class="text-muted-foreground mt-1 text-xs font-medium">{stat.l}</dd>
-            </div>
-          ))
-        }
-      </dl>
+    <!-- Top scrim (z-1). -->
+    <div
+      class="absolute inset-x-0 top-0 z-[1] h-[130px] [background:linear-gradient(180deg,rgba(8,11,18,0.55)_0%,rgba(8,11,18,0)_100%)] xl:h-[300px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0.6)_0%,rgba(10,10,18,0)_100%)]"
+    >
+    </div>
+    <!-- Bottom scrim (z-2) — fades the photo into the dark canvas. -->
+    <div
+      class="absolute inset-x-0 bottom-0 z-[2] h-[120px] [background:linear-gradient(180deg,rgba(10,13,20,0)_0%,#0A0D14_94%)] xl:top-[420px] xl:h-[460px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0)_0%,rgba(10,10,18,0.95)_100%)]"
+    >
     </div>
 
-    {
-      featured[0] && (
-        <div class="hidden xl:block">
-          <VehicleCard vehicle={featured[0]} />
-        </div>
-      )
-    }
+    <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip fading UP to transparent. -->
+    <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
+      <span
+        class="[background-image:linear-gradient(0deg,#FFFFFF_0%,#FFFFFF_40%,rgba(238,242,255,0)_82%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:text-[258px] xl:tracking-[-10px] xl:opacity-70"
+      >
+        FLOTA
+      </span>
+    </div>
+
+    <!-- Van cutout (z-4) — SAME crop/position as the photo, so it lands over the van. -->
+    <Picture
+      src={vanImg}
+      formats={["avif", "webp"]}
+      alt=""
+      loading="eager"
+      width={1376}
+      height={768}
+      class="pointer-events-none absolute inset-0 z-[4] h-full w-full object-cover object-[center_46%] xl:object-center"
+    />
+
+    <LandingNav active="home" />
+
+    <!-- Hero content column + trust card + search island land in Phase 2. Shell height
+         keeps the composition (photo/wordmark/van) visible until then. -->
+    <div class="relative z-[5] h-[336px] xl:h-[880px]"></div>
   </section>
 
   <!-- Category quick-links -->
