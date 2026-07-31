@@ -52,7 +52,10 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 > Screenshots are the **shipped surface**, re-exported when a slice changes it — not
 > the design mockup. Rows 09/20 were re-exported 2026-07-28 from the merged
 > `staff-pulpit-dispatch` cockpit (PR #14); the per-change target mockups for that
-> slice live in `context/archive/2026-07-24-staff-pulpit-dispatch/`.
+> slice live in `context/archive/2026-07-24-staff-pulpit-dispatch/`. Row 07 was
+> re-exported and row 26 added 2026-07-31 from the `landing-redesign` restyle
+> (`ScreenDesktopHome` / `ScreenMobileHome`); its target mockups live in
+> `context/changes/landing-redesign/design-review/` pending archive.
 
 | #   | Screen                              | Role / device      | Slice                                              | Source file            |
 | --- | ----------------------------------- | ------------------ | -------------------------------------------------- | ---------------------- |
@@ -81,6 +84,7 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 | 23  | Fleet management                    | Admin · mobile     | **S-04**                                           | — (jpg export only)    |
 | 24  | Overdue returns                     | Admin · mobile     | S-07                                               | — (jpg export only)    |
 | 25  | Employees                           | Admin · mobile     | S-08                                               | — (jpg export only)    |
+| 26  | Landing page                        | Customer · mobile  | landing-redesign                                   | `customer-desktop.jsx` |
 
 Screenshot filenames are numbered to match this table, e.g.
 `screenshots/04-customer-mobile-reservation-form.png`.
