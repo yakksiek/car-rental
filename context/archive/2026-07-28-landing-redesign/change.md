@@ -1,9 +1,10 @@
 ---
 change_id: landing-redesign
 title: Implement the restyled customer landing page (desktop home)
-status: implemented
+status: archived
 created: 2026-07-28
-updated: 2026-07-30
+updated: 2026-07-31
+archived_at: 2026-07-31T18:49:47Z
 ---
 
 ## Notes
