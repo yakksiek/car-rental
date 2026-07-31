@@ -33,14 +33,14 @@ const STEPS = [
 ---
 
 <section class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
-  <div class="bg-card rounded-[24px] border border-[#E7EAF0] p-[26px] xl:rounded-[28px] xl:p-16">
+  <div class="bg-card border-border rounded-[24px] border p-[26px] xl:rounded-[28px] xl:p-16">
     <!-- Section header (inside the card, top-left). -->
     <div class="mb-8 max-w-[560px]">
       <p class="text-muted-foreground text-[11px] font-bold tracking-[1.2px] uppercase">Jak to działa</p>
       <h2 class="text-foreground mt-2 font-serif text-[27px] leading-none xl:text-[38px]">
         Proces wynajmu pojazdu<span class="text-primary">.</span>
       </h2>
-      <p class="mt-3 text-[15px] text-[#5B6474]">Online albo telefonicznie — wybór należy do Ciebie.</p>
+      <p class="mt-3 text-[15px] text-[var(--flota-ink-2)]">Online albo telefonicznie — wybór należy do Ciebie.</p>
     </div>
 
     <!-- Desktop: branching lanes → horizontal track. -->
@@ -48,7 +48,7 @@ const STEPS = [
       <p class="text-muted-foreground mb-3 text-[12.5px]">Ty wybierasz, jak zaczynasz:</p>
       <div class="mb-2 flex max-w-[520px] gap-3">
         <span
-          class="inline-flex items-center gap-2 rounded-full border border-[#E7EAF0] px-4 py-2.5 text-[14px] font-medium text-[#0E1524]"
+          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[14px] font-medium"
         >
           <svg
             class="text-primary size-[15px]"
@@ -66,7 +66,7 @@ const STEPS = [
           Online — bez telefonu
         </span>
         <span
-          class="inline-flex items-center gap-2 rounded-full border border-[#E7EAF0] px-4 py-2.5 text-[14px] font-medium text-[#0E1524]"
+          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[14px] font-medium"
         >
           <svg
             class="text-primary size-[15px]"
@@ -86,15 +86,28 @@ const STEPS = [
         </span>
       </div>
 
-      <!-- Two connectors funneling down and converging over circle 1 (bottom-left). -->
-      <svg class="h-11 w-[520px]" viewBox="0 0 520 44" fill="none" aria-hidden="true">
-        <path d="M95 0 L95 14 Q95 30 145 30 L160 44" stroke="#99A2B2" stroke-width="2"></path>
-        <path d="M330 0 L330 14 Q330 30 178 30 L160 44" stroke="#99A2B2" stroke-width="2"></path>
+      <!-- Two connectors (design's angular polylines): a vertical drop from each lane pill,
+           then a short diagonal onto circle 1's top shoulders. No curves, no meeting spike;
+           the circle (z-10) tucks the line ends under itself. -->
+      <svg class="h-[52px] w-[340px]" viewBox="0 0 340 52" fill="none" aria-hidden="true">
+        <path
+          d="M102 0 L102 26 L163 52"
+          stroke="var(--flota-muted)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
+        <path
+          d="M289 0 L289 26 L189 52"
+          stroke="var(--flota-muted)"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
       </svg>
 
-      <!-- Horizontal 4-circle track. -->
-      <div class="relative mt-2 grid grid-cols-4 gap-8">
-        <span class="absolute top-[30px] right-[12%] left-[12%] z-0 h-[2px] bg-[#E7EAF0]"></span>
+      <!-- Horizontal 4-circle track — inset so step 1 sits under the two lane pills (design
+           centers circle 1 at ~left+150 of its 300px slot, i.e. between the pills). -->
+      <div class="relative grid grid-cols-4 gap-8 px-12">
+        <span class="bg-border absolute top-[30px] right-[15%] left-[15%] z-0 h-[2px]"></span>
         {
           STEPS.map((step) => (
             <div class="relative z-10 flex flex-col items-center text-center">
@@ -102,7 +115,7 @@ const STEPS = [
                 {step.n}
               </span>
               <div class="text-foreground mt-4 text-[16px] font-bold tracking-tight">{step.titleDesktop}</div>
-              <p class="mt-2 text-[13.5px] leading-[21px] text-[#5B6474]">{step.desc}</p>
+              <p class="mt-2 text-[13.5px] leading-[21px] text-[var(--flota-ink-2)]">{step.desc}</p>
             </div>
           ))
         }
@@ -114,13 +127,13 @@ const STEPS = [
       {
         STEPS.map((step, i) => (
           <div class="relative flex gap-4 pb-6 last:pb-0">
-            {i < STEPS.length - 1 && <span class="absolute top-[44px] bottom-0 left-[21px] w-[2px] bg-[#E7EAF0]" />}
+            {i < STEPS.length - 1 && <span class="bg-border absolute top-[44px] bottom-0 left-[21px] w-[2px]" />}
             <span class="bg-primary text-primary-foreground z-10 flex size-[44px] shrink-0 items-center justify-center rounded-full text-[19px] font-bold">
               {step.n}
             </span>
             <div class="pt-1.5">
               <div class="text-foreground text-[16px] font-bold tracking-tight">{step.titleMobile}</div>
-              <p class="mt-1 text-[13.5px] leading-[21px] text-[#5B6474]">{step.desc}</p>
+              <p class="mt-1 text-[13.5px] leading-[21px] text-[var(--flota-ink-2)]">{step.desc}</p>
             </div>
           </div>
         ))

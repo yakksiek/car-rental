@@ -163,10 +163,11 @@ padding `11px 22px 11px 14px`; `rounded-full`; shadow `0 12px 34px -10px rgba(0,
 - **Top scrim:** height 300, `linear-gradient(180deg, rgba(10,10,18,.6) 0%, rgba(10,10,18,0) 100%)`. `exact`
 - **Bottom scrim:** top 420 height 460, `linear-gradient(180deg, rgba(10,10,18,0) 0%, rgba(10,10,18,.95) 100%)`. `exact`
 - **FLOTA wordmark (z-3):** centered, top ~172; **Inter 700**, `258px`, `tracking-[-10px]`,
-  normal line-height, `opacity-[0.7]`, gradient-clip text
-  `[background-image:linear-gradient(0deg,#FFFFFF_0%,#FFFFFF_40%,rgba(238,242,255,0)_82%)]`
-  (white solid at the glyphs' base, fading UP to transparent — note the `0deg`/stop order;
-  `bg-clip-text text-transparent`). `deviation(mock font Space Grotesk → Inter)` else `exact`
+  normal line-height, `opacity-[0.72]`, gradient-clip text
+  `[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_42%,rgba(238,242,255,0)_90%)]`
+  (white solid at the glyphs' **top**, fading **DOWN** to transparent — design uses `180deg`;
+  the glyph tops read while the bases dissolve into the horizon; `bg-clip-text text-transparent`).
+  `deviation(mock font Space Grotesk → Inter)` else `exact`
 - **Van cutout (z-4):** `van-cutout.png` → `src/assets/`, same crop/position as photo,
   `object-cover object-center`, `pointer-events-none`. Keep the photo→wordmark→van z-order. `exact`
 - **Content block (z-5):** left `64px`, top `414px`, width `560px`, vertical gap `20px`. `exact`
@@ -184,7 +185,7 @@ padding `11px 22px 11px 14px`; `rounded-full`; shadow `0 12px 34px -10px rgba(0,
 
 - **Photo stage:** height `336px`, `object-cover object-[center_46%]`; top scrim 130 `rgba(8,11,18,.55)→0`;
   bottom fade 120 `rgba(10,13,20,0)→#0A0D14 94%`. `exact`
-- **FLOTA wordmark:** Inter 700 `122px` `tracking-[-5px]` `opacity-[.85]` gradient(0/48%/96%), z-2,
+- **FLOTA wordmark:** Inter 700 `122px` `tracking-[-5px]` `opacity-[.85]` gradient(`180deg`, 0/48%/96%), z-2,
   under the van cutout (z-3). `deviation(font)` else `exact`
 - **Content (below the photo stage, still on dark):** padding `2px 22px 34px`, gap 18. `exact`
   - **Eyebrow (live count):** "**{vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ**" 11px, `font-bold`,
@@ -341,3 +342,13 @@ fuller `SiteFooter` tagline at all breakpoints — reuse, don't fork the footer 
 10. Hero eyebrow keeps the fixed genitive Polish form (full N=1..4 agreement out of scope; count ≥5 today). `Polish agreement`
 11. Section-heading sizes/tracking are optically re-tuned for Instrument Serif (Playfair source differs metrically); finalized at the vision-diff. `serif optical`
 12. Mobile menu = landing-local dropdown inside `LandingNav`; category icons = landing-local set. Shared `MobileNav`/`SpecIcon`/`VehicleSilhouette` untouched. `no shared edit`
+
+_Reconciled at impl-review triage (2026-07-30): shipped values that diverge from an `exact` line above are recorded here so the contract matches reality. Items 13, 14, 16 below; the Popular-card image rounded inset (S8 → rounded-[12px]/[14px]) was tightened in code to match the contract._
+
+_Amended (2026-07-31) after a user fidelity pass against the live design: (a) the wordmark gradient was **`180deg`** in the design, not `0deg` — S2 above had transcribed it inverted (white was solid at the base fading up, instead of solid at the **top** fading down); corrected in code + S2 for both breakpoints. (b) The desktop hero geometry was aligned to the design's exact absolute layout — content column `top-[414px]` (was 376), trust card `top-[600px]` (was 556), body sheet `xl:-mt-10` = −40 (was −96, **now matches S5**), search island lifted `xl:top-[-145px]` to sit contiguously below the bullets — giving the pill real photo below it (~60px) as in the canonical._
+
+13. Popular card (`LandingVehicleCard`) title/sub composition: title = make + model on one line (e.g. "Renault Master"), sub = production year. Re-authored from S8's "brand / model · year" — same fields redistributed. `re-authored composition`
+14. Mobile hero content bottom padding ships `pb-[56px]` (S2 states 34px) — re-tuned so the dark hero content clears the light-sheet `-mt` overlap. `layout re-tune`
+15. Body-sheet overlap (S5): **desktop `xl:-mt-10` (−40px) now matches S5**; the search island is lifted `xl:top-[-145px]` to sit contiguously below the bullets (design-exact hero: content top 414, sheet −40, pill ~695). Mobile still ships `-mt-8` (32px) vs S5's −16 — small re-tune. `mobile -mt re-tune`
+16. Desktop search island width ships `xl:w-[740px]` (S3 gives no explicit pill width) — widened from 600px so the inline TYP / DATY / ODDZIAŁ field values ("Warszawa · Mokotów", long date ranges) don't truncate. `re-authored width`
+17. Process stepper (S6) desktop: the design absolutely-positions the branch connectors as two angular polylines onto circle 1 (centered at `left+150` of its 300px slot, i.e. under the two lane pills). Re-authored as a flow `grid grid-cols-4` with `px-12` inset so circle 1 lands under the pills (~175px), and two straight-segment SVG paths (`M…L…L…`, rounded joins) drop from each pill onto circle 1's shoulders — **not** the earlier `Q`-curve/​meeting-spike version. `re-authored branch connectors`

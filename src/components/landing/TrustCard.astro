@@ -20,26 +20,26 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
 
 <div
   class:list={[
-    "bg-card overflow-hidden rounded-[20px] border border-[#E7EAF0] xl:rounded-[22px] xl:border-transparent xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.35)]",
+    "bg-card border-border overflow-hidden rounded-[20px] border xl:rounded-[22px] xl:border-transparent xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.35)]",
     className,
   ]}
 >
   <!-- Row 1: ratings — HARDCODED PLACEHOLDER (no reviews feature; deviation, flagged). -->
-  <div class="flex items-center gap-3 border-b border-[#EEF1F5] px-4 py-2.5">
-    <span class="flex size-[38px] shrink-0 items-center justify-center rounded-md bg-[#F1F3F7]">
+  <div class="border-border flex items-center gap-3 border-b px-4 py-2.5">
+    <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
       <svg class="text-primary size-[18px]" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
         <path d="M12 2.6l2.9 5.88 6.49.94-4.7 4.58 1.11 6.46L12 17.98l-5.8 3.05 1.1-6.46-4.69-4.58 6.48-.94z"></path>
       </svg>
     </span>
     <div class="min-w-0">
-      <div class="text-[17px] leading-tight font-bold text-[#0E1524]">4.9 / 5</div>
-      <div class="text-[12.5px] text-[#5A6373]">1 280 opinii klientów</div>
+      <div class="text-foreground text-[17px] leading-tight font-bold">4.9 / 5</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">1 280 opinii klientów</div>
     </div>
   </div>
 
   <!-- Row 2: live fleet count. -->
-  <div class="flex items-center gap-3 border-b border-[#EEF1F5] px-4 py-2.5">
-    <span class="flex size-[38px] shrink-0 items-center justify-center rounded-md bg-[#F1F3F7]">
+  <div class="border-border flex items-center gap-3 border-b px-4 py-2.5">
+    <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
       <svg
         class="text-primary size-[18px]"
         viewBox="0 0 24 24"
@@ -56,15 +56,15 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
       </svg>
     </span>
     <div class="min-w-0">
-      <div class="text-[17px] leading-tight font-bold text-[#0E1524]">{count} {countNoun}</div>
-      <div class="text-[12.5px] text-[#5A6373]">we flocie, gotowe od ręki</div>
+      <div class="text-foreground text-[17px] leading-tight font-bold">{count} {countNoun}</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">we flocie, gotowe od ręki</div>
     </div>
   </div>
 
   <!-- Row 3: reservation channels (laptop + phone tiles). -->
   <div class="flex items-center gap-3 px-4 py-2.5">
     <span class="flex items-center gap-1.5">
-      <span class="flex size-[38px] shrink-0 items-center justify-center rounded-md bg-[#F1F3F7]">
+      <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
         <svg
           class="text-primary size-[18px]"
           viewBox="0 0 24 24"
@@ -79,7 +79,7 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
           <path d="M2 20h20"></path>
         </svg>
       </span>
-      <span class="flex size-[38px] shrink-0 items-center justify-center rounded-md bg-[#F1F3F7]">
+      <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
         <svg
           class="text-primary size-[18px]"
           viewBox="0 0 24 24"
@@ -96,8 +96,8 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
       </span>
     </span>
     <div class="min-w-0">
-      <div class="text-[17px] leading-tight font-bold text-[#0E1524]">Rezerwacja</div>
-      <div class="text-[12.5px] text-[#5A6373]">online lub telefonicznie</div>
+      <div class="text-foreground text-[17px] leading-tight font-bold">Rezerwacja</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">online lub telefonicznie</div>
     </div>
   </div>
 </div>
