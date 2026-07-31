@@ -11,6 +11,7 @@ import {
   formatPayloadKg,
   formatPln,
   fuelLabelPl,
+  pluralPl,
   rentalDays,
   totalDueAtPickup,
   transmissionLabelPl,
@@ -140,6 +141,41 @@ describe("formatDuration", () => {
     expect(formatDuration(3)).toBe("3 dni");
     expect(formatDuration(5)).toBe("5 dni");
     expect(formatDuration(21)).toBe("21 dni");
+  });
+});
+
+describe("pluralPl", () => {
+  const POJAZD: [string, string, string] = ["pojazd", "pojazdy", "pojazdów"];
+
+  it("uses the genitive (many) form for zero", () => {
+    expect(pluralPl(0, POJAZD)).toBe("pojazdów");
+  });
+
+  it("uses the singular for exactly one", () => {
+    expect(pluralPl(1, POJAZD)).toBe("pojazd");
+  });
+
+  it("uses the few form for 2–4", () => {
+    expect(pluralPl(2, POJAZD)).toBe("pojazdy");
+    expect(pluralPl(4, POJAZD)).toBe("pojazdy");
+  });
+
+  it("uses the many form for 5+", () => {
+    expect(pluralPl(5, POJAZD)).toBe("pojazdów");
+  });
+
+  it("uses the few form for 22–24 (mod-10 in 2–4, not a teen)", () => {
+    expect(pluralPl(22, POJAZD)).toBe("pojazdy");
+  });
+
+  it("uses the many form for 25", () => {
+    expect(pluralPl(25, POJAZD)).toBe("pojazdów");
+  });
+
+  it("uses the many form for the teens 12–14 despite their mod-10 digit", () => {
+    expect(pluralPl(12, POJAZD)).toBe("pojazdów");
+    expect(pluralPl(13, POJAZD)).toBe("pojazdów");
+    expect(pluralPl(14, POJAZD)).toBe("pojazdów");
   });
 });
 

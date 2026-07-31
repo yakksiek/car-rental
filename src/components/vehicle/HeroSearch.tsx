@@ -76,13 +76,16 @@ export default function HeroSearch({ category = null }: Props) {
   }
 
   return (
-    <div className="max-w-2xl">
-      <div className="bg-card shadow-pop flex flex-col gap-1 rounded-lg p-2 sm:flex-row sm:items-center sm:gap-0 sm:rounded-full">
+    <div className="w-full">
+      {/* Restyled search pill (S3): stacked white card on mobile (in the light sheet),
+          inline pill on desktop (≥xl, inside the dark hero). One island — the page
+          repositions it across the hero/sheet boundary, it is never double-mounted. */}
+      <div className="bg-card flex flex-col rounded-[22px] p-3 [box-shadow:0_18px_40px_-14px_rgba(0,0,0,0.30)] xl:flex-row xl:items-center xl:p-[7px] xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.40)]">
         {/* Typ */}
-        <div className="min-w-0 flex-1 px-4 py-2">
-          <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Typ</div>
+        <div className="border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Typ</div>
           <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="text-foreground mt-0.5 h-auto w-full justify-between border-0 bg-transparent p-0 text-[15px] font-semibold shadow-none hover:bg-transparent focus-visible:ring-0">
+            <SelectTrigger className="text-foreground mt-1 h-auto w-full justify-between border-0 bg-transparent p-0 text-[15px] font-bold shadow-none hover:bg-transparent focus-visible:ring-0 xl:text-[14.5px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -96,18 +99,16 @@ export default function HeroSearch({ category = null }: Props) {
           </Select>
         </div>
 
-        <div className="hidden h-8 w-px bg-[var(--flota-hair-2)] sm:block" />
-
         {/* Daty */}
-        <div className="min-w-0 flex-1 px-4 py-2">
-          <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Daty</div>
+        <div className="border-border xl:border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:border-l xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Daty</div>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
                 className={cn(
-                  "mt-0.5 flex w-full min-w-0 items-center gap-2 text-[15px] font-semibold",
-                  range?.from ? "text-foreground" : "text-foreground/70",
+                  "mt-1 flex w-full min-w-0 items-center gap-2 text-[15px] font-bold xl:text-[14.5px]",
+                  range?.from ? "text-foreground" : "text-foreground/55",
                 )}
               >
                 <CalendarIcon className="size-4 shrink-0" />
@@ -131,19 +132,17 @@ export default function HeroSearch({ category = null }: Props) {
           </Popover>
         </div>
 
-        <div className="hidden h-8 w-px bg-[var(--flota-hair-2)] sm:block" />
-
         {/* Oddział — single fixed branch (no location data model yet) */}
-        <div className="min-w-0 flex-1 px-4 py-2">
-          <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Oddział</div>
-          <div className="text-foreground mt-0.5 truncate text-[15px] font-semibold">Warszawa · Mokotów</div>
+        <div className="border-border xl:border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:border-l xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Oddział</div>
+          <div className="text-foreground mt-1 truncate text-[15px] font-bold xl:text-[14.5px]">Warszawa · Mokotów</div>
         </div>
 
         {/* Szukaj */}
         <button
           type="button"
           onClick={handleSearch}
-          className="bg-foreground text-background rounded-button inline-flex h-12 shrink-0 items-center justify-center gap-2 px-6 text-sm font-semibold transition hover:opacity-90"
+          className="bg-foreground text-background mt-2 inline-flex h-[52px] w-full shrink-0 items-center justify-center gap-2 rounded-[15px] text-[15.5px] font-bold transition hover:opacity-90 xl:mt-0 xl:h-auto xl:w-auto xl:px-6 xl:py-[15px] xl:text-[14.5px]"
         >
           <SearchIcon className="size-4" />
           Szukaj
