@@ -52,7 +52,7 @@ const CATEGORIES: VehicleCategory[] = [
   </div>
 
   <div
-    class="xl:bg-card flex flex-wrap gap-2 xl:inline-flex xl:flex-nowrap xl:gap-1 xl:rounded-full xl:border xl:border-[#E7EAF0] xl:px-2 xl:py-[7px]"
+    class="xl:bg-card xl:border-border flex flex-wrap gap-2 xl:inline-flex xl:flex-nowrap xl:gap-1 xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
   >
     {
       CATEGORIES.map((category) => {
@@ -64,10 +64,13 @@ const CATEGORIES: VehicleCategory[] = [
               "inline-flex items-center gap-2 rounded-full border px-[13px] py-[11px] text-[14px] transition xl:border-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px]",
               isActive
                 ? "bg-primary text-primary-foreground border-transparent font-semibold xl:[box-shadow:0_4px_12px_-2px_rgba(180,54,56,0.30)]"
-                : "border-[#E7EAF0] font-medium text-[#5B6474] hover:text-[#0E1524]",
+                : "border-border hover:text-foreground font-medium text-[var(--flota-ink-2)]",
             )}
           >
-            <CategoryIcon category={category} class:list={isActive ? "text-primary-foreground" : "text-[#5B6474]"} />
+            <CategoryIcon
+              category={category}
+              class:list={isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]"}
+            />
             {categoryLabelPl(category)}
           </a>
         );

@@ -37,10 +37,10 @@ const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
       >
         F
       </span>
-      <span class="text-[20px] font-bold tracking-tight text-[#0E1524]">Flota</span>
+      <span class="text-foreground text-[20px] font-bold tracking-tight">Flota</span>
     </a>
 
-    <nav class="flex items-center gap-1 justify-self-center rounded-full bg-[#F1F3F7] px-1.5 py-[5px]">
+    <nav class="bg-background flex items-center gap-1 justify-self-center rounded-full px-1.5 py-[5px]">
       {
         nav.map((item) => (
           <a
@@ -48,8 +48,8 @@ const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
             class:list={cn(
               "rounded-full px-[18px] py-[9px] text-[14.5px] transition-colors",
               active === item.id
-                ? "bg-white font-semibold text-[#0E1524] [box-shadow:0_1px_2px_rgba(0,0,0,0.08)]"
-                : "font-medium text-[#5A6373] hover:text-[#0E1524]",
+                ? "text-foreground bg-white font-semibold [box-shadow:0_1px_2px_rgba(0,0,0,0.08)]"
+                : "hover:text-foreground font-medium text-[var(--flota-ink-2)]",
             )}
           >
             {item.label}
@@ -59,7 +59,7 @@ const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
     </nav>
 
     <div class="flex items-center gap-5 justify-self-end">
-      <a href={PHONE_HREF} class="flex items-center gap-2 text-[14.5px] font-bold text-[#0E1524]">
+      <a href={PHONE_HREF} class="text-foreground flex items-center gap-2 text-[14.5px] font-bold">
         <svg
           class="text-primary size-[15px]"
           viewBox="0 0 24 24"

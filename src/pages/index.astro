@@ -1,6 +1,8 @@
 ---
-// components
+// core
 import { Picture } from "astro:assets";
+
+// components
 import Layout from "../layouts/Layout.astro";
 import LandingNav from "../components/LandingNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
@@ -80,10 +82,12 @@ const popularChipLabel =
       >
       </div>
 
-      <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip fading UP to transparent. -->
+      <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip: white solid at the TOP, fading
+           DOWN to transparent (design uses 180deg — the glyph tops read, bases dissolve
+           into the horizon). -->
       <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
         <span
-          class="[background-image:linear-gradient(0deg,#FFFFFF_0%,#FFFFFF_40%,rgba(238,242,255,0)_82%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:text-[258px] xl:tracking-[-10px] xl:opacity-70"
+          class="[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_48%,rgba(238,242,255,0)_96%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_42%,rgba(238,242,255,0)_90%)] xl:text-[258px] xl:tracking-[-10px] xl:opacity-[0.72]"
         >
           FLOTA
         </span>
@@ -162,7 +166,7 @@ const popularChipLabel =
 
     <!-- Desktop hero content — absolutely composed on the 880px canvas. -->
     <div class="hidden xl:block">
-      <div class="absolute top-[376px] left-16 z-[5] w-[560px]">
+      <div class="absolute top-[414px] left-16 z-[5] w-[560px]">
         <h1 class="font-serif text-[56px] leading-[56px] tracking-[-2px] text-white">
           Pojazdy<br />użytkowe<span class="text-primary">.</span>
         </h1>
@@ -186,7 +190,7 @@ const popularChipLabel =
       </div>
 
       <!-- Trust card floats bottom-right of the hero, bottom-aligned with the search pill. -->
-      <div class="absolute top-[556px] right-16 z-[6] w-[340px]">
+      <div class="absolute top-[600px] right-16 z-[6] w-[340px]">
         <TrustCard count={vehicles.length} />
       </div>
     </div>
@@ -194,13 +198,13 @@ const popularChipLabel =
 
   <!-- Light body sheet (S5) — rises over the dark hero with an upward shadow. -->
   <div
-    class="bg-background relative z-10 -mt-8 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-24 xl:rounded-t-[40px]"
+    class="bg-background relative z-10 -mt-8 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-10 xl:rounded-t-[40px]"
   >
     <!-- Search island — SINGLE mount. Mobile: a white card at the top of the sheet.
          Desktop (≥xl): absolutely lifted up into the dark hero's content column
          (bottom-left). It is never duplicated (a second mount = a second island state). -->
     <div
-      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-96px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[600px] xl:max-w-none xl:px-0"
+      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-145px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[740px] xl:max-w-none xl:px-0"
     >
       <HeroSearch client:load />
     </div>

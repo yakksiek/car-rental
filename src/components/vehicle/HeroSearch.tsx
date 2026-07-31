@@ -82,10 +82,10 @@ export default function HeroSearch({ category = null }: Props) {
           repositions it across the hero/sheet boundary, it is never double-mounted. */}
       <div className="bg-card flex flex-col rounded-[22px] p-3 [box-shadow:0_18px_40px_-14px_rgba(0,0,0,0.30)] xl:flex-row xl:items-center xl:p-[7px] xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.40)]">
         {/* Typ */}
-        <div className="min-w-0 flex-1 border-b border-[#EEF1F5] px-4 py-2.5 xl:border-b-0 xl:py-2">
-          <div className="text-[10px] font-bold tracking-[0.8px] text-[#9AA3B2] uppercase">Typ</div>
+        <div className="border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Typ</div>
           <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="mt-1 h-auto w-full justify-between border-0 bg-transparent p-0 text-[15px] font-bold text-[#0E1524] shadow-none hover:bg-transparent focus-visible:ring-0 xl:text-[14.5px]">
+            <SelectTrigger className="text-foreground mt-1 h-auto w-full justify-between border-0 bg-transparent p-0 text-[15px] font-bold shadow-none hover:bg-transparent focus-visible:ring-0 xl:text-[14.5px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -100,15 +100,15 @@ export default function HeroSearch({ category = null }: Props) {
         </div>
 
         {/* Daty */}
-        <div className="min-w-0 flex-1 border-b border-[#EEF1F5] px-4 py-2.5 xl:border-b-0 xl:border-l xl:border-[#E4E8EF] xl:py-2">
-          <div className="text-[10px] font-bold tracking-[0.8px] text-[#9AA3B2] uppercase">Daty</div>
+        <div className="border-border xl:border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:border-l xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Daty</div>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
                 className={cn(
                   "mt-1 flex w-full min-w-0 items-center gap-2 text-[15px] font-bold xl:text-[14.5px]",
-                  range?.from ? "text-[#0E1524]" : "text-[#0E1524]/55",
+                  range?.from ? "text-foreground" : "text-foreground/55",
                 )}
               >
                 <CalendarIcon className="size-4 shrink-0" />
@@ -133,9 +133,9 @@ export default function HeroSearch({ category = null }: Props) {
         </div>
 
         {/* Oddział — single fixed branch (no location data model yet) */}
-        <div className="min-w-0 flex-1 border-b border-[#EEF1F5] px-4 py-2.5 xl:border-b-0 xl:border-l xl:border-[#E4E8EF] xl:py-2">
-          <div className="text-[10px] font-bold tracking-[0.8px] text-[#9AA3B2] uppercase">Oddział</div>
-          <div className="mt-1 truncate text-[15px] font-bold text-[#0E1524] xl:text-[14.5px]">Warszawa · Mokotów</div>
+        <div className="border-border xl:border-border min-w-0 flex-1 border-b px-4 py-2.5 xl:border-b-0 xl:border-l xl:py-2">
+          <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">Oddział</div>
+          <div className="text-foreground mt-1 truncate text-[15px] font-bold xl:text-[14.5px]">Warszawa · Mokotów</div>
         </div>
 
         {/* Szukaj */}
