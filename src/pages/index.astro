@@ -1,22 +1,33 @@
 ---
+// core
+import { Picture } from "astro:assets";
+
 // components
 import Layout from "../layouts/Layout.astro";
-import SiteHeader from "../components/SiteHeader.astro";
+import LandingNav from "../components/LandingNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import VehicleCard from "../components/vehicle/VehicleCard.astro";
-import VehicleSilhouette from "../components/vehicle/VehicleSilhouette.astro";
 import HeroSearch from "../components/vehicle/HeroSearch.tsx";
+import TrustCard from "../components/landing/TrustCard.astro";
+import ProcessSteps from "../components/landing/ProcessSteps.astro";
+import TypeSelector from "../components/landing/TypeSelector.astro";
+import LandingVehicleCard from "../components/vehicle/LandingVehicleCard.astro";
 
 // others
-import type { VehicleCategory, VehicleFilters } from "../types";
+import type { VehicleFilters } from "../types";
 import { listVehicles } from "../lib/services/vehicles";
 import { categoryLabelPl } from "../lib/format";
+import heroImg from "../assets/hero-airfield.jpg";
+import vanImg from "../assets/van-cutout.png";
 
-// Public landing — a marketing entry point adapted from design screens 07/01 with
-// NO account chrome (no greeting, no deposit card; those are logged-in-customer
-// surfaces deferred to v2). Server-rendered: a hero with the <HeroSearch> island
-// (Typ/Daty → `/fleet`), category quick-links into `/fleet?category=…`, and a
-// "Popularne" featured strip (first few active vehicles via `listVehicles`).
+// Public landing (restyled — `customer-desktop.jsx` → ScreenDesktopHome / ScreenMobileHome).
+// A dark immersive hero (full-bleed photo → translucent FLOTA wordmark → van-cutout
+// z-order → glass search pill + trust card) rising into a light sheet that carries the
+// "Proces wynajmu" stepper, a click-to-route category selector, and a "Popularne" strip.
+// Built over existing data + tokens (no global.css edit) and existing fonts. NO account
+// chrome (logged-in surfaces are deferred to v2).
+//
+// Dark hero palette is landing-local arbitrary hex (`#080B12` desktop / `#0A0D14` mobile);
+// no token layer added. The forked <LandingNav> replaces the shared <SiteHeader>.
 
 const NO_FILTERS: VehicleFilters = {
   category: null,
@@ -29,83 +40,121 @@ const NO_FILTERS: VehicleFilters = {
 const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
 const featured = vehicles.slice(0, 3);
 
-const CATEGORIES: VehicleCategory[] = [
-  "cargo_van",
-  "passenger_van",
-  "car_transporter",
-  "refrigerated_truck",
-  "flatbed_truck",
-];
+// "Furgony" chip (S8) — derived from the shown set so it never misdescribes the data:
+// the top-3 are any-category, so the chip reads the category only when all three share
+// one, else a neutral label. deviation(static label decoupled from data — flagged).
+const firstFeaturedCategory = featured.length > 0 ? featured[0].category : null;
+const popularChipLabel =
+  firstFeaturedCategory && featured.every((vehicle) => vehicle.category === firstFeaturedCategory)
+    ? categoryLabelPl(firstFeaturedCategory)
+    : "Polecane";
 ---
 
 <Layout title="Flota — wynajem pojazdów użytkowych">
-  <SiteHeader active="home" />
+  <!-- Dark hero (S2) — full-bleed. Positioning context for the floating <LandingNav>
+       and (on desktop) the absolutely-composed content column + trust card. -->
+  <section class="relative w-full overflow-hidden bg-[#0A0D14] xl:h-[880px] xl:bg-[#080B12]">
+    <LandingNav active="home" />
 
-  <!-- Hero -->
-  <section class="max-w-app mx-auto grid items-center gap-12 px-5 pt-12 pb-8 sm:px-8 xl:grid-cols-2 xl:pt-20">
-    <div>
-      <p class="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
-        <span class="bg-success size-1.5 rounded-full"></span>
-        {vehicles.length} pojazdów dostępnych
-      </p>
-      <h1 class="text-foreground mt-4 font-serif text-6xl leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">
-        Pojazdy<br />użytkowe<span class="text-primary">.</span>
-        <span class="text-muted-foreground mt-2 block text-4xl sm:text-5xl">
-          Na dzień. <span class="text-primary">Na miesiąc.</span>
-        </span>
-      </h1>
-      <p class="mt-6 max-w-md text-lg text-[var(--flota-ink-2)]">
-        Furgony, busy osobowe, lawety, izotermy i plandeki — od warszawskiej firmy z 14-letnim doświadczeniem.
-        Rezerwacja online, bez ukrytych opłat.
-      </p>
-      <div class="mt-8">
-        <HeroSearch client:load />
+    <!-- Photo stage: a 336px band on mobile; full-fill on the 880px desktop canvas.
+         Holds the photo → wordmark → van z-order. -->
+    <div class="relative h-[336px] w-full xl:absolute xl:inset-0 xl:h-auto">
+      <!-- Photo (z-0) — the LCP element: eager + high priority, optimized to AVIF/WebP. -->
+      <Picture
+        src={heroImg}
+        formats={["avif", "webp"]}
+        alt=""
+        loading="eager"
+        fetchpriority="high"
+        width={1376}
+        height={768}
+        class="absolute inset-0 z-0 h-full w-full object-cover object-[center_46%] xl:object-center"
+      />
+
+      <!-- Top scrim (z-1). -->
+      <div
+        class="absolute inset-x-0 top-0 z-[1] h-[130px] [background:linear-gradient(180deg,rgba(8,11,18,0.55)_0%,rgba(8,11,18,0)_100%)] xl:h-[300px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0.6)_0%,rgba(10,10,18,0)_100%)]"
+      >
       </div>
-      <dl class="mt-10 flex flex-wrap gap-x-9 gap-y-4">
-        {
-          [
-            { n: `${vehicles.length}`, l: "pojazdów" },
-            { n: "14 lat", l: "na rynku" },
-            { n: "24/7", l: "odbiór" },
-          ].map((stat) => (
-            <div>
-              <dt class="text-foreground text-2xl font-bold tracking-tight">{stat.n}</dt>
-              <dd class="text-muted-foreground mt-1 text-xs font-medium">{stat.l}</dd>
-            </div>
-          ))
-        }
-      </dl>
+      <!-- Bottom scrim (z-2) — fades the photo into the dark canvas. -->
+      <div
+        class="absolute inset-x-0 bottom-0 z-[2] h-[120px] [background:linear-gradient(180deg,rgba(10,13,20,0)_0%,#0A0D14_94%)] xl:top-[420px] xl:h-[460px] xl:[background:linear-gradient(180deg,rgba(10,10,18,0)_0%,rgba(10,10,18,0.95)_100%)]"
+      >
+      </div>
+
+      <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip: white solid at the TOP, fading
+           DOWN to transparent (design uses 180deg — the glyph tops read, bases dissolve
+           into the horizon). -->
+      <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
+        <span
+          class="[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_48%,rgba(238,242,255,0)_96%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_42%,rgba(238,242,255,0)_90%)] xl:text-[258px] xl:tracking-[-10px] xl:opacity-[0.72]"
+        >
+          FLOTA
+        </span>
+      </div>
+
+      <!-- Van cutout (z-4) — SAME crop/position as the photo, so it lands over the van. -->
+      <Picture
+        src={vanImg}
+        formats={["avif", "webp"]}
+        alt=""
+        loading="eager"
+        width={1376}
+        height={768}
+        class="pointer-events-none absolute inset-0 z-[4] h-full w-full object-cover object-[center_46%] xl:object-center"
+      />
     </div>
 
-    {
-      featured[0] && (
-        <div class="hidden xl:block">
-          <VehicleCard vehicle={featured[0]} />
-        </div>
-      )
-    }
-  </section>
-
-  <!-- Category quick-links -->
-  <section id="kategorie" class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
-    <div class="mb-7 flex items-end justify-between gap-4">
-      <div>
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">5 kategorii</p>
-        <h2 class="text-foreground mt-1.5 text-3xl font-bold tracking-tight sm:text-4xl">
-          Wybierz typ pojazdu<span class="text-primary">.</span>
-        </h2>
-      </div>
+    <!-- Mobile hero content (below the photo stage, on solid dark). Copy is intentionally
+         different from desktop; the eyebrow is mobile-only (fixed genitive, deviation). -->
+    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[56px] xl:hidden">
+      <p class="text-[11px] font-bold tracking-[1.4px] text-white/60 uppercase">
+        {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
+      </p>
+      <h1 class="font-serif text-[46px] leading-[1.02] tracking-[-1.8px] text-white">
+        Pojazdy<br />użytkowe<span class="text-primary">.</span>
+      </h1>
+      <p class="text-[15px] leading-[23px] text-white/72">
+        Wynajem długoterminowy i na dobę, w pełni online, z fakturą VAT.
+      </p>
+      <ul class="flex flex-col gap-2.5">
+        {
+          [
+            "Darmowe podstawienie i odbiór w mieście",
+            "Bezpłatne odwołanie rezerwacji",
+            "Wynajem średnioterminowy już od 1 miesiąca",
+          ].map((text) => (
+            <li class="flex items-center gap-2.5 text-[14px] font-medium text-white/[0.92]">
+              <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/10">
+                <svg
+                  class="text-primary size-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              {text}
+            </li>
+          ))
+        }
+      </ul>
       <a
         href="/fleet"
-        class="text-foreground hover:text-primary inline-flex items-center gap-1.5 text-sm font-semibold"
+        class="bg-primary text-primary-foreground mt-1.5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[16px] text-[16px] font-bold [box-shadow:0_14px_30px_-10px_rgba(180,54,56,0.55)]"
       >
-        Cała flota
+        Zarezerwuj online
         <svg
           class="size-4"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.7"
+          stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
@@ -114,57 +163,118 @@ const CATEGORIES: VehicleCategory[] = [
         </svg>
       </a>
     </div>
+
+    <!-- Desktop hero content — absolutely composed on the 880px canvas. -->
+    <div class="hidden xl:block">
+      <div class="absolute top-[414px] left-16 z-[5] w-[560px]">
+        <h1 class="font-serif text-[56px] leading-[56px] tracking-[-2px] text-white">
+          Pojazdy<br />użytkowe<span class="text-primary">.</span>
+        </h1>
+        <p class="mt-5 max-w-[440px] text-[15.5px] leading-[24px] text-white/80">
+          Nowe samochody dla Twojej firmy. Dostępne od ręki!
+        </p>
+        <ul class="mt-6 flex flex-col gap-3">
+          {
+            [
+              "Darmowe podstawienie i odbiór na terenie miasta",
+              "Bezpłatne odwołanie rezerwacji",
+              "Wynajem średnioterminowy już od 1 miesiąca",
+            ].map((text) => (
+              <li class="flex items-center gap-3 text-[15.5px] font-medium text-white/95">
+                <span class="bg-primary size-[7px] shrink-0 rounded-full" />
+                {text}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <!-- Trust card floats bottom-right of the hero, bottom-aligned with the search pill. -->
+      <div class="absolute top-[600px] right-16 z-[6] w-[340px]">
+        <TrustCard count={vehicles.length} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Light body sheet (S5) — rises over the dark hero with an upward shadow. -->
+  <div
+    class="bg-background relative z-10 -mt-8 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-10 xl:rounded-t-[40px]"
+  >
+    <!-- Search island — SINGLE mount. Mobile: a white card at the top of the sheet.
+         Desktop (≥xl): absolutely lifted up into the dark hero's content column
+         (bottom-left). It is never duplicated (a second mount = a second island state). -->
     <div
-      class="-mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden"
+      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 xl:absolute xl:top-[-145px] xl:left-16 xl:z-20 xl:mx-0 xl:w-[740px] xl:max-w-none xl:px-0"
     >
-      {
-        CATEGORIES.map((category) => (
-          <a
-            href={`/fleet?category=${category}`}
-            class="group bg-card shadow-card hover:shadow-pop flex min-h-[180px] w-44 shrink-0 flex-col justify-between rounded-xl p-5 transition hover:-translate-y-0.5 sm:w-auto"
-          >
-            <div class="text-foreground flex flex-1 items-center justify-center py-3">
-              <VehicleSilhouette category={category} alt={categoryLabelPl(category)} class="max-w-[150px]" />
+      <HeroSearch client:load />
+    </div>
+
+    <!-- Mobile trust card (desktop's copy floats in the hero above). -->
+    <div class="mx-auto mt-4 w-full max-w-[560px] px-4 sm:px-6 xl:hidden">
+      <TrustCard count={vehicles.length} />
+    </div>
+
+    <!-- Proces wynajmu (S6) -->
+    <ProcessSteps />
+
+    <!-- Wybierz typ pojazdu (S7) — click-to-route category selector -->
+    <TypeSelector active="cargo_van" />
+
+    <!-- Popularne (S8) — forked LandingVehicleCard over live top-3 -->
+    {
+      featured.length > 0 && (
+        <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
+          <div class="mb-6 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <h2 class="text-foreground font-serif text-[26px] leading-none xl:text-[38px]">Popularne</h2>
+              <span class="bg-accent text-accent-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold">
+                <svg
+                  class="text-primary size-[13px]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 18V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1" />
+                  <path d="M15 18H9" />
+                  <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+                  <circle cx="7" cy="18" r="2" />
+                  <circle cx="17" cy="18" r="2" />
+                </svg>
+                {popularChipLabel}
+              </span>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-foreground font-semibold tracking-tight">{categoryLabelPl(category)}</span>
+            <a
+              href="/fleet"
+              class="text-primary xl:bg-primary xl:text-primary-foreground inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold hover:underline xl:rounded-full xl:px-4 xl:py-2 xl:no-underline xl:transition xl:hover:opacity-90"
+            >
+              Wszystkie
               <svg
-                class="text-muted-foreground group-hover:text-foreground size-4 transition"
+                class="hidden size-[15px] xl:inline"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.7"
+                stroke-width="1.9"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 aria-hidden="true"
               >
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
-            </div>
-          </a>
-        ))
-      }
-    </div>
-  </section>
+            </a>
+          </div>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((vehicle) => (
+              <LandingVehicleCard vehicle={vehicle} />
+            ))}
+          </div>
+        </section>
+      )
+    }
 
-  <!-- Popular -->
-  {
-    featured.length > 0 && (
-      <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
-        <div class="mb-6 flex items-end justify-between gap-4">
-          <h2 class="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">Popularne</h2>
-          <a href="/fleet" class="text-primary text-sm font-semibold hover:underline">
-            Wszystkie
-          </a>
-        </div>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((vehicle) => (
-            <VehicleCard vehicle={vehicle} />
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  <SiteFooter />
+    <SiteFooter />
+  </div>
 </Layout>

@@ -1,0 +1,157 @@
+---
+// others
+import { cn } from "../lib/utils";
+
+// Landing-scoped floating navigation (S1) — a FORK, not the shared <SiteHeader>.
+// SiteHeader backs 5 public pages; the landing needs a different chrome that sits
+// OVER the dark hero: a floating white pill on desktop, a logo + glass hamburger on
+// mobile. The mobile menu is a landing-local <details> dropdown (dark surface,
+// Start / Flota / phone) — the shared <MobileNav.tsx> is deliberately untouched, so
+// /fleet + the other public pages keep their existing light menu.
+//
+// Positioned `absolute` over the hero: the consuming <section> must be `relative`.
+
+interface Props {
+  active?: "home" | "fleet";
+}
+
+const { active = "home" } = Astro.props;
+
+const PHONE_LABEL = "+48 22 100 20 30";
+const PHONE_HREF = "tel:+48221002030";
+
+const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
+  { id: "home", label: "Start", href: "/" },
+  { id: "fleet", label: "Flota", href: "/fleet" },
+];
+---
+
+<div class="pointer-events-none absolute inset-x-0 top-0 z-40">
+  <!-- Desktop: floating white pill (≥xl). -->
+  <div
+    class="pointer-events-auto absolute top-7 right-8 left-8 hidden grid-cols-[1fr_auto_1fr] items-center rounded-full bg-white py-[11px] pr-[22px] pl-[14px] [box-shadow:0_12px_34px_-10px_rgba(0,0,0,0.25)] xl:grid"
+  >
+    <a href="/" class="flex items-center gap-2.5 justify-self-start">
+      <span
+        class="bg-primary text-primary-foreground flex size-[38px] items-center justify-center rounded-[11px] text-[19px] font-bold"
+      >
+        F
+      </span>
+      <span class="text-foreground text-[20px] font-bold tracking-tight">Flota</span>
+    </a>
+
+    <nav class="bg-background flex items-center gap-1 justify-self-center rounded-full px-1.5 py-[5px]">
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            class:list={cn(
+              "rounded-full px-[18px] py-[9px] text-[14.5px] transition-colors",
+              active === item.id
+                ? "text-foreground bg-white font-semibold [box-shadow:0_1px_2px_rgba(0,0,0,0.08)]"
+                : "hover:text-foreground font-medium text-[var(--flota-ink-2)]",
+            )}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-5 justify-self-end">
+      <a href={PHONE_HREF} class="text-foreground flex items-center gap-2 text-[14.5px] font-bold">
+        <svg
+          class="text-primary size-[15px]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
+          ></path>
+        </svg>
+        {PHONE_LABEL}
+      </a>
+      <a
+        href="/fleet"
+        class="bg-foreground text-background rounded-full px-[22px] py-[13px] text-[14.5px] font-semibold transition hover:opacity-90"
+      >
+        Przeglądaj flotę
+      </a>
+    </div>
+  </div>
+
+  <!-- Mobile: logo + glass hamburger over the photo (<xl). -->
+  <div class="pointer-events-auto absolute inset-x-4 top-4 flex items-center justify-between xl:hidden">
+    <a href="/" class="flex items-center gap-2.5">
+      <span
+        class="bg-primary text-primary-foreground flex size-[34px] items-center justify-center rounded-[10px] text-[17px] font-bold"
+      >
+        F
+      </span>
+      <span class="text-[19px] font-bold tracking-tight text-white">Flota</span>
+    </a>
+
+    <details class="group relative">
+      <summary
+        aria-label="Menu"
+        class="flex size-10 list-none items-center justify-center rounded-[12px] bg-white/15 backdrop-blur-[6px] select-none [&::-webkit-details-marker]:hidden"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          class="text-white"
+          aria-hidden="true"
+        >
+          <path d="M4 7h16M4 12h16M4 17h16"></path>
+        </svg>
+      </summary>
+      <div
+        class="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0A0D14]/95 p-2 [box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
+      >
+        {
+          nav.map((item) => (
+            <a
+              href={item.href}
+              class:list={cn(
+                "block rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors",
+                active === item.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white",
+              )}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+        <a
+          href={PHONE_HREF}
+          class="mt-1 flex items-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <svg
+            class="text-primary size-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
+            ></path>
+          </svg>
+          {PHONE_LABEL}
+        </a>
+      </div>
+    </details>
+  </div>
+</div>
