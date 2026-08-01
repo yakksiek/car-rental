@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import Brand from "../brand/Brand.astro";
 
 // Shared card-centered "Strefa pracownika" shell for the recovery / invite-accept
 // surfaces (S-08, designs R1–R10). Mirrors the SignInForm auth-card idiom: a dark
@@ -36,10 +37,7 @@ const { pageTitle } = Astro.props;
         Logowanie
       </a>
       <div class="relative flex items-center gap-3">
-        <span
-          class="bg-primary text-primary-foreground flex size-[42px] shrink-0 items-center justify-center rounded-[13px] font-serif text-[27px] leading-none shadow-[0_6px_16px_rgba(180,54,56,0.30)]"
-          >F</span
-        >
+        <Brand variant="mark" label={false} tone="inverse" markClass="h-[42px]" class="shrink-0" />
         <div class="leading-none">
           <div class="text-[18px] font-bold tracking-[-0.3px]">Flota</div>
           <div class="mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] text-white/65 uppercase">
@@ -54,10 +52,7 @@ const { pageTitle } = Astro.props;
       class="bg-card md:shadow-overlay relative z-10 flex flex-1 flex-col px-6 py-7 md:w-[440px] md:flex-none md:rounded-[20px] md:px-10 md:py-9"
     >
       <div class="mb-6 hidden items-center gap-3 md:flex">
-        <span
-          class="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl font-serif text-[26px] leading-none shadow-[0_6px_16px_rgba(180,54,56,0.30)]"
-          >F</span
-        >
+        <Brand variant="mark" label={false} markClass="h-10" class="shrink-0" />
         <div class="leading-none">
           <div class="text-foreground text-[17px] font-bold tracking-[-0.3px]">Flota</div>
           <div class="text-muted-foreground mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] uppercase">

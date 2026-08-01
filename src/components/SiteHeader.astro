@@ -1,6 +1,7 @@
 ---
 // components
 import MobileNav from "./MobileNav.tsx";
+import Brand from "./brand/Brand.astro";
 
 // others
 import { cn } from "../lib/utils";
@@ -30,13 +31,8 @@ const nav: { id: "home" | "fleet"; label: string; href: string }[] = [
   <div
     class="max-w-app mx-auto flex items-center justify-between gap-4 px-5 py-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:px-8"
   >
-    <a href="/" class="flex items-center gap-2.5 justify-self-start">
-      <span
-        class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-[10px] text-lg font-normal"
-      >
-        F
-      </span>
-      <span class="text-foreground text-[17px] font-bold tracking-tight">Flota</span>
+    <a href="/" class="flex items-center justify-self-start">
+      <Brand markClass="h-8" wordmarkClass="text-[17px]" />
     </a>
 
     <!-- Desktop nav (centered); hidden on mobile in favour of the dropdown. -->
