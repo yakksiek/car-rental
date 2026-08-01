@@ -20,14 +20,14 @@ Cloudflare scored a clean pass on all five agent-friendly criteria, is **free at
 
 All six candidates pass the hard filters: the Astro 6 SSR + TypeScript stack runs on each (Cloudflare keeps `@astrojs/cloudflare`; all others require an adapter swap), and because FleetRent needs no persistent server-side connections, no serverless-only platform is excluded.
 
-| Platform | CLI-first | Managed/Serverless | Agent-readable docs | Stable deploy API | MCP / Integration | Net |
-|---|---|---|---|---|---|---|
-| **Cloudflare** | Pass | Pass | Pass | Pass | Pass | **5 Pass** |
-| **Vercel** | Pass | Pass | Pass | Pass | Partial | **4½ Pass** |
-| **Fly.io** | Pass | Partial | Pass | Pass | Partial | **4 Pass** |
-| **Netlify** | Partial | Pass | Partial | Pass | Pass | **3½ Pass** |
-| **Render** | Partial | Pass | Pass | Partial | Pass | **3½ Pass** |
-| **Railway** | Partial | Pass | Pass | Partial | Partial | **3 Pass** |
+| Platform       | CLI-first | Managed/Serverless | Agent-readable docs | Stable deploy API | MCP / Integration | Net         |
+| -------------- | --------- | ------------------ | ------------------- | ----------------- | ----------------- | ----------- |
+| **Cloudflare** | Pass      | Pass               | Pass                | Pass              | Pass              | **5 Pass**  |
+| **Vercel**     | Pass      | Pass               | Pass                | Pass              | Partial           | **4½ Pass** |
+| **Fly.io**     | Pass      | Partial            | Pass                | Pass              | Partial           | **4 Pass**  |
+| **Netlify**    | Partial   | Pass               | Partial             | Pass              | Pass              | **3½ Pass** |
+| **Render**     | Partial   | Pass               | Pass                | Partial           | Pass              | **3½ Pass** |
+| **Railway**    | Partial   | Pass               | Pass                | Partial           | Partial           | **3 Pass**  |
 
 **Per-platform scoring notes:**
 
@@ -46,7 +46,7 @@ Wins on every agent-friendliness axis and is free at FleetRent's scale. Cruciall
 
 #### 2. Vercel
 
-The strongest pure-DX option with excellent agent-readable docs and a clean, predictable CLI — arguably the smoothest iteration loop on a 3-week timeline. It loses the top slot on two counts: the **commercial-use ban on Hobby forces $20/seat/mo** (vs Cloudflare's $0), and adopting it means swapping the adapter and re-validating Supabase SSR cookie auth on Vercel's serverless functions. Genuine Node serverless (not edge polyfills) means *fewer* runtime surprises than Cloudflare — its real advantage if `workerd` friction materializes.
+The strongest pure-DX option with excellent agent-readable docs and a clean, predictable CLI — arguably the smoothest iteration loop on a 3-week timeline. It loses the top slot on two counts: the **commercial-use ban on Hobby forces $20/seat/mo** (vs Cloudflare's $0), and adopting it means swapping the adapter and re-validating Supabase SSR cookie auth on Vercel's serverless functions. Genuine Node serverless (not edge polyfills) means _fewer_ runtime surprises than Cloudflare — its real advantage if `workerd` friction materializes.
 
 #### 3. Netlify
 
@@ -58,7 +58,7 @@ Best-in-class **official, production-recommended MCP server** and confirmed GA A
 
 1. **`workerd` is "almost-Node," not Node.** Supabase SSR cookie auth (`src/middleware.ts`, `src/lib/supabase.ts`) and any transitive dependency touching Node `crypto`/`streams`/`Buffer` run on polyfills behind the `nodejs_compat` flag. Runtime-only failures that don't reproduce under `npm run dev` are the hardest bug class — and they surface in production.
 2. **3 MB gzipped Worker bundle limit on the free tier.** The protocol features (FR-006/007: photo upload + **digital signature** capture) will pull in client libraries (signature pad, image compression). Astro 6 + React 19 + Supabase client + those can crowd 3 MB gzip, forcing the $5/mo plan (10 MB ceiling) or a mid-sprint refactor.
-3. **A stale Pages reference lingered in the hand-off docs.** `@astrojs/cloudflare` v13 **dropped Pages support**; current deploys must target **Workers** (`wrangler deploy`). The code (`astro.config.mjs`) was already Workers-only, and `CLAUDE.md` already documents `wrangler deploy`, but `tech-stack.md` carried `deployment_target: cloudflare-pages` from the starter default. *Resolved 2026-05-29:* `tech-stack.md` frontmatter + prose corrected to `cloudflare-workers`. (CI has no deploy step, so nothing Pages-shaped to fix there.)
+3. **A stale Pages reference lingered in the hand-off docs.** `@astrojs/cloudflare` v13 **dropped Pages support**; current deploys must target **Workers** (`wrangler deploy`). The code (`astro.config.mjs`) was already Workers-only, and `CLAUDE.md` already documents `wrangler deploy`, but `tech-stack.md` carried `deployment_target: cloudflare-pages` from the starter default. _Resolved 2026-05-29:_ `tech-stack.md` frontmatter + prose corrected to `cloudflare-workers`. (CI has no deploy step, so nothing Pages-shaped to fix there.)
 4. **Free-tier CPU budget is 10 ms per invocation.** SSR-rendering the fleet catalog with React hydration plus Supabase data fetching could brush this ceiling (CPU time excludes Supabase fetch-wait, which helps) — a latency/cost surprise vector on heavier pages.
 5. **No server-side image processing.** Protocol photos are a core feature, but Workers isn't a file-processing runtime. Server-side resize/optimization means adding the paid Cloudflare Images product or doing it all client-side.
 
@@ -68,7 +68,7 @@ The team shipped FleetRent on Workers because the starter defaulted to it and th
 
 ### Unknown Unknowns
 
-- **A hand-off doc carried a stale Pages label.** `tech-stack.md` said `deployment_target: cloudflare-pages` (a starter default) while the installed adapter is Workers-only — a contradiction an agent could have followed into the deprecated path. *Resolved 2026-05-29.* Note CI does not deploy at all (lint + build only), so the deploy path is not yet automated. *(Version-accuracy finding — per the skill's Getting-Started validation rule.)*
+- **A hand-off doc carried a stale Pages label.** `tech-stack.md` said `deployment_target: cloudflare-pages` (a starter default) while the installed adapter is Workers-only — a contradiction an agent could have followed into the deprecated path. _Resolved 2026-05-29._ Note CI does not deploy at all (it runs lint + unit + build and the integration gate, but no deploy step), so the deploy path is not yet automated. _(Version-accuracy finding — per the skill's Getting-Started validation rule.)_
 - **`astro:env/server` secrets ≠ Worker runtime secrets.** The app reads `SUPABASE_URL`/`SUPABASE_KEY` via `astro:env/server`. On Workers these must be wired as runtime secrets (`wrangler secret put`), plus a local `.dev.vars`; the build-time schema won't populate the runtime. A green build can still ship null config to production — which is what `src/lib/config-status.ts` exists to catch, but it's better to wire it right.
 - **No Hyperdrive needed — until a raw Postgres driver appears.** FleetRent uses the Supabase JS client over HTTPS, so Hyperdrive is unnecessary. But Workers can't easily open arbitrary TCP, so any future direct `pg` connection (a migration runner, a heavy query path) would suddenly require Hyperdrive.
 - **Billing is CPU-time, not wall-time.** A slow Supabase query costs nothing on Cloudflare's meter — counterintuitively good for this I/O-bound app, but it means slow DB must be watched via Supabase-side observability; Cloudflare's metrics won't reveal it.
@@ -81,19 +81,20 @@ The team shipped FleetRent on Workers because the starter defaulted to it and th
 - **Rollback**: `wrangler rollback [<version-id>]` reverts to a previous deployed version in seconds; `wrangler versions list` shows the history. Caveat: rollback reverts code only — Supabase schema migrations do **not** roll back automatically, so a deploy paired with a DB migration needs a manual migration-revert plan.
 - **Approval**: an agent may run `wrangler deploy` to a non-production version and `wrangler tail`/`wrangler versions list` unattended. Human-only actions: promoting a version to production for the first cutover, rotating the primary Supabase key, and any destructive Supabase operation (drop table, delete project) — those stay panel-by-hand even when the agent suggests them.
 - **Logs**: `wrangler tail` streams live runtime logs (read-only); `wrangler deployments list` and `wrangler versions list` show deploy history. The Cloudflare observability MCP server (`https://observability.mcp.cloudflare.com/sse`) exposes structured log/analytics queries for agent use — evolving, treat as a bonus over the CLI.
+- **CI quality gates**: `.github/workflows/ci.yml` gates every push/PR to `main` with two checks. The `ci` job runs lint + **unit** + build (the build still uses the `SUPABASE_URL` / `SUPABASE_KEY` repo secrets). A separate **`integration`** job boots a slimmed local Supabase on the runner (`supabase start -x …`; Docker is preinstalled on `ubuntu-latest`, migrations + seed auto-apply) and runs the integration suite — it needs **no new repo secrets**, because its `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` come from the runner's own `supabase status`, not from GitHub. Enforcing both as **required status checks** on `main` (check names `ci`, `integration`) is a one-time repo-admin action — runbook: `context/changes/testing-quality-gates-wiring/required-checks.md`. CI still has **no deploy step** (deploys are `wrangler deploy`, run out-of-band).
 
 ## Risk Register
 
-| Risk | Source | Likelihood | Impact | Mitigation |
-|---|---|---|---|---|
-| ~~Stale Pages label in `tech-stack.md`~~ (resolved 2026-05-29) | Research finding | — | — | Fixed: `tech-stack.md` frontmatter + prose now `cloudflare-workers`; `astro.config.mjs` and `CLAUDE.md` were already Workers-aligned. Remaining: create `wrangler.jsonc` with `nodejs_compat` + a current `compatibility_date` during Plan Mode deploy. |
-| `workerd` runtime diverges from Node — production-only failures in Supabase SSR / deps | Devil's advocate / Pre-mortem | M | H | Enable `@astrojs/cloudflare` `platformProxy` for dev parity; smoke-test auth + protocol-email paths against an actual `wrangler` build (not just `astro dev`) before relying on them. |
-| 3 MB gzipped free-tier bundle limit exceeded by signature/image client libs | Devil's advocate / Pre-mortem | M | M | Monitor build output size; lazy-load heavy client libs as islands; budget the $5/mo paid plan (10 MB) as the accepted fallback. |
-| Runtime secrets not wired (green build, null config in prod) | Unknown unknowns | M | H | Set `wrangler secret put SUPABASE_URL/KEY` for prod + `.dev.vars` locally; rely on `config-status.ts` banner as the backstop, not the primary control. |
-| Free-tier 10 ms CPU/invocation ceiling on SSR-heavy pages | Devil's advocate | L | M | CPU excludes Supabase fetch-wait, so headroom is large; if hit, the $5 plan raises the limit. Watch via observability. |
-| No server-side image processing for protocol photos | Devil's advocate | L | M | Keep photos in Supabase Storage; do client-side compression/resize; add Cloudflare Images only if server-side processing becomes necessary. |
-| Slow Supabase queries invisible on Cloudflare's CPU-time meter | Unknown unknowns | M | M | Use Supabase-side observability / query insights to catch slow DB; don't rely on Cloudflare metrics for DB latency. |
-| Future direct Postgres (`pg`) connection blocked by Workers TCP limits | Unknown unknowns | L | M | Keep all DB access via the Supabase JS client over HTTPS; if a raw driver is ever needed, route it through Hyperdrive. |
+| Risk                                                                                   | Source                        | Likelihood | Impact | Mitigation                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------- | ----------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~Stale Pages label in `tech-stack.md`~~ (resolved 2026-05-29)                         | Research finding              | —          | —      | Fixed: `tech-stack.md` frontmatter + prose now `cloudflare-workers`; `astro.config.mjs` and `CLAUDE.md` were already Workers-aligned. Remaining: create `wrangler.jsonc` with `nodejs_compat` + a current `compatibility_date` during Plan Mode deploy. |
+| `workerd` runtime diverges from Node — production-only failures in Supabase SSR / deps | Devil's advocate / Pre-mortem | M          | H      | Enable `@astrojs/cloudflare` `platformProxy` for dev parity; smoke-test auth + protocol-email paths against an actual `wrangler` build (not just `astro dev`) before relying on them.                                                                   |
+| 3 MB gzipped free-tier bundle limit exceeded by signature/image client libs            | Devil's advocate / Pre-mortem | M          | M      | Monitor build output size; lazy-load heavy client libs as islands; budget the $5/mo paid plan (10 MB) as the accepted fallback.                                                                                                                         |
+| Runtime secrets not wired (green build, null config in prod)                           | Unknown unknowns              | M          | H      | Set `wrangler secret put SUPABASE_URL/KEY` for prod + `.dev.vars` locally; rely on `config-status.ts` banner as the backstop, not the primary control.                                                                                                  |
+| Free-tier 10 ms CPU/invocation ceiling on SSR-heavy pages                              | Devil's advocate              | L          | M      | CPU excludes Supabase fetch-wait, so headroom is large; if hit, the $5 plan raises the limit. Watch via observability.                                                                                                                                  |
+| No server-side image processing for protocol photos                                    | Devil's advocate              | L          | M      | Keep photos in Supabase Storage; do client-side compression/resize; add Cloudflare Images only if server-side processing becomes necessary.                                                                                                             |
+| Slow Supabase queries invisible on Cloudflare's CPU-time meter                         | Unknown unknowns              | M          | M      | Use Supabase-side observability / query insights to catch slow DB; don't rely on Cloudflare metrics for DB latency.                                                                                                                                     |
+| Future direct Postgres (`pg`) connection blocked by Workers TCP limits                 | Unknown unknowns              | L          | M      | Keep all DB access via the Supabase JS client over HTTPS; if a raw driver is ever needed, route it through Hyperdrive.                                                                                                                                  |
 
 ## Getting Started
 
@@ -108,6 +109,7 @@ The team shipped FleetRent on Workers because the starter defaulted to it and th
 ## Out of Scope
 
 The following were not evaluated in this research:
+
 - Docker image configuration
 - CI/CD pipeline setup
 - Production-scale architecture (multi-region, HA, DR)
