@@ -27,3 +27,38 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Boot a slimmed local Supabase. Docker is preinstalled on ubuntu-latest, so
+      # no `services:` block is needed. A fresh runner volume makes `supabase start`
+      # apply all migrations + seed.sql automatically (no `db reset`). No `astro sync`
+      # — Vitest stubs the Astro virtual modules. Excluded services are unused by any
+      # integration test; Postgres/Kong/Auth/PostgREST/Storage/Mailpit are kept.
+      # Mailpit stays IN: staff.test.ts (S-08) sends real GoTrue invite emails through
+      # the local SMTP service, so excluding it fails those 4 tests.
+      - name: Start Supabase (slimmed stack)
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime
+      # Remap `supabase status -o env` to the three names tests/integration/setup.ts
+      # requires and strip the surrounding quotes (its output is KEY="value"; unquoted
+      # values are what $GITHUB_ENV needs). No repo secrets — keys come from the stack.
+      - name: Export Supabase credentials
+        run: |
+          npx supabase status -o env \
+            | sed -e 's/^API_URL=/SUPABASE_URL=/' \
+                  -e 's/^ANON_KEY=/SUPABASE_ANON_KEY=/' \
+                  -e 's/^SERVICE_ROLE_KEY=/SUPABASE_SERVICE_ROLE_KEY=/' \
+            | grep -E '^SUPABASE_(URL|ANON_KEY|SERVICE_ROLE_KEY)=' \
+            | sed -e 's/="/=/' -e 's/"$//' \
+            >> "$GITHUB_ENV"
+      - run: npm run test:integration
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop
