@@ -1,0 +1,25 @@
+-- Complete the current_app_role() grant carve-out: revoke anon/PUBLIC EXECUTE.
+--
+-- 20260714120000_rpc_execute_grant_hardening.sql made the `authenticated` grant
+-- on current_app_role() EXPLICIT (so a future re-create can't strand the RLS
+-- policies that depend on it), but deliberately did NOT revoke the built-in
+-- PUBLIC + anon EXECUTE it inherited at creation (20260604153139). That left it
+-- inconsistent with the four staff RPCs hardened in the same migration and with
+-- lessons.md -> "Revoke EXECUTE before granting it".
+--
+-- Verified safe to revoke anon/PUBLIC (audit 2026-07-31, change
+-- list-pending-reservations-grant-leak):
+--   * The helper returns only the CALLER's own role: `select role from
+--     public.profiles where user_id = auth.uid()`. For an anon (no-session)
+--     caller auth.uid() is NULL -> no row -> NULL. It never exposed data.
+--   * All 9 RLS policies referencing public.current_app_role() are scoped to the
+--     `authenticated` role only (profiles, vehicles insert/update, protocol
+--     storage objects). No anon/PUBLIC-scoped policy references it, so revoking
+--     anon/PUBLIC cannot strand any anon query path.
+--   * No application or test code invokes it directly via `.rpc()`; it is used
+--     exclusively inside SECURITY DEFINER function bodies and RLS predicates,
+--     where the check runs as the definer/owner, not the caller.
+--
+-- `authenticated` (and service_role) KEEP EXECUTE -- those 9 policies require it.
+
+revoke execute on function public.current_app_role() from public, anon;

@@ -1,0 +1,23 @@
+-- Re-close list_pending_reservations at the grant layer (regression fix).
+--
+-- lessons.md -> "Revoke EXECUTE before granting it": a DROP+CREATE resets a
+-- function's ACL to Supabase's default (EXECUTE to PUBLIC + anon); only the
+-- per-function `revoke execute ... from public, anon` is the durable control,
+-- and it must be RE-APPLIED after every recreation.
+--
+-- 20260714120000_rpc_execute_grant_hardening.sql revoked public+anon on this
+-- staff RPC. 20260728120000_list_pending_reservations_add_plate.sql then
+-- `drop function`+`create function`'d it (to add the vehicle_plate OUT column)
+-- and re-stated only the `grant ... to authenticated` "verbatim from
+-- 20260617121000" -- but that original create migration never held the revoke
+-- (it lived in the separate 20260714120000 hardening), so the drop silently
+-- restored the default anon grant. The rpc-execute-grant-hardening regression
+-- guard (tests/integration/rpc-execute-grants.test.ts) caught it: anon can
+-- execute list_pending_reservations() again.
+--
+-- No PII was exposed -- the in-function `current_app_role() in ('employee',
+-- 'admin')` filter returns zero rows to a role-null caller -- but the grant
+-- layer (defense in depth) was open. This forward migration re-closes it.
+-- (Cannot amend 20260728120000 in place: it has already been applied.)
+
+revoke execute on function public.list_pending_reservations() from public, anon;
