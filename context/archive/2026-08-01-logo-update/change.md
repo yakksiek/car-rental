@@ -1,10 +1,10 @@
 ---
 change_id: logo-update
 title: Logo update
-status: impl_reviewed
+status: archived
 created: 2026-08-01
 updated: 2026-08-01
-archived_at: null
+archived_at: 2026-08-01T20:32:51Z
 ---
 
 ## Notes
