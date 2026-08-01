@@ -40,18 +40,18 @@ All core surfaces (below) map to Phase 2; favicon to Phase 3. No phase contradic
 
 Mark height preserves each surface's current badge size; `<Brand variant="lockup">` unless noted.
 
-| File / spot                               | tone      | mark height | line status                                       |
-| ----------------------------------------- | --------- | ----------- | ------------------------------------------------- |
-| `SiteHeader.astro`                        | `ink`     | ~34px       | `exact`                                           |
-| `LandingNav.astro` desktop pill           | `ink`     | 38px        | `exact`                                           |
-| `LandingNav.astro` mobile bar (dark)      | `inverse` | 34px        | `exact`                                           |
-| `MobileNav.tsx` overlay                   | `ink`     | ~34px       | `exact` (verify overlay bg is light at implement) |
-| `SiteFooter.astro`                        | `ink`     | ~30px       | `exact`                                           |
-| `auth/signin.astro` mobile band (dark)    | `inverse` | 42px        | `exact`                                           |
-| `auth/signin.astro` desktop card          | `ink`     | 40px        | `exact`                                           |
-| `auth/AuthShell.astro` mobile band (dark) | `inverse` | 42px        | `exact`                                           |
-| `auth/AuthShell.astro` desktop card       | `ink`     | 40px        | `exact`                                           |
-| `shell/StaffShell.astro` sidebar top      | `ink`     | ~36px       | `exact`                                           |
+| File / spot                               | tone      | mark height       | line status                                                                                                                                                                                          |
+| ----------------------------------------- | --------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SiteHeader.astro`                        | `ink`     | ~34px             | `exact`                                                                                                                                                                                              |
+| `LandingNav.astro` desktop pill           | `ink`     | 38px              | `exact`                                                                                                                                                                                              |
+| `LandingNav.astro` mobile bar (dark)      | `inverse` | 34px              | `exact`                                                                                                                                                                                              |
+| `MobileNav.tsx` overlay                   | `ink`     | ~34px             | `exact` (verify overlay bg is light at implement)                                                                                                                                                    |
+| `SiteFooter.astro`                        | `ink`     | ~30px             | `exact`                                                                                                                                                                                              |
+| `auth/signin.astro` mobile band (dark)    | `inverse` | 42px              | `exact`                                                                                                                                                                                              |
+| `auth/signin.astro` desktop card          | `ink`     | 40px              | `exact`                                                                                                                                                                                              |
+| `auth/AuthShell.astro` mobile band (dark) | `inverse` | 42px              | `exact`                                                                                                                                                                                              |
+| `auth/AuthShell.astro` desktop card       | `ink`     | 40px              | `exact`                                                                                                                                                                                              |
+| `shell/StaffShell.astro` sidebar top      | `ink`     | 24px md / 30px lg | `deviation(van aspect — a 34px-tall mark is ~70px wide (viewBox 124×60) and overflows the ~56px-usable md:w-[72px] icon-rail; downsized to h-6 / lg:h-[30px] to fit the rail and the 240px sidebar)` |
 
 - Container: **none** on all of the above (the crimson square badge is removed). `exact`.
 - `font-serif` on some current monograms is irrelevant post-swap (the van is an SVG, not a letter). `exact`.
@@ -68,4 +68,4 @@ Mark height preserves each surface's current badge size; `<Brand variant="lockup
 
 Hero gradient "FLOTA" wordmark (`index.astro`), OG/social image + web manifest, "FleetRent" name in email templates + PDF footer.
 
-**Verdict: PASS — 10 core surfaces + favicon aligned, 2 repo designs superseded, 2 deviations recorded (favicon tile, ink-token).**
+**Verdict: PASS — 10 core surfaces + favicon aligned, 2 repo designs superseded, 3 deviations recorded (favicon tile, ink-token, StaffShell rail-fit).**
