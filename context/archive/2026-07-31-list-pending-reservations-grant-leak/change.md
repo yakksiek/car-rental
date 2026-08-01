@@ -1,9 +1,10 @@
 ---
 change_id: list-pending-reservations-grant-leak
 title: list_pending_reservations anon EXECUTE-grant regression
-status: preparing
+status: archived
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-01
+archived_at: 2026-08-01T13:22:36Z
 ---
 
 ## Notes
@@ -36,7 +37,7 @@ updated: 2026-07-31
 
 - 2026-07-31 — **Audit found the class has ONE instance** (this RPC). Full
   migration-history sweep: every other recreated staff RPC re-applied its revoke;
-  all 14 other staff definer RPCs show anon_x=f. Two _adjacent, lower-priority_
+  all 14 other staff definer RPCs show anon*x=f. Two \_adjacent, lower-priority*
   over-grants surfaced (different class — pre-existing, neutralized by other
   layers, NOT part of this fix): (1) `current_app_role()` still has anon/PUBLIC
   EXECUTE — harmless-but-removable (returns NULL to anon; no anon RLS policy needs
@@ -61,3 +62,13 @@ updated: 2026-07-31
   20260617121000") is left as-is — migrations are immutable once applied/shipped.
   The correct history is recorded in `20260731212650_...revoke_anon.sql` and
   `research.md`.
+
+- 2026-08-01 — **Shipped & confirmed on prod.** Guardrail test
+  (`tests/integration/security-definer-anon-guardrail.test.ts` — property-based
+  catalog sweep mirroring Supabase advisor lint 0028) + `tests/helpers/db.ts`
+  postgres.js catalog helper added; local test hooks wired (pre-commit unit,
+  pre-push full integration suite). Merged to `main` via PR #20 (migrations) and
+  PR #21 (guardrail + hooks). **Prod push done:** `supabase migration list --linked`
+  shows both `20260731212650` and `20260731213618` on remote (`fmgbyfpilgzvhkziigsj`);
+  `supabase db push --dry-run` → "Remote database is up to date." The grant-layer
+  gap on prod is closed. Change complete — archiving.
