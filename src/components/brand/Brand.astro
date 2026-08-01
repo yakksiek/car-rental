@@ -1,0 +1,64 @@
+---
+// others
+import { cn } from "../../lib/utils";
+import {
+  MARK_VIEWBOX,
+  MARK_STREAKS,
+  MARK_STREAK_STROKE,
+  MARK_BODY_PATH,
+  MARK_BODY_STROKE,
+  MARK_WHEELS,
+  MARK_WHEEL_STROKE,
+  hasWordmark,
+  toneTextClass,
+  type BrandTone,
+  type BrandVariant,
+} from "./mark";
+
+// Flota brand lockup — the single source for the "motion van" mark across every
+// Astro surface (replaces the old inline "F"-on-crimson-square badge). The mark is
+// containerless line-art that recolors by `tone` via currentColor: `ink` on light
+// surfaces, `inverse` (white) on dark ones. `variant="lockup"` renders mark +
+// "Flota" wordmark; `variant="mark"` renders the mark alone for surfaces that
+// supply their own wordmark/sublabel (footer, staff shell, auth cards). Size the
+// mark with Tailwind height classes via `markClass` (idiomatic here — the codebase
+// sizes with `size-*`/`h-*`, not numeric props), which may be responsive.
+
+interface Props {
+  variant?: BrandVariant;
+  tone?: BrandTone;
+  markClass?: string;
+  wordmarkClass?: string;
+  class?: string;
+}
+
+const {
+  variant = "lockup",
+  tone = "ink",
+  markClass = "h-8",
+  wordmarkClass = "text-[17px]",
+  class: className,
+} = Astro.props;
+
+const toneClass = toneTextClass(tone);
+const isMark = variant === "mark";
+---
+
+<span class:list={cn("inline-flex items-center gap-2.5", className)}>
+  <svg
+    viewBox={MARK_VIEWBOX}
+    class:list={cn("w-auto shrink-0", markClass, toneClass)}
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    role={isMark ? "img" : undefined}
+    aria-label={isMark ? "Flota" : undefined}
+    aria-hidden={isMark ? undefined : "true"}
+  >
+    {MARK_STREAKS.map(([x1, y1, x2, y2]) => <line x1={x1} y1={y1} x2={x2} y2={y2} stroke-width={MARK_STREAK_STROKE} />)}
+    <path d={MARK_BODY_PATH} stroke-width={MARK_BODY_STROKE}></path>
+    {MARK_WHEELS.map(([cx, cy, r]) => <circle cx={cx} cy={cy} r={r} stroke-width={MARK_WHEEL_STROKE} />)}
+  </svg>
+  {hasWordmark(variant) && <span class:list={cn("font-bold tracking-tight", toneClass, wordmarkClass)}>Flota</span>}
+</span>
