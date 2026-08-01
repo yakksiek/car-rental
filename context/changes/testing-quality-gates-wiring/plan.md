@@ -340,9 +340,9 @@ to and including the green PR and the documentation.
 
 #### Automated
 
-- [x] 1.1 Unit suite passes locally: `npm test`
-- [x] 1.2 Workflow YAML is valid (`actionlint` or any YAML parser)
-- [x] 1.3 Lint still passes: `npm run lint`
+- [x] 1.1 Unit suite passes locally: `npm test` — 21b2f88
+- [x] 1.2 Workflow YAML is valid (`actionlint` or any YAML parser) — 21b2f88
+- [x] 1.3 Lint still passes: `npm run lint` — 21b2f88
 
 #### Manual
 
@@ -353,9 +353,9 @@ to and including the green PR and the documentation.
 
 #### Automated
 
-- [ ] 2.1 Integration suite passes locally: `npm run test:integration`
-- [ ] 2.2 Workflow YAML is valid (`actionlint` or any YAML parser)
-- [ ] 2.3 The `-x` exclude list is accepted by the pinned CLI (start with no "unknown service" error, then stop)
+- [x] 2.1 Integration suite passes locally: `npm run test:integration`
+- [x] 2.2 Workflow YAML is valid (`actionlint` or any YAML parser)
+- [x] 2.3 The `-x` exclude list is accepted by the pinned CLI (start with no "unknown service" error, then stop)
 
 #### Manual
 
