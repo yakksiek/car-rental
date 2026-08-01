@@ -2,6 +2,9 @@
 import * as React from "react";
 import { Home, Menu, Truck, X } from "lucide-react";
 
+// components
+import Brand from "./brand/Brand";
+
 // others
 import { cn } from "../lib/utils";
 
@@ -62,12 +65,9 @@ export default function MobileNav({ active }: Props) {
               onClick={() => {
                 setOpen(false);
               }}
-              className="flex items-center gap-2.5"
+              className="flex items-center"
             >
-              <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-[10px] text-lg font-normal">
-                F
-              </span>
-              <span className="text-foreground text-[17px] font-bold tracking-tight">Flota</span>
+              <Brand markClass="h-8" wordmarkClass="text-[17px]" />
             </a>
             <button
               type="button"

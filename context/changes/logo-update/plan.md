@@ -232,30 +232,30 @@ No data migration. Asset migration only: `public/favicon.png` → `favicon.svg` 
 
 #### Automated
 
-- [x] 1.1 Type check passes: `npx astro check`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Build passes: `npm run build`
-- [x] 1.4 Unit test: `Brand.tsx` variants + tone — `npm test`
+- [x] 1.1 Type check passes: `npx astro check` — 5cd1317
+- [x] 1.2 Lint passes: `npm run lint` — 5cd1317
+- [x] 1.3 Build passes: `npm run build` — 5cd1317
+- [x] 1.4 Unit test: `Brand.tsx` variants + tone — `npm test` — 5cd1317
 
 #### Manual
 
-- [x] 1.5 `<Brand>` renders legibly at ink/inverse on light+dark, no container
-- [x] 1.6 Mark matches `design-review/flota-mark.svg`
+- [x] 1.5 `<Brand>` renders legibly at ink/inverse on light+dark, no container — 5cd1317
+- [x] 1.6 Mark matches `design-review/flota-mark.svg` — 5cd1317
 
 ### Phase 2: Swap the ~11 core spots to `<Brand>`
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 No remaining inline brand-badge blocks in the 9 files (grep spot-check)
+- [x] 2.1 Type check passes: `npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 No remaining inline brand-badge blocks in the 9 files (grep spot-check)
 
 #### Manual
 
-- [ ] 2.5 All ~11 spots render the van, correct tone, mobile + desktop
-- [ ] 2.6 Rendered vision-diff vs `design-review/index.md` passes (only recorded deviations)
-- [ ] 2.7 No layout shift where the badge used to sit
+- [x] 2.5 All ~11 spots render the van, correct tone, mobile + desktop
+- [x] 2.6 Rendered vision-diff vs `design-review/index.md` passes (only recorded deviations)
+- [x] 2.7 No layout shift where the badge used to sit
 
 ### Phase 3: Favicon / apple-touch / theme-color
 
