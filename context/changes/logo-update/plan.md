@@ -261,12 +261,12 @@ No data migration. Asset migration only: `public/favicon.png` → `favicon.svg` 
 
 #### Automated
 
-- [x] 3.1 Build emits `favicon.svg`, `apple-touch-icon.png`, `favicon-32x32.png`
-- [x] 3.2 Old asset gone: `test ! -f public/favicon.png`
-- [x] 3.3 Lint passes: `npm run lint`
+- [x] 3.1 Build emits `favicon.svg`, `apple-touch-icon.png`, `favicon-32x32.png` — d20bdb8
+- [x] 3.2 Old asset gone: `test ! -f public/favicon.png` — 970e92b
+- [x] 3.3 Lint passes: `npm run lint` — d20bdb8
 
 #### Manual
 
-- [x] 3.4 Tab favicon legible on light + dark tab bars
-- [x] 3.5 apple-touch icon + `theme-color` verified on device
-- [x] 3.6 Favicon reads clearly at 16–20px
+- [x] 3.4 Tab favicon legible on light + dark tab bars — d20bdb8
+- [x] 3.5 apple-touch icon + `theme-color` verified on device — d20bdb8
+- [x] 3.6 Favicon reads clearly at 16–20px — d20bdb8
