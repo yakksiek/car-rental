@@ -346,7 +346,7 @@ to and including the green PR and the documentation.
 
 #### Manual
 
-- [ ] 1.4 On a PR, the `ci` check log shows the unit step passing
+- [x] 1.4 On a PR, the `ci` check log shows the unit step passing
 - [ ] 1.5 Two rapid pushes: the earlier run shows as cancelled
 
 ### Phase 2: Integration job
@@ -359,19 +359,19 @@ to and including the green PR and the documentation.
 
 #### Manual
 
-- [ ] 2.4 On a real PR, the `integration` check goes green; log shows start → migrations+seed → suite pass → stop
-- [ ] 2.5 Added CI time is acceptable (cold-start + serial suite)
-- [ ] 2.6 No repo secrets were needed for the job
+- [x] 2.4 On a real PR, the `integration` check goes green; log shows start → migrations+seed → suite pass → stop
+- [x] 2.5 Added CI time is acceptable (cold-start + serial suite)
+- [x] 2.6 No repo secrets were needed for the job
 
 ### Phase 3: Prove green + enforce + docs
 
 #### Automated
 
-- [x] 3.1 `test-plan.md` no longer claims CI is lint+build only (`grep` shows updated prose)
-- [x] 3.2 `infrastructure.md` mentions the integration CI job (`grep` shows the new note)
+- [x] 3.1 `test-plan.md` no longer claims CI is lint+build only (`grep` shows updated prose) — 83fd0ba
+- [x] 3.2 `infrastructure.md` mentions the integration CI job (`grep` shows the new note) — 83fd0ba
 
 #### Manual
 
-- [ ] 3.3 Both `ci` and `integration` checks are green on the PR
-- [ ] 3.4 `main` branch-protection lists `ci` and `integration` as required status checks
+- [x] 3.3 Both `ci` and `integration` checks are green on the PR
+- [x] 3.4 `main` branch-protection lists `ci` and `integration` as required status checks
 - [ ] 3.5 Optional: a PR that breaks a test is blocked from merging
