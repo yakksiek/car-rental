@@ -113,19 +113,27 @@ The full set of gates that must pass before a change reaches production.
 "Required after §3 Phase <N>" means the gate is enforced once that rollout
 phase lands; before that, the gate is planned.
 
-| Gate                              | Where                  | Required?                              | Catches                                              |
-| --------------------------------- | ---------------------- | -------------------------------------- | ---------------------------------------------------- |
-| lint + typecheck                  | local + CI             | required (wired today)                 | syntactic / type drift                               |
-| unit                              | local + CI             | required after §3 Phase 1              | logic regressions in pure helpers                    |
-| integration (RLS + overlap + API) | local + CI             | required after §3 Phase 2              | PII leaks, double-bookings, authz/validation bypass  |
-| post-edit hook                    | local (agent loop)     | recommended after §3 Phase 5           | regressions at edit time                             |
-| e2e on critical flows             | local (CI: §3 Phase 5) | optional — green locally, not enforced | phantom availability; broken booking/auth user paths |
-| visual diff / multimodal review   | CI on PR               | optional                               | rendering regressions classic tests miss             |
-| pre-prod smoke                    | between merge + prod   | optional                               | environment-specific failures                        |
+| Gate                              | Where                    | Required?                                          | Catches                                              |
+| --------------------------------- | ------------------------ | -------------------------------------------------- | ---------------------------------------------------- |
+| lint + typecheck                  | local + CI               | required (wired today)                             | syntactic / type drift                               |
+| unit                              | local + CI               | required — CI-wired §3 Phase 5 (`ci` job)          | logic regressions in pure helpers                    |
+| integration (RLS + overlap + API) | local + CI               | required — CI-wired §3 Phase 5 (`integration` job) | PII leaks, double-bookings, authz/validation bypass  |
+| post-edit hook                    | local (agent loop)       | recommended after §3 Phase 5                       | regressions at edit time                             |
+| e2e on critical flows             | local (CI deferred — §7) | optional — green locally, not enforced             | phantom availability; broken booking/auth user paths |
+| visual diff / multimodal review   | CI on PR                 | optional                                           | rendering regressions classic tests miss             |
+| pre-prod smoke                    | between merge + prod     | optional                                           | environment-specific failures                        |
 
-CI today (`.github/workflows/ci.yml`) runs `astro sync` + lint + build only;
-the unit and integration gates are wired by §3 Phase 5 (and the unit gate
-may be wired as soon as Phase 1 lands).
+CI (`.github/workflows/ci.yml`) now runs both gates on every push/PR to `main`
+(wired by §3 Phase 5): the `ci` job runs `astro sync` + lint + **unit** + build
+under a workflow-level `concurrency` group that cancels superseded runs (commit
+`21b2f88`), and a separate `integration` job boots a slimmed local Supabase
+(`supabase start -x …`, migrations + seed auto-applied, **no repo secrets** —
+keys come from the runner's local stack) and runs `npm run test:integration`
+(commit `8fbfcb6`). Making both **required status checks** on `main` — check
+names `ci` and `integration` — is the out-of-tree repo-admin step; the exact
+enablement runbook lives in the §3 Phase 5 change folder
+(`context/changes/testing-quality-gates-wiring/required-checks.md`). **e2e stays
+optional/local and is not wired into the required gate** (§7).
 
 ## 6. Cookbook Patterns
 
