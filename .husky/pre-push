@@ -1,0 +1,28 @@
+# Pre-push integration gate.
+#
+# Runs the FULL integration suite (tests/integration/**) against the LOCAL
+# Supabase DB before a push -- the "heavier tests" pre-push layer from
+# context/foundation/test-plan.md (§5: integration = local + CI). It subsumes
+# the earlier anon-grant-only hook: security-definer-anon-guardrail.test.ts now
+# runs as part of the suite, so a forgotten `revoke ... from public, anon` is
+# still caught here (Supabase security advisor lint 0028), alongside the RLS,
+# overlap, and API-boundary suites.
+#
+# It needs the local Supabase stack up (PostgREST + Auth + Postgres on :54322).
+# If the DB is unreachable we SKIP (never block an unrelated push) with a note --
+# the accepted trade-off of a local hook: it is fast local feedback, not the CI
+# gate (CI wiring is test-plan §3 Phase 5). Emergency bypass: `git push --no-verify`.
+
+if ! node -e 'const s=require("net").connect(54322,"127.0.0.1");s.setTimeout(1500);s.on("connect",()=>{s.end();process.exit(0)});s.on("timeout",()=>process.exit(1));s.on("error",()=>process.exit(1))' 2>/dev/null; then
+  echo '⚠️  integration gate skipped: local Supabase DB not reachable on :54322.'
+  echo '    Start it with `npx supabase start` to run the suite before pushing.'
+  exit 0
+fi
+
+echo '🔒 integration gate: running the full integration suite against local Supabase…'
+if ! npm run test:integration; then
+  echo ''
+  echo '⛔ Push blocked: integration tests failed (see the run above).'
+  echo '   Fix the failing test(s) and push again, or bypass with `git push --no-verify`.'
+  exit 1
+fi
