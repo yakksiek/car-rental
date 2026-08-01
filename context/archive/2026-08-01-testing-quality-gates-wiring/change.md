@@ -1,10 +1,10 @@
 ---
 change_id: testing-quality-gates-wiring
 title: Wire the CI quality gate so unit + integration suites run on every PR to main
-status: impl_reviewed
+status: archived
 created: 2026-08-01
 updated: 2026-08-01
-archived_at: null
+archived_at: 2026-08-01T17:27:39Z
 ---
 
 ## Notes
