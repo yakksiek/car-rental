@@ -1,4 +1,7 @@
 ---
+// components
+import Brand from "./brand/Brand.astro";
+
 // Public site footer. The login entry point lives here as a discreet
 // "Strefa pracownika" link, not in the customer-facing header: v1 customers are
 // anonymous (the booking funnel needs no account), so `/auth/signin` is a
@@ -10,11 +13,7 @@ const year = 2026;
 <footer class="bg-card mt-12 border-t border-[var(--flota-hair-2)]">
   <div class="max-w-app mx-auto flex flex-col gap-6 px-5 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
     <div class="flex items-center gap-2.5">
-      <span
-        class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-[10px] text-lg font-normal"
-      >
-        F
-      </span>
+      <Brand variant="mark" markClass="h-8" class="shrink-0" />
       <div>
         <div class="text-foreground font-bold tracking-tight">Flota</div>
         <div class="text-muted-foreground text-xs">Wynajem pojazdów użytkowych · Warszawa</div>

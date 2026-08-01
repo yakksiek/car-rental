@@ -1,6 +1,7 @@
 ---
 // components
 import NavIcon from "./NavIcon.astro";
+import Brand from "../brand/Brand.astro";
 
 // others
 import type { AppRole } from "../../types";
@@ -65,10 +66,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       href="/dashboard"
       class="flex items-center md:justify-center md:pb-4 lg:justify-start lg:gap-2.5 lg:px-2.5 lg:pb-5"
     >
-      <span
-        class="bg-primary text-primary-foreground flex size-[34px] items-center justify-center rounded-[10px] font-serif text-[22px] leading-none"
-        >F</span
-      >
+      <Brand variant="mark" markClass="h-6 lg:h-[30px]" class="shrink-0" />
       <span class="hidden leading-none lg:block">
         <span class="text-foreground block text-[15px] font-bold tracking-tight">Flota</span>
         <span class="text-muted-foreground mt-1 block text-[10px] font-semibold tracking-wider uppercase"
