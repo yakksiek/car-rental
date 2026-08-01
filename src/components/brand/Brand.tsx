@@ -23,6 +23,9 @@ interface BrandProps {
   tone?: BrandTone;
   markClass?: string;
   wordmarkClass?: string;
+  // See `Brand.astro`: set false on a mark that sits beside its own visible
+  // "Flota" wordmark, so the mark is decorative and "Flota" isn't announced twice.
+  label?: boolean;
   className?: string;
 }
 
@@ -31,10 +34,12 @@ export default function Brand({
   tone = "ink",
   markClass = "h-8",
   wordmarkClass = "text-[17px]",
+  label = true,
   className,
 }: BrandProps) {
   const toneClass = toneTextClass(tone);
   const isMark = variant === "mark";
+  const labelled = isMark && label;
 
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
@@ -45,9 +50,9 @@ export default function Brand({
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        role={isMark ? "img" : undefined}
-        aria-label={isMark ? "Flota" : undefined}
-        aria-hidden={isMark ? undefined : true}
+        role={labelled ? "img" : undefined}
+        aria-label={labelled ? "Flota" : undefined}
+        aria-hidden={labelled ? undefined : true}
       >
         {MARK_STREAKS.map(([x1, y1, x2, y2], i) => (
           <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth={MARK_STREAK_STROKE} />

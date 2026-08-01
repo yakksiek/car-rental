@@ -1,7 +1,7 @@
 ---
 change_id: logo-update
 title: Logo update
-status: implemented
+status: impl_reviewed
 created: 2026-08-01
 updated: 2026-08-01
 archived_at: null

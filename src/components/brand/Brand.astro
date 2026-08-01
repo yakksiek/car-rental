@@ -29,6 +29,11 @@ interface Props {
   tone?: BrandTone;
   markClass?: string;
   wordmarkClass?: string;
+  // Whether the standalone mark carries its own "Flota" accessible name. Only
+  // meaningful for `variant="mark"`. Set false on surfaces that render their own
+  // visible "Flota" wordmark right beside the mark, so a screen reader doesn't
+  // announce "Flota" twice; the mark then becomes decorative (`aria-hidden`).
+  label?: boolean;
   class?: string;
 }
 
@@ -37,11 +42,16 @@ const {
   tone = "ink",
   markClass = "h-8",
   wordmarkClass = "text-[17px]",
+  label = true,
   class: className,
 } = Astro.props;
 
 const toneClass = toneTextClass(tone);
 const isMark = variant === "mark";
+// The mark is the accessible name only for a standalone, opted-in mark. A lockup
+// names itself via its own wordmark; a mark beside an external visible wordmark
+// passes label={false}. In both those cases the svg is decorative.
+const labelled = isMark && label;
 ---
 
 <span class:list={cn("inline-flex items-center gap-2.5", className)}>
@@ -52,9 +62,9 @@ const isMark = variant === "mark";
     stroke="currentColor"
     stroke-linecap="round"
     stroke-linejoin="round"
-    role={isMark ? "img" : undefined}
-    aria-label={isMark ? "Flota" : undefined}
-    aria-hidden={isMark ? undefined : "true"}
+    role={labelled ? "img" : undefined}
+    aria-label={labelled ? "Flota" : undefined}
+    aria-hidden={labelled ? undefined : "true"}
   >
     {MARK_STREAKS.map(([x1, y1, x2, y2]) => <line x1={x1} y1={y1} x2={x2} y2={y2} stroke-width={MARK_STREAK_STROKE} />)}
     <path d={MARK_BODY_PATH} stroke-width={MARK_BODY_STROKE}></path>
