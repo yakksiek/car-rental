@@ -353,9 +353,9 @@ to and including the green PR and the documentation.
 
 #### Automated
 
-- [x] 2.1 Integration suite passes locally: `npm run test:integration`
-- [x] 2.2 Workflow YAML is valid (`actionlint` or any YAML parser)
-- [x] 2.3 The `-x` exclude list is accepted by the pinned CLI (start with no "unknown service" error, then stop)
+- [x] 2.1 Integration suite passes locally: `npm run test:integration` — 8fbfcb6
+- [x] 2.2 Workflow YAML is valid (`actionlint` or any YAML parser) — 8fbfcb6
+- [x] 2.3 The `-x` exclude list is accepted by the pinned CLI (start with no "unknown service" error, then stop) — 8fbfcb6
 
 #### Manual
 
@@ -367,8 +367,8 @@ to and including the green PR and the documentation.
 
 #### Automated
 
-- [ ] 3.1 `test-plan.md` no longer claims CI is lint+build only (`grep` shows updated prose)
-- [ ] 3.2 `infrastructure.md` mentions the integration CI job (`grep` shows the new note)
+- [x] 3.1 `test-plan.md` no longer claims CI is lint+build only (`grep` shows updated prose)
+- [x] 3.2 `infrastructure.md` mentions the integration CI job (`grep` shows the new note)
 
 #### Manual
 
