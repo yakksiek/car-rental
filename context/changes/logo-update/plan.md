@@ -246,27 +246,27 @@ No data migration. Asset migration only: `public/favicon.png` → `favicon.svg` 
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 No remaining inline brand-badge blocks in the 9 files (grep spot-check)
+- [x] 2.1 Type check passes: `npx astro check` — 01d3945
+- [x] 2.2 Lint passes: `npm run lint` — 01d3945
+- [x] 2.3 Build passes: `npm run build` — 01d3945
+- [x] 2.4 No remaining inline brand-badge blocks in the 9 files (grep spot-check) — 01d3945
 
 #### Manual
 
-- [x] 2.5 All ~11 spots render the van, correct tone, mobile + desktop
-- [x] 2.6 Rendered vision-diff vs `design-review/index.md` passes (only recorded deviations)
-- [x] 2.7 No layout shift where the badge used to sit
+- [x] 2.5 All ~11 spots render the van, correct tone, mobile + desktop — 01d3945
+- [x] 2.6 Rendered vision-diff vs `design-review/index.md` passes (only recorded deviations) — 01d3945
+- [x] 2.7 No layout shift where the badge used to sit — 01d3945
 
 ### Phase 3: Favicon / apple-touch / theme-color
 
 #### Automated
 
-- [ ] 3.1 Build emits `favicon.svg`, `apple-touch-icon.png`, `favicon-32x32.png`
-- [ ] 3.2 Old asset gone: `test ! -f public/favicon.png`
-- [ ] 3.3 Lint passes: `npm run lint`
+- [x] 3.1 Build emits `favicon.svg`, `apple-touch-icon.png`, `favicon-32x32.png`
+- [x] 3.2 Old asset gone: `test ! -f public/favicon.png`
+- [x] 3.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.4 Tab favicon legible on light + dark tab bars
-- [ ] 3.5 apple-touch icon + `theme-color` verified on device
-- [ ] 3.6 Favicon reads clearly at 16–20px
+- [x] 3.4 Tab favicon legible on light + dark tab bars
+- [x] 3.5 apple-touch icon + `theme-color` verified on device
+- [x] 3.6 Favicon reads clearly at 16–20px
