@@ -232,15 +232,15 @@ No data migration. Asset migration only: `public/favicon.png` → `favicon.svg` 
 
 #### Automated
 
-- [ ] 1.1 Type check passes: `npx astro check`
-- [ ] 1.2 Lint passes: `npm run lint`
-- [ ] 1.3 Build passes: `npm run build`
-- [ ] 1.4 Unit test: `Brand.tsx` variants + tone — `npm test`
+- [x] 1.1 Type check passes: `npx astro check`
+- [x] 1.2 Lint passes: `npm run lint`
+- [x] 1.3 Build passes: `npm run build`
+- [x] 1.4 Unit test: `Brand.tsx` variants + tone — `npm test`
 
 #### Manual
 
-- [ ] 1.5 `<Brand>` renders legibly at ink/inverse on light+dark, no container
-- [ ] 1.6 Mark matches `design-review/flota-mark.svg`
+- [x] 1.5 `<Brand>` renders legibly at ink/inverse on light+dark, no container
+- [x] 1.6 Mark matches `design-review/flota-mark.svg`
 
 ### Phase 2: Swap the ~11 core spots to `<Brand>`
 
