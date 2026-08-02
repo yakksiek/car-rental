@@ -175,7 +175,7 @@ Hero: eyebrow `Cennik`, H1 `Przejrzyste stawki, bez ukrytych kosztów`, lead ver
 9. `fleet-count-live` — About "pojazdy we flocie" = live count. Reason: user decision (anti-drift).
 10. `css-details-no-maxheight-anim` — native FAQ open/close (optional `::details-content` enhancement). Reason: native = no island (user decision).
 11. `overlay-undesigned` / `states-undesigned` / `staff-link-removed` / `rental-term-links→/pricing` / `Kontakt→/about#kontakt` / `category-icon-map` / `empty-state-added` — undesigned states + link wiring, spec'd above.
-12. `shell-inner-caps-1180` — header inner row caps at `max-w-[1180px] mx-auto` (like the footer), not full-bleed. Reason: preserves the design's shared header/body/footer content edge above the ~1276px design canvas.
+12. ~~`shell-inner-caps-1180` — header inner row caps at `max-w-[1180px] mx-auto` (like the footer), not full-bleed.~~ **Superseded (S-09 P8, 2026-08-02):** the shell chrome (SiteHeader + SiteFooter inner rows) now caps at **1800px** (`--container-shell` → `max-w-shell`), per user decision — the nav pill and footer columns use the wider band on large screens while the info-page bodies stay at 1180. `info-pages-use-1180` (deviation #1, page bodies) still holds, so the chrome intentionally sits wider than the 1180 page content on every page. The 48px desktop / 18–22px mobile gutter floor is unchanged.
 
 ---
 

@@ -168,6 +168,11 @@
   /* App shell max width — header, footer, and page bodies share this cap. */
   --container-app: 1400px;
 
+  /* Public shell chrome (SiteHeader + SiteFooter inner rows) cap — wider than the
+     1180 info-page bodies on purpose (S-09 P8): the nav pill and footer columns use
+     the full 1800 band on wide screens while the page content stays at 1180. */
+  --container-shell: 1800px;
+
   /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);

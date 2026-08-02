@@ -12,8 +12,9 @@ import { cn } from "../lib/utils";
 //   • Desktop (sm+): logo left, centered 5-link pill nav, phone + "Zarezerwuj" CTA right.
 //   • Mobile (<sm): logo left; a phone-reveal chip + hamburger overlay (<MobileNav>) right.
 // No account chrome: v1 customers are anonymous, so the staff sign-in lives elsewhere.
-// The inner row caps at 1180px (mirrors the footer) with a 48px desktop gutter floor,
-// so header, page body, and footer share one content edge above the design canvas.
+// The inner row caps at 1800px (max-w-shell, mirrors the footer) with a 48px desktop
+// gutter floor. The chrome sits wider than the 1180 info-page bodies on purpose (S-09
+// P8) — logo/nav/CTA use the full band on wide screens while page content stays at 1180.
 // Plain anchors; the layout's <ClientRouter /> upgrades them to view transitions.
 
 type NavId = "home" | "fleet" | "pricing" | "faq" | "about";
@@ -34,7 +35,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
 ---
 
 <header class="bg-card border-b border-[var(--flota-hair-2)]">
-  <div class="mx-auto flex max-w-[1180px] items-center justify-between px-[18px] py-[14px] sm:px-[48px] sm:py-[18px]">
+  <div class="max-w-shell mx-auto flex items-center justify-between px-[18px] py-[14px] sm:px-[48px] sm:py-[18px]">
     <a href="/" class="flex items-center">
       <Brand
         class="gap-1.5"
