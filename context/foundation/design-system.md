@@ -85,12 +85,20 @@ Screens map to `context/foundation/roadmap.md` items. When planning a slice, ope
 | 24  | Overdue returns                     | Admin · mobile     | S-07                                               | — (jpg export only)    |
 | 25  | Employees                           | Admin · mobile     | S-08                                               | — (jpg export only)    |
 | 26  | Landing page                        | Customer · mobile  | landing-redesign                                   | `customer-desktop.jsx` |
+| 27  | Cennik (pricing)                    | Customer · desktop | S-09 / `public-info-pages`                         | `info-pages.jsx`       |
+| 28  | FAQ                                 | Customer · desktop | S-09 / `public-info-pages`                         | `info-pages.jsx`       |
+| 29  | O nas (about)                       | Customer · desktop | S-09 / `public-info-pages`                         | `info-pages.jsx`       |
 
 Screenshot filenames are numbered to match this table, e.g.
 `screenshots/04-customer-mobile-reservation-form.png`.
 Rows 20–25 are later `.jpg` exports (no recoverable JSX source); the **Admin · mobile**
 set (22–25) is the "full back-office on a phone" pass — screen **23** is the S-04 fleet
 management mobile design.
+Rows **27–29** are the S-09 public info pages (`info-pages.jsx`); that slice also
+redesigned the shared public shell — `SiteHeader` / `SiteFooter` / `MobileNav` →
+`InfoHeader` / `InfoFooter` / mobile (5-link pill nav, phone-reveal, 3-column contact
+footer), superseding their earlier Start/Flota 2-link form. `LandingNav` keeps its own
+immersive fork.
 
 ### S-02 reservation flow — high-fidelity pass
 

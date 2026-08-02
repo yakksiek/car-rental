@@ -39,7 +39,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | done   |
 | S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | done   |
 | S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | done   |
-| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site | F-01, S-01    | FR-003 reuse; post-v1  | todo   |
+| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site | F-01, S-01    | FR-003 reuse; post-v1  | done   |
 
 ## Streams
 
