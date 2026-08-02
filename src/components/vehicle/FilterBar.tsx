@@ -54,9 +54,9 @@ const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
 // Shared FilterBtn chrome: full-width row (mobile) → auto pill (sm+), growing to
 // fill the tablet row and hugging content on desktop.
 const fieldShell =
-  "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-3.5 text-left whitespace-nowrap border-0 shadow-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 sm:h-[52px] sm:w-auto sm:flex-1 sm:rounded-full sm:pr-4 sm:pl-2 lg:flex-none";
+  "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-3.5 text-left whitespace-nowrap border border-[var(--flota-hair)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 sm:h-[52px] sm:w-auto sm:flex-1 sm:rounded-full sm:pr-4 sm:pl-2 lg:flex-none";
 
-const fieldLabel = "text-[10px] font-heavy leading-none text-muted-foreground uppercase";
+const fieldLabel = "text-[10px] leading-none text-muted-foreground uppercase";
 
 export default function FilterBar({ initial }: Props) {
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
@@ -68,6 +68,10 @@ export default function FilterBar({ initial }: Props) {
   const [sort, setSort] = React.useState<CatalogSort | "">(initial.sort ?? "");
   const [error, setError] = React.useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
+  // Pending state for "Zastosuj": the button triggers a navigation (async
+  // view-transition fetch), so it must disable + show a spinner in-flight. It
+  // never needs resetting — the non-persisted island remounts on the new page.
+  const [submitting, setSubmitting] = React.useState(false);
 
   const hasDate = Boolean(range?.from);
   const dateLabel =
@@ -98,6 +102,7 @@ export default function FilterBar({ initial }: Props) {
 
     const params = serializeFilters(filters);
     const query = params.toString();
+    setSubmitting(true);
     void navigate(`/fleet${query ? `?${query}` : ""}`);
   }
 
@@ -105,12 +110,12 @@ export default function FilterBar({ initial }: Props) {
     <div className="flex flex-col gap-2">
       <div className="bg-secondary flex flex-col gap-2.5 rounded-[18px] border border-[var(--flota-hair-2)] p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5 sm:p-3 sm:pr-4 sm:pl-5 lg:flex-nowrap">
         {/* "Filtry": a text eyebrow on mobile, a dark round chip + label on sm+. */}
-        <span className={cn(fieldLabel, "text-[11px] sm:hidden")}>Filtry</span>
+        <span className={cn(fieldLabel, "text-[11px] font-bold sm:hidden")}>Filtry</span>
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--flota-ink-deep)] text-white">
             <SlidersHorizontal className="size-4" />
           </span>
-          <span className="font-heavy text-[12px]">Filtry</span>
+          <span className="text-[12px] font-bold">Filtry</span>
         </div>
 
         {/* Termin — date range (Popover + Calendar). Icon stays on mobile. */}
@@ -121,8 +126,8 @@ export default function FilterBar({ initial }: Props) {
                 <CalendarIcon className="size-[18px] sm:size-4" />
               </span>
               <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                <span className={cn(fieldLabel, "hidden sm:block")}>Termin</span>
-                <span className={cn("text-[14px] font-bold", !hasDate && "text-muted-foreground font-medium")}>
+                <span className={cn(fieldLabel, "hidden font-bold sm:block")}>Termin</span>
+                <span className={cn("text-[14px]", hasDate ? "font-[650]" : "text-muted-foreground font-medium")}>
                   {dateLabel}
                 </span>
               </span>
@@ -153,11 +158,19 @@ export default function FilterBar({ initial }: Props) {
                 <Package className="size-4" />
               </span>
               <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
-                <span className={cn(fieldLabel, "text-[14px] font-medium normal-case sm:text-[10px] sm:uppercase")}>
+                <span
+                  className={cn(
+                    fieldLabel,
+                    "text-[14px] font-semibold normal-case sm:text-[10px] sm:font-bold sm:uppercase",
+                  )}
+                >
                   Ładowność
                 </span>
                 <span
-                  className={cn("text-[14px] font-bold", minPayload === "any" && "text-muted-foreground font-medium")}
+                  className={cn(
+                    "text-[14px]",
+                    minPayload === "any" ? "text-muted-foreground font-medium" : "font-[650]",
+                  )}
                 >
                   <SelectValue />
                 </span>
@@ -186,10 +199,15 @@ export default function FilterBar({ initial }: Props) {
                 <ArrowUpDown className="size-4" />
               </span>
               <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
-                <span className={cn(fieldLabel, "text-[14px] font-medium normal-case sm:text-[10px] sm:uppercase")}>
+                <span
+                  className={cn(
+                    fieldLabel,
+                    "text-[14px] font-semibold normal-case sm:text-[10px] sm:font-bold sm:uppercase",
+                  )}
+                >
                   Sortowanie
                 </span>
-                <span className={cn("text-[14px] font-bold", sort === "" && "text-muted-foreground font-medium")}>
+                <span className={cn("text-[14px]", sort === "" ? "text-muted-foreground font-medium" : "font-[650]")}>
                   <SelectValue placeholder="domyślne" />
                 </span>
               </span>
@@ -208,9 +226,17 @@ export default function FilterBar({ initial }: Props) {
         <Button
           type="button"
           onClick={handleApply}
-          className="h-[50px] w-full rounded-[13px] text-[14px] font-bold sm:rounded-[14px] lg:ml-auto lg:h-[46px] lg:w-auto lg:rounded-full lg:px-7"
+          disabled={submitting}
+          className="h-[50px] w-full rounded-[13px] text-[15px] font-[650] shadow-[0_4px_14px_-2px_rgba(180,54,56,0.35)] sm:rounded-[14px] lg:ml-auto lg:h-[46px] lg:w-auto lg:rounded-full lg:px-7"
         >
-          Zastosuj
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              Szukam…
+            </span>
+          ) : (
+            "Zastosuj"
+          )}
         </Button>
       </div>
 

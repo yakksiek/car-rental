@@ -56,8 +56,8 @@ const specs = [
       <div class="text-muted-foreground text-[11px] font-bold tracking-wide uppercase">
         {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabelPl(vehicle.category)}
       </div>
-      <div class="mt-1 truncate text-[21px] font-bold tracking-[-0.5px] text-[var(--flota-ink)]">{title}</div>
-      {subtitle && <div class="truncate text-[14px] text-[var(--flota-ink-2)]">{subtitle}</div>}
+      <div class="mt-2 truncate text-[21px] font-bold tracking-[-0.5px] text-[var(--flota-ink)]">{title}</div>
+      {subtitle && <div class="truncate text-[14px] text-[#5B6474]">{subtitle}</div>}
     </div>
 
     <!-- Image frame: 16:9 gradient placeholder → silhouette / edge-to-edge photo. -->
@@ -88,7 +88,7 @@ const specs = [
     <div class="grid grid-cols-4 gap-2 border-y border-[var(--flota-hair-2)] py-[15px]">
       {
         specs.map((spec) => (
-          <div class="flex flex-col items-center gap-1 text-center">
+          <div class="flex flex-col items-center gap-[7px] text-center">
             <SpecIcon name={spec.icon} class="text-muted-foreground" />
             <span class="truncate text-[12.5px] font-semibold text-[var(--flota-ink)]">{spec.value}</span>
           </div>
@@ -98,9 +98,7 @@ const specs = [
 
     <!-- Footer: price + sub / CTA. Side-by-side when the card is ≥ 400px wide (3-up
          desktop), stacked full-width below when narrower (2-up tablet, 1-up mobile). -->
-    <div
-      class="mt-[18px] flex flex-col gap-3.5 @min-[400px]:flex-row @min-[400px]:items-end @min-[400px]:justify-between"
-    >
+    <div class="mt-4 flex flex-col gap-3.5 @min-[400px]:flex-row @min-[400px]:items-end @min-[400px]:justify-between">
       <div class="min-w-0">
         <div class="text-[24px] leading-none font-bold tracking-tight text-[var(--flota-ink)]">
           {formatPln(vehicle.daily_rate)}<span class="text-muted-foreground ml-1 text-[14px] font-medium">/dzień</span>
@@ -110,7 +108,7 @@ const specs = [
         </div>
       </div>
       <span
-        class="inline-flex h-[44px] w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--flota-ink-deep)] px-5 text-[14px] font-bold text-white @min-[400px]:w-auto"
+        class="inline-flex h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--flota-ink-deep)] px-5 text-[14px] font-[650] text-white @min-[400px]:w-auto"
       >
         Rezerwuj
         <svg

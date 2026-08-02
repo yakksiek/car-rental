@@ -409,6 +409,250 @@ fidelity gate.
 
 ---
 
+## Phase 6: Design-fidelity completion (added post-impl-review)
+
+> Added after the impl-review + a full component-by-component audit against the live
+> Claude Design (`customer-desktop.jsx`). The itemized exact values live in
+> `reviews/design-audit.md`; the sub-phases below carry the intent, key contract, and
+> gates. Decisions taken with the user: **include** the card-footer fix; scope =
+> **everything on the audit list** (fleet + landing, incl. low-priority batches). Order
+> fixes the components first, then composes the tablet layout (6D) from them. No
+> behavior/data/API change — purely presentational.
+
+---
+
+## Phase 6A: Fleet controls & cards — fidelity fixes
+
+### Overview
+
+Fix the fleet defects the audit surfaced (`design-audit.md` §1 2a/2b, §2 Fleet): the
+`SelectTrigger` height collapse (the "two broken pills"), the deferred-filter mobile
+rows, the card-footer stack threshold, the mobile scroller animation, plus batched
+micro-fidelity nits.
+
+### Changes Required:
+
+#### 1. FilterBar — SelectTrigger height + mobile rows
+
+**File**: `src/components/vehicle/FilterBar.tsx`
+
+**Intent**: Ładowność/Sortowanie must match the 52px pill height and the design's mobile-row treatment.
+
+**Contract**: Add `data-[size=default]:h-[50px] sm:data-[size=default]:h-[52px] py-0` to
+`fieldShell` so shadcn's `data-[size=default]:h-9` is merged out (same modifier+base) —
+the two `<SelectTrigger>` pills stop collapsing to 36px; verify `justify-between`/`gap`
+don't misalign. Mobile (`<sm`) Termin: bare ~16px muted calendar glyph (no 36px round
+wrapper). Mobile Ładowność/Sortowanie labels: `text-foreground` (dark), not muted.
+Micro-nits (audit §2 F4/F5): mobile row `px-4` / label `14.5px` / `Filtry` `tracking-[1px]`;
+desktop field `gap-[11px]` `pr-[14px]` + pill `shadow-[0_1px_2px_rgba(15,23,42,0.04)]`,
+label `tracking-[0.5px]`, chip `gap-[9px]` `tracking-[0.4px]`, chevron `size-[15px]`;
+Zastosuj `lg:px-[26px] lg:text-[14px]`; card `sm:pr-[14px]`, base `gap-2`. Decisions kept:
+mobile Select chevron stays `⌄`; desktop default-values stay muted; lucide glyphs kept.
+Non-persist mount + handleApply flow unchanged.
+
+#### 2. FleetTypeScroll — smooth animation
+
+**File**: `src/components/vehicle/FleetTypeScroll.tsx`
+
+**Intent**: Buttery expand/collapse matching `HeaderContactToggle`.
+
+**Contract**: Fixed 40px icon holder; transition only `flex`/`max-width` (+ background/color),
+drop `transition-all` and the animated padding/margin; active `px-[14px]` `flex:1 1 auto`;
+inactive `text-white/[0.72]`; dim the `·` at `opacity-40`. Preserve instant-nav anchors +
+no-JS fallback.
+
+#### 3. VehicleCard — footer threshold + micro-nits
+
+**File**: `src/components/vehicle/VehicleCard.astro`
+
+**Intent**: Side-by-side footer at laptop widths; close the sub-pixel gaps.
+
+**Contract**: Footer/CTA container query `@min-[400px]:` → `@min-[360px]:` (3-col cards go
+side-by-side at ~1280) + `@min:gap-0` in row mode. Micro (audit §2): eyebrow
+`tracking-[0.4px]`, title `leading-[1.1]`, subtitle `mt-[3px]`, spec icon `size-[15px]`,
+spec value `tracking-[-0.1px]`, price `tracking-[-0.7px]`, drop `/dzień` `ml-1`.
+
+#### 4. Fleet page — delete result heading + reflow
+
+**File**: `src/pages/fleet/index.astro`
+
+**Intent**: Remove the mock-absent result-count heading; keep top rhythm.
+
+**Contract**: Delete the `<h1>{count} pojazdów…</h1>` block (`:120-128`); give the desktop
+pill bar `pt-8 sm:pt-10` (≈40px) and the mobile scroller matching top space. Pill-bar nits:
+`gap-3`, `tracking-[-0.1px]`. Update `design-contract.md` S3 (heading removed — was a kept
+deviation, now overridden by user directive).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Types: `npx astro check` · Lint: `npm run lint` · Build: `npm run build` · Unit: `npm test`
+
+#### Manual Verification:
+
+- Ładowność/Sortowanie render at 52px (desktop) / 50px (mobile), like Termin; icon chips have breathing room
+- Mobile rows: bare calendar glyph; dark Ładowność/Sortowanie labels
+- Scroller expand/collapse smooth (no padding snap); instant nav + no-JS still work
+- 3-col cards show price-left / Rezerwuj-right at ~1280px
+- No result heading; pill bar ~40px below header at all breakpoints
+- Filter apply / date validation / clear-all unchanged
+
+---
+
+## Phase 6B: Landing hero, nav & trust-card polish
+
+### Overview
+
+Bring the shipped landing hero into line with the live design at the mobile + desktop
+tiers (tablet is 6D). Trust-card icon restyle (1b) + hero/nav micro-fidelity
+(`design-audit.md` §1 1b, §2 Landing hero/nav).
+
+### Changes Required:
+
+#### 1. TrustCard — drop tiles, faint glyph
+
+**File**: `src/components/landing/TrustCard.astro`
+
+**Intent**: Match `TrustRow` (`showTiles = false`).
+
+**Contract**: Remove the 38px boxed icon tiles; render each row as title+sub with one large
+faint glyph behind (`absolute right-8 top-1 opacity-[0.09]`, ~76px, accent) — star / truck /
+phone. Desktop card: no row dividers (flex col `gap-2`); mobile keeps `#EEF1F5` dividers.
+Desktop width `340`→`300` (`index.astro:193`). Content unchanged.
+
+#### 2. Hero + nav micro-fidelity
+
+**Files**: `src/pages/index.astro`, `src/components/LandingNav.astro`
+
+**Contract** (audit §2 H1–H4): mobile heading dot → 9px accent circle (not text "."); mobile
+wordmark `top-[86px]`; mobile sheet `-mt-4`, hero content `pb-[34px]`; nav active-pill shadow
+`0 2px 6px rgba(14,21,36,0.15)`, marks 42/38, dark buttons → `bg-[var(--flota-ink-deep)]`
+(nav CTA + HeroSearch Szukaj).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Types: `npx astro check` · Lint: `npm run lint` · Build: `npm run build`
+
+#### Manual Verification:
+
+- Trust card: no tiles, faint glyph behind each row; desktop no dividers / mobile dividers; width 300 desktop
+- Mobile hero dot is a circle; wordmark + sheet spacing match design
+- `/reserve`, `/about`, `/pricing` unaffected
+
+---
+
+## Phase 6C: Landing sections + Popularne card fidelity
+
+### Overview
+
+Static-fidelity fixes to ProcessSteps, TypeSelector, and the Popularne card
+(`design-audit.md` §2 Landing sections + Popularne). Type-explorer hover-preview stays out
+(deliberately withdrawn earlier).
+
+### Changes Required:
+
+#### 1. ProcessSteps
+
+**File**: `src/components/landing/ProcessSteps.astro`
+
+**Contract**: Desktop step title `text-[16.5px] leading-[21px]` drop `tracking-tight`; desc
+`text-[13px] leading-[20px]`; title→desc gap `mt-4`. Lane pills `text-[12.5px] font-semibold`,
+`shadow-[0_2px_6px_rgba(14,21,36,0.08)]`, `pr-4 pl-[14px]`. Mobile nudges (`top-[50px]`,
+`pb-[26px]`, `mt-[5px]`).
+
+#### 2. TypeSelector
+
+**File**: `src/components/landing/TypeSelector.astro`
+
+**Contract**: Mobile inactive pills `bg-card` (white, not transparent); mobile row →
+`overflow-x-auto` nowrap `shrink-0` (not `flex-wrap`); mobile active glow
+`0 4px 12px -3px rgba(180,54,56,0.35)`, weights 650/550, pad `pr-4 pl-[13px]`; desktop
+`xl:gap-[9px]`, transporter glyph `xl:size-[20px]`. CTA stays dark `Cała flota` (decision —
+record deviation).
+
+#### 3. LandingVehicleCard (Popularne)
+
+**File**: `src/components/vehicle/LandingVehicleCard.astro`
+
+**Contract** (per `PopularCard`/`MobilePopularCard`): subtitle `text-muted-foreground`
+(not ink-2); image radii `rounded-[14px] @min-[400px]:rounded-[12px]` (un-swap); desktop spec
+row → vertical inter-column dividers + one bottom hairline (mobile keeps `border-y`); spec
+value `font-semibold text-[12px]`, icon `size-[14px]`, cell `gap-1.5`; CTA
+`bg-[var(--flota-ink-deep)] text-white`, `13.5/14px`, taller (~40/44), `font-[650]` mobile;
+price mobile `text-[24px] @min:text-[22px]`; "od" `text-[12px]`; desktop row `@min:items-center`;
+title tracking `-0.4/-0.3`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Types: `npx astro check` · Lint: `npm run lint` · Build: `npm run build`
+
+#### Manual Verification:
+
+- Desktop process steps read tighter (title 16.5/21, desc 13/20); lane pills lifted
+- Mobile type pills are white cards in a single horizontal-scroll row with the active glow
+- Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA
+
+---
+
+## Phase 6D: Landing tablet layout (compose ScreenTabletHome)
+
+### Overview
+
+The heavyweight (1a): build the missing 834-band layout by composing the now-corrected
+components (`design-audit.md` §1 1a).
+
+### Changes Required:
+
+#### 1. Tablet hero + sections
+
+**File**: `src/pages/index.astro`
+
+**Intent**: Add a tablet tier (≈`md`/`lg`→`xl`) reproducing `ScreenTabletHome`.
+
+**Contract**: 452px photo stage; 2-col hero grid `1.25fr/0.95fr` gap 36 align-end — heading
+(`62px/lh62/-2.4`, 11px accent-circle dot) + bullets (24px circled checks) LEFT, the white
+search card RIGHT; trust as a 3-across white bar (`1fr 1fr 1fr`, radius 20, cells `10px 18px`,
+`#EEF1F5` splits); Popularne 3-col across the tablet band; wordmark `210px/-9/top-118`,
+scrims 150/150. **HeroSearch stays a single mount** — position its wrapper into the hero's
+right column at the tablet tier without a second island instance.
+
+#### 2. Tablet nav
+
+**File**: `src/components/LandingNav.astro`
+
+**Contract**: Over-hero glass pill (`rgba(255,255,255,0.12)`, blur, Start/Flota/Cennik/FAQ) +
+glass phone/book toggle (`rgba(255,255,255,0.14)`, phone active #fff / book active accent) for
+the tablet band; reconcile with the existing `lg` white pill.
+
+#### 3. Tablet section treatments
+
+**Files**: `src/components/landing/ProcessSteps.astro`, `src/components/landing/TypeSelector.astro`
+
+**Contract**: Add the tablet arrangements per `ScreenTabletHome` (process 2-col; type pills
+wrap row). Port exact 834 values from the design screen.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Types: `npx astro check` · Lint: `npm run lint` · Build: `npm run build`
+
+#### Manual Verification:
+
+- At 834: 2-col hero with search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne — matches `ScreenTabletHome`
+- HeroSearch is a single island (no duplicated state); mobile + desktop unchanged
+- Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations)
+
+**Implementation Note**: Close by re-capturing `/` and `/fleet` at **true** 390 / 834 / 1440
+(impl-review recommended this — prior shots were ~2× too wide) and vision-diffing both.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -534,3 +778,64 @@ revert of the touched components/page.
 - [x] 5.7 `/reserve`, `/about`, `/pricing` render identically (no shared-primitive regression)
 - [x] 5.8 Keyboard focus + visible focus rings on pills, filter triggers, card links; scroller keyboard-reachable
 - [x] 5.9 Perf on `/fleet` not regressed vs pre-restyle
+
+### Phase 6A: Fleet controls & cards — fidelity fixes
+
+#### Automated
+
+- [ ] 6A.1 Types pass: `npx astro check`
+- [ ] 6A.2 Lint passes: `npm run lint`
+- [ ] 6A.3 Production build succeeds: `npm run build`
+- [ ] 6A.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 6A.5 Ładowność/Sortowanie render 52px desktop / 50px mobile (like Termin); icon chips have breathing room
+- [ ] 6A.6 Mobile rows: bare calendar glyph; Ładowność/Sortowanie labels dark, not muted
+- [ ] 6A.7 Scroller expand/collapse is smooth (no padding snap); instant nav + no-JS still work
+- [ ] 6A.8 3-col cards show price-left / Rezerwuj-right at ~1280px
+- [ ] 6A.9 Result heading gone; pill bar ~40px below header at all breakpoints
+- [ ] 6A.10 Filter apply / date validation / clear-all unchanged
+
+### Phase 6B: Landing hero, nav & trust-card polish
+
+#### Automated
+
+- [ ] 6B.1 Types pass: `npx astro check`
+- [ ] 6B.2 Lint passes: `npm run lint`
+- [ ] 6B.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 6B.4 Trust card: no tiles, faint glyph per row; desktop no dividers / mobile dividers; width 300 desktop
+- [ ] 6B.5 Mobile hero dot is a circle; wordmark + sheet spacing match design
+- [ ] 6B.6 `/reserve`, `/about`, `/pricing` unaffected
+
+### Phase 6C: Landing sections + Popularne card fidelity
+
+#### Automated
+
+- [ ] 6C.1 Types pass: `npx astro check`
+- [ ] 6C.2 Lint passes: `npm run lint`
+- [ ] 6C.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 6C.4 Desktop process steps tighter (title 16.5/21, desc 13/20); lane pills lifted
+- [ ] 6C.5 Mobile type pills are white cards in a single horizontal-scroll row with active glow
+- [ ] 6C.6 Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA
+
+### Phase 6D: Landing tablet layout (compose ScreenTabletHome)
+
+#### Automated
+
+- [ ] 6D.1 Types pass: `npx astro check`
+- [ ] 6D.2 Lint passes: `npm run lint`
+- [ ] 6D.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 6D.4 At 834: 2-col hero + search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne (matches ScreenTabletHome)
+- [ ] 6D.5 HeroSearch is a single island (no duplicated state); mobile + desktop unchanged
+- [ ] 6D.6 Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations)
+- [ ] 6D.7 Re-capture `/` and `/fleet` at true 390 / 834 / 1440 and vision-diff both
