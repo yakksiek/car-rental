@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-08-01
+updated: 2026-08-02
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -227,7 +227,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - **Routes/labels.** Defaulted to English slugs + Polish labels (matching `/fleet` = "Flota"): `/about` = O nas, `/faq` = FAQ, `/pricing` = Cennik. Block: no.
   - **FAQ accordion.** No `Accordion` primitive exists in `src/components/ui/` yet — the FAQ either adds one (`npx shadcn@latest add accordion`, then rewrite `@/` imports per CLAUDE.md) or uses native `<details>/<summary>`. Design call against the mockup at plan time. Block: no.
 - **Risk:** Still among the lowest-risk items — mostly static Astro over the existing shell. Two things lift it above pure-static: (1) **Cennik has a live read path** into pricing, so its numbers must match the catalog exactly — reuse the vehicle pricing already surfaced on `/fleet` as the single source rather than re-deriving, and reconcile the mockup's pricing model with our stored rate fields (a mismatch is a data-model decision, not styling); (2) the design comes from **user-supplied mockups delivered at the start of `/10x-plan`** (these three screens are absent from the Claude Design project / `design-system.md` catalog), so the Design Alignment Audit runs against those mockups — porting exact values per `context/foundation/lessons.md` and checking each against our business logic and tokens before build, flagging any deviation.
-- **Status:** todo
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -283,3 +283,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-06: A logged-in employee can fill a return protocol — the issue baseline shown as reference, all current values entered fresh — and the system auto-computes and displays deltas (km driven, fuel change, new damage); the protocol is auto-emailed to the customer.** — Archived 2026-07-23 → `context/archive/2026-07-14-return-protocol-comparison/`. Lesson: —.
 - **S-07: see overdue returns flagged automatically on the dashboard** — Archived 2026-07-23 → `context/archive/2026-07-23-overdue-returns-dashboard/`. Lesson: —.
 - **S-08: An admin can add and remove employee accounts; employees can self-service reset their own password via email.** — Archived 2026-07-24 → `context/archive/2026-07-23-employee-account-management/`. Lesson: —.
+- **S-09: A visitor can open three public content pages from the site nav — O nas (`/about`), FAQ (`/faq`), and Cennik (`/pricing`) — each rendered in the existing public shell over the live tokens/fonts. O nas and FAQ are static content; Cennik renders prices dynamically from the fleet data so the rates shown never drift from the catalog. SiteHeader and SiteFooter nav gain links to the three pages.** — Archived 2026-08-02 → `context/archive/2026-08-01-public-info-pages/`. Lesson: —.
