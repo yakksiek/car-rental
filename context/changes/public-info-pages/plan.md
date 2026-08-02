@@ -699,9 +699,9 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 13.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 13.1 `npm run lint` · `npx astro check` · `npm run build` pass — e3de2f2
 
 #### Manual
 
-- [x] 13.2 Tablet header shows the contact/booking toggle button; no overflow/wrap; toggles call↔book per design
-- [x] 13.3 Wide-desktop + mobile headers unchanged; vision-diff of tablet header vs the Cennik-tablet mockup matches
+- [x] 13.2 Tablet header shows the contact/booking toggle button; no overflow/wrap; toggles call↔book per design — e3de2f2
+- [x] 13.3 Wide-desktop + mobile headers unchanged; vision-diff of tablet header vs the Cennik-tablet mockup matches — e3de2f2
