@@ -9,11 +9,13 @@ import * as React from "react";
 // headers keep their own chrome. Clicking the inactive segment switches mode (no navigation);
 // clicking the active one follows its link.
 //
-// Animation: the reveal is driven by `grid-template-columns: 0fr → 1fr` on the label wrapper
-// (the modern smooth-reveal technique) rather than the design's max-width + width:auto toggle,
-// which jumps/clips on collapse and reads janky. The icon sits in a fixed 38px holder (never
-// moves); only grid-template-columns, background, opacity, and color (via currentColor)
-// transition — no per-frame width/padding/gap thrash. Symmetric in both directions.
+// Animation: the label reveal is a `max-width: 0 ↔ N` transition on a `min-w-0 overflow-hidden`
+// wrapper (N per segment, just above the label's measured width so the FULL number always shows
+// — grid-template-columns:1fr under-sizes the column in some engines and clips the number). The
+// icon sits in a fixed 38px holder (never moves) and the segment is content-sized, so it grows/
+// shrinks smoothly with no width/padding/gap snapping (the design's original jank). Only max-width,
+// background, opacity, and color (via currentColor) transition. SSR-safe: N is a static value, so
+// the default (book) segment renders open with no hydration flash.
 
 const INKD = "#141B2D";
 const EASE = "cubic-bezier(.4, 0, 0.2, 1)";
@@ -63,11 +65,23 @@ interface SegmentProps {
   activeBackground: string;
   fontWeight: number;
   label: string;
+  // Revealed width (px) when active — a touch above the label's measured width so it never clips.
+  revealWidth: number;
   onActivate: () => void;
   children: React.ReactNode;
 }
 
-function Segment({ active, href, ariaLabel, activeBackground, fontWeight, label, onActivate, children }: SegmentProps) {
+function Segment({
+  active,
+  href,
+  ariaLabel,
+  activeBackground,
+  fontWeight,
+  label,
+  revealWidth,
+  onActivate,
+  children,
+}: SegmentProps) {
   return (
     <a
       href={href}
@@ -87,19 +101,14 @@ function Segment({ active, href, ariaLabel, activeBackground, fontWeight, label,
     >
       <span className="flex size-[38px] shrink-0 items-center justify-center">{children}</span>
       <span
-        className="grid"
-        style={{
-          gridTemplateColumns: active ? "1fr" : "0fr",
-          transition: `grid-template-columns ${REVEAL_MS}ms ${EASE}`,
-        }}
+        className="min-w-0 overflow-hidden"
+        style={{ maxWidth: active ? revealWidth : 0, transition: `max-width ${REVEAL_MS}ms ${EASE}` }}
       >
-        <span className="min-w-0 overflow-hidden">
-          <span
-            className="block pr-4 pl-0.5 text-[14px] whitespace-nowrap"
-            style={{ fontWeight, opacity: active ? 1 : 0, transition: "opacity .28s ease" }}
-          >
-            {label}
-          </span>
+        <span
+          className="block pr-4 pl-0.5 text-[14px] whitespace-nowrap"
+          style={{ fontWeight, opacity: active ? 1 : 0, transition: "opacity .28s ease" }}
+        >
+          {label}
         </span>
       </span>
     </a>
@@ -118,6 +127,7 @@ export default function HeaderContactToggle() {
         activeBackground={INKD}
         fontWeight={650}
         label="Zarezerwuj"
+        revealWidth={112}
         onActivate={() => {
           setMode("book");
         }}
@@ -132,6 +142,7 @@ export default function HeaderContactToggle() {
         activeBackground="var(--flota-accent)"
         fontWeight={700}
         label="+48 22 100 20 30"
+        revealWidth={150}
         onActivate={() => {
           setMode("phone");
         }}
