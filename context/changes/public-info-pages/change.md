@@ -1,7 +1,7 @@
 ---
 change_id: public-info-pages
 title: Public informational pages (About / FAQ / Pricing)
-status: implemented
+status: implementing
 created: 2026-08-01
 updated: 2026-08-02
 archived_at: null
