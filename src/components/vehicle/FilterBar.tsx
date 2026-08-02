@@ -3,7 +3,7 @@ import * as React from "react";
 import { navigate } from "astro:transitions/client";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { ArrowUpDown, CalendarIcon, ChevronDownIcon, Package, SlidersHorizontal } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 // components
@@ -18,20 +18,27 @@ import type { CatalogSort, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 
-// The catalog's only interactive piece. It stages date-range / minimum-payload /
-// price-sort locally and commits to the URL on an explicit "Zastosuj" — one
-// navigation per deliberate change. It is NOT `transition:persist`ed: it remounts
-// on every navigation and re-derives its state from `initial` (the current URL
-// filters), so category-tab and apply navigations never leave it stale. Inline
-// date validation mirrors `validateDateRange` so the picker can't submit a range
-// the RPC would choke on.
+// The catalog's only interactive piece — the restyled filter card (design
+// ScreenDesktopFleet / ScreenTabletFleet / ScreenMobileFleet). It stages
+// date-range / minimum-payload / price-sort locally and commits to the URL on an
+// explicit "Zastosuj" — one navigation per deliberate change. It is NOT
+// `transition:persist`ed: it remounts on every navigation and re-derives its state
+// from `initial` (the current URL filters), so category-pill and apply navigations
+// never leave it stale. Inline date validation mirrors `validateDateRange` so the
+// picker can't submit a range the RPC would choke on.
+//
+// Each trigger is a `FilterBtn`: a white pill on the grey card (desktop/tablet) that
+// morphs into a full-width row on mobile (< sm). Termin keeps its calendar icon on
+// mobile with a left-aligned value; Ładowność / Sortowanie drop the icon and lay
+// out label-left / value-right. "Zastosuj" is inline-right on desktop and a
+// full-width row on tablet + mobile.
 
 interface Props {
   initial: VehicleFilters;
 }
 
 const PAYLOAD_OPTIONS = [
-  { value: "any", label: "Ładowność: dowolna" },
+  { value: "any", label: "dowolna" },
   { value: "500", label: "500+ kg" },
   { value: "1000", label: "1000+ kg" },
   { value: "1500", label: "1500+ kg" },
@@ -44,6 +51,13 @@ const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: "price_desc", label: "Cena: malejąco" },
 ];
 
+// Shared FilterBtn chrome: full-width row (mobile) → auto pill (sm+), growing to
+// fill the tablet row and hugging content on desktop.
+const fieldShell =
+  "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-3.5 text-left whitespace-nowrap border-0 shadow-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 sm:h-[52px] sm:w-auto sm:flex-1 sm:rounded-full sm:pr-4 sm:pl-2 lg:flex-none";
+
+const fieldLabel = "text-[10px] font-heavy leading-none text-muted-foreground uppercase";
+
 export default function FilterBar({ initial }: Props) {
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initial.pickup);
@@ -55,6 +69,7 @@ export default function FilterBar({ initial }: Props) {
   const [error, setError] = React.useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
 
+  const hasDate = Boolean(range?.from);
   const dateLabel =
     range?.from && range.to
       ? `${format(range.from, "d MMM", { locale: pl })} – ${format(range.to, "d MMM", { locale: pl })}`
@@ -88,20 +103,31 @@ export default function FilterBar({ initial }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Date range */}
+      <div className="bg-secondary flex flex-col gap-2.5 rounded-[18px] border border-[var(--flota-hair-2)] p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5 sm:p-3 sm:pr-4 sm:pl-5 lg:flex-nowrap">
+        {/* "Filtry": a text eyebrow on mobile, a dark round chip + label on sm+. */}
+        <span className={cn(fieldLabel, "text-[11px] sm:hidden")}>Filtry</span>
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--flota-ink-deep)] text-white">
+            <SlidersHorizontal className="size-4" />
+          </span>
+          <span className="font-heavy text-[12px]">Filtry</span>
+        </div>
+
+        {/* Termin — date range (Popover + Calendar). Icon stays on mobile. */}
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "bg-card h-10 justify-start gap-2 rounded-full font-medium",
-                !range?.from && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="size-4" />
-              {dateLabel}
-            </Button>
+            <button type="button" className={fieldShell}>
+              <span className="text-muted-foreground sm:bg-accent sm:text-primary flex size-9 shrink-0 items-center justify-center rounded-full">
+                <CalendarIcon className="size-[18px] sm:size-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+                <span className={cn(fieldLabel, "hidden sm:block")}>Termin</span>
+                <span className={cn("text-[14px] font-bold", !hasDate && "text-muted-foreground font-medium")}>
+                  {dateLabel}
+                </span>
+              </span>
+              <ChevronDownIcon className="text-muted-foreground size-4 shrink-0 opacity-60" />
+            </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
@@ -119,10 +145,24 @@ export default function FilterBar({ initial }: Props) {
           </PopoverContent>
         </Popover>
 
-        {/* Minimum payload */}
+        {/* Ładowność — minimum payload. No icon on mobile; label-left / value-right. */}
         <Select value={minPayload} onValueChange={setMinPayload}>
-          <SelectTrigger className="bg-card hover:bg-accent hover:text-accent-foreground h-10 rounded-full font-medium transition-colors">
-            <SelectValue />
+          <SelectTrigger className={fieldShell}>
+            <span className="flex min-w-0 flex-1 items-center gap-2.5">
+              <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
+                <Package className="size-4" />
+              </span>
+              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
+                <span className={cn(fieldLabel, "text-[14px] font-medium normal-case sm:text-[10px] sm:uppercase")}>
+                  Ładowność
+                </span>
+                <span
+                  className={cn("text-[14px] font-bold", minPayload === "any" && "text-muted-foreground font-medium")}
+                >
+                  <SelectValue />
+                </span>
+              </span>
+            </span>
           </SelectTrigger>
           <SelectContent>
             {PAYLOAD_OPTIONS.map((opt) => (
@@ -133,30 +173,45 @@ export default function FilterBar({ initial }: Props) {
           </SelectContent>
         </Select>
 
-        {/* Price sort + apply — pushed to the right on wider screens (design 08). */}
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <Select
-            value={sort}
-            onValueChange={(value) => {
-              setSort(value as CatalogSort);
-            }}
-          >
-            <SelectTrigger className="bg-card hover:bg-accent hover:text-accent-foreground h-10 rounded-full font-medium transition-colors">
-              <SelectValue placeholder="Sortowanie" />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Sortowanie — price sort. Same shape as Ładowność. */}
+        <Select
+          value={sort}
+          onValueChange={(value) => {
+            setSort(value as CatalogSort);
+          }}
+        >
+          <SelectTrigger className={fieldShell}>
+            <span className="flex min-w-0 flex-1 items-center gap-2.5">
+              <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
+                <ArrowUpDown className="size-4" />
+              </span>
+              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
+                <span className={cn(fieldLabel, "text-[14px] font-medium normal-case sm:text-[10px] sm:uppercase")}>
+                  Sortowanie
+                </span>
+                <span className={cn("text-[14px] font-bold", sort === "" && "text-muted-foreground font-medium")}>
+                  <SelectValue placeholder="domyślne" />
+                </span>
+              </span>
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Button onClick={handleApply} className="rounded-button h-10 px-5 font-semibold">
-            Zastosuj
-          </Button>
-        </div>
+        {/* Zastosuj — inline-right on desktop, full-width row on tablet + mobile. */}
+        <Button
+          type="button"
+          onClick={handleApply}
+          className="h-[50px] w-full rounded-[13px] text-[14px] font-bold sm:rounded-[14px] lg:ml-auto lg:h-[46px] lg:w-auto lg:rounded-full lg:px-7"
+        >
+          Zastosuj
+        </Button>
       </div>
 
       {error && <p className="text-destructive text-sm font-medium">{error}</p>}
