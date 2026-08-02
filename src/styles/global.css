@@ -30,6 +30,11 @@
   --flota-hair: rgba(15, 23, 42, 0.08);
   --flota-hair-2: rgba(15, 23, 42, 0.05);
 
+  /* Dark-navy surface introduced by the public info pages (O nas / FAQ / Cennik):
+     dark cards, CTAs, the featured pricing tier, the "Dobrze wiedzieć" box, and
+     the contact card. The one color the design adds with no existing token. */
+  --flota-ink-deep: #141b2d;
+
   /* Brand — crimson */
   --flota-accent: #b43638;
   --flota-accent-dark: #8e2628;
@@ -163,6 +168,11 @@
   /* App shell max width — header, footer, and page bodies share this cap. */
   --container-app: 1400px;
 
+  /* Public shell chrome (SiteHeader + SiteFooter inner rows) cap — wider than the
+     1180 info-page bodies on purpose (S-09 P8): the nav pill and footer columns use
+     the full 1800 band on wide screens while the page content stays at 1180. */
+  --container-shell: 1800px;
+
   /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -176,6 +186,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-ink-deep: var(--flota-ink-deep);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);

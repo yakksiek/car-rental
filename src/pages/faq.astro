@@ -1,0 +1,268 @@
+---
+// components
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import InfoIcon from "../components/icons/InfoIcon.astro";
+
+// FAQ — static single-open accordion (design ScreenFaqDesktop/Mobile, FaqBody),
+// re-authored as native <details name="faq"> so it is CSS-only (no island) and works
+// with JS disabled. The shared `name` makes the accordion exclusive (one open at a
+// time) in modern browsers. The ghost-number treatment, the +→× toggle, and the
+// open/close height animation are all pure CSS keyed off `[open]`; the height
+// animation is a progressive enhancement (::details-content + interpolate-size) that
+// degrades to instant on older browsers. All copy is verbatim from the design source.
+
+const faqs: [q: string, a: string][] = [
+  [
+    "Jakie dokumenty są potrzebne do wynajmu?",
+    "Dowód osobisty oraz ważne prawo jazdy kat. B (kat. C dla pojazdów powyżej 3,5 t). Firmy dodatkowo podają NIP — fakturę wystawiamy od ręki.",
+  ],
+  [
+    "Czy muszę mieć konto, żeby zarezerwować?",
+    "Nie. Rezerwację złożysz bez zakładania konta — wybierasz pojazd i termin, a potwierdzenie przychodzi e-mailem. Możesz też zadzwonić do nas bezpośrednio.",
+  ],
+  [
+    "Ile wynosi kaucja i kiedy ją zwracacie?",
+    "Kaucja zaczyna się od 1 500 zł i zależy od klasy pojazdu. Zwracamy ją w pełnej wysokości po zwrocie auta bez uszkodzeń, zwykle w ciągu 3 dni roboczych.",
+  ],
+  [
+    "Jaki jest limit kilometrów?",
+    "Standardowo 300 km na dobę. Każdy dodatkowy kilometr to 0,50 zł. Przy wynajmie długoterminowym ustalamy indywidualny, wyższy limit.",
+  ],
+  [
+    "Co obejmuje ubezpieczenie?",
+    "Każdy pojazd ma pełne AC, OC i NNW oraz assistance 24/7 w całej Polsce. W razie awarii lub kolizji podstawiamy auto zastępcze.",
+  ],
+  [
+    "Czy dostarczacie auto pod wskazany adres?",
+    "Tak. Podstawienie i odbiór w granicach miasta są bezpłatne. Poza miastem wyceniamy dojazd indywidualnie — wystarczy podać adres przy rezerwacji.",
+  ],
+  [
+    "Czy mogę przedłużyć wynajem?",
+    "Oczywiście. Wystarczy telefon lub e-mail przed końcem umowy. Przy dłuższym okresie automatycznie przechodzisz na korzystniejszą stawkę.",
+  ],
+  [
+    "Jak odwołać lub zmienić rezerwację?",
+    "Bezpłatne odwołanie jest możliwe do 24 godzin przed odbiorem. Zmianę terminu lub pojazdu zrobimy telefonicznie bez dodatkowych opłat.",
+  ],
+  [
+    "Jaki jest minimalny wiek kierowcy?",
+    "Kierowca musi mieć ukończone 21 lat i minimum 2 lata prawa jazdy. Dodatkowych kierowców dopisujemy do umowy bezpłatnie.",
+  ],
+  [
+    "W jaki sposób mogę zapłacić?",
+    "Kartą, przelewem lub gotówką przy odbiorze. Dla firm oferujemy płatność z odroczonym terminem na podstawie faktury VAT.",
+  ],
+];
+---
+
+<Layout title="FAQ — Flota">
+  <SiteHeader active="faq" />
+
+  <main>
+    <!-- Hero -->
+    <div
+      class="bg-card border-b border-[var(--flota-hair-2)] px-[22px] pt-[30px] pb-[34px] sm:px-[48px] sm:pt-[58px] sm:pb-[62px]"
+    >
+      <div class="mx-auto max-w-[1180px]">
+        <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
+          <span class="bg-primary size-1.5 rounded-full"></span>
+          FAQ
+        </div>
+        <h1
+          class="text-foreground mt-4 text-[34px] leading-[1.02] font-bold tracking-[-1px] text-balance sm:text-[54px] sm:tracking-[-1.8px]"
+        >
+          Najczęściej zadawane pytania
+        </h1>
+        <p class="mt-4 max-w-[680px] text-[15px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[18px]">
+          Wszystko o wynajmie — dokumenty, kaucja, ubezpieczenie i płatności. Nie znalazłeś odpowiedzi? Zadzwoń,
+          jesteśmy dostępni całą dobę.
+        </p>
+      </div>
+    </div>
+
+    <!-- Accordion -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <div>
+        {
+          faqs.map(([q, a], i) => (
+            <details name="faq" class="faq" open={i === 0}>
+              <summary class="faq-summary">
+                <span class="faq-ghost" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span class="faq-q">{q}</span>
+                <span class="faq-toggle">
+                  <InfoIcon name="plus" size={18} />
+                </span>
+              </summary>
+              <div class="faq-answer">{a}</div>
+            </details>
+          ))
+        }
+      </div>
+
+      <!-- CTA banner -->
+      <div
+        class="bg-ink-deep mt-5 flex flex-col items-start justify-between gap-4 rounded-[20px] p-[22px] sm:mt-[30px] sm:flex-row sm:items-center sm:px-8 sm:py-7"
+      >
+        <div>
+          <div class="text-[18px] font-bold tracking-[-0.4px] text-white sm:text-[21px]">Masz inne pytanie?</div>
+          <div class="mt-1 text-[14px] text-white/70 sm:text-[15px]">
+            Nasz zespół pomoże Ci wybrać właściwy pojazd — 24/7.
+          </div>
+        </div>
+        <div class="flex shrink-0 gap-2.5">
+          <a
+            href="tel:+48221002030"
+            class="text-ink-deep inline-flex h-[46px] items-center gap-2 rounded-[12px] bg-white px-5 text-[14.5px] font-bold"
+          >
+            <InfoIcon name="phone" size={16} color="var(--flota-ink-deep)" />
+            Zadzwoń
+          </a>
+          <a
+            href="mailto:kontakt@flota.pl"
+            class="bg-primary inline-flex h-[46px] items-center gap-2 rounded-[12px] px-5 text-[14.5px] font-[650] text-white"
+          >
+            <InfoIcon name="mail" size={16} color="#fff" />
+            Napisz
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-9 sm:h-[60px]"></div>
+  </main>
+
+  <SiteFooter />
+</Layout>
+
+<style>
+  /* Native single-open accordion with the design's ghost-number treatment. */
+  .faq {
+    position: relative;
+    overflow: hidden;
+    /* Enables keyword→length interpolation so ::details-content can animate to auto
+       height on supporting browsers; ignored (instant open) elsewhere. */
+    interpolate-size: allow-keywords;
+  }
+  .faq + .faq {
+    border-top: 1px solid var(--flota-hair);
+  }
+
+  /* Big translucent index number behind the content. */
+  .faq-ghost {
+    position: absolute;
+    left: -2px;
+    top: 6px;
+    font-size: 120px;
+    font-weight: 800;
+    letter-spacing: -4px;
+    line-height: 1;
+    color: rgba(15, 23, 42, 0.14);
+    pointer-events: none;
+    transition: color 0.3s ease;
+  }
+  .faq[open] .faq-ghost {
+    color: rgba(180, 54, 56, 0.85);
+  }
+
+  /* Summary row, offset to clear the ghost number. */
+  .faq-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-left: 188px;
+    padding-top: 22px;
+    padding-bottom: 10px;
+    cursor: pointer;
+  }
+  .faq-summary::-webkit-details-marker {
+    display: none;
+  }
+  .faq-q {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1.2;
+    color: var(--flota-ink);
+  }
+  .faq-toggle {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid var(--flota-hair);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--flota-ink);
+    transition:
+      transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      background 0.25s,
+      border-color 0.25s;
+  }
+  .faq[open] .faq-toggle {
+    transform: rotate(45deg);
+    background: var(--flota-accent);
+    border-color: var(--flota-accent);
+    color: #fff;
+  }
+
+  /* Answer, offset to match the summary; height animates on supporting browsers. */
+  .faq-answer {
+    margin-left: 188px;
+    max-width: 640px;
+    padding: 16px 40px 6px 0;
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: var(--flota-ink-2);
+  }
+  .faq::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      content-visibility 0.4s allow-discrete;
+  }
+  .faq[open]::details-content {
+    block-size: auto;
+  }
+
+  @media (max-width: 640px) {
+    .faq-ghost {
+      top: 4px;
+      font-size: 96px;
+      color: rgba(15, 23, 42, 0.04);
+    }
+    .faq[open] .faq-ghost {
+      color: rgba(180, 54, 56, 0.5);
+    }
+    .faq-summary {
+      margin-left: 90px;
+      padding-top: 16px;
+      padding-bottom: 6px;
+    }
+    .faq-q {
+      font-size: 16.5px;
+    }
+    .faq-toggle {
+      width: 30px;
+      height: 30px;
+    }
+    /* The plus icon is rendered by the child InfoIcon component, so it sits outside
+       this component's style scope — reach it with :global to shrink it on mobile. */
+    .faq-toggle :global(svg) {
+      width: 15px;
+      height: 15px;
+    }
+    .faq-answer {
+      margin-left: 90px;
+      padding: 12px 0 4px;
+      font-size: 14px;
+    }
+  }
+</style>
