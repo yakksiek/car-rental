@@ -101,7 +101,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
 };
 
 const chipClass =
-  "bg-accent text-accent-foreground hover:bg-accent/70 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-medium transition-colors";
+  "bg-card text-foreground hover:border-foreground/25 inline-flex items-center gap-1.5 rounded-full border border-[var(--flota-hair)] px-3.5 py-1.5 text-[13px] font-semibold transition-colors";
 ---
 
 <Layout title="Flota — przeglądaj pojazdy">
@@ -245,7 +245,7 @@ const chipClass =
               </span>
             </a>
           )}
-          <a href="/fleet" class="text-primary ml-1 text-sm font-semibold hover:underline">
+          <a href="/fleet" class="text-muted-foreground hover:text-foreground ml-1 text-sm font-medium hover:underline">
             Wyczyść wszystko
           </a>
         </div>
