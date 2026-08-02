@@ -1,6 +1,7 @@
 ---
 // components
 import MobileNav from "./MobileNav.tsx";
+import HeaderContactToggle from "./HeaderContactToggle.tsx";
 import Brand from "./brand/Brand.astro";
 import InfoIcon from "./icons/InfoIcon.astro";
 
@@ -8,14 +9,16 @@ import InfoIcon from "./icons/InfoIcon.astro";
 import { cn } from "../lib/utils";
 
 // Public site header (design `InfoHeader` / `InfoHeaderMobile`), shared across the
-// whole customer-facing site. Three presentations of one nav model:
-//   • Desktop (sm+): logo left, centered 5-link pill nav, phone + "Zarezerwuj" CTA right.
-//   • Mobile (<sm): logo left; a phone-reveal chip + hamburger overlay (<MobileNav>) right.
-// No account chrome: v1 customers are anonymous, so the staff sign-in lives elsewhere.
-// The inner row caps at 1800px (max-w-shell, mirrors the footer) with a 48px desktop
-// gutter floor. The chrome sits wider than the 1180 info-page bodies on purpose (S-09
-// P8) — logo/nav/CTA use the full band on wide screens while page content stays at 1180.
-// Plain anchors; the layout's <ClientRouter /> upgrades them to view transitions.
+// whole customer-facing site. Three responsive presentations of one nav model:
+//   • Wide desktop (≥lg): logo, centered 5-link pill nav, phone + "Zarezerwuj" CTA.
+//   • Tablet (md–<lg): logo, 5-link pill (compressed <840), and the compact contact/booking
+//     toggle (<HeaderContactToggle>) in place of the phone text + CTA, so nothing overflows.
+//   • Mobile (<md): logo + phone-reveal chip + hamburger overlay (<MobileNav>).
+// Breakpoints mirror the design's InfoHeader container queries (toggle replaces phone+CTA
+// on tablet; ≤840 → pill padding shrinks; S-09 P13). No account chrome: v1 customers are
+// anonymous, so the staff sign-in lives elsewhere. The inner row caps at 1800px (max-w-shell,
+// mirrors the footer) with a 48px gutter floor on the wide band; page bodies stay at 1180
+// (S-09 P8). Plain anchors; the layout's <ClientRouter /> upgrades them to view transitions.
 
 type NavId = "home" | "fleet" | "pricing" | "faq" | "about";
 
@@ -35,23 +38,23 @@ const nav: { id: NavId; label: string; href: string }[] = [
 ---
 
 <header class="bg-card border-b border-[var(--flota-hair-2)]">
-  <div class="max-w-shell mx-auto flex items-center justify-between px-[18px] py-[14px] sm:px-[48px] sm:py-[18px]">
+  <div class="max-w-shell mx-auto flex items-center justify-between px-[18px] py-[14px] md:px-[48px] md:py-[18px]">
     <a href="/" class="flex items-center">
       <Brand
         class="gap-1.5"
-        markClass="h-[34px] sm:h-10"
-        wordmarkClass="text-[18px] tracking-[-0.4px] sm:text-[20px]"
+        markClass="h-[34px] md:h-10"
+        wordmarkClass="text-[18px] tracking-[-0.4px] md:text-[20px]"
       />
     </a>
 
-    <!-- Desktop pill nav (centered); hidden on mobile in favour of the overlay. -->
-    <nav class="bg-background hidden items-center gap-0.5 rounded-full p-[5px_6px] sm:flex">
+    <!-- Pill nav (centered); shown from the tablet band up, hidden on mobile (overlay). -->
+    <nav class="bg-background hidden items-center gap-0.5 rounded-full p-[5px_6px] md:flex">
       {
         nav.map((item) => (
           <a
             href={item.href}
             class:list={cn(
-              "rounded-full px-[18px] py-[9px] text-[14.5px] transition-colors",
+              "rounded-full px-[13px] py-[9px] text-[14.5px] transition-colors min-[840px]:px-[18px]",
               active === item.id
                 ? "bg-card text-foreground font-[650] shadow-[0_2px_6px_rgba(14,21,36,0.15)]"
                 : "font-medium text-[#5A6373]",
@@ -63,8 +66,8 @@ const nav: { id: NavId; label: string; href: string }[] = [
       }
     </nav>
 
-    <!-- Desktop phone + reservation CTA; hidden on mobile. -->
-    <div class="hidden items-center gap-[18px] sm:flex">
+    <!-- Wide-desktop phone + reservation CTA (≥lg); collapses into the toggle below that. -->
+    <div class="hidden items-center gap-[18px] lg:flex">
       <a href="tel:+48221002030" class="text-foreground inline-flex items-center gap-2 text-[14.5px] font-bold">
         <InfoIcon name="phone" size={16} color="var(--flota-accent)" />
         +48 22 100 20 30
@@ -77,8 +80,13 @@ const nav: { id: NavId; label: string; href: string }[] = [
       </a>
     </div>
 
-    <!-- Mobile controls (phone-reveal + hamburger overlay); hidden on sm+. -->
-    <div class="sm:hidden">
+    <!-- Tablet contact/booking toggle (md–<lg); replaces the phone text + CTA where they'd overflow. -->
+    <div class="hidden md:flex lg:hidden">
+      <HeaderContactToggle client:idle />
+    </div>
+
+    <!-- Mobile controls (phone-reveal + hamburger overlay); hidden from the tablet band up. -->
+    <div class="md:hidden">
       <MobileNav active={active} client:idle />
     </div>
   </div>

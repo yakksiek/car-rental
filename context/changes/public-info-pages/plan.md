@@ -689,19 +689,19 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 12.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 12.1 `npm run lint` · `npx astro check` · `npm run build` pass — b90c83e
 
 #### Manual
 
-- [x] 12.2 About fleet-list icons use the canonical glyph set; vision-diff vs the updated `o nas` mockup matches
+- [x] 12.2 About fleet-list icons use the canonical glyph set; vision-diff vs the updated `o nas` mockup matches — b90c83e
 
 ### Phase 13: Tablet header — contact/booking toggle button
 
 #### Automated
 
-- [ ] 13.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 13.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 13.2 Tablet header shows the contact/booking toggle button; no overflow/wrap; toggles call↔book per design
-- [ ] 13.3 Wide-desktop + mobile headers unchanged; vision-diff of tablet header vs the Cennik-tablet mockup matches
+- [x] 13.2 Tablet header shows the contact/booking toggle button; no overflow/wrap; toggles call↔book per design
+- [x] 13.3 Wide-desktop + mobile headers unchanged; vision-diff of tablet header vs the Cennik-tablet mockup matches
