@@ -829,13 +829,13 @@ revert of the touched components/page.
 
 #### Automated
 
-- [x] 6D.1 Types pass: `npx astro check`
-- [x] 6D.2 Lint passes: `npm run lint`
-- [x] 6D.3 Production build succeeds: `npm run build`
+- [x] 6D.1 Types pass: `npx astro check` — 858bfcf
+- [x] 6D.2 Lint passes: `npm run lint` — 858bfcf
+- [x] 6D.3 Production build succeeds: `npm run build` — 858bfcf
 
 #### Manual
 
-- [x] 6D.4 At 834: 2-col hero + search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne (matches ScreenTabletHome)
-- [x] 6D.5 HeroSearch is a single island (no duplicated state); mobile + desktop unchanged
-- [x] 6D.6 Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations)
-- [x] 6D.7 Re-capture `/` and `/fleet` at true 390 / 834 / 1440 and vision-diff both
+- [x] 6D.4 At 834: 2-col hero + search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne (matches ScreenTabletHome) — 858bfcf
+- [x] 6D.5 HeroSearch is a single island (no duplicated state); mobile + desktop unchanged — 858bfcf
+- [x] 6D.6 Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations) — 858bfcf
+- [x] 6D.7 Re-capture `/` and `/fleet` at true 390 / 834 / 1440 and vision-diff both — 858bfcf
