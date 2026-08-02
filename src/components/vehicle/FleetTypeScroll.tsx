@@ -124,7 +124,7 @@ export default function FleetTypeScroll({ pills, active }: Props) {
 
   return (
     <div className="-mx-5 mb-[22px] px-5 pt-8 sm:hidden">
-      <div className="flex gap-[2px] rounded-full bg-[#0A0A0F] p-[5px] shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
+      <div className="flex gap-[2px] overflow-x-auto rounded-full bg-[#0A0A0F] p-[5px] shadow-[0_8px_24px_rgba(0,0,0,0.14)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {pills.map((pill) => {
           const isActive = current === keyOf(pill.category);
           return (
@@ -137,7 +137,7 @@ export default function FleetTypeScroll({ pills, active }: Props) {
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex h-10 items-center overflow-hidden rounded-full focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none",
-                isActive ? "flex-[1_1_auto] bg-white text-[#0A0A0F]" : "w-10 shrink-0 text-white/[0.72]",
+                isActive ? "flex-[1_0_auto] bg-white text-[#0A0A0F]" : "w-10 shrink-0 text-white/[0.72]",
               )}
               style={{
                 transition: `flex ${DUR}ms ${EASE}, background-color .25s ease, color .2s ease`,
