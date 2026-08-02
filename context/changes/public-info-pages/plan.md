@@ -658,22 +658,22 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 9.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 9.1 `npm run lint` · `npx astro check` · `npm run build` pass — 68c365c
 
 #### Manual
 
-- [x] 9.2 Category glyphs identical on landing selector, /fleet filter tabs, and Cennik rate table
-- [x] 9.3 Vision-diff of /fleet filter + Cennik rate table vs the updated mockups matches
+- [x] 9.2 Category glyphs identical on landing selector, /fleet filter tabs, and Cennik rate table — 68c365c
+- [x] 9.3 Vision-diff of /fleet filter + Cennik rate table vs the updated mockups matches — 68c365c
 
 ### Phase 10: About narrative photo — cover the wrapper (fix black stripes)
 
 #### Automated
 
-- [ ] 10.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 10.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 10.2 About narrative photo fully covers its wrapper (desktop + mobile); no black stripes
+- [x] 10.2 About narrative photo fully covers its wrapper (desktop + mobile); no black stripes
 
 ### Phase 11: About stats band — new card design (accent bar + watermark)
 
