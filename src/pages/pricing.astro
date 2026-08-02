@@ -4,9 +4,9 @@ import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import InfoIcon from "../components/icons/InfoIcon.astro";
+import CategoryIcon from "../components/vehicle/CategoryIcon.astro";
 
 // others
-import type { VehicleCategory } from "../types";
 import type { InfoIconName } from "../components/icons/info-icons";
 import { getCategoryPricing } from "../lib/services/vehicles";
 import { formatPln } from "../lib/format";
@@ -20,15 +20,6 @@ import { cn } from "../lib/utils";
 // not store. Money always routes through formatPln (never .toFixed()).
 
 const pricing = await getCategoryPricing(Astro.locals.supabase);
-
-// Per-category icon (design category→II map).
-const CATEGORY_ICON: Record<VehicleCategory, InfoIconName> = {
-  cargo_van: "van",
-  passenger_van: "bus",
-  car_transporter: "lift",
-  refrigerated_truck: "container",
-  flatbed_truck: "crew",
-};
 
 interface Tier {
   icon: InfoIconName;
@@ -225,7 +216,7 @@ const goodToKnow: [k: string, v: string][] = [
               >
                 <div class="flex min-w-0 items-center gap-[13px]">
                   <div class="bg-background flex size-[40px] shrink-0 items-center justify-center rounded-[10px]">
-                    <InfoIcon name={CATEGORY_ICON[row.category]} size={21} color="var(--flota-ink-2)" />
+                    <CategoryIcon category={row.category} class="size-[21px] text-[var(--flota-ink-2)]" />
                   </div>
                   <div class="min-w-0">
                     <div class="text-foreground text-[14.5px] font-[650] tracking-[-0.2px] sm:text-[15.5px]">

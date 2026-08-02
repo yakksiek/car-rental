@@ -8,7 +8,7 @@ import Layout from "../../layouts/Layout.astro";
 import SiteHeader from "../../components/SiteHeader.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import VehicleCard from "../../components/vehicle/VehicleCard.astro";
-import VehicleSilhouette from "../../components/vehicle/VehicleSilhouette.astro";
+import CategoryIcon from "../../components/vehicle/CategoryIcon.astro";
 import FilterBar from "../../components/vehicle/FilterBar.tsx";
 
 // others
@@ -153,7 +153,7 @@ const chipClass =
                   <rect x="14" y="14" width="7" height="7" />
                 </svg>
               ) : (
-                <VehicleSilhouette category={tab.category} alt={tab.label} class="w-8" />
+                <CategoryIcon category={tab.category} class="size-5" />
               )}
             </span>
             <span class="leading-tight">
