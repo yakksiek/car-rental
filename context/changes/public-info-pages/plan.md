@@ -312,25 +312,25 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 2.1 `npm run lint` · `npx astro check` · `npm run build` pass
-- [x] 2.2 `/about` responds 200
+- [x] 2.1 `npm run lint` · `npx astro check` · `npm run build` pass — 97f84ec
+- [x] 2.2 `/about` responds 200 — 97f84ec
 
 #### Manual
 
-- [x] 2.3 Live "pojazdy we flocie" = active count; `—` fallback when Supabase unset
+- [x] 2.3 Live "pojazdy we flocie" = active count; `—` fallback when Supabase unset — 97f84ec
 - [ ] 2.4 Vision-diff (desktop + mobile) vs `o nas *.jpg` matches (deviations aside)
 
 ### Phase 3: FAQ page (`/faq`)
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` · `npx astro check` · `npm run build` pass
-- [ ] 3.2 `/faq` responds 200
+- [x] 3.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 3.2 `/faq` responds 200
 
 #### Manual
 
 - [ ] 3.3 Single-open works; toggle +→× and ghost numbers animate at both breakpoints
-- [ ] 3.4 Works with JS disabled (native `<details>`)
+- [x] 3.4 Works with JS disabled (native `<details>`)
 - [ ] 3.5 Vision-diff vs `faq *.jpg` matches (deviations aside)
 
 ### Phase 4: Cennik page (`/pricing`) — hybrid
