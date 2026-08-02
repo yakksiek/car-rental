@@ -815,27 +815,27 @@ revert of the touched components/page.
 
 #### Automated
 
-- [x] 6C.1 Types pass: `npx astro check`
-- [x] 6C.2 Lint passes: `npm run lint`
-- [x] 6C.3 Production build succeeds: `npm run build`
+- [x] 6C.1 Types pass: `npx astro check` — cdcd43e
+- [x] 6C.2 Lint passes: `npm run lint` — cdcd43e
+- [x] 6C.3 Production build succeeds: `npm run build` — cdcd43e
 
 #### Manual
 
-- [x] 6C.4 Desktop process steps tighter (title 16.5/21, desc 13/20); lane pills lifted
-- [x] 6C.5 Mobile type pills are white cards in a single horizontal-scroll row with active glow
-- [x] 6C.6 Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA
+- [x] 6C.4 Desktop process steps tighter (title 16.5/21, desc 13/20); lane pills lifted — cdcd43e
+- [x] 6C.5 Mobile type pills are white cards in a single horizontal-scroll row with active glow — cdcd43e
+- [x] 6C.6 Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA — cdcd43e
 
 ### Phase 6D: Landing tablet layout (compose ScreenTabletHome)
 
 #### Automated
 
-- [ ] 6D.1 Types pass: `npx astro check`
-- [ ] 6D.2 Lint passes: `npm run lint`
-- [ ] 6D.3 Production build succeeds: `npm run build`
+- [x] 6D.1 Types pass: `npx astro check`
+- [x] 6D.2 Lint passes: `npm run lint`
+- [x] 6D.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 6D.4 At 834: 2-col hero + search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne (matches ScreenTabletHome)
-- [ ] 6D.5 HeroSearch is a single island (no duplicated state); mobile + desktop unchanged
-- [ ] 6D.6 Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations)
-- [ ] 6D.7 Re-capture `/` and `/fleet` at true 390 / 834 / 1440 and vision-diff both
+- [x] 6D.4 At 834: 2-col hero + search card right, 3-across trust bar, glass nav+toggle, 3-col Popularne (matches ScreenTabletHome)
+- [x] 6D.5 HeroSearch is a single island (no duplicated state); mobile + desktop unchanged
+- [x] 6D.6 Vision-diff `/` at 390 / 834 / 1440 converges (minus recorded deviations)
+- [x] 6D.7 Re-capture `/` and `/fleet` at true 390 / 834 / 1440 and vision-diff both
