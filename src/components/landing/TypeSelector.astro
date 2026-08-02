@@ -10,6 +10,10 @@ import { categoryLabelPl } from "../../lib/format";
 // Category selector (S7) — five click-to-route pills into `/fleet?category=<cat>`.
 // Furgon is the active (accent) pill per the mock; there is no hover-preview this
 // slice (click-to-route only — the hover-hint copy is dropped, deviation(scope)).
+// The "see-all" CTA ships as a dark `Cała flota` button, not the design's crimson
+// `Wszystkie` — deviation(kept; the rename came from the dropped hover-preview).
+// Mobile pills scroll horizontally (nowrap) as white cards; the active one carries
+// the crimson glow.
 
 interface Props {
   active?: VehicleCategory;
@@ -52,7 +56,7 @@ const CATEGORIES: VehicleCategory[] = [
   </div>
 
   <div
-    class="xl:bg-card xl:border-border flex flex-wrap gap-2 xl:inline-flex xl:flex-nowrap xl:gap-1 xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
+    class="xl:border-border xl:bg-card flex flex-nowrap gap-2 overflow-x-auto xl:inline-flex xl:gap-[9px] xl:overflow-visible xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
   >
     {
       CATEGORIES.map((category) => {
@@ -61,15 +65,18 @@ const CATEGORIES: VehicleCategory[] = [
           <a
             href={`/fleet?category=${category}`}
             class:list={cn(
-              "inline-flex items-center gap-2 rounded-full border px-[13px] py-[11px] text-[14px] transition xl:border-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px]",
+              "inline-flex shrink-0 items-center gap-2 rounded-full border py-[11px] pr-4 pl-[13px] text-[14px] transition xl:border-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px]",
               isActive
-                ? "bg-primary text-primary-foreground border-transparent font-semibold xl:[box-shadow:0_4px_12px_-2px_rgba(180,54,56,0.30)]"
-                : "border-border hover:text-foreground font-medium text-[var(--flota-ink-2)]",
+                ? "bg-primary text-primary-foreground border-transparent font-[650] [box-shadow:0_4px_12px_-3px_rgba(180,54,56,0.35)] xl:[box-shadow:0_4px_12px_-2px_rgba(180,54,56,0.30)]"
+                : "bg-card border-border hover:text-foreground font-[550] text-[var(--flota-ink-2)] xl:bg-transparent",
             )}
           >
             <CategoryIcon
               category={category}
-              class:list={isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]"}
+              class:list={[
+                category === "car_transporter" && "xl:size-[20px]",
+                isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]",
+              ]}
             />
             {categoryLabelPl(category)}
           </a>

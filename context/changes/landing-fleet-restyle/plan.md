@@ -801,29 +801,29 @@ revert of the touched components/page.
 
 #### Automated
 
-- [x] 6B.1 Types pass: `npx astro check`
-- [x] 6B.2 Lint passes: `npm run lint`
-- [x] 6B.3 Production build succeeds: `npm run build`
+- [x] 6B.1 Types pass: `npx astro check` — ab03c60
+- [x] 6B.2 Lint passes: `npm run lint` — ab03c60
+- [x] 6B.3 Production build succeeds: `npm run build` — ab03c60
 
 #### Manual
 
-- [x] 6B.4 Trust card: no tiles, faint glyph per row; desktop no dividers / mobile dividers; width 300 desktop
-- [x] 6B.5 Mobile hero dot is a circle; wordmark + sheet spacing match design
-- [x] 6B.6 `/reserve`, `/about`, `/pricing` unaffected
+- [x] 6B.4 Trust card: no tiles, faint glyph per row; desktop no dividers / mobile dividers; width 300 desktop — ab03c60
+- [x] 6B.5 Mobile hero dot is a circle; wordmark + sheet spacing match design — ab03c60
+- [x] 6B.6 `/reserve`, `/about`, `/pricing` unaffected — ab03c60
 
 ### Phase 6C: Landing sections + Popularne card fidelity
 
 #### Automated
 
-- [ ] 6C.1 Types pass: `npx astro check`
-- [ ] 6C.2 Lint passes: `npm run lint`
-- [ ] 6C.3 Production build succeeds: `npm run build`
+- [x] 6C.1 Types pass: `npx astro check`
+- [x] 6C.2 Lint passes: `npm run lint`
+- [x] 6C.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 6C.4 Desktop process steps tighter (title 16.5/21, desc 13/20); lane pills lifted
-- [ ] 6C.5 Mobile type pills are white cards in a single horizontal-scroll row with active glow
-- [ ] 6C.6 Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA
+- [x] 6C.4 Desktop process steps tighter (title 16.5/21, desc 13/20); lane pills lifted
+- [x] 6C.5 Mobile type pills are white cards in a single horizontal-scroll row with active glow
+- [x] 6C.6 Popularne cards: grey subtitle, correct radii, desktop vertical spec dividers, ink-deep CTA
 
 ### Phase 6D: Landing tablet layout (compose ScreenTabletHome)
 
