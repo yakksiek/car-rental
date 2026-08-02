@@ -635,24 +635,24 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 7.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 7.1 `npm run lint` · `npx astro check` · `npm run build` pass — 0960c5e
 
 #### Manual
 
-- [x] 7.2 Landing nav (desktop pill + mobile dropdown) lists all 5 destinations, each routing correctly
-- [x] 7.3 Landing mobile header shows the call-icon phone-reveal; tap animates the number open + dials; hamburger still works
-- [x] 7.4 Vision-diff of the landing hero nav (desktop + mobile) vs `customer-desktop.jsx` matches
-- [x] 7.5 Landing shows the full nav pill on tablet widths (not the hamburger); no overflow
+- [x] 7.2 Landing nav (desktop pill + mobile dropdown) lists all 5 destinations, each routing correctly — 0960c5e
+- [x] 7.3 Landing mobile header shows the call-icon phone-reveal; tap animates the number open + dials; hamburger still works — 0960c5e
+- [x] 7.4 Vision-diff of the landing hero nav (desktop + mobile) vs `customer-desktop.jsx` matches — 0960c5e
+- [x] 7.5 Landing shows the full nav pill on tablet widths (not the hamburger); no overflow — 0960c5e
 
 ### Phase 8: Widen the shared content cap (1180 → 1800)
 
 #### Automated
 
-- [ ] 8.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 8.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 8.2 Header + footer inner rows cap at 1800px (page bodies unchanged at 1180); no horizontal overflow; mobile unchanged
+- [x] 8.2 Header + footer inner rows cap at 1800px (page bodies unchanged at 1180); no horizontal overflow; mobile unchanged
 
 ### Phase 9: Unify category icons to the canonical set (fleet filter + Cennik)
 
