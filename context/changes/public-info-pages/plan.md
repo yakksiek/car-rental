@@ -324,27 +324,27 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 3.1 `npm run lint` · `npx astro check` · `npm run build` pass
-- [x] 3.2 `/faq` responds 200
+- [x] 3.1 `npm run lint` · `npx astro check` · `npm run build` pass — ed85815
+- [x] 3.2 `/faq` responds 200 — ed85815
 
 #### Manual
 
 - [ ] 3.3 Single-open works; toggle +→× and ghost numbers animate at both breakpoints
-- [x] 3.4 Works with JS disabled (native `<details>`)
+- [x] 3.4 Works with JS disabled (native `<details>`) — ed85815
 - [ ] 3.5 Vision-diff vs `faq *.jpg` matches (deviations aside)
 
 ### Phase 4: Cennik page (`/pricing`) — hybrid
 
 #### Automated
 
-- [ ] 4.1 `npm run lint` · `npx astro check` · `npm run build` pass
-- [ ] 4.2 `getCategoryPricing` unit tests pass: `npm test`
-- [ ] 4.3 Integration test passes if added: `npm run test:integration`
-- [ ] 4.4 `/pricing` responds 200
+- [x] 4.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 4.2 `getCategoryPricing` unit tests pass: `npm test`
+- [x] 4.3 Integration test passes if added: `npm run test:integration`
+- [x] 4.4 `/pricing` responds 200
 
 #### Manual
 
-- [ ] 4.5 Table = `MIN(daily/monthly)` per active category via `formatPln`; empties hidden; fallback row when unset
+- [x] 4.5 Table = `MIN(daily/monthly)` per active category via `formatPln`; empties hidden; fallback row when unset
 - [ ] 4.6 Vision-diff vs `prices *.jpg` matches (rate-rows deviation expected pre-mock-update)
 
 ### Phase 5: Finalize — cross-links, catalog sync, vision-diff
