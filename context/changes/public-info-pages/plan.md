@@ -393,9 +393,9 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 6.1 `npm run lint` · `npx astro check` · `npm run build` pass; unit tests green
-- [x] 6.2 No `StatusPill` importers remain (component deleted)
+- [x] 6.1 `npm run lint` · `npx astro check` · `npm run build` pass; unit tests green — 0597270
+- [x] 6.2 No `StatusPill` importers remain (component deleted) — 0597270
 
 #### Manual
 
-- [x] 6.3 "Dostępny" badge gone from /fleet cards, landing Popularne cards, and /fleet/[id] detail; cards render cleanly with no leftover gap
+- [x] 6.3 "Dostępny" badge gone from /fleet cards, landing Popularne cards, and /fleet/[id] detail; cards render cleanly with no leftover gap — 0597270
