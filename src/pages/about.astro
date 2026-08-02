@@ -1,6 +1,6 @@
 ---
 // core
-import { Picture } from "astro:assets";
+import { Image } from "astro:assets";
 
 // components
 import Layout from "../layouts/Layout.astro";
@@ -141,9 +141,9 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
         <div
           class="relative h-[220px] overflow-hidden rounded-[22px] border border-[var(--flota-hair)] bg-[#0A0D14] sm:h-[340px]"
         >
-          <Picture
+          <Image
             src={heroImg}
-            formats={["avif", "webp"]}
+            format="webp"
             alt=""
             width={1180}
             height={680}
