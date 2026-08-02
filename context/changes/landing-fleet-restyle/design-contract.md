@@ -130,7 +130,9 @@ a recorded deviation. **No unmapped surface.**
 
 ### S3 — Active-filter chips + result count (mock-silent → deviation, kept)
 
-- Result heading "{count} pojazdów gotowych do wynajmu." retained, restyled to new type scale — deviation(mock drops the count).
+- Result heading "{count} pojazdów gotowych do wynajmu." **removed** (Phase 6A.4) — the
+  design draws no count at any breakpoint; the earlier kept-deviation is overridden by
+  the user directive. The pill bar now leads the page and carries the ~40px top rhythm.
 - Chip: pill tag `rounded-full bg-card border border-[var(--flota-hair)]` with remove affordance — deviation(designed on-brand).
 - "Wyczyść wszystko": subdued text link `text-muted-foreground` — deviation(kept; behavior unchanged).
 
