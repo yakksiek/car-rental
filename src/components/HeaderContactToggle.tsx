@@ -4,25 +4,29 @@ import * as React from "react";
 // Tablet-band contact / booking toggle for the public header (design `InfoHeader`
 // `info-toggle`). A segmented pill in a #EAEDF2 track: the active segment expands to a
 // link (book → /fleet, phone → tel:), the other collapses to an icon button. Rendered
-// only in the tablet band (sm–<lg) where the full phone text + "Zarezerwuj" CTA would
-// overflow; the wide-desktop (full phone + CTA) and mobile (<sm, phone-reveal + hamburger)
-// headers keep their own chrome. Both segments stay mounted so max-width/padding/gap animate
-// smoothly — clicking the inactive one just switches mode (no navigation); clicking the
-// active one follows its link. Values (widths, timings) ported verbatim from the source.
+// only in the tablet band (md–<lg) where the full phone text + "Zarezerwuj" CTA would
+// overflow; the wide-desktop (full phone + CTA) and mobile (<md, phone-reveal + hamburger)
+// headers keep their own chrome. Clicking the inactive segment switches mode (no navigation);
+// clicking the active one follows its link.
+//
+// Animation: the reveal is driven by `grid-template-columns: 0fr → 1fr` on the label wrapper
+// (the modern smooth-reveal technique) rather than the design's max-width + width:auto toggle,
+// which jumps/clips on collapse and reads janky. The icon sits in a fixed 38px holder (never
+// moves); only grid-template-columns, background, opacity, and color (via currentColor)
+// transition — no per-frame width/padding/gap thrash. Symmetric in both directions.
 
 const INKD = "#141B2D";
-const EASE = "cubic-bezier(.22,1,.36,1)";
-const SEG_TRANSITION = `max-width .42s ${EASE}, padding .42s ${EASE}, gap .42s, background .3s ease`;
-const LABEL_TRANSITION = `max-width .42s ${EASE}, opacity .28s ease .05s`;
+const EASE = "cubic-bezier(.4, 0, 0.2, 1)";
+const REVEAL_MS = 420;
 
-function CalendarGlyph({ color }: { color: string }) {
+function CalendarGlyph() {
   return (
     <svg
       width={17}
       height={17}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -34,14 +38,14 @@ function CalendarGlyph({ color }: { color: string }) {
   );
 }
 
-function PhoneGlyph({ color }: { color: string }) {
+function PhoneGlyph() {
   return (
     <svg
       width={17}
       height={17}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -52,70 +56,88 @@ function PhoneGlyph({ color }: { color: string }) {
   );
 }
 
+interface SegmentProps {
+  active: boolean;
+  href: string;
+  ariaLabel: string;
+  activeBackground: string;
+  fontWeight: number;
+  label: string;
+  onActivate: () => void;
+  children: React.ReactNode;
+}
+
+function Segment({ active, href, ariaLabel, activeBackground, fontWeight, label, onActivate, children }: SegmentProps) {
+  return (
+    <a
+      href={href}
+      aria-label={ariaLabel}
+      onClick={(event) => {
+        if (!active) {
+          event.preventDefault();
+          onActivate();
+        }
+      }}
+      className="flex h-[38px] items-center overflow-hidden rounded-full"
+      style={{
+        background: active ? activeBackground : "transparent",
+        color: active ? "#fff" : "var(--flota-ink-2)",
+        transition: "background .3s ease, color .3s ease",
+      }}
+    >
+      <span className="flex size-[38px] shrink-0 items-center justify-center">{children}</span>
+      <span
+        className="grid"
+        style={{
+          gridTemplateColumns: active ? "1fr" : "0fr",
+          transition: `grid-template-columns ${REVEAL_MS}ms ${EASE}`,
+        }}
+      >
+        <span className="min-w-0 overflow-hidden">
+          <span
+            className="block pr-4 pl-0.5 text-[14px] whitespace-nowrap"
+            style={{ fontWeight, opacity: active ? 1 : 0, transition: "opacity .28s ease" }}
+          >
+            {label}
+          </span>
+        </span>
+      </span>
+    </a>
+  );
+}
+
 export default function HeaderContactToggle() {
   const [mode, setMode] = React.useState<"book" | "phone">("book");
-  const book = mode === "book";
-  const phone = mode === "phone";
 
   return (
-    <div className="box-border inline-flex items-center gap-1 rounded-full bg-[#EAEDF2] p-1">
-      {/* BOOK: active → link to /fleet; inactive → switch to book. */}
-      <a
+    <div className="inline-flex items-center gap-1 rounded-full bg-[#EAEDF2] p-1">
+      <Segment
+        active={mode === "book"}
         href="/fleet"
-        aria-label={book ? "Zarezerwuj pojazd" : "Pokaż rezerwację"}
-        onClick={(event) => {
-          if (!book) {
-            event.preventDefault();
-            setMode("book");
-          }
-        }}
-        className="box-border inline-flex h-[38px] items-center justify-center overflow-hidden rounded-full"
-        style={{
-          width: book ? "auto" : 38,
-          maxWidth: book ? 200 : 38,
-          padding: book ? "0 16px" : 0,
-          gap: book ? 8 : 0,
-          background: book ? INKD : "transparent",
-          transition: SEG_TRANSITION,
+        ariaLabel={mode === "book" ? "Zarezerwuj pojazd" : "Pokaż rezerwację"}
+        activeBackground={INKD}
+        fontWeight={650}
+        label="Zarezerwuj"
+        onActivate={() => {
+          setMode("book");
         }}
       >
-        <CalendarGlyph color={book ? "#fff" : "var(--flota-ink-2)"} />
-        <span
-          className="overflow-hidden text-[14px] font-[650] whitespace-nowrap text-white"
-          style={{ maxWidth: book ? 150 : 0, opacity: book ? 1 : 0, transition: LABEL_TRANSITION }}
-        >
-          Zarezerwuj
-        </span>
-      </a>
+        <CalendarGlyph />
+      </Segment>
 
-      {/* PHONE: active → tel: link; inactive → switch to phone (reveal number). */}
-      <a
+      <Segment
+        active={mode === "phone"}
         href="tel:+48221002030"
-        aria-label={phone ? "Zadzwoń: +48 22 100 20 30" : "Pokaż numer telefonu"}
-        onClick={(event) => {
-          if (!phone) {
-            event.preventDefault();
-            setMode("phone");
-          }
-        }}
-        className="box-border inline-flex h-[38px] items-center justify-center overflow-hidden rounded-full"
-        style={{
-          width: phone ? "auto" : 38,
-          maxWidth: phone ? 220 : 38,
-          padding: phone ? "0 16px" : 0,
-          gap: phone ? 8 : 0,
-          background: phone ? "var(--flota-accent)" : "transparent",
-          transition: SEG_TRANSITION,
+        ariaLabel={mode === "phone" ? "Zadzwoń: +48 22 100 20 30" : "Pokaż numer telefonu"}
+        activeBackground="var(--flota-accent)"
+        fontWeight={700}
+        label="+48 22 100 20 30"
+        onActivate={() => {
+          setMode("phone");
         }}
       >
-        <PhoneGlyph color={phone ? "#fff" : "var(--flota-ink-2)"} />
-        <span
-          className="overflow-hidden text-[14px] font-bold tracking-[-0.2px] whitespace-nowrap text-white"
-          style={{ maxWidth: phone ? 210 : 0, opacity: phone ? 1 : 0, transition: LABEL_TRANSITION }}
-        >
-          +48 22 100 20 30
-        </span>
-      </a>
+        <PhoneGlyph />
+      </Segment>
     </div>
   );
 }
