@@ -281,6 +281,237 @@ Review-driven refinements to the shipped S-09 surfaces (shell + O nas / FAQ / Ce
 
 ---
 
+## Phase 7: Landing hero nav parity (LandingNav)
+
+### Overview
+
+Bring the landing-hero nav (`LandingNav.astro`) up to parity with the redesigned shell and the design source. The S-09 plan deliberately left `LandingNav` untouched — it was a 2-link fork from when only Start/Flota existed. Now that Cennik / FAQ / O nas ship, the landing nav is missing them, its mobile header lacks the design's phone-reveal control, and the pill collapses to the hamburger too early (tablets fall back to the mobile layout). **Reverses the original "No LandingNav change" non-goal** per review feedback (2026-08-02).
+
+Design source (fetch live at implement, do not import): `customer-desktop.jsx` — `DesktopHeader` (5-link nav) and `ScreenMobileHome` (the `phoneOpen` call-icon reveal, dark-hero glass variant).
+
+### Changes Required:
+
+#### 1. Add Cennik / FAQ / O nas to the landing nav (desktop pill + mobile dropdown)
+
+**File**: `src/components/LandingNav.astro`
+**Intent**: The desktop floating pill (`LandingNav.astro:41`) and the mobile `<details>` dropdown (`:114`) list only `Start` + `Flota`; add the three new destinations so the landing matches the shell's 5-link nav.
+**Contract**: Widen `active` (`:18`) to `"home" | "fleet" | "pricing" | "faq" | "about"`. Extend the `nav` array (`:26`) with `pricing`→`/pricing`→`Cennik`, `faq`→`/faq`→`FAQ`, `about`→`/about`→`O nas` (labels per `DesktopHeader` in `customer-desktop.jsx`; `Flota` keeps the PL label). Both the desktop pill and the mobile dropdown map over the same array, so both inherit the new items — no structural change. Keep the existing pill/active styling and the "Przeglądaj flotę" CTA. `index.astro` still passes `active="home"`.
+
+#### 2. Add the mobile phone-reveal call-icon to the landing header
+
+**File**: `src/components/LandingNav.astro`
+**Intent**: The design's landing mobile header (`ScreenMobileHome`) has a call-icon chip that animates open to reveal the phone number, beside the hamburger; our mobile header (`:87`) only has the hamburger (the phone is buried inside the dropdown).
+**Contract**: Add the phone-reveal chip to the mobile header row, beside the hamburger, porting the `phoneOpen` button from `customer-desktop.jsx` `ScreenMobileHome` — the **dark-hero glass variant**: closed `40×40 rounded-[12px] bg-white/15 backdrop-blur-[6px]` with a white call icon; open animates `width→auto`, number `max-width 0→160`, `padding .38s cubic-bezier(.4,0,.2,1)`, `opacity .28s ease`; revealed number is a real `tel:+48221002030` link (`text-[14px] font-bold text-white`). **CSS-only** — `LandingNav` has no island (its menu is a CSS `<details>`), so drive the reveal with a peer checkbox+label or a second `<details>` styled as the chip; no React. Same control already shipped on the info-pages mobile header (`MobileNav.tsx`), here in the dark/glass treatment. `aria-label="Pokaż numer telefonu"`.
+
+#### 3. Show the full nav pill on tablet (lower the desktop-pill breakpoint)
+
+**File**: `src/components/LandingNav.astro`
+**Intent**: The desktop floating pill renders only at `≥xl` (1280px), so tablets (≈768–1279px) fall back to the logo + hamburger even though the pill fits.
+**Contract**: Lower the desktop-pill breakpoint from `xl:` to the tablet breakpoint (per the design — confirm the exact px, likely `lg:` / `md:`). Above it, render the full floating pill (5-link nav + phone/CTA per #1); below it, keep the mobile logo + hamburger + phone-reveal (#2), coordinating the breakpoints so the phone-reveal shows only where the pill is hidden. Verify the pill contents (logo + 5 links + phone + "Przeglądaj flotę") don't overflow at the low end of the tablet range; if the mockup's tablet pill drops the phone text or CTA to fit, match it.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- Landing desktop pill lists all 5 destinations, each routing correctly
+- Landing mobile dropdown lists all 5 destinations
+- On tablet the landing shows the full nav pill (not the hamburger); pill contents don't overflow
+- Landing mobile header shows the call-icon chip; tapping animates the number open and it dials; the hamburger still opens the menu
+- Vision-diff of the landing hero nav (desktop + mobile) vs `customer-desktop.jsx` matches
+
+---
+
+## Phase 8: Widen the shared content cap (1180 → 1800)
+
+### Overview
+
+The shared header/footer inner rows (`max-w-[1180px]`) read too narrow on wide screens — the nav pill and footer columns sit in a ~1180 band with large empty side margins. Widen the **shell chrome (header + footer) to 1800px**. Per user decision (2026-08-02, scope confirmed), the info-page bodies (O nas / FAQ / Cennik) **stay at 1180**, so the header logo/nav and footer columns intentionally extend wider than the page content. **Reverses only the `shell-inner-caps-1180` deviation** in `design-contract.md`; `info-pages-use-1180` (bodies at 1180) still stands. 1180 came from the ~1276px design canvas.
+
+### Changes Required:
+
+#### 1. Single shared content-width token
+
+**File**: `src/styles/global.css`
+**Intent**: Define the shell cap once rather than as a literal.
+**Contract**: Add a `@theme` entry `--container-shell: 1800px;` → `max-w-shell` utility (mirrors the existing `--container-app: 1400px` → `max-w-app`).
+
+#### 2. Apply the 1800 cap to the shell only
+
+**Files**: `src/components/SiteHeader.astro`, `src/components/SiteFooter.astro` (only).
+**Intent**: Widen the header/footer inner-row cap 1180 → 1800.
+**Contract**: Replace the `max-w-[1180px]` on the header inner row and both footer inner rows (columns row + bottom copyright bar) with `max-w-shell`. Keep the 48px desktop gutter / 18–22px mobile padding as the floor. Leave the info-page bodies (`about`/`faq`/`pricing`), `max-w-app` (1400, fleet/other), and the landing (full-bleed) **untouched** — the chrome now sits wider than the 1180 page content on every page (intended, per confirmed scope). Update `design-contract.md`: record that `shell-inner-caps-1180` is superseded (header + footer inner rows now cap at 1800); `info-pages-use-1180` still holds for the page bodies.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- Header + footer inner rows cap at 1800px on wide screens; info-page bodies still at 1180 (chrome wider than content, as intended)
+- No horizontal overflow at any viewport; mobile layout unchanged
+- Spot-check at ~1900px wide: header logo/nav/CTA and footer columns use the wider 1800 band
+
+---
+
+## Phase 9: Unify category icons to the canonical set (fleet filter + Cennik)
+
+### Overview
+
+The vehicle-category glyph diverges across surfaces: the landing category selector uses the **canonical** `CategoryIcon.astro` (lucide truck / bus / snowflake / package + a bespoke car-on-flatbed); the `/fleet` filter tabs use `VehicleSilhouette` (full vehicle drawings); the Cennik rate table uses the `InfoIcon` `II.*` set (van/bus/lift/container/crew). Reuse the landing's canonical `CategoryIcon` on the fleet filter and the Cennik rate table so the category glyph is one consistent set site-wide. The user has already updated the Claude Design mockups so the fleet-filter + Cennik mocks show the canonical set — **pull the design source at implement to confirm the glyphs before applying** (a glyph may have changed).
+
+### Changes Required:
+
+#### 1. Make `CategoryIcon` the shared category-glyph source
+
+**File**: `src/components/landing/CategoryIcon.astro` — consider relocating to `src/components/vehicle/CategoryIcon.astro` (it is no longer landing-only; update its "Landing-local" comment + the `TypeSelector` import).
+**Intent**: One component owns the canonical per-category glyph for every surface.
+**Contract**: Keep the five `VehicleCategory` branches and the `category`/`class` props. Confirm each glyph against the freshly-pulled design source; if the canonical set changed, update the paths here so all consumers inherit it.
+
+#### 2. Fleet filter tabs → `CategoryIcon`
+
+**File**: `src/pages/fleet/index.astro`
+**Intent**: The category filter tabs render `VehicleSilhouette`; swap to the canonical glyph.
+**Contract**: Replace `<VehicleSilhouette category={tab.category} … class="w-8" />` (~`:156`) with `<CategoryIcon category={tab.category} class="…" />` sized to match the tab per the mockup. Keep the "Wszystkie" grid icon. Add the `CategoryIcon` import; drop `VehicleSilhouette` **only if** it is no longer used on the page (it still backs the cards elsewhere — verify).
+
+#### 3. Cennik rate table → `CategoryIcon`
+
+**File**: `src/pages/pricing.astro`
+**Intent**: The rate-table row icon uses `InfoIcon` via the local `CATEGORY_ICON` map; swap to the canonical glyph.
+**Contract**: Render `<CategoryIcon category={row.category} … />` in the rate-table row chip; delete the `CATEGORY_ICON` map. Keep `InfoIcon` for the tier cards / benefit checks / CTA arrow (those are concept icons, not category glyphs). Match the current chip's size/color.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- The five category glyphs are identical on the landing selector, the /fleet filter tabs, and the Cennik rate table
+- Vision-diff of the /fleet filter + Cennik rate table vs the (updated) mockups matches
+
+---
+
+## Phase 10: About narrative photo — cover the wrapper (fix black stripes)
+
+### Overview
+
+On `/about`, the "Nasza historia" photo does not fill its rounded wrapper — the `bg-[#0A0D14]` backing shows as two black stripes (top/bottom). Cause: `astro:assets` `<Picture>` wraps the `<img>` in a `<picture>` element, which breaks the `h-full` chain (the img's `h-full` resolves against the inline `<picture>`, not the fixed-height wrapper), so `object-cover` never fills the box.
+
+### Changes Required:
+
+#### 1. Make the narrative photo cover its wrapper
+
+**File**: `src/pages/about.astro`
+**Intent**: The photo should fully cover the `h-[220px]` / `sm:h-[340px]` rounded wrapper with no letterbox/pillarbox.
+**Contract**: Mirror the proven landing pattern (`index.astro`): make the wrapper `relative` and render the `<Picture>` as `absolute inset-0 h-full w-full object-cover` (absolute positioning fills the box regardless of the `<picture>` wrapper). Alternatively switch `<Picture>` → `<Image>` (plain `<img>`, no wrapper) with `h-full w-full object-cover`. Keep `rounded-[22px]`, the backing, `alt=""`, and the avif/webp formats.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- The About narrative photo fully covers its wrapper at desktop + mobile — no black stripes
+
+---
+
+## Phase 11: About stats band — new card design (accent bar + watermark)
+
+### Overview
+
+The Claude Design mockup for O nas now gives the 4 stat cards ("10+ lat na rynku", "N pojazdy we flocie", "24/7", "do 2 lat") a richer treatment; our build ships the old flat cards. Update to match. (Identified by re-pulling `info-pages.jsx` → `AboutBody` STATS on 2026-08-02 and diffing against the shipped version.)
+
+### Changes Required:
+
+#### 1. Restyle the stat cards
+
+**File**: `src/pages/about.astro` (stats band).
+**Intent**: Add the design's crimson top-accent bar + faint corner watermark to each stat card.
+**Contract** (from `info-pages.jsx` `AboutBody` STATS, pulled 2026-08-02):
+
+- Card wrapper gains `position: relative; overflow: hidden` (keep `bg-card`, `rounded-[16px]`, `border-[var(--flota-hair-2)]`, shadow `0 1px 2px rgba(15,23,42,0.03)`, padding 18px mobile / 24px 26px desktop).
+- **Top accent bar**: absolute `inset-x-0 top-0 h-[3px]`, `bg-[var(--flota-accent)]` at `opacity: 0.85`.
+- **Corner watermark**: absolute `right:-18px; bottom:-24px; opacity:0.05; pointer-events:none`, rendering the card's own icon at **132px desktop / 96px mobile**, color `--flota-ink`.
+- **Content layer**: wrap the existing icon (accent, 22/20) + number + label in a `position: relative` div so it sits above the watermark.
+- The "pojazdy we flocie" card's icon becomes the canonical truck glyph (consistent with Phase 9); its watermark uses the same glyph. The other three keep their `II.*` icons (shield / headset / spark).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- Each About stat card shows the crimson top bar + faint corner watermark, content sitting above the watermark
+- Vision-diff of the About stats band vs the updated `o nas` mockup matches
+
+---
+
+## Phase 12: About "Nasza flota" list icons → canonical set
+
+### Overview
+
+The updated O nas mockup (`info-pages.jsx` `FLEET_ITEMS`, pulled 2026-08-02) swaps the "Nasza flota" list icons to the canonical `Icon.*` glyph set; our build uses the older `II.*` icons (van / bus / container / lift / crew / city). Align to the canonical set (same theme as Phase 9). Pull the design source at implement for the exact glyphs.
+
+### Changes Required:
+
+#### 1. Swap the fleet-list icons
+
+**File**: `src/pages/about.astro` (the "Nasza flota" list; `fleetItems`).
+**Intent**: Use the canonical glyphs per the updated design.
+**Contract**: Update the 6 `fleetItems` icons to the design's `FLEET_ITEMS` set — `truck` (Furgony L3 i L4H2), `bus` (Busy 8–9 osobowe), `box` (Kontenery 8–10 europalet), `flatbed` (Winda załadowcza), `van` (Brygadówki 7-osobowe), `city` (Małe vany miejskie) — porting the exact `Icon.*` paths from `shared.jsx`. Some (e.g. `truck` / `box` / `flatbed`) are not yet in our `InfoIcon` set — add them, reusing the shared `CategoryIcon` glyphs where they coincide (see Phase 9). Keep the copy + layout; icon size 26, accent color, stroke 1.7.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- About "Nasza flota" list shows the canonical glyphs; vision-diff vs the updated `o nas` mockup matches
+
+---
+
+## Phase 13: Tablet header — contact/booking toggle button
+
+### Overview
+
+On tablet widths the shared header breaks: the desktop layout (logo + 5-link pill + full phone number + "Zarezerwuj" CTA) has no intermediate treatment, so the phone number overflows and breaks the layout. The Claude Design project now has a **tablet-specific header** (Cennik → tablet) with a **single compact contact button** replacing the phone text + CTA at that breakpoint: it carries both a **call** icon and a **booking** icon, **toggles between the two states**, and unwraps to either navigate to booking (`/fleet`) or reveal the full phone number (`tel:`). This is the designed answer to the tablet responsiveness (supersedes the generic container-query collapse that was earlier left un-queued). **Pull the tablet design from Claude Design (`info-pages.jsx`, the updated tablet `InfoHeader` / Cennik-tablet screen) at implement** — it is a very fresh addition (not present in the 2026-08-02 pull); confirm exact states, breakpoint, icons, and animation before building.
+
+### Changes Required:
+
+#### 1. Add the tablet contact/booking toggle to the shared header
+
+**File**: `src/components/SiteHeader.astro` (shared across all public pages).
+**Intent**: Between the mobile (`<sm`) and full-desktop layouts, add a tablet band where the phone-number text + "Zarezerwuj" CTA collapse into the designed single toggle button so nothing overflows.
+**Contract**: At the tablet breakpoint (per the design — confirm the exact px), hide the full phone-number text + the separate "Zarezerwuj" CTA and show the unified contact button. It toggles between a **call** state (unwraps to `+48 22 100 20 30` as a `tel:+48221002030` link) and a **book** state (routes to `/fleet`), with the design's icons + unwrap animation. Reuse the phone-reveal mechanism from Phase 7 / `MobileNav` where possible; `SiteHeader` is Astro, so drive the toggle CSS-only (checkbox/label) or promote just this control to a small island if the toggle genuinely needs JS. Leave the wide-desktop and mobile layouts unchanged. Port exact values from the pulled tablet design.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+
+#### Manual Verification:
+
+- At tablet widths the header shows the single contact/booking toggle button; nothing overflows or wraps
+- The button toggles between call (reveals/dials the number) and book (routes to `/fleet`) per the design
+- Wide-desktop and mobile headers unchanged; no regression on /fleet, /about, /faq, /pricing, /r
+- Vision-diff of the tablet header vs the Cennik-tablet mockup matches
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -399,3 +630,78 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 #### Manual
 
 - [x] 6.3 "Dostępny" badge gone from /fleet cards, landing Popularne cards, and /fleet/[id] detail; cards render cleanly with no leftover gap — 0597270
+
+### Phase 7: Landing hero nav parity (LandingNav)
+
+#### Automated
+
+- [x] 7.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [x] 7.2 Landing nav (desktop pill + mobile dropdown) lists all 5 destinations, each routing correctly
+- [x] 7.3 Landing mobile header shows the call-icon phone-reveal; tap animates the number open + dials; hamburger still works
+- [x] 7.4 Vision-diff of the landing hero nav (desktop + mobile) vs `customer-desktop.jsx` matches
+- [x] 7.5 Landing shows the full nav pill on tablet widths (not the hamburger); no overflow
+
+### Phase 8: Widen the shared content cap (1180 → 1800)
+
+#### Automated
+
+- [ ] 8.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 8.2 Header + footer inner rows cap at 1800px (page bodies unchanged at 1180); no horizontal overflow; mobile unchanged
+
+### Phase 9: Unify category icons to the canonical set (fleet filter + Cennik)
+
+#### Automated
+
+- [ ] 9.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 9.2 Category glyphs identical on landing selector, /fleet filter tabs, and Cennik rate table
+- [ ] 9.3 Vision-diff of /fleet filter + Cennik rate table vs the updated mockups matches
+
+### Phase 10: About narrative photo — cover the wrapper (fix black stripes)
+
+#### Automated
+
+- [ ] 10.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 10.2 About narrative photo fully covers its wrapper (desktop + mobile); no black stripes
+
+### Phase 11: About stats band — new card design (accent bar + watermark)
+
+#### Automated
+
+- [ ] 11.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 11.2 About stat cards show the crimson top bar + faint corner watermark; vision-diff vs the updated `o nas` mockup matches
+
+### Phase 12: About "Nasza flota" list icons → canonical set
+
+#### Automated
+
+- [ ] 12.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 12.2 About fleet-list icons use the canonical glyph set; vision-diff vs the updated `o nas` mockup matches
+
+### Phase 13: Tablet header — contact/booking toggle button
+
+#### Automated
+
+- [ ] 13.1 `npm run lint` · `npx astro check` · `npm run build` pass
+
+#### Manual
+
+- [ ] 13.2 Tablet header shows the contact/booking toggle button; no overflow/wrap; toggles call↔book per design
+- [ ] 13.3 Wide-desktop + mobile headers unchanged; vision-diff of tablet header vs the Cennik-tablet mockup matches
