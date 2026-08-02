@@ -253,6 +253,34 @@ Wire remaining links, sync foundation docs, ship the mock-update brief, and run 
 
 ---
 
+## Phase 6: Post-implementation refinements
+
+### Overview
+
+Review-driven refinements to the shipped S-09 surfaces (shell + O nas / FAQ / Cennik), gathered after the initial build. The specific changes are filled in from the user's review feedback, then implemented like any other phase — each staying within the design contract (exact values; recorded deviations preserved).
+
+### Changes Required:
+
+#### 1. Remove the "Dostępny" availability badge from customer vehicle surfaces
+
+**Files**: `src/components/vehicle/VehicleCard.astro`, `src/components/vehicle/LandingVehicleCard.astro`, `src/components/vehicle/VehicleDetail.astro`; delete `src/components/vehicle/StatusPill.astro`.
+**Intent**: The badge always renders `available` → "Dostępny" (every listed/detail vehicle is bookable in-context — RLS hides inactive rows and the availability RPC excludes overlapping bookings; no surface ever passes `reserved`/"Zajęty"). It conveys nothing to the customer and clutters the cards.
+**Contract**: Remove the `<StatusPill/>` render + its import from the catalogue card, the landing "Popularne" card, and the `/fleet/[id]` detail header (drop the empty wrapper `div` in the detail so no spacer is left). `StatusPill.astro` becomes orphaned (no importers; `ReservationStatusCard` only references it in a comment) → delete it. No behavioural/data change; purely a UI declutter.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- `npm run lint` · `npx astro check` · `npm run build` all pass
+- Existing unit tests still pass: `npm test`
+
+#### Manual Verification:
+
+- Each requested refinement is visibly applied
+- Rendered vision-diff of every touched surface still matches the mockups (recorded deviations aside)
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -360,3 +388,14 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 - [x] 5.4 Vision-diff across all six surfaces empty except recorded deviations — 7ce1de1
 - [x] 5.5 `roadmap.md` S-09 = done; `design-system.md` rows 27–29 added — 7ce1de1
 - [x] 5.6 `content-factcheck.md` handed to the user — 7ce1de1
+
+### Phase 6: Post-implementation refinements
+
+#### Automated
+
+- [x] 6.1 `npm run lint` · `npx astro check` · `npm run build` pass; unit tests green
+- [x] 6.2 No `StatusPill` importers remain (component deleted)
+
+#### Manual
+
+- [x] 6.3 "Dostępny" badge gone from /fleet cards, landing Popularne cards, and /fleet/[id] detail; cards render cleanly with no leftover gap
