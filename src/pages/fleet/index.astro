@@ -10,6 +10,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import VehicleCard from "../../components/vehicle/VehicleCard.astro";
 import CategoryIcon from "../../components/vehicle/CategoryIcon.astro";
 import FilterBar from "../../components/vehicle/FilterBar.tsx";
+import FleetTypeScroll from "../../components/vehicle/FleetTypeScroll.tsx";
 
 // others
 import type { CatalogSort, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
@@ -70,6 +71,15 @@ function tabHref(category: VehicleCategory | null): string {
   const query = params.toString();
   return `/fleet${query ? `?${query}` : ""}`;
 }
+
+// The mobile dark type-pill scroller (FleetTypeScroll island) needs each tab's href
+// resolved server-side so its anchors work before hydration / with JS off.
+const scrollerPills = tabs.map((tab) => ({
+  category: tab.category,
+  label: tab.label,
+  count: tab.count,
+  href: tabHref(tab.category),
+}));
 
 // Active-filter summary chips: indicate what's applied and let the visitor drop a
 // single filter (link to the listing minus that one) or clear all (→ /fleet).
@@ -160,48 +170,9 @@ const chipClass =
       }
     </div>
 
-    <!-- Category tabs: square horizontal-scroll on mobile (design 02). Replaced by
-         the dark type-pill scroller in Phase 4. -->
-    <div
-      class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
-    >
-      {
-        tabs.map((tab) => (
-          <a
-            href={tabHref(tab.category)}
-            class:list={[
-              "inline-flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 text-center text-[11px] font-semibold transition-colors",
-              filters.category === tab.category
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card text-foreground hover:border-foreground/40 border-[var(--flota-hair)]",
-            ]}
-          >
-            <span class="flex w-8 shrink-0 items-center justify-center">
-              {tab.category === null ? (
-                <svg
-                  class="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                </svg>
-              ) : (
-                <CategoryIcon category={tab.category} class="size-5" />
-              )}
-            </span>
-            <span class="leading-tight">{tab.label}</span>
-          </a>
-        ))
-      }
-    </div>
+    <!-- Category type-pills (mobile, design ScreenMobileFleet). The dark animated
+         scroller; anchors still navigate before hydration. Hidden at sm+. -->
+    <FleetTypeScroll pills={scrollerPills} active={filters.category} client:visible />
 
     <!-- Filter bar -->
     <div class="pb-4">
