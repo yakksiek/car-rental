@@ -121,21 +121,6 @@ export default function HeaderContactToggle() {
   return (
     <div className="inline-flex items-center gap-1 rounded-full bg-[#EAEDF2] p-1">
       <Segment
-        active={mode === "book"}
-        href="/fleet"
-        ariaLabel={mode === "book" ? "Zarezerwuj pojazd" : "Pokaż rezerwację"}
-        activeBackground={INKD}
-        fontWeight={650}
-        label="Zarezerwuj"
-        revealWidth={112}
-        onActivate={() => {
-          setMode("book");
-        }}
-      >
-        <CalendarGlyph />
-      </Segment>
-
-      <Segment
         active={mode === "phone"}
         href="tel:+48221002030"
         ariaLabel={mode === "phone" ? "Zadzwoń: +48 22 100 20 30" : "Pokaż numer telefonu"}
@@ -148,6 +133,21 @@ export default function HeaderContactToggle() {
         }}
       >
         <PhoneGlyph />
+      </Segment>
+
+      <Segment
+        active={mode === "book"}
+        href="/fleet"
+        ariaLabel={mode === "book" ? "Zarezerwuj pojazd" : "Pokaż rezerwację"}
+        activeBackground={INKD}
+        fontWeight={650}
+        label="Zarezerwuj"
+        revealWidth={112}
+        onActivate={() => {
+          setMode("book");
+        }}
+      >
+        <CalendarGlyph />
       </Segment>
     </div>
   );
