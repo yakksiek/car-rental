@@ -305,8 +305,8 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 #### Manual
 
 - [x] 1.5 Header/footer render on fleet/detail/reserve/`/r` with no regression (vision-diff) — deff00c
-- [x] 1.6 Mobile phone-reveal expands/dials; hamburger overlay lists 5 links, Escape-closes
-- [x] 1.7 Vision-diff of redesigned header/footer vs design-review matches (deviations aside)
+- [x] 1.6 Mobile phone-reveal expands/dials; hamburger overlay lists 5 links, Escape-closes — 7ce1de1
+- [x] 1.7 Vision-diff of redesigned header/footer vs design-review matches (deviations aside) — 7ce1de1
 
 ### Phase 2: O nas page (`/about`)
 
@@ -318,7 +318,7 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 #### Manual
 
 - [x] 2.3 Live "pojazdy we flocie" = active count; `—` fallback when Supabase unset — 97f84ec
-- [x] 2.4 Vision-diff (desktop + mobile) vs `o nas *.jpg` matches (deviations aside)
+- [x] 2.4 Vision-diff (desktop + mobile) vs `o nas *.jpg` matches (deviations aside) — 7ce1de1
 
 ### Phase 3: FAQ page (`/faq`)
 
@@ -329,9 +329,9 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Manual
 
-- [x] 3.3 Single-open works; toggle +→× and ghost numbers animate at both breakpoints
+- [x] 3.3 Single-open works; toggle +→× and ghost numbers animate at both breakpoints — 7ce1de1
 - [x] 3.4 Works with JS disabled (native `<details>`) — ed85815
-- [x] 3.5 Vision-diff vs `faq *.jpg` matches (deviations aside)
+- [x] 3.5 Vision-diff vs `faq *.jpg` matches (deviations aside) — 7ce1de1
 
 ### Phase 4: Cennik page (`/pricing`) — hybrid
 
@@ -345,18 +345,18 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 #### Manual
 
 - [x] 4.5 Table = `MIN(daily/monthly)` per active category via `formatPln`; empties hidden; fallback row when unset — 3000183
-- [x] 4.6 Vision-diff vs `prices *.jpg` matches (rate-rows deviation expected pre-mock-update)
+- [x] 4.6 Vision-diff vs `prices *.jpg` matches (rate-rows deviation expected pre-mock-update) — 7ce1de1
 
 ### Phase 5: Finalize — cross-links, catalog sync, vision-diff
 
 #### Automated
 
-- [x] 5.1 Full build + lint + `astro check` green
-- [x] 5.2 Unit + integration suites pass
-- [x] 5.3 No broken internal links
+- [x] 5.1 Full build + lint + `astro check` green — 7ce1de1
+- [x] 5.2 Unit + integration suites pass — 7ce1de1
+- [x] 5.3 No broken internal links — 7ce1de1
 
 #### Manual
 
-- [x] 5.4 Vision-diff across all six surfaces empty except recorded deviations
-- [x] 5.5 `roadmap.md` S-09 = done; `design-system.md` rows 27–29 added
-- [x] 5.6 `content-factcheck.md` handed to the user
+- [x] 5.4 Vision-diff across all six surfaces empty except recorded deviations — 7ce1de1
+- [x] 5.5 `roadmap.md` S-09 = done; `design-system.md` rows 27–29 added — 7ce1de1
+- [x] 5.6 `content-factcheck.md` handed to the user — 7ce1de1
