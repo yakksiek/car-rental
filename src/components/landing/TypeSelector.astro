@@ -32,7 +32,7 @@ const CATEGORIES: VehicleCategory[] = [
 
 <section class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
   <div class="mb-6 flex items-end justify-between gap-4">
-    <h2 class="text-foreground font-serif text-[28px] leading-none xl:text-[44px]">
+    <h2 class="text-foreground font-serif text-[28px] leading-none md:text-[32px] xl:text-[44px]">
       Wybierz typ pojazdu<span class="text-primary">.</span>
     </h2>
     <a
@@ -56,7 +56,7 @@ const CATEGORIES: VehicleCategory[] = [
   </div>
 
   <div
-    class="xl:border-border xl:bg-card flex flex-nowrap gap-2 overflow-x-auto xl:inline-flex xl:gap-[9px] xl:overflow-visible xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
+    class="xl:border-border xl:bg-card flex flex-nowrap gap-2 overflow-x-auto md:flex-wrap md:gap-[10px] md:overflow-visible xl:inline-flex xl:gap-[9px] xl:overflow-visible xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
   >
     {
       CATEGORIES.map((category) => {
@@ -74,7 +74,7 @@ const CATEGORIES: VehicleCategory[] = [
             <CategoryIcon
               category={category}
               class:list={[
-                category === "car_transporter" && "xl:size-[20px]",
+                category === "car_transporter" && "md:size-[20px]",
                 isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]",
               ]}
             />
