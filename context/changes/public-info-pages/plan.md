@@ -679,21 +679,21 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 11.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 11.1 `npm run lint` · `npx astro check` · `npm run build` pass — 149f28f
 
 #### Manual
 
-- [x] 11.2 About stat cards show the crimson top bar + faint corner watermark; vision-diff vs the updated `o nas` mockup matches
+- [x] 11.2 About stat cards show the crimson top bar + faint corner watermark; vision-diff vs the updated `o nas` mockup matches — 149f28f
 
 ### Phase 12: About "Nasza flota" list icons → canonical set
 
 #### Automated
 
-- [ ] 12.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 12.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 12.2 About fleet-list icons use the canonical glyph set; vision-diff vs the updated `o nas` mockup matches
+- [x] 12.2 About fleet-list icons use the canonical glyph set; vision-diff vs the updated `o nas` mockup matches
 
 ### Phase 13: Tablet header — contact/booking toggle button
 

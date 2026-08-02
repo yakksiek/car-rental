@@ -17,7 +17,10 @@ export type InfoIconName =
   | "invoice"
   | "headset"
   | "van"
+  | "truck"
   | "bus"
+  | "box"
+  | "flatbed"
   | "container"
   | "lift"
   | "crew"
@@ -71,6 +74,19 @@ export const ICONS: Record<InfoIconName, IconEl[]> = {
     { path: "M3 7h11v9H3zM14 10h4l3 3.2V16h-7" },
     { circle: { cx: 7.5, cy: 18, r: 1.8 } },
     { circle: { cx: 17.5, cy: 18, r: 1.8 } },
+  ],
+  // Design `Icon.*` (shared.jsx) — the canonical O nas "Nasza flota" list glyphs (S-09 P12).
+  truck: [
+    { path: "M3 7h11v10H3zM14 11h5l2 3v3h-7" },
+    { circle: { cx: 7, cy: 18, r: 2 } },
+    { circle: { cx: 17, cy: 18, r: 2 } },
+  ],
+  box: [{ path: "M12 2.6l8 4.4v9L12 20.4 4 16V7z" }, { path: "M4.2 7L12 11.4 19.8 7M12 11.4V20" }],
+  flatbed: [
+    { path: "M2 16.5h12M14 16.5V9h4.5l3 3.2v4.3H19" },
+    { path: "M5 12.5h6.5" },
+    { circle: { cx: 7, cy: 18.4, r: 1.7 } },
+    { circle: { cx: 18, cy: 18.4, r: 1.7 } },
   ],
   bus: [
     { rect: { x: 4, y: 4, w: 16, h: 12, rx: 2 } },
