@@ -297,14 +297,14 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [ ] 1.1 Lint passes: `npm run lint`
-- [ ] 1.2 Types/Astro check passes: `npx astro check`
-- [ ] 1.3 Production build succeeds: `npm run build`
-- [ ] 1.4 No `@/` local imports introduced (ESLint green)
+- [x] 1.1 Lint passes: `npm run lint`
+- [x] 1.2 Types/Astro check passes: `npx astro check`
+- [x] 1.3 Production build succeeds: `npm run build`
+- [x] 1.4 No `@/` local imports introduced (ESLint green)
 
 #### Manual
 
-- [ ] 1.5 Header/footer render on fleet/detail/reserve/`/r` with no regression (vision-diff)
+- [x] 1.5 Header/footer render on fleet/detail/reserve/`/r` with no regression (vision-diff)
 - [ ] 1.6 Mobile phone-reveal expands/dials; hamburger overlay lists 5 links, Escape-closes
 - [ ] 1.7 Vision-diff of redesigned header/footer vs design-review matches (deviations aside)
 
