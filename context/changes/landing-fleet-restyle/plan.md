@@ -464,9 +464,9 @@ revert of the touched components/page.
 
 #### Automated
 
-- [ ] 1.1 Types pass: `npx astro check`
-- [ ] 1.2 Lint passes: `npm run lint`
-- [ ] 1.3 Production build succeeds: `npm run build`
+- [x] 1.1 Types pass: `npx astro check`
+- [x] 1.2 Lint passes: `npm run lint`
+- [x] 1.3 Production build succeeds: `npm run build`
 
 #### Manual
 
