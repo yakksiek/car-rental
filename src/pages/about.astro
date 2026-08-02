@@ -1,0 +1,240 @@
+---
+// core
+import { Picture } from "astro:assets";
+
+// components
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import InfoIcon from "../components/icons/InfoIcon.astro";
+
+// others
+import type { InfoIconName } from "../components/icons/info-icons";
+import { getCategoryCounts } from "../lib/services/vehicles";
+import heroImg from "../assets/hero-airfield.jpg";
+
+// O nas — static marketing page (design `ScreenAboutDesktop/Mobile`, AboutBody) over
+// the shared shell. One live datum: the "pojazdy we flocie" stat = active-vehicle
+// count (getCategoryCounts). Everything else is verbatim design copy. The hero photo
+// reuses src/assets/hero-airfield.jpg via astro:assets (mirrors index.astro).
+
+const counts = await getCategoryCounts(Astro.locals.supabase);
+// LIVE fleet count; "—" when Supabase is unset/empty (states-undesigned deviation).
+const fleetCount = counts.total > 0 ? String(counts.total) : "—";
+
+const stats: { icon: InfoIconName; n: string; l: string }[] = [
+  { icon: "shield", n: "10+", l: "lat na rynku" },
+  { icon: "van", n: fleetCount, l: "pojazdy we flocie" },
+  { icon: "headset", n: "24/7", l: "wsparcie i assistance" },
+  { icon: "spark", n: "do 2 lat", l: "maks. wiek auta" },
+];
+
+const fleetItems: { icon: InfoIconName; t: string; d: string }[] = [
+  { icon: "van", t: "Furgony L3 i L4H2", d: "Renault Master, Ford Transit, Mercedes Sprinter" },
+  { icon: "bus", t: "Busy 8–9 osobowe", d: "Idealne do przewozu większych grup" },
+  { icon: "container", t: "Kontenery 8–10 europalet", d: "Zabudowa kontenerowa i plandeka" },
+  { icon: "lift", t: "Winda załadowcza", d: "Łatwy za- i rozładunek ciężkich palet" },
+  { icon: "crew", t: "Brygadówki 7-osobowe", d: "Załoga i ładunek w jednym aucie" },
+  { icon: "city", t: "Małe vany miejskie", d: "Zwrotne, do transportu w mieście" },
+];
+
+const values: { icon: InfoIconName; t: string; d: string }[] = [
+  { icon: "shield", t: "Pełne ubezpieczenie", d: "Każdy pojazd z AC, OC i NNW oraz assistance 24/7 w całej Polsce." },
+  { icon: "gauge", t: "Niski przebieg", d: "Auta z gwarancją producenta, serwisowane i utrzymane w idealnym stanie." },
+  { icon: "spark", t: "Nowoczesna flota", d: "Wymieniamy pojazdy maks. co 2 lata — jeździsz najnowszymi modelami." },
+  {
+    icon: "calendar",
+    t: "Elastyczne terminy",
+    d: "Wynajem na dobę, krótko-, średnio- i długoterminowy — jak potrzebujesz.",
+  },
+  { icon: "invoice", t: "Faktura VAT", d: "Pełna dokumentacja i faktura do każdego wynajmu, także dla firm." },
+  { icon: "headset", t: "Wsparcie 24/7", d: "Jesteśmy pod telefonem o każdej porze — także w weekendy i święta." },
+];
+
+const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = [
+  { icon: "phone", k: "Telefon", v: "+48 22 100 20 30", href: "tel:+48221002030" },
+  { icon: "mail", k: "E-mail", v: "kontakt@flota.pl", href: "mailto:kontakt@flota.pl" },
+  { icon: "pin", k: "Adres", v: "Al. Jerozolimskie 200, Warszawa" },
+  { icon: "clock", k: "Godziny", v: "Czynne 24 / 7" },
+];
+---
+
+<Layout title="O nas — Flota">
+  <SiteHeader active="about" />
+
+  <main>
+    <!-- Hero -->
+    <div
+      class="bg-card border-b border-[var(--flota-hair-2)] px-[22px] pt-[30px] pb-[34px] sm:px-[48px] sm:pt-[58px] sm:pb-[62px]"
+    >
+      <div class="mx-auto max-w-[1180px]">
+        <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
+          <span class="bg-primary size-1.5 rounded-full"></span>
+          O nas
+        </div>
+        <h1
+          class="text-foreground mt-4 text-[34px] leading-[1.02] font-bold tracking-[-1px] text-balance sm:text-[54px] sm:tracking-[-1.8px]"
+        >
+          Flota, na której możesz polegać
+        </h1>
+        <p class="mt-4 max-w-[680px] text-[15px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[18px]">
+          Jesteśmy zespołem z ponad 10-letnim doświadczeniem w wynajmie samochodów dostawczych. Oferujemy elastyczne
+          rozwiązania dla firm i klientów indywidualnych — od jednej doby po wynajem długoterminowy.
+        </p>
+      </div>
+    </div>
+
+    <!-- Stats band (fleet count is live) -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        {
+          stats.map((s) => (
+            <div class="bg-card rounded-[16px] border border-[var(--flota-hair-2)] p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:px-[26px] sm:py-[24px]">
+              <InfoIcon name={s.icon} size={22} color="var(--flota-accent)" />
+              <div class="text-foreground mt-3 text-[32px] leading-none font-[780] tracking-[-2px] sm:mt-4 sm:text-[46px]">
+                {s.n}
+              </div>
+              <div class="text-muted-foreground mt-2 text-[13.5px] font-semibold">{s.l}</div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <!-- Narrative + photo -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <div class="grid grid-cols-1 items-center gap-[22px] sm:grid-cols-2 sm:gap-[44px]">
+        <div>
+          <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
+            <span class="bg-primary size-1.5 rounded-full"></span>
+            Nasza historia
+          </div>
+          <h2 class="text-foreground mt-3 text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
+            Rzetelność i elastyczność od pierwszego dnia
+          </h2>
+          <p class="mt-3.5 text-[14.5px] leading-[1.65] text-[var(--flota-ink-2)] sm:text-[15.5px]">
+            Wszystkie nasze pojazdy są utrzymywane w doskonałym stanie technicznym, mają niski przebieg i bogate
+            wyposażenie. Niezależnie od tego, czy wynajmujesz auto na dobę, miesiąc czy dłużej, możesz liczyć na pełne
+            ubezpieczenie i wsparcie na każdym etapie.
+          </p>
+          <p class="mt-3 text-[14.5px] leading-[1.65] text-[var(--flota-ink-2)] sm:text-[15.5px]">
+            Specjalizujemy się w wynajmie krótko-, średnio- i długoterminowym, dzięki czemu dopasowujemy ofertę do
+            zmieniających się potrzeb Twojego biznesu.
+          </p>
+        </div>
+        <div
+          class="h-[220px] overflow-hidden rounded-[22px] border border-[var(--flota-hair)] bg-[#0A0D14] sm:h-[340px]"
+        >
+          <Picture
+            src={heroImg}
+            formats={["avif", "webp"]}
+            alt=""
+            width={1180}
+            height={680}
+            class="h-full w-full object-cover"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Nasza flota -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
+        Nasza flota
+      </h2>
+      <div class="mt-1 mb-1.5 text-[14px] text-[var(--flota-ink-2)] sm:text-[15px]">
+        Szeroki wybór pojazdów do każdego zadania transportowego.
+      </div>
+      <div class="mt-1 grid grid-cols-1 sm:mt-3 sm:grid-cols-2 sm:gap-x-14">
+        {
+          fleetItems.map((item) => (
+            <div class="flex items-start gap-4 border-b border-[var(--flota-hair-2)] py-[15px] sm:px-[2px] sm:py-[18px]">
+              <span class="mt-0.5 shrink-0 leading-none">
+                <InfoIcon name={item.icon} size={26} color="var(--flota-accent)" />
+              </span>
+              <div>
+                <div class="text-foreground text-[15px] font-bold tracking-[-0.3px] sm:text-[16px]">{item.t}</div>
+                <div class="text-muted-foreground mt-[3px] text-[13px] leading-[1.45]">{item.d}</div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <!-- Dlaczego Flota -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
+        Dlaczego Flota
+      </h2>
+      <div class="mt-2 grid grid-cols-1 sm:mt-[26px] sm:grid-cols-3 sm:gap-x-11 sm:gap-y-[34px]">
+        {
+          values.map((v) => (
+            <div class="border-t border-[var(--flota-hair-2)] py-[18px] sm:border-t-0 sm:py-[2px]">
+              <InfoIcon name={v.icon} size={30} color="var(--flota-accent)" />
+              <div class="text-foreground mt-3 text-[15.5px] font-bold tracking-[-0.3px] sm:mt-4 sm:text-[17px]">
+                {v.t}
+              </div>
+              <div class="mt-1.5 max-w-[300px] text-[13.5px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[14.5px]">
+                {v.d}
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <!-- Kontakt card -->
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <div
+        id="kontakt"
+        class="bg-ink-deep grid grid-cols-1 gap-[22px] rounded-[24px] p-6 sm:grid-cols-2 sm:gap-10 sm:px-[44px] sm:py-[40px]"
+      >
+        <div>
+          <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
+            <span class="bg-primary size-1.5 rounded-full"></span>
+            Kontakt
+          </div>
+          <div class="mt-3 mb-2 text-[24px] leading-[1.05] font-bold tracking-[-0.8px] text-white sm:text-[32px]">
+            Porozmawiajmy o Twoim transporcie
+          </div>
+          <div class="text-[14px] leading-[1.55] text-white/[0.72] sm:text-[15.5px]">
+            Zadzwoń lub napisz — dobierzemy pojazd i termin do Twoich potrzeb. Jesteśmy dostępni całą dobę.
+          </div>
+          <a
+            href="/fleet"
+            class="bg-primary mt-5 inline-flex h-12 items-center gap-2 rounded-[12px] px-6 text-[15px] font-[650] text-white"
+          >
+            Zarezerwuj pojazd
+            <InfoIcon name="arrowRight" size={17} color="#fff" />
+          </a>
+        </div>
+        <div class="flex flex-col gap-1">
+          {
+            contacts.map((c) => (
+              <div class="flex items-center gap-3.5 border-b border-white/10 py-[13px] last:border-b-0">
+                <div class="flex size-[42px] shrink-0 items-center justify-center rounded-[11px] bg-white/10">
+                  <InfoIcon name={c.icon} size={20} color="#fff" />
+                </div>
+                <div>
+                  <div class="text-[11.5px] font-bold tracking-[0.4px] text-white/50 uppercase">{c.k}</div>
+                  {c.href ? (
+                    <a href={c.href} class="mt-0.5 block text-[15px] font-[650] text-white sm:text-[16px]">
+                      {c.v}
+                    </a>
+                  ) : (
+                    <div class="mt-0.5 text-[15px] font-[650] text-white sm:text-[16px]">{c.v}</div>
+                  )}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="h-9 sm:h-[60px]"></div>
+  </main>
+
+  <SiteFooter />
+</Layout>

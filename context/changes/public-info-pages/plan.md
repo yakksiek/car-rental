@@ -297,14 +297,14 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Types/Astro check passes: `npx astro check`
-- [x] 1.3 Production build succeeds: `npm run build`
-- [x] 1.4 No `@/` local imports introduced (ESLint green)
+- [x] 1.1 Lint passes: `npm run lint` — deff00c
+- [x] 1.2 Types/Astro check passes: `npx astro check` — deff00c
+- [x] 1.3 Production build succeeds: `npm run build` — deff00c
+- [x] 1.4 No `@/` local imports introduced (ESLint green) — deff00c
 
 #### Manual
 
-- [x] 1.5 Header/footer render on fleet/detail/reserve/`/r` with no regression (vision-diff)
+- [x] 1.5 Header/footer render on fleet/detail/reserve/`/r` with no regression (vision-diff) — deff00c
 - [ ] 1.6 Mobile phone-reveal expands/dials; hamburger overlay lists 5 links, Escape-closes
 - [ ] 1.7 Vision-diff of redesigned header/footer vs design-review matches (deviations aside)
 
@@ -312,12 +312,12 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` · `npx astro check` · `npm run build` pass
-- [ ] 2.2 `/about` responds 200
+- [x] 2.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 2.2 `/about` responds 200
 
 #### Manual
 
-- [ ] 2.3 Live "pojazdy we flocie" = active count; `—` fallback when Supabase unset
+- [x] 2.3 Live "pojazdy we flocie" = active count; `—` fallback when Supabase unset
 - [ ] 2.4 Vision-diff (desktop + mobile) vs `o nas *.jpg` matches (deviations aside)
 
 ### Phase 3: FAQ page (`/faq`)
