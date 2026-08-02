@@ -31,6 +31,13 @@ interface Props {
 
 const keyOf = (category: VehicleCategory | null): string => category ?? "all";
 
+// Smooth expand/collapse (mirrors HeaderContactToggle): a fixed 40px icon holder that
+// never moves + a `min-w-0 overflow-hidden` label wrapper whose max-width animates.
+// Only flex / max-width / background / color transition — never `transition-all` with
+// animated padding/margin, which snapped.
+const EASE = "cubic-bezier(.22,1,.36,1)";
+const DUR = 320;
+
 function CategoryGlyph({ category, className }: { category: VehicleCategory | null; className?: string }) {
   return (
     <svg
@@ -116,7 +123,7 @@ export default function FleetTypeScroll({ pills, active }: Props) {
   }
 
   return (
-    <div className="-mx-5 mb-[22px] px-5 sm:hidden">
+    <div className="-mx-5 mb-[22px] px-5 pt-8 sm:hidden">
       <div className="flex gap-[2px] rounded-full bg-[#0A0A0F] p-[5px] shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
         {pills.map((pill) => {
           const isActive = current === keyOf(pill.category);
@@ -129,20 +136,23 @@ export default function FleetTypeScroll({ pills, active }: Props) {
               }}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex h-10 items-center overflow-hidden rounded-full transition-all duration-[320ms] ease-[cubic-bezier(.22,1,.36,1)] focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none",
-                isActive
-                  ? "flex-1 justify-center bg-white pr-4 pl-3 text-[#0A0A0F]"
-                  : "w-10 shrink-0 justify-center text-white/70",
+                "flex h-10 items-center overflow-hidden rounded-full focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none",
+                isActive ? "flex-[1_1_auto] bg-white text-[#0A0A0F]" : "w-10 shrink-0 text-white/[0.72]",
               )}
+              style={{
+                transition: `flex ${DUR}ms ${EASE}, background-color .25s ease, color .2s ease`,
+              }}
             >
-              <CategoryGlyph category={pill.category} className="size-[18px] shrink-0" />
+              <span className="flex size-10 shrink-0 items-center justify-center">
+                <CategoryGlyph category={pill.category} className="size-[18px]" />
+              </span>
               <span
-                className={cn(
-                  "overflow-hidden text-[13.5px] font-[650] tracking-[-0.1px] whitespace-nowrap transition-all duration-[320ms] ease-[cubic-bezier(.22,1,.36,1)]",
-                  isActive ? "ml-2 max-w-[180px] opacity-100" : "ml-0 max-w-0 opacity-0",
-                )}
+                className="min-w-0 overflow-hidden"
+                style={{ maxWidth: isActive ? 180 : 0, transition: `max-width ${DUR}ms ${EASE}` }}
               >
-                {pill.label} · {pill.count}
+                <span className="block pr-[14px] pl-0.5 text-[13.5px] font-[650] tracking-[-0.1px] whitespace-nowrap">
+                  {pill.label} <span className="opacity-40">·</span> {pill.count}
+                </span>
               </span>
             </a>
           );

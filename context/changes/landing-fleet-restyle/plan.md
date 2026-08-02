@@ -783,19 +783,19 @@ revert of the touched components/page.
 
 #### Automated
 
-- [ ] 6A.1 Types pass: `npx astro check`
-- [ ] 6A.2 Lint passes: `npm run lint`
-- [ ] 6A.3 Production build succeeds: `npm run build`
-- [ ] 6A.4 Unit tests pass: `npm test`
+- [x] 6A.1 Types pass: `npx astro check`
+- [x] 6A.2 Lint passes: `npm run lint`
+- [x] 6A.3 Production build succeeds: `npm run build`
+- [x] 6A.4 Unit tests pass: `npm test`
 
 #### Manual
 
-- [ ] 6A.5 Ładowność/Sortowanie render 52px desktop / 50px mobile (like Termin); icon chips have breathing room
-- [ ] 6A.6 Mobile rows: bare calendar glyph; Ładowność/Sortowanie labels dark, not muted
-- [ ] 6A.7 Scroller expand/collapse is smooth (no padding snap); instant nav + no-JS still work
-- [ ] 6A.8 3-col cards show price-left / Rezerwuj-right at ~1280px
-- [ ] 6A.9 Result heading gone; pill bar ~40px below header at all breakpoints
-- [ ] 6A.10 Filter apply / date validation / clear-all unchanged
+- [x] 6A.5 Ładowność/Sortowanie render 52px desktop / 50px mobile (like Termin); icon chips have breathing room
+- [x] 6A.6 Mobile rows: bare calendar glyph; Ładowność/Sortowanie labels dark, not muted
+- [x] 6A.7 Scroller expand/collapse is smooth (no padding snap); instant nav + no-JS still work
+- [x] 6A.8 3-col cards show price-left / Rezerwuj-right at ~1280px
+- [x] 6A.9 Result heading gone; pill bar ~40px below header at all breakpoints
+- [x] 6A.10 Filter apply / date validation / clear-all unchanged
 
 ### Phase 6B: Landing hero, nav & trust-card polish
 
