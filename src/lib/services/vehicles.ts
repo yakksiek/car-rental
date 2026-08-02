@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
 import type { Vehicle, VehicleCategory, VehicleFilters } from "../../types";
 import type { VehicleInput } from "../vehicle-schema";
+import { categoryLabelPl } from "../format";
 
 // The single home for public catalog queries. Two paths return the identical
 // `Vehicle[]` so the UI has one card and one mapper:
@@ -123,6 +124,85 @@ export async function getCategoryCounts(client: CatalogClient | null): Promise<C
     byCategory[row.category] += 1;
   }
   return { total: data.length, byCategory };
+}
+
+export interface CategoryPricing {
+  category: VehicleCategory;
+  label: string;
+  minDaily: number;
+  minMonthly: number;
+  count: number;
+}
+
+// Canonical category order for the Cennik table — matches CATEGORY_LABELS_PL and
+// getCategoryCounts.byCategory so every fleet read presents categories the same way.
+const CATEGORY_PRICING_ORDER: VehicleCategory[] = [
+  "cargo_van",
+  "passenger_van",
+  "car_transporter",
+  "refrigerated_truck",
+  "flatbed_truck",
+];
+
+/**
+ * Pure reducer: fold active vehicles into per-category "from" pricing (the cheapest
+ * daily + monthly rate in each category). The money columns deserialize as **strings**
+ * (src/types.ts) despite the generated `number` type, so the param accepts `string |
+ * number` and every compare goes through `Number(...)` — never `.toFixed()` a raw
+ * value. Empty categories are dropped; the result is in canonical category order.
+ * Exported for unit testing independently of the DB read.
+ */
+export function reduceCategoryPricing(
+  vehicles: { category: VehicleCategory; daily_rate: string | number; monthly_rate: string | number }[],
+): CategoryPricing[] {
+  const byCategory = new Map<VehicleCategory, { minDaily: number; minMonthly: number; count: number }>();
+  for (const vehicle of vehicles) {
+    const daily = Number(vehicle.daily_rate);
+    const monthly = Number(vehicle.monthly_rate);
+    const existing = byCategory.get(vehicle.category);
+    if (existing) {
+      existing.minDaily = Math.min(existing.minDaily, daily);
+      existing.minMonthly = Math.min(existing.minMonthly, monthly);
+      existing.count += 1;
+    } else {
+      byCategory.set(vehicle.category, { minDaily: daily, minMonthly: monthly, count: 1 });
+    }
+  }
+
+  const result: CategoryPricing[] = [];
+  for (const category of CATEGORY_PRICING_ORDER) {
+    const entry = byCategory.get(category);
+    if (!entry) {
+      continue;
+    }
+    result.push({
+      category,
+      label: categoryLabelPl(category),
+      minDaily: entry.minDaily,
+      minMonthly: entry.minMonthly,
+      count: entry.count,
+    });
+  }
+  return result;
+}
+
+/**
+ * Per-category "from" rates for the public Cennik table, over active vehicles. Reuses
+ * the PII-safe `listVehicles` query, then folds with `reduceCategoryPricing`. A `null`
+ * client (Supabase unconfigured) yields `[]` so the page shows its fallback row.
+ */
+export async function getCategoryPricing(client: CatalogClient | null): Promise<CategoryPricing[]> {
+  if (!client) {
+    return [];
+  }
+  const vehicles = await listVehicles(client, {
+    category: null,
+    pickup: null,
+    return: null,
+    minPayload: null,
+    sort: null,
+  });
+  return reduceCategoryPricing(vehicles);
 }
 
 // A malformed id is just a vehicle that cannot exist. We reject it before the

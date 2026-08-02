@@ -1,0 +1,52 @@
+---
+// others
+import { ICONS, type InfoIconName } from "./info-icons";
+
+// Renders one glyph from the shared info-page icon set. `currentColor` drives both
+// the stroke and the gauge dot's fill, so a single `color` prop recolors the whole
+// glyph. Default stroke-width is 1.7 (the design's Icon.base); UI chevrons/hamburger
+// pass `stroke={2}`. Geometry + names live in ./info-icons.ts.
+
+interface Props {
+  name: InfoIconName;
+  size?: number;
+  color?: string;
+  stroke?: number;
+  class?: string;
+}
+
+const { name, size = 22, color = "currentColor", stroke = 1.7, class: className } = Astro.props;
+const els = ICONS[name];
+---
+
+<svg
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width={stroke}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  style={color === "currentColor" ? undefined : `color:${color}`}
+  class:list={className}
+>
+  {
+    els.map((el) =>
+      el.path ? (
+        <path d={el.path} />
+      ) : el.rect ? (
+        <rect x={el.rect.x} y={el.rect.y} width={el.rect.w} height={el.rect.h} rx={el.rect.rx} />
+      ) : el.circle ? (
+        <circle
+          cx={el.circle.cx}
+          cy={el.circle.cy}
+          r={el.circle.r}
+          fill={el.circle.fill ? "currentColor" : undefined}
+          stroke={el.circle.fill ? "none" : undefined}
+        />
+      ) : null,
+    )
+  }
+</svg>

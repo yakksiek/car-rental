@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-07-24
+updated: 2026-08-02
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -39,17 +39,19 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed           | S-05          | US-02, FR-007/008, NFR | done   |
 | S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                  | F-02, S-02    | FR-012                 | done   |
 | S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password         | F-02          | FR-013                 | done   |
+| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site | F-01, S-01    | FR-003 reuse; post-v1  | done   |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                       | Chain                             | Note                                                                                           |
-| ------ | --------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------- |
-| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`          | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.            |
-| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06` | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.          |
-| C      | Fleet & account admin       | `S-04` / `S-08`                   | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever. |
-| D      | Operations visibility       | `S-07`                            | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after. |
+| Stream | Theme                       | Chain                             | Note                                                                                                                                                        |
+| ------ | --------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`          | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.                                                                         |
+| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06` | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.                                                                       |
+| C      | Fleet & account admin       | `S-04` / `S-08`                   | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever.                                                              |
+| D      | Operations visibility       | `S-07`                            | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after.                                                              |
+| E      | Public content pages        | `S-09`                            | Informational pages over the existing public shell; About/FAQ static, Cennik reads live pricing (F-01, read-only). No auth. Independent — schedule anytime. |
 
 ## Baseline
 
@@ -211,21 +213,38 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Admin-only and fully independent once roles exist — the most freely schedulable slice, which is why it's parked toward the end of the must-have path under the speed goal but can be picked up anytime after F-02 to fill capacity gaps.
 - **Status:** done
 
+### S-09: Public informational pages (About / FAQ / Pricing)
+
+- **Outcome:** A visitor can open three public content pages from the site nav — **O nas** (`/about`), **FAQ** (`/faq`), and **Cennik** (`/pricing`) — each rendered in the existing public shell (`Layout` + `SiteHeader` + `SiteFooter`) over the live tokens/fonts. O nas and FAQ are static content; **Cennik renders prices dynamically from the fleet data** (a live pricing table/grid per the user-supplied mockup) so the rates shown never drift from the catalog. `SiteHeader` and `SiteFooter` nav gain links to the three pages.
+- **Change ID:** public-info-pages
+- **PRD refs:** — (net-new; not in PRD v1). Cennik reuses **FR-003** pricing data (daily/monthly rate, deposit, km limit, per-extra-km); supports the public funnel (US-01) and the ≤2 s page-load NFR; adds no new FR.
+- **Prerequisites:** **F-01** (vehicle/pricing data, done) for the live Cennik prices; **S-01** (`/fleet`, done) for cross-links. The public shell already exists — no scaffolding.
+- **Parallel with:** — (every prior slice is done; fully standalone)
+- **Blockers:** the user provides **mockups for all three pages at the start of `/10x-plan`**; O nas / FAQ copy must be supplied before launch (see Unknowns — soft; placeholders unblock the build).
+- **Unknowns:**
+  - **Cennik pricing model.** Resolved → **dynamic** (pull from fleet data; static-terms option dropped). Open at plan time: the exact shape from the mockup (per-vehicle table? per-category tiers? plan cards?) and how it maps onto our stored rate fields (daily/monthly rate, deposit, km limit, per-extra-km). The mockup's pricing model must be **reconciled with our business logic** — if it shows something we don't store (weekly tiers, package deals, promo prices), that's a data-model gap to flag, not silently invent. Needs a read path (a pricing service over `listVehicles`, or a Supabase view/RPC). Owner: user. Block: no — resolve at `/10x-plan`.
+  - **Content source (O nas / FAQ).** Copy likely arrives with the mockups; if they're layout-only, the real Polish copy (About narrative, FAQ Q&A set) is a content task that gates launch, not the build. Owner: user. Block: soft.
+  - **Routes/labels.** Defaulted to English slugs + Polish labels (matching `/fleet` = "Flota"): `/about` = O nas, `/faq` = FAQ, `/pricing` = Cennik. Block: no.
+  - **FAQ accordion.** No `Accordion` primitive exists in `src/components/ui/` yet — the FAQ either adds one (`npx shadcn@latest add accordion`, then rewrite `@/` imports per CLAUDE.md) or uses native `<details>/<summary>`. Design call against the mockup at plan time. Block: no.
+- **Risk:** Still among the lowest-risk items — mostly static Astro over the existing shell. Two things lift it above pure-static: (1) **Cennik has a live read path** into pricing, so its numbers must match the catalog exactly — reuse the vehicle pricing already surfaced on `/fleet` as the single source rather than re-deriving, and reconcile the mockup's pricing model with our stored rate fields (a mismatch is a data-model decision, not styling); (2) the design comes from **user-supplied mockups delivered at the start of `/10x-plan`** (these three screens are absent from the Claude Design project / `design-system.md` catalog), so the Design Alignment Audit runs against those mockups — porting exact values per `context/foundation/lessons.md` and checking each against our business logic and tokens before build, flagging any deviation.
+- **Status:** done
+
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                   | Suggested issue title                                     | Ready for `/10x-plan` | Notes                                                                                                    |
-| ---------- | --------------------------- | --------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------- |
-| F-01       | booking-integrity-data      | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data`                                                                   |
-| F-02       | employee-admin-roles        | Employee/admin role model on existing auth                | yes                   | Parallel with F-01                                                                                       |
-| S-01       | public-fleet-catalog        | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01                                                                                               |
-| S-02       | public-reservation-request  | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01                                                                             |
-| S-02a      | changeover-day-availability | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability`                                   |
-| S-03       | reservation-approval        | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02                                                                                         |
-| S-04       | fleet-management            | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable                                                                         |
-| S-05       | issue-protocol              | Issue handover protocol + photos/signature + email        | planned               | Plan reviewed (SOUND), 7 phases. Blocked on verified sender domain; then `/10x-implement issue-protocol` |
-| S-06       | return-protocol-comparison  | Return protocol with auto-comparison + email              | no                    | Needs S-05                                                                                               |
-| S-07       | overdue-returns-dashboard   | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable                                                                         |
-| S-08       | employee-account-management | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable                                                                               |
+| Roadmap ID | Change ID                   | Suggested issue title                                     | Ready for `/10x-plan` | Notes                                                                                                                                                                                                                                 |
+| ---------- | --------------------------- | --------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F-01       | booking-integrity-data      | Vehicle/reservation data model + hotel-style overlap rule | yes                   | Run `/10x-plan booking-integrity-data`                                                                                                                                                                                                |
+| F-02       | employee-admin-roles        | Employee/admin role model on existing auth                | yes                   | Parallel with F-01                                                                                                                                                                                                                    |
+| S-01       | public-fleet-catalog        | Public fleet catalog: browse, filter, detail card         | no                    | Needs F-01                                                                                                                                                                                                                            |
+| S-02       | public-reservation-request  | Public reservation request with no double-booking         | no                    | North star; needs F-01, S-01                                                                                                                                                                                                          |
+| S-02a      | changeover-day-availability | Half-available changeover days on the booking calendar    | no                    | Needs S-02; refines FR-014; run `/10x-new changeover-day-availability`                                                                                                                                                                |
+| S-03       | reservation-approval        | Employee accept/reject pending reservations               | no                    | Needs F-02, S-02                                                                                                                                                                                                                      |
+| S-04       | fleet-management            | Fleet CRUD with deletion guard                            | no                    | Needs F-01, F-02; parallelizable                                                                                                                                                                                                      |
+| S-05       | issue-protocol              | Issue handover protocol + photos/signature + email        | planned               | Plan reviewed (SOUND), 7 phases. Blocked on verified sender domain; then `/10x-implement issue-protocol`                                                                                                                              |
+| S-06       | return-protocol-comparison  | Return protocol with auto-comparison + email              | no                    | Needs S-05                                                                                                                                                                                                                            |
+| S-07       | overdue-returns-dashboard   | Overdue returns flag on employee dashboard                | no                    | Needs F-02, S-02; parallelizable                                                                                                                                                                                                      |
+| S-08       | employee-account-management | Admin employee accounts + self-service password reset     | no                    | Needs F-02; parallelizable                                                                                                                                                                                                            |
+| S-09       | public-info-pages           | Public About/FAQ pages + dynamic pricing (Cennik)         | yes                   | Net-new (post-v1). About/FAQ static; Cennik reads live fleet pricing (F-01). Mockups supplied at plan start — reconcile Cennik's pricing model vs. our rate fields. Run `/10x-new public-info-pages` → `/10x-plan public-info-pages`. |
 
 ## Open Roadmap Questions
 
@@ -264,3 +283,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-06: A logged-in employee can fill a return protocol — the issue baseline shown as reference, all current values entered fresh — and the system auto-computes and displays deltas (km driven, fuel change, new damage); the protocol is auto-emailed to the customer.** — Archived 2026-07-23 → `context/archive/2026-07-14-return-protocol-comparison/`. Lesson: —.
 - **S-07: see overdue returns flagged automatically on the dashboard** — Archived 2026-07-23 → `context/archive/2026-07-23-overdue-returns-dashboard/`. Lesson: —.
 - **S-08: An admin can add and remove employee accounts; employees can self-service reset their own password via email.** — Archived 2026-07-24 → `context/archive/2026-07-23-employee-account-management/`. Lesson: —.
+- **S-09: A visitor can open three public content pages from the site nav — O nas (`/about`), FAQ (`/faq`), and Cennik (`/pricing`) — each rendered in the existing public shell over the live tokens/fonts. O nas and FAQ are static content; Cennik renders prices dynamically from the fleet data so the rates shown never drift from the catalog. SiteHeader and SiteFooter nav gain links to the three pages.** — Archived 2026-08-02 → `context/archive/2026-08-01-public-info-pages/`. Lesson: —.

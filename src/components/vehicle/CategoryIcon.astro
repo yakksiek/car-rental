@@ -3,10 +3,12 @@
 import { cn } from "../../lib/utils";
 import type { VehicleCategory } from "../../types";
 
-// Landing-local category pill glyphs (S7). The design uses lucide icons for four
+// Canonical per-category glyph, shared site-wide (S-09 P9): the landing type selector,
+// the /fleet filter tabs, and the Cennik rate table all render this one set so the
+// category icon is consistent everywhere. The design uses lucide icons for four
 // categories (truck / bus / snowflake / package) plus a bespoke car-on-flatbed for
-// Autolaweta; transcribed here as a small stroke icon set so the shared `SpecIcon`
-// and `VehicleSilhouette` (which back /fleet + 6 surfaces) stay untouched.
+// Autolaweta; transcribed here as a small stroke icon set. Distinct from the full
+// vehicle drawings in `VehicleSilhouette` (which still back the cards / detail / reserve).
 
 interface Props {
   category: VehicleCategory;

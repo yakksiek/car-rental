@@ -26,8 +26,8 @@ interface Props {
 
 const { view } = Astro.props;
 
-// Status pill, mirroring StatusPill's soft-tint + dot idiom. `pending` is the
-// only status S-02 produces; confirmed/rejected/cancelled arrive with S-03.
+// Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
+// produces; confirmed/rejected/cancelled arrive with S-03.
 const PILL: Record<ReservationStatus, { label: string; classes: string }> = {
   pending: { label: "Oczekuje", classes: "bg-warning/10 text-warning" },
   confirmed: { label: "Potwierdzone", classes: "bg-success/10 text-success" },
