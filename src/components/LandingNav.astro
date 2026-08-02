@@ -48,7 +48,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
     class="pointer-events-auto absolute top-7 right-8 left-8 hidden grid-cols-[1fr_auto_1fr] items-center rounded-full bg-white py-[11px] pr-[22px] pl-[14px] [box-shadow:0_12px_34px_-10px_rgba(0,0,0,0.25)] lg:grid"
   >
     <a href="/" class="flex items-center justify-self-start">
-      <Brand markClass="h-[38px]" wordmarkClass="text-[20px]" />
+      <Brand markClass="h-[42px]" wordmarkClass="text-[20px]" />
     </a>
 
     <nav class="bg-background flex items-center gap-1 justify-self-center rounded-full px-1.5 py-[5px]">
@@ -59,7 +59,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
             class:list={cn(
               "rounded-full px-[18px] py-[9px] text-[14.5px] transition-colors",
               active === item.id
-                ? "text-foreground bg-white font-semibold [box-shadow:0_1px_2px_rgba(0,0,0,0.08)]"
+                ? "text-foreground bg-white font-semibold [box-shadow:0_2px_6px_rgba(14,21,36,0.15)]"
                 : "hover:text-foreground font-medium text-[var(--flota-ink-2)]",
             )}
           >
@@ -90,7 +90,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
       </a>
       <a
         href="/fleet"
-        class="bg-foreground text-background rounded-full px-[22px] py-[13px] text-[14.5px] font-semibold transition hover:opacity-90"
+        class="text-background rounded-full bg-[var(--flota-ink-deep)] px-[22px] py-[13px] text-[14.5px] font-semibold transition hover:opacity-90"
       >
         Przeglądaj flotę
       </a>
@@ -100,7 +100,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
   <!-- Mobile: logo + glass phone-reveal + hamburger over the photo (<lg). -->
   <div class="pointer-events-auto absolute inset-x-4 top-4 flex items-center justify-between lg:hidden">
     <a href="/" class="flex items-center">
-      <Brand tone="inverse" markClass="h-[34px]" wordmarkClass="text-[19px]" />
+      <Brand tone="inverse" markClass="h-[38px]" wordmarkClass="text-[19px]" />
     </a>
 
     <div class="flex items-center gap-[10px]">

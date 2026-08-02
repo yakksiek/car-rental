@@ -85,7 +85,7 @@ const popularChipLabel =
       <!-- FLOTA wordmark (z-3) — Inter 700, gradient-clip: white solid at the TOP, fading
            DOWN to transparent (design uses 180deg — the glyph tops read, bases dissolve
            into the horizon). -->
-      <div class="pointer-events-none absolute inset-x-0 top-[70px] z-[3] text-center xl:top-[172px]">
+      <div class="pointer-events-none absolute inset-x-0 top-[86px] z-[3] text-center xl:top-[172px]">
         <span
           class="[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_48%,rgba(238,242,255,0)_96%)] bg-clip-text font-sans text-[122px] leading-none font-bold tracking-[-5px] text-transparent opacity-[0.85] xl:[background-image:linear-gradient(180deg,#FFFFFF_0%,#FFFFFF_42%,rgba(238,242,255,0)_90%)] xl:text-[258px] xl:tracking-[-10px] xl:opacity-[0.72]"
         >
@@ -107,12 +107,13 @@ const popularChipLabel =
 
     <!-- Mobile hero content (below the photo stage, on solid dark). Copy is intentionally
          different from desktop; the eyebrow is mobile-only (fixed genitive, deviation). -->
-    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[56px] xl:hidden">
+    <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[34px] xl:hidden">
       <p class="text-[11px] font-bold tracking-[1.4px] text-white/60 uppercase">
         {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
       </p>
       <h1 class="font-serif text-[46px] leading-[1.02] tracking-[-1.8px] text-white">
-        Pojazdy<br />użytkowe<span class="text-primary">.</span>
+        Pojazdy<br />użytkowe<span class="bg-primary ml-[3px] inline-block size-[9px] rounded-full align-baseline"
+        ></span>
       </h1>
       <p class="text-[15px] leading-[23px] text-white/72">
         Wynajem długoterminowy i na dobę, w pełni online, z fakturą VAT.
@@ -190,7 +191,7 @@ const popularChipLabel =
       </div>
 
       <!-- Trust card floats bottom-right of the hero, bottom-aligned with the search pill. -->
-      <div class="absolute top-[600px] right-16 z-[6] w-[340px]">
+      <div class="absolute top-[600px] right-16 z-[6] w-[300px]">
         <TrustCard count={vehicles.length} />
       </div>
     </div>
@@ -198,7 +199,7 @@ const popularChipLabel =
 
   <!-- Light body sheet (S5) — rises over the dark hero with an upward shadow. -->
   <div
-    class="bg-background relative z-10 -mt-8 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-10 xl:rounded-t-[40px]"
+    class="bg-background relative z-10 -mt-4 rounded-t-[28px] pt-5 [box-shadow:0_-20px_48px_rgba(0,0,0,0.14)] xl:-mt-10 xl:rounded-t-[40px]"
   >
     <!-- Search island — SINGLE mount. Mobile: a white card at the top of the sheet.
          Desktop (≥xl): absolutely lifted up into the dark hero's content column

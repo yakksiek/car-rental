@@ -5,7 +5,10 @@ import { pluralPl } from "../../lib/format";
 // Landing trust card (S4) — three rows: a hardcoded ratings PLACEHOLDER, the live
 // fleet count, and the reservation channels. Rendered twice (desktop floats in the
 // dark hero, mobile stacks in the light sheet); it is static markup, so two copies
-// carry no state cost. Icons are landing-local inline SVGs (accent stroke).
+// carry no state cost. Each row is title + sub with one large faint accent glyph
+// (76px, opacity 0.09) behind it, top-right (design TrustRow, showTiles=false) — no
+// boxed icon tiles. Desktop is a flex col (gap-2, no dividers); mobile keeps the
+// #EEF1F5 row dividers.
 
 interface Props {
   count: number;
@@ -20,82 +23,65 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
 
 <div
   class:list={[
-    "bg-card border-border overflow-hidden rounded-[20px] border xl:rounded-[22px] xl:border-transparent xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.35)]",
+    "bg-card border-border overflow-hidden rounded-[20px] border xl:flex xl:flex-col xl:gap-2 xl:rounded-[22px] xl:border-transparent xl:[box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.35)]",
     className,
   ]}
 >
   <!-- Row 1: ratings — HARDCODED PLACEHOLDER (no reviews feature; deviation, flagged). -->
-  <div class="border-border flex items-center gap-3 border-b px-4 py-2.5">
-    <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
-      <svg class="text-primary size-[18px]" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
-        <path d="M12 2.6l2.9 5.88 6.49.94-4.7 4.58 1.11 6.46L12 17.98l-5.8 3.05 1.1-6.46-4.69-4.58 6.48-.94z"></path>
-      </svg>
-    </span>
-    <div class="min-w-0">
+  <div class="relative overflow-hidden border-b border-[#EEF1F5] px-4 py-2.5 xl:border-b-0">
+    <svg
+      class="text-primary pointer-events-none absolute top-1 right-8 size-[76px] opacity-[0.09]"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+      aria-hidden="true"
+    >
+      <path d="M12 2.6l2.9 5.88 6.49.94-4.7 4.58 1.11 6.46L12 17.98l-5.8 3.05 1.1-6.46-4.69-4.58 6.48-.94z"></path>
+    </svg>
+    <div class="relative min-w-0">
       <div class="text-foreground text-[17px] leading-tight font-bold">4.9 / 5</div>
       <div class="text-[12.5px] text-[var(--flota-ink-2)]">1 280 opinii klientów</div>
     </div>
   </div>
 
   <!-- Row 2: live fleet count. -->
-  <div class="border-border flex items-center gap-3 border-b px-4 py-2.5">
-    <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
-      <svg
-        class="text-primary size-[18px]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.7"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M3 6h10v9H3zM13 9h4l3 3v3h-7z"></path>
-        <circle cx="7" cy="17.5" r="1.6"></circle>
-        <circle cx="17" cy="17.5" r="1.6"></circle>
-      </svg>
-    </span>
-    <div class="min-w-0">
+  <div class="relative overflow-hidden border-b border-[#EEF1F5] px-4 py-2.5 xl:border-b-0">
+    <svg
+      class="text-primary pointer-events-none absolute top-1 right-8 size-[76px] opacity-[0.09]"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h10v9H3zM13 9h4l3 3v3h-7z"></path>
+      <circle cx="7" cy="17.5" r="1.6"></circle>
+      <circle cx="17" cy="17.5" r="1.6"></circle>
+    </svg>
+    <div class="relative min-w-0">
       <div class="text-foreground text-[17px] leading-tight font-bold">{count} {countNoun}</div>
       <div class="text-[12.5px] text-[var(--flota-ink-2)]">we flocie, gotowe od ręki</div>
     </div>
   </div>
 
-  <!-- Row 3: reservation channels (laptop + phone tiles). -->
-  <div class="flex items-center gap-3 px-4 py-2.5">
-    <span class="flex items-center gap-1.5">
-      <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
-        <svg
-          class="text-primary size-[18px]"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.7"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="4" y="5" width="16" height="11" rx="1.5"></rect>
-          <path d="M2 20h20"></path>
-        </svg>
-      </span>
-      <span class="bg-background flex size-[38px] shrink-0 items-center justify-center rounded-md">
-        <svg
-          class="text-primary size-[18px]"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.7"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="7" y="2.5" width="10" height="19" rx="2.2"></rect>
-          <path d="M11 18.5h2"></path>
-        </svg>
-      </span>
-    </span>
-    <div class="min-w-0">
+  <!-- Row 3: reservation channels. -->
+  <div class="relative overflow-hidden px-4 py-2.5">
+    <svg
+      class="text-primary pointer-events-none absolute top-1 right-8 size-[76px] opacity-[0.09]"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="7" y="2.5" width="10" height="19" rx="2.2"></rect>
+      <path d="M11 18.5h2"></path>
+    </svg>
+    <div class="relative min-w-0">
       <div class="text-foreground text-[17px] leading-tight font-bold">Rezerwacja</div>
       <div class="text-[12.5px] text-[var(--flota-ink-2)]">online lub telefonicznie</div>
     </div>
