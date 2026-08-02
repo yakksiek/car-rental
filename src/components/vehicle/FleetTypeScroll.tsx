@@ -117,7 +117,7 @@ export default function FleetTypeScroll({ pills, active }: Props) {
 
   return (
     <div className="-mx-5 mb-[22px] px-5 sm:hidden">
-      <div className="flex gap-[2px] overflow-x-auto rounded-full bg-[#0A0A0F] p-[5px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex gap-[2px] rounded-full bg-[#0A0A0F] p-[5px] shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
         {pills.map((pill) => {
           const isActive = current === keyOf(pill.category);
           return (
@@ -129,14 +129,16 @@ export default function FleetTypeScroll({ pills, active }: Props) {
               }}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex h-10 shrink-0 items-center overflow-hidden rounded-full transition-all duration-[320ms] focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none",
-                isActive ? "bg-white pr-4 pl-3 text-[#0A0A0F]" : "w-10 justify-center text-white/70",
+                "flex h-10 items-center overflow-hidden rounded-full transition-all duration-[320ms] ease-[cubic-bezier(.22,1,.36,1)] focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none",
+                isActive
+                  ? "flex-1 justify-center bg-white pr-4 pl-3 text-[#0A0A0F]"
+                  : "w-10 shrink-0 justify-center text-white/70",
               )}
             >
               <CategoryGlyph category={pill.category} className="size-[18px] shrink-0" />
               <span
                 className={cn(
-                  "overflow-hidden text-[13.5px] font-bold whitespace-nowrap transition-all duration-[320ms]",
+                  "overflow-hidden text-[13.5px] font-[650] tracking-[-0.1px] whitespace-nowrap transition-all duration-[320ms] ease-[cubic-bezier(.22,1,.36,1)]",
                   isActive ? "ml-2 max-w-[180px] opacity-100" : "ml-0 max-w-0 opacity-0",
                 )}
               >

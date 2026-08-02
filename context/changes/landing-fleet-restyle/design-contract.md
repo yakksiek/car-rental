@@ -71,10 +71,13 @@ a recorded deviation. **No unmapped surface.**
 | `#8A93A3` / `#9AA3B2` (muted filter labels)                                | `--flota-muted` / `text-muted-foreground`                      | deviation(snap)                                                                        |
 | Inter                                                                      | `--flota-font-sans`                                            | **exact**                                                                              |
 | weights 540 / 600 / 650 / 700                                              | `--flota-fw-medium/semibold/bold/heavy`                        | **exact**                                                                              |
-| `rounded-[12px]` (card image)                                              | `--flota-radius-md` / `rounded-md`                             | **exact**                                                                              |
-| `rounded-full` (pills, CTAs)                                               | `--flota-radius-pill` / `rounded-full`                         | **exact**                                                                              |
-| `rounded-[22px]` (card)                                                    | `rounded-[22px]` arbitrary                                     | deviation(no token; matches landing `LandingVehicleCard`)                              |
-| `rounded-[18px]` (filter card)                                             | `rounded-[18px]` arbitrary                                     | deviation(no token; between lg/xl)                                                     |
+
+> **Weight-utility note:** the design-system token for 700 is `--flota-fw-heavy`, but **`font-heavy` is NOT a Tailwind v4 utility** (the `font-*` scale reads the `--font-weight-*` namespace, which this project does not extend). Ship 700 as **`font-bold`** (Tailwind default = 700) or `font-[var(--flota-fw-heavy)]`. All spec lines below say `font-bold` for this reason — do not transcribe `font-heavy` into code (it emits no CSS).
+
+| `rounded-[12px]` (card image) | `--flota-radius-md` / `rounded-md` | **exact** |
+| `rounded-full` (pills, CTAs) | `--flota-radius-pill` / `rounded-full` | **exact** |
+| `rounded-[22px]` (card) | `rounded-[22px]` arbitrary | deviation(no token; matches landing `LandingVehicleCard`) |
+| `rounded-[18px]` (filter card) | `rounded-[18px]` arbitrary | deviation(no token; between lg/xl) |
 
 ---
 
@@ -116,8 +119,8 @@ a recorded deviation. **No unmapped surface.**
 ### S2 — Filter card (desktop)
 
 - Card: `bg-secondary rounded-[18px] p-3 pl-5 gap-3.5 flex items-center`; border `--flota-hair-2` — deviation(snap `#EEF0F4`; `rounded-[18px]` arbitrary).
-- "Filtry" chip: `size-9 rounded-full bg-[var(--flota-ink-deep)]` + white filter icon + label `text-[12px] font-heavy` — deviation(snap `#141922`).
-- `FilterBtn` (×3 — Termin / Ładowność / Sortowanie): `h-[52px] rounded-full bg-card`; leading `size-9 rounded-full bg-accent` + crimson icon; field label `text-[10px] font-heavy uppercase text-muted-foreground`; value `text-[14px] font-bold`; trailing chevron-down — exact (colors snapped per token map).
+- "Filtry" chip: `size-9 rounded-full bg-[var(--flota-ink-deep)]` + white filter icon + label `text-[12px] font-bold` — deviation(snap `#141922`).
+- `FilterBtn` (×3 — Termin / Ładowność / Sortowanie): `h-[52px] rounded-full bg-card`; leading `size-9 rounded-full bg-accent` + crimson icon; field label `text-[10px] font-bold uppercase text-muted-foreground`; value `text-[14px] font-bold`; trailing chevron-down — exact (colors snapped per token map).
 - "Zastosuj": `ml-auto h-[46px] rounded-full bg-primary text-white text-[14px] font-bold` (desktop, inline) — exact.
 - **Tablet arrangement:** the "Filtry" chip + 3 triggers wrap on the first row; **"Zastosuj" drops to a full-width second row** `h-[50px] rounded-[14px]` — exact (verified against `fleet-tablet.jpg`; was undocumented).
 - **Sort field label:** ship **"Sortowanie"** (noun, consistent with Termin / Ładowność) across all breakpoints — deviation(the mock is internally inconsistent: desktop+tablet render the eyebrow `SORTUJ`, mobile renders `Sortowanie`; we standardize on the noun form).
@@ -134,12 +137,12 @@ a recorded deviation. **No unmapped surface.**
 ### S4 — Vehicle card (`FleetCardBig`)
 
 - Container: `bg-card rounded-[22px] p-[22px] shadow-card`, single `<a>` → `/fleet/{id}/{slug}` (dates appended when set) — exact (radius arbitrary per token map).
-- Eyebrow `{year} · {categoryLabelPl}`: `text-[11px] font-heavy uppercase text-muted-foreground` — exact.
-- Title (make): `text-[21px] font-heavy tracking-[-0.5px] text-[var(--flota-ink)]` — exact.
+- Eyebrow `{year} · {categoryLabelPl}`: `text-[11px] font-bold uppercase text-muted-foreground` — exact.
+- Title (make): `text-[21px] font-bold tracking-[-0.5px] text-[var(--flota-ink)]` — exact.
 - Subtitle `{model} · {production_year}`: `text-[14px] text-[var(--flota-ink-2)]` — deviation(snap `#5B6474`).
 - Image frame: `aspect-[16/9] rounded-md my-4`; photo via `<VehicleSilhouette>` when present, else the mock's diagonal gradient placeholder `[background:linear-gradient(-111deg,…)]` — exact (silhouette/photo swap kept).
 - Spec grid: `grid grid-cols-4 gap-2 py-[15px] border-y border-[var(--flota-hair-2)]`; `<SpecIcon>` icons `text-muted-foreground`; values `text-[12.5px] font-semibold text-[var(--flota-ink)]` (seats / transmission / fuel / payload) — exact.
-- Price: `{formatPln(daily_rate)} zł` `text-[24px] font-heavy` + "/dzień" `text-[14px] font-medium text-muted-foreground` — exact.
+- Price: `{formatPln(daily_rate)} zł` `text-[24px] font-bold` + "/dzień" `text-[14px] font-medium text-muted-foreground` — exact.
 - Price sub: `{monthly} zł/mies. · kaucja {deposit} zł` `text-[12px] font-medium` — exact.
 - CTA "Rezerwuj" + arrow: `h-[44px] rounded-full bg-[var(--flota-ink-deep)] text-white text-[14px] font-bold` — deviation(pill CTA, not the 14px `--flota-radius-button`; matches landing card).
 - `stack` (vertical footer) engages by container width in 2-/1-col grids (Tailwind `@container` + `@min-[Npx]:`) — exact (container-query, per lesson).
@@ -160,7 +163,7 @@ a recorded deviation. **No unmapped surface.**
 
 ### S7 — Mobile filter card
 
-- Card: `bg-secondary rounded-[18px] p-3.5`; section label "Filtry" `text-[11px] font-heavy uppercase text-muted-foreground` (text label, **not** a chip on mobile) — deviation(snap `#8A93A3`).
+- Card: `bg-secondary rounded-[18px] p-3.5`; section label "Filtry" `text-[11px] font-bold uppercase text-muted-foreground` (text label, **not** a chip on mobile) — deviation(snap `#8A93A3`).
 - Rows (×3), `h-[50px] rounded-[13px] bg-card`:
   - **Termin** row: calendar icon + **left-aligned** placeholder "Wybierz daty" + trailing chevron, **no field label** — exact.
   - **Ładowność** / **Sortowanie** rows: field label + **right-aligned** value ("dowolna" / "domyślne") + trailing chevron — exact.
