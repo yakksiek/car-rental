@@ -648,22 +648,22 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 8.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 8.1 `npm run lint` · `npx astro check` · `npm run build` pass — 5da8db5
 
 #### Manual
 
-- [x] 8.2 Header + footer inner rows cap at 1800px (page bodies unchanged at 1180); no horizontal overflow; mobile unchanged
+- [x] 8.2 Header + footer inner rows cap at 1800px (page bodies unchanged at 1180); no horizontal overflow; mobile unchanged — 5da8db5
 
 ### Phase 9: Unify category icons to the canonical set (fleet filter + Cennik)
 
 #### Automated
 
-- [ ] 9.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 9.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 9.2 Category glyphs identical on landing selector, /fleet filter tabs, and Cennik rate table
-- [ ] 9.3 Vision-diff of /fleet filter + Cennik rate table vs the updated mockups matches
+- [x] 9.2 Category glyphs identical on landing selector, /fleet filter tabs, and Cennik rate table
+- [x] 9.3 Vision-diff of /fleet filter + Cennik rate table vs the updated mockups matches
 
 ### Phase 10: About narrative photo — cover the wrapper (fix black stripes)
 
