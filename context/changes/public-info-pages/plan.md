@@ -669,21 +669,21 @@ None — no schema/data migration. `--flota-ink-deep` is additive. The shell red
 
 #### Automated
 
-- [x] 10.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 10.1 `npm run lint` · `npx astro check` · `npm run build` pass — c0db359
 
 #### Manual
 
-- [x] 10.2 About narrative photo fully covers its wrapper (desktop + mobile); no black stripes
+- [x] 10.2 About narrative photo fully covers its wrapper (desktop + mobile); no black stripes — c0db359
 
 ### Phase 11: About stats band — new card design (accent bar + watermark)
 
 #### Automated
 
-- [ ] 11.1 `npm run lint` · `npx astro check` · `npm run build` pass
+- [x] 11.1 `npm run lint` · `npx astro check` · `npm run build` pass
 
 #### Manual
 
-- [ ] 11.2 About stat cards show the crimson top bar + faint corner watermark; vision-diff vs the updated `o nas` mockup matches
+- [x] 11.2 About stat cards show the crimson top bar + faint corner watermark; vision-diff vs the updated `o nas` mockup matches
 
 ### Phase 12: About "Nasza flota" list icons → canonical set
 

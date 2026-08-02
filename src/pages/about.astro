@@ -7,6 +7,7 @@ import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import InfoIcon from "../components/icons/InfoIcon.astro";
+import CategoryIcon from "../components/vehicle/CategoryIcon.astro";
 
 // others
 import type { InfoIconName } from "../components/icons/info-icons";
@@ -22,9 +23,12 @@ const counts = await getCategoryCounts(Astro.locals.supabase);
 // LIVE fleet count; "—" when Supabase is unset/empty (states-undesigned deviation).
 const fleetCount = counts.total > 0 ? String(counts.total) : "—";
 
-const stats: { icon: InfoIconName; n: string; l: string }[] = [
+// STATS cards (design AboutBody STATS, pulled 2026-08-02): accent bar + faint corner
+// watermark + number + label — no small top icon. The "pojazdy we flocie" card uses the
+// canonical truck glyph (CategoryIcon, consistent with P9); the other three keep II.* icons.
+const stats: { icon: InfoIconName | "truck"; n: string; l: string }[] = [
   { icon: "shield", n: "10+", l: "lat na rynku" },
-  { icon: "van", n: fleetCount, l: "pojazdy we flocie" },
+  { icon: "truck", n: fleetCount, l: "pojazdy we flocie" },
   { icon: "headset", n: "24/7", l: "wsparcie i assistance" },
   { icon: "spark", n: "do 2 lat", l: "maks. wiek auta" },
 ];
@@ -89,12 +93,23 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {
           stats.map((s) => (
-            <div class="bg-card rounded-[16px] border border-[var(--flota-hair-2)] p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:px-[26px] sm:py-[24px]">
-              <InfoIcon name={s.icon} size={22} color="var(--flota-accent)" />
-              <div class="text-foreground mt-3 text-[32px] leading-none font-[780] tracking-[-2px] sm:mt-4 sm:text-[46px]">
-                {s.n}
+            <div class="bg-card relative overflow-hidden rounded-[16px] border border-[var(--flota-hair-2)] p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:px-[26px] sm:py-[24px]">
+              {/* Crimson top-accent bar */}
+              <div class="bg-primary absolute inset-x-0 top-0 h-[3px] opacity-[0.85]" />
+              {/* Faint corner watermark of the card's own icon */}
+              <div class="pointer-events-none absolute right-[-18px] bottom-[-24px] opacity-[0.05]">
+                {s.icon === "truck" ? (
+                  <CategoryIcon category="cargo_van" class="size-24 text-[var(--flota-ink)] sm:size-[132px]" />
+                ) : (
+                  <InfoIcon name={s.icon} color="var(--flota-ink)" class="size-24 sm:size-[132px]" />
+                )}
               </div>
-              <div class="text-muted-foreground mt-2 text-[13.5px] font-semibold">{s.l}</div>
+              <div class="relative">
+                <div class="text-foreground mt-1 text-[32px] leading-none font-[780] tracking-[-2px] sm:mt-1.5 sm:text-[46px]">
+                  {s.n}
+                </div>
+                <div class="text-muted-foreground mt-2 text-[12.5px] font-semibold sm:text-[13.5px]">{s.l}</div>
+              </div>
             </div>
           ))
         }
