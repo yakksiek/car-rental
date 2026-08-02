@@ -265,7 +265,7 @@ const chipClass =
           <p class="text-muted-foreground mt-1 text-sm">Zmień filtry lub zakres dat, aby zobaczyć więcej.</p>
         </div>
       ) : (
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
           {vehicles.map((vehicle) => (
             <VehicleCard vehicle={vehicle} pickup={filters.pickup} returnDate={filters.return} />
           ))}

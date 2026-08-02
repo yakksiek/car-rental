@@ -478,9 +478,9 @@ revert of the touched components/page.
 
 #### Automated
 
-- [x] 2.1 Types pass: `npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Production build succeeds: `npm run build`
+- [x] 2.1 Types pass: `npx astro check` — 241fff9
+- [x] 2.2 Lint passes: `npm run lint` — 241fff9
+- [x] 2.3 Production build succeeds: `npm run build` — 241fff9
 
 #### Manual
 
@@ -492,9 +492,9 @@ revert of the touched components/page.
 
 #### Automated
 
-- [ ] 3.1 Types pass: `npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Production build succeeds: `npm run build`
+- [x] 3.1 Types pass: `npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Production build succeeds: `npm run build`
 
 #### Manual
 
