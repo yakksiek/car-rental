@@ -48,7 +48,7 @@ const STEPS = [
       <p class="text-muted-foreground mb-3 text-[12.5px]">Ty wybierasz, jak zaczynasz:</p>
       <div class="mb-2 flex max-w-[520px] gap-3">
         <span
-          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[14px] font-medium"
+          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border py-2.5 pr-4 pl-[14px] text-[12.5px] font-semibold shadow-[0_2px_6px_rgba(14,21,36,0.08)]"
         >
           <svg
             class="text-primary size-[15px]"
@@ -66,7 +66,7 @@ const STEPS = [
           Online — bez telefonu
         </span>
         <span
-          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-[14px] font-medium"
+          class="border-border text-foreground inline-flex items-center gap-2 rounded-full border py-2.5 pr-4 pl-[14px] text-[12.5px] font-semibold shadow-[0_2px_6px_rgba(14,21,36,0.08)]"
         >
           <svg
             class="text-primary size-[15px]"
@@ -114,8 +114,8 @@ const STEPS = [
               <span class="bg-primary text-primary-foreground flex size-[60px] items-center justify-center rounded-full text-[26px] font-bold">
                 {step.n}
               </span>
-              <div class="text-foreground mt-4 text-[16px] font-bold tracking-tight">{step.titleDesktop}</div>
-              <p class="mt-2 text-[13.5px] leading-[21px] text-[var(--flota-ink-2)]">{step.desc}</p>
+              <div class="text-foreground mt-4 text-[16.5px] leading-[21px] font-bold">{step.titleDesktop}</div>
+              <p class="mt-4 text-[13px] leading-[20px] text-[var(--flota-ink-2)]">{step.desc}</p>
             </div>
           ))
         }
@@ -126,14 +126,14 @@ const STEPS = [
     <div class="flex flex-col xl:hidden">
       {
         STEPS.map((step, i) => (
-          <div class="relative flex gap-4 pb-6 last:pb-0">
-            {i < STEPS.length - 1 && <span class="bg-border absolute top-[44px] bottom-0 left-[21px] w-[2px]" />}
+          <div class="relative flex gap-4 pb-[26px] last:pb-0">
+            {i < STEPS.length - 1 && <span class="bg-border absolute top-[50px] bottom-0 left-[21px] w-[2px]" />}
             <span class="bg-primary text-primary-foreground z-10 flex size-[44px] shrink-0 items-center justify-center rounded-full text-[19px] font-bold">
               {step.n}
             </span>
             <div class="pt-1.5">
               <div class="text-foreground text-[16px] font-bold tracking-tight">{step.titleMobile}</div>
-              <p class="mt-1 text-[13.5px] leading-[21px] text-[var(--flota-ink-2)]">{step.desc}</p>
+              <p class="mt-[5px] text-[13.5px] leading-[21px] text-[var(--flota-ink-2)]">{step.desc}</p>
             </div>
           </div>
         ))
