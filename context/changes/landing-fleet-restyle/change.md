@@ -1,7 +1,7 @@
 ---
 change_id: landing-fleet-restyle
 title: Landing fleet restyle
-status: implementing
+status: implemented
 created: 2026-08-02
 updated: 2026-08-02
 archived_at: null

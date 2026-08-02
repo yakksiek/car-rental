@@ -470,9 +470,9 @@ revert of the touched components/page.
 
 #### Manual
 
-- [ ] 1.4 Pill bar matches the mock at desktop + tablet; active pill reflects the current category
-- [ ] 1.5 Clicking a pill filters the fleet (instant nav) and preserves active date/payload/sort params
-- [ ] 1.6 `/about` and `/pricing` (reuse `CategoryIcon`) render unchanged
+- [x] 1.4 Pill bar matches the mock at desktop + tablet; active pill reflects the current category
+- [x] 1.5 Clicking a pill filters the fleet (instant nav) and preserves active date/payload/sort params
+- [x] 1.6 `/about` and `/pricing` (reuse `CategoryIcon`) render unchanged
 
 ### Phase 2: Filter card
 
@@ -484,9 +484,9 @@ revert of the touched components/page.
 
 #### Manual
 
-- [ ] 2.4 Filter card matches the mock (Filtry chip, 3 triggers, crimson Zastosuj) at all breakpoints
-- [ ] 2.5 Date/payload/sort panels still open and function; "Zastosuj" validates + navigates
-- [ ] 2.6 Invalid date range shows the inline error; active-filter chips + "Wyczyść wszystko" work
+- [x] 2.4 Filter card matches the mock (Filtry chip, 3 triggers, crimson Zastosuj) at all breakpoints
+- [x] 2.5 Date/payload/sort panels still open and function; "Zastosuj" validates + navigates
+- [x] 2.6 Invalid date range shows the inline error; active-filter chips + "Wyczyść wszystko" work
 
 ### Phase 3: Vehicle card (`VehicleCard.astro` → `FleetCardBig`)
 
@@ -498,10 +498,10 @@ revert of the touched components/page.
 
 #### Manual
 
-- [ ] 3.4 Card matches `FleetCardBig` (radii, gradient image, spec hairlines, `#141B2D` CTA) at all breakpoints
-- [ ] 3.5 Card links to the correct `/fleet/{id}/{slug}` with dates appended when set
-- [ ] 3.6 Photo cards and `<VehicleSilhouette>` fallback cards both render correctly
-- [ ] 3.7 `stack` footer engages in 2-col / 1-col grids without clipping
+- [x] 3.4 Card matches `FleetCardBig` (radii, gradient image, spec hairlines, `#141B2D` CTA) at all breakpoints
+- [x] 3.5 Card links to the correct `/fleet/{id}/{slug}` with dates appended when set
+- [x] 3.6 Photo cards and `<VehicleSilhouette>` fallback cards both render correctly
+- [x] 3.7 `stack` footer engages in 2-col / 1-col grids without clipping
 
 ### Phase 4: Mobile type-pill scroller
 
@@ -513,24 +513,24 @@ revert of the touched components/page.
 
 #### Manual
 
-- [ ] 4.4 Mobile scroller matches the mock: dark container, active pill expanded with count, inactive icons
-- [ ] 4.5 Expand/collapse animates on selection; scrolls horizontally on overflow
-- [ ] 4.6 Selecting a type navigates + filters and preserves date/payload/sort params
-- [ ] 4.7 Desktop/tablet pill bar hidden on mobile and vice-versa (no double control)
+- [x] 4.4 Mobile scroller matches the mock: dark container, active pill expanded with count, inactive icons
+- [x] 4.5 Expand/collapse animates on selection; scrolls horizontally on overflow
+- [x] 4.6 Selecting a type navigates + filters and preserves date/payload/sort params
+- [x] 4.7 Desktop/tablet pill bar hidden on mobile and vice-versa (no double control)
 
 ### Phase 5: Mock-omitted states + fidelity gate
 
 #### Automated
 
-- [x] 5.1 Types pass: `npx astro check`
-- [x] 5.2 Lint passes: `npm run lint`
-- [x] 5.3 Production build succeeds: `npm run build`
-- [x] 5.4 Existing unit tests pass: `npm test`
+- [x] 5.1 Types pass: `npx astro check` — 67442a9
+- [x] 5.2 Lint passes: `npm run lint` — 67442a9
+- [x] 5.3 Production build succeeds: `npm run build` — 67442a9
+- [x] 5.4 Existing unit tests pass: `npm test` — 67442a9
 
 #### Manual
 
-- [ ] 5.5 Vision-diff at 1440 / 834 / 390 converges to empty (minus recorded deviations)
-- [ ] 5.6 Empty-results, date-error, and loading states render on-brand
-- [ ] 5.7 `/reserve`, `/about`, `/pricing` render identically (no shared-primitive regression)
-- [ ] 5.8 Keyboard focus + visible focus rings on pills, filter triggers, card links; scroller keyboard-reachable
-- [ ] 5.9 Perf on `/fleet` not regressed vs pre-restyle
+- [x] 5.5 Vision-diff at 1440 / 834 / 390 converges to empty (minus recorded deviations)
+- [x] 5.6 Empty-results, date-error, and loading states render on-brand
+- [x] 5.7 `/reserve`, `/about`, `/pricing` render identically (no shared-primitive regression)
+- [x] 5.8 Keyboard focus + visible focus rings on pills, filter triggers, card links; scroller keyboard-reachable
+- [x] 5.9 Perf on `/fleet` not regressed vs pre-restyle
