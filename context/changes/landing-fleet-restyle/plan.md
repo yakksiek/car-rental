@@ -783,33 +783,33 @@ revert of the touched components/page.
 
 #### Automated
 
-- [x] 6A.1 Types pass: `npx astro check`
-- [x] 6A.2 Lint passes: `npm run lint`
-- [x] 6A.3 Production build succeeds: `npm run build`
-- [x] 6A.4 Unit tests pass: `npm test`
+- [x] 6A.1 Types pass: `npx astro check` — df87f85
+- [x] 6A.2 Lint passes: `npm run lint` — df87f85
+- [x] 6A.3 Production build succeeds: `npm run build` — df87f85
+- [x] 6A.4 Unit tests pass: `npm test` — df87f85
 
 #### Manual
 
-- [x] 6A.5 Ładowność/Sortowanie render 52px desktop / 50px mobile (like Termin); icon chips have breathing room
-- [x] 6A.6 Mobile rows: bare calendar glyph; Ładowność/Sortowanie labels dark, not muted
-- [x] 6A.7 Scroller expand/collapse is smooth (no padding snap); instant nav + no-JS still work
-- [x] 6A.8 3-col cards show price-left / Rezerwuj-right at ~1280px
-- [x] 6A.9 Result heading gone; pill bar ~40px below header at all breakpoints
-- [x] 6A.10 Filter apply / date validation / clear-all unchanged
+- [x] 6A.5 Ładowność/Sortowanie render 52px desktop / 50px mobile (like Termin); icon chips have breathing room — df87f85
+- [x] 6A.6 Mobile rows: bare calendar glyph; Ładowność/Sortowanie labels dark, not muted — df87f85
+- [x] 6A.7 Scroller expand/collapse is smooth (no padding snap); instant nav + no-JS still work — df87f85
+- [x] 6A.8 3-col cards show price-left / Rezerwuj-right at ~1280px — df87f85
+- [x] 6A.9 Result heading gone; pill bar ~40px below header at all breakpoints — df87f85
+- [x] 6A.10 Filter apply / date validation / clear-all unchanged — df87f85
 
 ### Phase 6B: Landing hero, nav & trust-card polish
 
 #### Automated
 
-- [ ] 6B.1 Types pass: `npx astro check`
-- [ ] 6B.2 Lint passes: `npm run lint`
-- [ ] 6B.3 Production build succeeds: `npm run build`
+- [x] 6B.1 Types pass: `npx astro check`
+- [x] 6B.2 Lint passes: `npm run lint`
+- [x] 6B.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 6B.4 Trust card: no tiles, faint glyph per row; desktop no dividers / mobile dividers; width 300 desktop
-- [ ] 6B.5 Mobile hero dot is a circle; wordmark + sheet spacing match design
-- [ ] 6B.6 `/reserve`, `/about`, `/pricing` unaffected
+- [x] 6B.4 Trust card: no tiles, faint glyph per row; desktop no dividers / mobile dividers; width 300 desktop
+- [x] 6B.5 Mobile hero dot is a circle; wordmark + sheet spacing match design
+- [x] 6B.6 `/reserve`, `/about`, `/pricing` unaffected
 
 ### Phase 6C: Landing sections + Popularne card fidelity
 
