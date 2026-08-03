@@ -51,15 +51,17 @@ const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: "price_desc", label: "Cena: malejąco" },
 ];
 
-// Shared FilterBtn chrome: full-width row (mobile) → auto pill (sm+), growing to
-// fill the tablet row and hugging content on desktop. The `data-[size=default]:*`
+// Shared FilterBtn chrome: full-width row (mobile) → content-hugging auto pill that
+// wraps (sm+); the fields never stretch to fill the row (design F6). The chevron rides
+// on the value's line (see each field) so it hugs the value instead of the wider
+// uppercase label. The `data-[size=default]:*`
 // heights are load-bearing: <SelectTrigger> stamps `data-[size=default]:h-9`, which
 // (same modifier, differing base) tailwind-merge can't dedupe against a plain
 // `h-[52px]`, so the Ładowność/Sortowanie pills collapsed to 36px. Overriding with
 // the same modifier drops it and re-aligns them to Termin's 50/52px. `py-0` kills
 // the trigger's inherited `py-2`.
 const fieldShell =
-  "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-4 py-0 text-left whitespace-nowrap border border-[var(--flota-hair)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 data-[size=default]:h-[50px] sm:h-[52px] sm:w-auto sm:flex-1 sm:gap-[11px] sm:rounded-full sm:pr-[14px] sm:pl-2 sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:data-[size=default]:h-[52px] lg:flex-none";
+  "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-4 py-0 text-left whitespace-nowrap border border-[var(--flota-hair)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 data-[size=default]:h-[50px] sm:h-[52px] sm:w-auto sm:flex-none sm:gap-[11px] sm:rounded-full sm:pr-[14px] sm:pl-2 sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:data-[size=default]:h-[52px]";
 
 const fieldLabel = "text-[10px] leading-none text-muted-foreground uppercase sm:tracking-[0.5px]";
 
@@ -132,16 +134,21 @@ export default function FilterBar({ initial }: Props) {
               </span>
               <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
                 <span className={cn(fieldLabel, "hidden font-bold sm:block")}>Termin</span>
-                <span
-                  className={cn(
-                    "text-[14.5px] sm:text-[14px]",
-                    hasDate ? "font-[650]" : "text-muted-foreground font-medium",
-                  )}
-                >
-                  {dateLabel}
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "text-[14.5px] sm:text-[14px]",
+                      hasDate ? "font-[650]" : "text-muted-foreground font-medium",
+                    )}
+                  >
+                    {dateLabel}
+                  </span>
+                  {/* Desktop: chevron hugs the value so it never floats to the pill's far edge. */}
+                  <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
                 </span>
               </span>
-              <ChevronDownIcon className="text-muted-foreground size-[15px] shrink-0 opacity-60" />
+              {/* Mobile: chevron trails at the full-width row's right edge. */}
+              <ChevronDownIcon className="text-muted-foreground size-[15px] shrink-0 opacity-60 sm:hidden" />
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -162,7 +169,7 @@ export default function FilterBar({ initial }: Props) {
 
         {/* Ładowność — minimum payload. No icon on mobile; label-left / value-right. */}
         <Select value={minPayload} onValueChange={setMinPayload}>
-          <SelectTrigger className={fieldShell}>
+          <SelectTrigger className={cn(fieldShell, "sm:[&>svg]:hidden")}>
             <span className="flex min-w-0 flex-1 items-center gap-2.5">
               <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
                 <Package className="size-4" />
@@ -176,13 +183,17 @@ export default function FilterBar({ initial }: Props) {
                 >
                   Ładowność
                 </span>
-                <span
-                  className={cn(
-                    "text-[14px]",
-                    minPayload === "any" ? "text-muted-foreground font-medium" : "font-[650]",
-                  )}
-                >
-                  <SelectValue />
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "text-[14px]",
+                      minPayload === "any" ? "text-muted-foreground font-medium" : "font-[650]",
+                    )}
+                  >
+                    <SelectValue />
+                  </span>
+                  {/* Desktop chevron hugs the value; the Select's built-in one is hidden ≥sm. */}
+                  <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
                 </span>
               </span>
             </span>
@@ -203,7 +214,7 @@ export default function FilterBar({ initial }: Props) {
             setSort(value as CatalogSort);
           }}
         >
-          <SelectTrigger className={fieldShell}>
+          <SelectTrigger className={cn(fieldShell, "sm:[&>svg]:hidden")}>
             <span className="flex min-w-0 flex-1 items-center gap-2.5">
               <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
                 <ArrowUpDown className="size-4" />
@@ -217,8 +228,11 @@ export default function FilterBar({ initial }: Props) {
                 >
                   Sortowanie
                 </span>
-                <span className={cn("text-[14px]", sort === "" ? "text-muted-foreground font-medium" : "font-[650]")}>
-                  <SelectValue placeholder="domyślne" />
+                <span className="flex items-center gap-1.5">
+                  <span className={cn("text-[14px]", sort === "" ? "text-muted-foreground font-medium" : "font-[650]")}>
+                    <SelectValue placeholder="domyślne" />
+                  </span>
+                  <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
                 </span>
               </span>
             </span>
