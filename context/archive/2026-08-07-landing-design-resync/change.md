@@ -1,10 +1,10 @@
 ---
 change_id: landing-design-resync
 title: Landing — re-sync to the evolved live design (TypeSelector + Popularne)
-status: implemented
+status: archived
 created: 2026-08-07
 updated: 2026-08-07
-archived_at: null
+archived_at: 2026-08-07T15:59:20Z
 ---
 
 ## Notes
