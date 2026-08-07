@@ -48,7 +48,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
     class="pointer-events-auto absolute top-7 right-8 left-8 hidden grid-cols-[1fr_auto_1fr] items-center rounded-full bg-white py-[11px] pr-[22px] pl-[14px] [box-shadow:0_12px_34px_-10px_rgba(0,0,0,0.25)] lg:grid"
   >
     <a href="/" class="flex items-center justify-self-start">
-      <Brand markClass="h-[38px]" wordmarkClass="text-[20px]" />
+      <Brand markClass="h-[20px]" wordmarkClass="text-[20px]" />
     </a>
 
     <nav class="bg-background flex items-center gap-1 justify-self-center rounded-full px-1.5 py-[5px]">
@@ -59,7 +59,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
             class:list={cn(
               "rounded-full px-[18px] py-[9px] text-[14.5px] transition-colors",
               active === item.id
-                ? "text-foreground bg-white font-semibold [box-shadow:0_1px_2px_rgba(0,0,0,0.08)]"
+                ? "text-foreground bg-white font-semibold [box-shadow:0_2px_6px_rgba(14,21,36,0.15)]"
                 : "hover:text-foreground font-medium text-[var(--flota-ink-2)]",
             )}
           >
@@ -90,17 +90,94 @@ const nav: { id: NavId; label: string; href: string }[] = [
       </a>
       <a
         href="/fleet"
-        class="bg-foreground text-background rounded-full px-[22px] py-[13px] text-[14.5px] font-semibold transition hover:opacity-90"
+        class="text-background rounded-full bg-[var(--flota-ink-deep)] px-[22px] py-[13px] text-[14.5px] font-semibold transition hover:opacity-90"
       >
         Przeglądaj flotę
       </a>
     </div>
   </div>
 
-  <!-- Mobile: logo + glass phone-reveal + hamburger over the photo (<lg). -->
-  <div class="pointer-events-auto absolute inset-x-4 top-4 flex items-center justify-between lg:hidden">
+  <!-- Tablet band (md–<lg): over-hero glass pill + glass phone/book toggle (design
+       ScreenTabletHome). The white pill takes over at lg+. Matches the design's 4-item
+       pill (Start / Flota / Cennik / FAQ — "O nas" stays reachable via footer + pages).
+       The toggle renders its default state (book active) as two direct links; no reveal
+       animation is needed here (the phone icon is itself a tel: link). -->
+  <div
+    class="pointer-events-auto absolute top-[22px] right-7 left-7 hidden items-center justify-between md:flex lg:hidden"
+  >
     <a href="/" class="flex items-center">
-      <Brand tone="inverse" markClass="h-[34px]" wordmarkClass="text-[19px]" />
+      <Brand tone="inverse" markClass="h-[19px]" wordmarkClass="text-[21px]" />
+    </a>
+
+    <div class="flex items-center gap-3">
+      <nav class="flex items-center gap-1.5 rounded-full bg-white/[0.12] px-1.5 py-[5px] backdrop-blur-[6px]">
+        {
+          nav.slice(0, 4).map((item) => (
+            <a
+              href={item.href}
+              class:list={cn(
+                "rounded-full px-4 py-[9px] text-[14px] whitespace-nowrap transition-colors",
+                active === item.id
+                  ? "bg-white/[0.92] font-[650] text-[#0E1524]"
+                  : "font-medium text-white/[0.86] hover:text-white",
+              )}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      <div class="inline-flex items-center gap-1 rounded-full bg-white/[0.14] p-1 backdrop-blur-[6px]">
+        <a
+          href={PHONE_HREF}
+          aria-label={`Zadzwoń: ${PHONE_LABEL}`}
+          class="flex size-[38px] items-center justify-center rounded-full text-white"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
+            ></path>
+          </svg>
+        </a>
+        <a
+          href="/fleet"
+          class="bg-primary flex h-[38px] items-center gap-2 rounded-full px-[15px] text-[14px] font-[650] text-white"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+            <path d="M3 10h18M8 3v4M16 3v4"></path>
+          </svg>
+          Zarezerwuj
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile: logo + glass phone-reveal + hamburger over the photo (<md). -->
+  <div class="pointer-events-auto absolute inset-x-4 top-4 flex items-center justify-between md:hidden">
+    <a href="/" class="flex items-center">
+      <Brand tone="inverse" markClass="h-[18px]" wordmarkClass="text-[19px]" />
     </a>
 
     <div class="flex items-center gap-[10px]">

@@ -10,6 +10,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import VehicleCard from "../../components/vehicle/VehicleCard.astro";
 import CategoryIcon from "../../components/vehicle/CategoryIcon.astro";
 import FilterBar from "../../components/vehicle/FilterBar.tsx";
+import FleetTypeScroll from "../../components/vehicle/FleetTypeScroll.tsx";
 
 // others
 import type { CatalogSort, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
@@ -71,6 +72,15 @@ function tabHref(category: VehicleCategory | null): string {
   return `/fleet${query ? `?${query}` : ""}`;
 }
 
+// The mobile dark type-pill scroller (FleetTypeScroll island) needs each tab's href
+// resolved server-side so its anchors work before hydration / with JS off.
+const scrollerPills = tabs.map((tab) => ({
+  category: tab.category,
+  label: tab.label,
+  count: tab.count,
+  href: tabHref(tab.category),
+}));
+
 // Active-filter summary chips: indicate what's applied and let the visitor drop a
 // single filter (link to the listing minus that one) or clear all (→ /fleet).
 const hasActiveFilters =
@@ -101,69 +111,60 @@ const SORT_LABELS: Record<CatalogSort, string> = {
 };
 
 const chipClass =
-  "bg-accent text-accent-foreground hover:bg-accent/70 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-medium transition-colors";
+  "bg-card text-foreground hover:border-foreground/25 inline-flex items-center gap-1.5 rounded-full border border-[var(--flota-hair)] px-3.5 py-1.5 text-[13px] font-semibold transition-colors";
 ---
 
 <Layout title="Flota — przeglądaj pojazdy">
   <SiteHeader active="fleet" />
 
-  <main class="max-w-app mx-auto px-5 pb-16 sm:px-8">
-    <!-- Page title -->
-    <div class="pt-8 pb-5 sm:pt-10">
-      <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Flota · Warszawa</p>
-      <h1 class="text-foreground mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-        {vehicles.length}{" "}
-        <span class="text-muted-foreground font-normal">pojazdów gotowych do wynajmu.</span>
-      </h1>
-    </div>
-
-    <!-- Category tabs: square + horizontal-scroll on mobile (design 02), inline
-         pills with counts on sm+ (design 08). -->
-    <div
-      class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
-    >
+  <main class="max-w-app mx-auto px-5 pb-16 sm:px-8 lg:px-12">
+    <!-- Category type-pills (desktop / tablet, design ScreenDesktopFleet). Each pill
+         is an anchor carrying its category filter — instant nav preserved. Hidden
+         below sm; the mobile dark scroller below covers < sm. The design has no
+         result-count heading (S3 override), so the pill bar leads the page and
+         carries the ~40px top rhythm the heading used to hold. -->
+    <div class="hidden flex-wrap gap-3 pt-8 pb-[22px] sm:flex sm:pt-10">
       {
         tabs.map((tab) => (
           <a
             href={tabHref(tab.category)}
             class:list={[
-              "inline-flex shrink-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 text-center text-[11px] font-semibold transition-colors",
-              "h-20 w-20",
-              "sm:h-11 sm:w-auto sm:flex-row sm:gap-2.5 sm:rounded-full sm:px-4 sm:text-[13px]",
+              "inline-flex h-[52px] shrink-0 items-center gap-3 rounded-full pr-[22px] pl-4 text-[14.5px] font-semibold tracking-[-0.1px] transition-colors",
               filters.category === tab.category
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card text-foreground hover:border-foreground/40 border-[var(--flota-hair)]",
+                ? "bg-[var(--flota-ink-deep)] text-white"
+                : "bg-card text-foreground hover:border-foreground/25 border border-[var(--flota-hair)]",
             ]}
           >
-            <span class="flex w-8 shrink-0 items-center justify-center">
-              {tab.category === null ? (
-                <svg
-                  class="size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                </svg>
-              ) : (
-                <CategoryIcon category={tab.category} class="size-5" />
-              )}
-            </span>
-            <span class="leading-tight">
-              {tab.label}
-              <span class="hidden sm:inline"> · {tab.count}</span>
+            {tab.category === null ? (
+              <svg
+                class="size-[18px] shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+              </svg>
+            ) : (
+              <CategoryIcon category={tab.category} class="size-[18px]" />
+            )}
+            <span>
+              {tab.label} · {tab.count}
             </span>
           </a>
         ))
       }
     </div>
+
+    <!-- Category type-pills (mobile, design ScreenMobileFleet). The dark animated
+         scroller; anchors still navigate before hydration. Hidden at sm+. -->
+    <FleetTypeScroll pills={scrollerPills} active={filters.category} client:visible />
 
     <!-- Filter bar -->
     <div class="pb-4">
@@ -207,27 +208,61 @@ const chipClass =
               </span>
             </a>
           )}
-          <a href="/fleet" class="text-primary ml-1 text-sm font-semibold hover:underline">
+          <a href="/fleet" class="text-muted-foreground hover:text-foreground ml-1 text-sm font-medium hover:underline">
             Wyczyść wszystko
           </a>
         </div>
       )
     }
 
-    <!-- Results -->
+    <!-- Results. The mock is silent on the empty / date-error states; these are
+         designed on-brand (centered card in the results region, existing Polish
+         copy). No loading treatment is warranted — results are SSR'd, so a filter
+         apply navigates straight to the rendered page (no client-side fetch). -->
     {
       dateError ? (
-        <div class="bg-card rounded-xl border border-[var(--flota-hair)] p-8 text-center">
-          <p class="text-foreground text-base font-medium">{dateError}</p>
-          <p class="text-muted-foreground mt-1 text-sm">Popraw zakres dat, aby zobaczyć dostępne pojazdy.</p>
+        <div class="bg-card shadow-card mx-auto flex max-w-md flex-col items-center gap-3 rounded-[22px] px-6 py-16 text-center">
+          <span class="text-primary bg-accent flex size-14 items-center justify-center rounded-full">
+            <svg
+              class="size-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M3 10h18M8 2v4M16 2v4M12 14v3" />
+              <circle cx="12" cy="18.5" r="0.6" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <p class="text-foreground text-lg font-bold tracking-tight">{dateError}</p>
+          <p class="text-muted-foreground text-sm">Popraw zakres dat, aby zobaczyć dostępne pojazdy.</p>
         </div>
       ) : vehicles.length === 0 ? (
-        <div class="bg-card rounded-xl border border-[var(--flota-hair)] p-8 text-center">
-          <p class="text-foreground text-base font-medium">Brak pojazdów spełniających kryteria</p>
-          <p class="text-muted-foreground mt-1 text-sm">Zmień filtry lub zakres dat, aby zobaczyć więcej.</p>
+        <div class="bg-card shadow-card mx-auto flex max-w-md flex-col items-center gap-3 rounded-[22px] px-6 py-16 text-center">
+          <span class="text-muted-foreground bg-secondary flex size-14 items-center justify-center rounded-full">
+            <svg
+              class="size-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.3-4.3" />
+            </svg>
+          </span>
+          <p class="text-foreground text-lg font-bold tracking-tight">Brak pojazdów spełniających kryteria</p>
+          <p class="text-muted-foreground text-sm">Zmień filtry lub zakres dat, aby zobaczyć więcej.</p>
         </div>
       ) : (
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
           {vehicles.map((vehicle) => (
             <VehicleCard vehicle={vehicle} pickup={filters.pickup} returnDate={filters.return} />
           ))}
