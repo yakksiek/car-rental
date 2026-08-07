@@ -3,23 +3,17 @@
 import CategoryIcon from "../vehicle/CategoryIcon.astro";
 
 // others
-import { cn } from "../../lib/utils";
 import type { VehicleCategory } from "../../types";
 import { categoryLabelPl } from "../../lib/format";
 
 // Category selector (S7) — five click-to-route pills into `/fleet?category=<cat>`.
-// Furgon is the active (accent) pill per the mock; there is no hover-preview this
-// slice (click-to-route only — the hover-hint copy is dropped, deviation(scope)).
+// Stateless: no active/selected pill — every pill renders in the default state with a
+// hover treatment (the live design's DesktopTypeExplorer renders all pills active={false}).
+// Crimson belongs only to the "Cała flota" CTA, never to a pill.
 // The "see-all" CTA is a crimson `Cała flota` (dark inner arrow-disc), matching the
 // live design: it is the LAST child of the pill row on every breakpoint — overhanging
 // into the bordered container's padding on desktop, after the wrapped pills on
 // tablet/mobile. Mobile pills WRAP (design `flexWrap:'wrap'`), not horizontal-scroll.
-
-interface Props {
-  active?: VehicleCategory;
-}
-
-const { active = "cargo_van" } = Astro.props;
 
 const CATEGORIES: VehicleCategory[] = [
   "cargo_van",
@@ -39,29 +33,18 @@ const CATEGORIES: VehicleCategory[] = [
     class="xl:border-border xl:bg-card flex flex-wrap gap-2 md:gap-[10px] xl:inline-flex xl:gap-[9px] xl:rounded-full xl:border xl:px-2 xl:py-[7px]"
   >
     {
-      CATEGORIES.map((category) => {
-        const isActive = category === active;
-        return (
-          <a
-            href={`/fleet?category=${category}`}
-            class:list={cn(
-              "inline-flex shrink-0 items-center gap-2 rounded-full border py-[11px] pr-4 pl-[13px] text-[14px] transition xl:border-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px]",
-              isActive
-                ? "bg-primary text-primary-foreground border-transparent font-[650] [box-shadow:0_4px_12px_-3px_rgba(180,54,56,0.35)] xl:[box-shadow:0_4px_12px_-2px_rgba(180,54,56,0.30)]"
-                : "bg-card border-border hover:text-foreground font-[550] text-[var(--flota-ink-2)] xl:bg-transparent",
-            )}
-          >
-            <CategoryIcon
-              category={category}
-              class:list={[
-                category === "car_transporter" && "md:size-[20px]",
-                isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]",
-              ]}
-            />
-            {categoryLabelPl(category)}
-          </a>
-        );
-      })
+      CATEGORIES.map((category) => (
+        <a
+          href={`/fleet?category=${category}`}
+          class="bg-card border-border xl:hover:text-foreground inline-flex shrink-0 items-center gap-2 rounded-full border py-[11px] pr-4 pl-[13px] text-[14px] font-[550] text-[var(--flota-ink-2)] transition hover:border-[#D7DCE5] hover:bg-[#F6F7F9] xl:border-transparent xl:bg-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px] xl:hover:border-transparent xl:hover:bg-[#F1F2F5]"
+        >
+          <CategoryIcon
+            category={category}
+            class:list={[category === "car_transporter" && "md:size-[20px]", "text-[var(--flota-ink-2)]"]}
+          />
+          {categoryLabelPl(category)}
+        </a>
+      ))
     }
     <a
       href="/fleet"
