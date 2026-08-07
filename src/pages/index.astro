@@ -165,10 +165,12 @@ const popularChipLabel =
       </a>
     </div>
 
-    <!-- Tablet hero content (834, design ScreenTabletHome) — heading + bullets over the
-         bottom-left of the 452px photo stage; the search card is the single <HeroSearch>
-         mount, lifted from the sheet into the hero's bottom-right (see wrapper below). -->
-    <div class="absolute bottom-[46px] left-10 z-[5] hidden w-[408px] flex-col gap-5 md:flex xl:hidden">
+    <!-- Tablet hero content (834, design ScreenTabletHome) — a solid-dark content band
+         IN FLOW below the 452px photo stage. The design puts this copy on solid dark
+         (not overlaid on the photo); this band is what gives the tablet hero its height.
+         The single <HeroSearch> island is lifted from the sheet to fill the band's
+         bottom-right, bottom-aligned with the copy (see the search wrapper below). -->
+    <div class="relative z-[5] ml-10 hidden w-[408px] flex-col gap-5 pt-1.5 pb-[46px] md:flex xl:hidden">
       <p class="text-[12px] font-bold tracking-[1.4px] text-white/60 uppercase">
         {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
       </p>
@@ -249,7 +251,7 @@ const popularChipLabel =
          Desktop (≥xl): absolutely lifted up into the dark hero's content column
          (bottom-left). It is never duplicated (a second mount = a second island state). -->
     <div
-      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 md:absolute md:top-[-280px] md:right-10 md:z-20 md:mx-0 md:w-[320px] md:max-w-none md:px-0 xl:top-[-145px] xl:right-auto xl:left-16 xl:w-[740px]"
+      class="mx-auto w-full max-w-[560px] px-4 sm:px-6 md:absolute md:top-[-315px] md:right-10 md:z-20 md:mx-0 md:w-[320px] md:max-w-none md:px-0 xl:top-[-145px] xl:right-auto xl:left-16 xl:w-[740px]"
     >
       <HeroSearch client:load />
     </div>
