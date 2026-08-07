@@ -454,14 +454,14 @@ may touch `supabase/seed.sql` (data only).
 
 #### Automated
 
-- [x] 6.1 Types pass: `npx astro check`
-- [x] 6.2 Lint passes: `npm run lint`
-- [x] 6.3 Production build succeeds: `npm run build`
+- [x] 6.1 Types pass: `npx astro check` — 4b01a1c
+- [x] 6.2 Lint passes: `npm run lint` — 4b01a1c
+- [x] 6.3 Production build succeeds: `npm run build` — 4b01a1c
 
 #### Manual
 
-- [x] 6.4 At 834: Popularne is 2 columns; spec values show in full — no truncation/collision
-- [x] 6.5 At 390: 1 column (unchanged); at 1440: 3 columns (unchanged)
+- [x] 6.4 At 834: Popularne is 2 columns; spec values show in full — no truncation/collision — 4b01a1c
+- [x] 6.5 At 390: 1 column (unchanged); at 1440: 3 columns (unchanged) — 4b01a1c
 
 ### Final gate
 
