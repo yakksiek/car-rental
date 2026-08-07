@@ -15,7 +15,6 @@ import LandingVehicleCard from "../components/vehicle/LandingVehicleCard.astro";
 // others
 import type { VehicleFilters } from "../types";
 import { listVehicles } from "../lib/services/vehicles";
-import { categoryLabelPl } from "../lib/format";
 import heroImg from "../assets/hero-airfield.jpg";
 import vanImg from "../assets/van-cutout.png";
 
@@ -39,15 +38,6 @@ const NO_FILTERS: VehicleFilters = {
 
 const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
 const featured = vehicles.slice(0, 3);
-
-// "Furgony" chip (S8) — derived from the shown set so it never misdescribes the data:
-// the top-3 are any-category, so the chip reads the category only when all three share
-// one, else a neutral label. deviation(static label decoupled from data — flagged).
-const firstFeaturedCategory = featured.length > 0 ? featured[0].category : null;
-const popularChipLabel =
-  firstFeaturedCategory && featured.every((vehicle) => vehicle.category === firstFeaturedCategory)
-    ? categoryLabelPl(firstFeaturedCategory)
-    : "Polecane";
 ---
 
 <Layout title="Flota — wynajem pojazdów użytkowych">
@@ -272,50 +262,9 @@ const popularChipLabel =
     {
       featured.length > 0 && (
         <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
-          <div class="mb-6 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <h2 class="text-foreground font-serif text-[26px] leading-none md:text-[30px] xl:text-[38px]">
-                Popularne
-              </h2>
-              <span class="bg-accent text-accent-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold">
-                <svg
-                  class="text-primary size-[13px]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M14 18V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1" />
-                  <path d="M15 18H9" />
-                  <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
-                  <circle cx="7" cy="18" r="2" />
-                  <circle cx="17" cy="18" r="2" />
-                </svg>
-                {popularChipLabel}
-              </span>
-            </div>
-            <a
-              href="/fleet"
-              class="text-primary md:bg-primary md:text-primary-foreground inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold hover:underline md:rounded-full md:px-4 md:py-2 md:no-underline md:transition md:hover:opacity-90"
-            >
-              Wszystkie
-              <svg
-                class="hidden size-[15px] md:inline"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.9"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </a>
-          </div>
+          <h2 class="text-foreground mb-6 font-serif text-[26px] leading-none md:text-[30px] xl:text-[38px]">
+            Popularne
+          </h2>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {featured.map((vehicle) => (
               <LandingVehicleCard vehicle={vehicle} />
