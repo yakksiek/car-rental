@@ -174,7 +174,7 @@ export default function FilterBar({ initial }: Props) {
               <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
                 <Package className="size-4" />
               </span>
-              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
+              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start sm:gap-0">
                 <span
                   className={cn(
                     fieldLabel,
@@ -219,7 +219,7 @@ export default function FilterBar({ initial }: Props) {
               <span className="text-primary bg-accent hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex">
                 <ArrowUpDown className="size-4" />
               </span>
-              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start">
+              <span className="flex w-full min-w-0 flex-row items-center justify-between gap-2 leading-tight sm:w-auto sm:flex-col sm:items-start sm:justify-start sm:gap-0">
                 <span
                   className={cn(
                     fieldLabel,
