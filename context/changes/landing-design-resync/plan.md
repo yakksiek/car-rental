@@ -297,28 +297,28 @@ may touch `supabase/seed.sql` (data only).
 
 #### Automated
 
-- [x] 2.1 Types pass: `npx astro check`
-- [x] 2.2 Lint passes: `npm run lint` (no unused `categoryLabelPl` in index.astro)
-- [x] 2.3 Production build succeeds: `npm run build`
+- [x] 2.1 Types pass: `npx astro check` — f576312
+- [x] 2.2 Lint passes: `npm run lint` (no unused `categoryLabelPl` in index.astro) — f576312
+- [x] 2.3 Production build succeeds: `npm run build` — f576312
 
 #### Manual
 
-- [x] 2.4 Popularne heading is bare "Popularne" — no chip, no "Wszystkie" — all breakpoints
-- [x] 2.5 Card subtitle reads "{Category} · {year}" (e.g. "Furgon · 2021")
+- [x] 2.4 Popularne heading is bare "Popularne" — no chip, no "Wszystkie" — all breakpoints — f576312
+- [x] 2.5 Card subtitle reads "{Category} · {year}" (e.g. "Furgon · 2021") — f576312
 
 ### Phase 3: Popularne card — tablet stacked footer + spec truncation
 
 #### Automated
 
-- [x] 3.1 Types pass: `npx astro check`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Production build succeeds: `npm run build`
+- [x] 3.1 Types pass: `npx astro check` — f576312
+- [x] 3.2 Lint passes: `npm run lint` — f576312
+- [x] 3.3 Production build succeeds: `npm run build` — f576312
 
 #### Manual
 
-- [x] 3.4 At 834: stacked price above full-width "Rezerwuj"; no two-line price wrap
-- [x] 3.5 At 834: spec values truncate one-per-column (no "AutomatycznaDiesel" collision)
-- [x] 3.6 At 390 / 1440: footer side-by-side unchanged ("od" + 22px price on desktop)
+- [x] 3.4 At 834: stacked price above full-width "Rezerwuj"; no two-line price wrap — f576312
+- [x] 3.5 At 834: spec values truncate one-per-column (no "AutomatycznaDiesel" collision) — f576312
+- [x] 3.6 At 390 / 1440: footer side-by-side unchanged ("od" + 22px price on desktop) — f576312
 
 ### Phase 4: Popularne card images — seed-data check
 

@@ -71,3 +71,24 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   (company-anchored events stay `Europe/Warsaw` even multi-locale) and **workerd ships a trimmed ICU**
   (why `returns.astro` hand-rolls month names — server-side multi-locale formatting will hit this).
   See `lessons.md` → "Locale/timezone/currency are single-locale".
+
+## Seed vehicles use random `picsum.photos` placeholders (read as non-vehicle stock photos)
+
+- **Symptom:** Vehicle cards (landing "Popularne", `/fleet`, vehicle detail) render real photos that
+  are **not vehicles** — clouds, a beach, a rocky coast. Most visible on the landing's top-3 featured
+  cards, where the design intends a clean gradient/silhouette placeholder.
+- **Cause:** `supabase/seed.sql` seeds every vehicle's `photos` array with
+  `https://picsum.photos/seed/<name>-N/960/600` — Lorem Picsum, which returns a **random** image per
+  seed string, never vehicle imagery. All 6 active seeded vehicles (Sprinter, Master, Crafter, Daily,
+  TGL, Scania) use these. The card code is correct: `photos[0]` → `<img>`, else the on-brand
+  `VehicleSilhouette` — so with no photos it already falls back to the designed placeholder.
+- **Scope:** **Seed data only** (confirmed 2026-08-07, change `landing-design-resync` Phase 4). Not a
+  component/CSS bug. Production data is separate and unverified here.
+- **Decision (owner, 2026-08-07):** Leave the seed as-is and hand off — do **not** clear or swap the
+  photos in this presentational change. The real fix is content: supply genuine vehicle photography
+  (then `photos[0]` renders correctly), or, if a placeholder is preferred, clear the `photos` arrays
+  in `supabase/seed.sql` (lines 33/41/50/59/68/77) so `VehicleSilhouette` renders. Either is a
+  one-line-per-row seed edit + local re-seed; **not** a code change (never hard-code the card to force
+  the silhouette — real photos are correct when they're actually of the vehicle).
+- **To action:** owner decision on real photography vs. placeholder, then a seed-only edit (+ prod
+  data cleanup if prod carries the same placeholders).
