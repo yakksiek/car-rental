@@ -440,28 +440,28 @@ may touch `supabase/seed.sql` (data only).
 
 #### Automated
 
-- [x] 5.1 Types pass: `npx astro check`
-- [x] 5.2 Lint passes: `npm run lint` (no unused `cn` / `active`)
-- [x] 5.3 Production build succeeds: `npm run build`
+- [x] 5.1 Types pass: `npx astro check` — 4fa475f
+- [x] 5.2 Lint passes: `npm run lint` (no unused `cn` / `active`) — 4fa475f
+- [x] 5.3 Production build succeeds: `npm run build` — 4fa475f
 
 #### Manual
 
-- [x] 5.4 No pill is crimson/active at any breakpoint; hover lightens (desktop #F1F2F5 + darker text; mobile/tablet #F6F7F9 + #D7DCE5 border)
-- [x] 5.5 The only crimson in the section is the "Cała flota →" CTA
-- [x] 5.6 Pills still route to `/fleet?category=…`
+- [x] 5.4 No pill is crimson/active at any breakpoint; hover lightens (desktop #F1F2F5 + darker text; mobile/tablet #F6F7F9 + #D7DCE5 border) — 4fa475f
+- [x] 5.5 The only crimson in the section is the "Cała flota →" CTA — 4fa475f
+- [x] 5.6 Pills still route to `/fleet?category=…` — 4fa475f
 
 ### Phase 6: Popularne — 2-column grid on tablet (removes truncation)
 
 #### Automated
 
-- [ ] 6.1 Types pass: `npx astro check`
-- [ ] 6.2 Lint passes: `npm run lint`
-- [ ] 6.3 Production build succeeds: `npm run build`
+- [x] 6.1 Types pass: `npx astro check`
+- [x] 6.2 Lint passes: `npm run lint`
+- [x] 6.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 6.4 At 834: Popularne is 2 columns; spec values show in full — no truncation/collision
-- [ ] 6.5 At 390: 1 column (unchanged); at 1440: 3 columns (unchanged)
+- [x] 6.4 At 834: Popularne is 2 columns; spec values show in full — no truncation/collision
+- [x] 6.5 At 390: 1 column (unchanged); at 1440: 3 columns (unchanged)
 
 ### Final gate
 
