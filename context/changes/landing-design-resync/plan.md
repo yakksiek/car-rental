@@ -283,15 +283,15 @@ may touch `supabase/seed.sql` (data only).
 
 #### Automated
 
-- [x] 1.1 Types pass: `npx astro check`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Production build succeeds: `npm run build`
+- [x] 1.1 Types pass: `npx astro check` — df6c442
+- [x] 1.2 Lint passes: `npm run lint` — df6c442
+- [x] 1.3 Production build succeeds: `npm run build` — df6c442
 
 #### Manual
 
-- [x] 1.4 Desktop: crimson CTA (dark arrow-disc) is the last chip inside the bordered pill container; heading row has no button
-- [x] 1.5 Tablet + mobile: crimson CTA after the wrapped pills; mobile pills wrap (no scroller)
-- [x] 1.6 Pills route to `/fleet?category=…`; "Cała flota" routes to `/fleet`
+- [x] 1.4 Desktop: crimson CTA (dark arrow-disc) is the last chip inside the bordered pill container; heading row has no button — df6c442
+- [x] 1.5 Tablet + mobile: crimson CTA after the wrapped pills; mobile pills wrap (no scroller) — df6c442
+- [x] 1.6 Pills route to `/fleet?category=…`; "Cała flota" routes to `/fleet` — df6c442
 
 ### Phase 2: Popularne — drop chip + "Wszystkie", subtitle = category · year
 
