@@ -1,7 +1,7 @@
 ---
 change_id: landing-design-resync
 title: Landing — re-sync to the evolved live design (TypeSelector + Popularne)
-status: implemented
+status: implementing
 created: 2026-08-07
 updated: 2026-08-07
 archived_at: null
@@ -28,3 +28,15 @@ this plan implements items #2–#11, i.e. everything non-footer).
   glyph is `tokens.accent` (crimson), which the app already matches.
 
 Purely presentational + one small data check (#10). No API/schema/behaviour change.
+
+**Follow-up phases queued (owner review 2026-08-07, after Phases 1–4 shipped).** Phases 1–4 are
+implemented + committed (`df6c442`, `f576312`, `bc33f3d`). Two more improvements were flagged and
+recorded as **Phase 5** and **Phase 6** (checked against the current live design), pending
+implementation via `/10x-implement landing-design-resync phase 5`:
+
+- **Phase 5** — "Wybierz typ pojazdu": drop the active (crimson) pill state entirely; pills are
+  hover-only; crimson belongs only to the "Cała flota →" CTA (design renders all pills `active={false}`).
+- **Phase 6** — "Popularne": tablet grid → 2 columns (design `ScreenTabletHome` is `1fr 1fr`),
+  which widens the tablet cards to ~377px and removes the spec truncation.
+
+Status reset to `planned` to reflect the queued phases; Phases 1–4 remain shipped.

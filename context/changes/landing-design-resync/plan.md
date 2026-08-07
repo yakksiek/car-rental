@@ -245,6 +245,114 @@ on-brand silhouette); this is a **data** problem, not CSS.
 
 ---
 
+## Phase 5: "Wybierz typ pojazdu" — remove the active pill state; hover-only; crimson only on "Cała flota"
+
+### Overview
+
+Follow-up flagged at owner review (2026-08-07), after Phases 1–4 shipped. The live design's
+`DesktopTypeExplorer` renders **every** type pill with `active={false}`
+(`customer-desktop.jsx:226`) — there is **no** persistent selected/crimson pill; crimson lives
+only on `CalaFlotaCTA`. Pills carry a **hover** treatment instead. The app currently marks
+"Furgon" active (crimson), which the owner does not want.
+
+### Changes Required
+
+#### 1. TypeSelector — drop the active state, add hover, keep crimson on the CTA only
+
+**File**: `src/components/landing/TypeSelector.astro`
+
+**Intent**: All 5 pills render in the default (unselected) state with a hover effect; no crimson
+pill; crimson is only the "Cała flota" CTA (unchanged).
+
+**Contract** (port from `TypePill` `:140-152`, hover CSS `:158`, `MobileTypePill` `:611-625`):
+
+- Remove the `active` prop and the `isActive` branch. Replace the pill's
+  `class:list={cn("<geometry>", isActive ? "<crimson>" : "<default>")}` with a **single static
+  class** (no crimson/active variant). Resulting class:
+  `inline-flex shrink-0 items-center gap-2 rounded-full border bg-card border-border py-[11px] pr-4 pl-[13px] text-[14px] font-[550] text-[var(--flota-ink-2)] transition hover:bg-[#F6F7F9] hover:border-[#D7DCE5] xl:border-transparent xl:bg-transparent xl:py-3 xl:pr-5 xl:pl-[18px] xl:text-[14.5px] xl:hover:bg-[#F1F2F5] xl:hover:border-transparent xl:hover:text-foreground`
+  - Mobile/tablet default = design `MobileTypePill` `#fff` / `1px #E7EAF0` → our `bg-card` /
+    `border-border`; hover `background:#F6F7F9; border-color:#D7DCE5` (`:158`) → `hover:bg-[#F6F7F9] hover:border-[#D7DCE5]`.
+  - Desktop (xl) default = transparent in the bordered container; hover
+    `background:#F1F2F5; span color:#141922` (`:158`) → `xl:hover:bg-[#F1F2F5] xl:hover:text-foreground`.
+    `deviation(token: design hover text #141922 → our --flota-ink #0f172a via the app-wide
+dark-ink mapping)`.
+  - Geometry classes unchanged (gap/padding/radius/text sizes as above).
+- Icon: drop the `isActive ? "text-primary-foreground" : "text-[var(--flota-ink-2)]"` →
+  always `text-[var(--flota-ink-2)]` (keep the `category === "car_transporter" && "md:size-[20px]"` size conditional).
+- Remove `interface Props { active?: VehicleCategory }` + `const { active = "cargo_van" } = Astro.props;`
+  (the component takes no props now). If `cn` becomes unused, drop the import (verify — lint will flag).
+- Update the top comment: remove the "Furgon is the active (accent) pill" line; the selector is
+  now stateless click-to-route, hover-only pills, crimson only on the CTA.
+
+#### 2. index.astro — drop the `active` prop
+
+**File**: `src/pages/index.astro`
+
+**Contract**: `<TypeSelector active="cargo_van" />` (`:259`) → `<TypeSelector />`.
+
+### Success Criteria
+
+#### Automated Verification
+
+- Types: `npx astro check` · Lint: `npm run lint` (no unused `cn` / `active`) · Build: `npm run build`
+
+#### Manual Verification
+
+- No pill is crimson/filled at any breakpoint (Furgon is no longer active). Hovering a pill
+  lightens it — desktop `#F1F2F5` bg + darker text; mobile/tablet `#F6F7F9` bg + `#D7DCE5` border.
+- The only crimson element in the section is the "Cała flota →" CTA.
+- Pills still route to `/fleet?category=…`.
+
+---
+
+## Phase 6: "Popularne" — 2-column grid on tablet (removes the truncation)
+
+### Overview
+
+Follow-up flagged at owner review (2026-08-07). The live design's `ScreenTabletHome` lays
+Popularne out as a **2-column** grid (`customer-desktop.jsx:768` — `gridTemplateColumns:'1fr 1fr'`,
+gap 16). The app uses `md:grid-cols-3`, so at 834 each card is ~246px — which is exactly what
+forces the Phase-3 spec-value truncation. Two columns at 834 make each card ~377px, wide enough
+that specs no longer truncate.
+
+### Changes Required
+
+#### 1. index.astro — tablet Popularne = 2 columns; desktop stays 3
+
+**File**: `src/pages/index.astro`
+
+**Intent**: `md`/`lg` (incl. tablet 834) render 2 columns; only `xl` (desktop ≥1280) renders 3.
+
+**Contract**:
+
+- Popularne grid (`:268`): `grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3` →
+  `grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3` (drop `md:grid-cols-3`, add
+  `xl:grid-cols-3`). `gap-4` = 16 matches the design gap.
+- No `LandingVehicleCard` edits needed (its internal layout is container-query driven). Card
+  widths become **390 → 350px (1-col)**, **834 → ~377px (2-col)**, **1440 → 435px (3-col)** — all
+  ≥ 280, so the Phase-3 stacked-footer + `w-full`/`@min-[280px]:w-auto` spec-truncation states go
+  **dormant** (never trigger). Leave them in place as the narrow-card safety net —
+  `deviation(reason: superseded by 2-col tablet; truncation no longer reachable, kept as fallback)`.
+- The footer at tablet 377px renders **side-by-side** (`@min-[280px]:flex-row`), consistent with
+  the app's user-approved mobile row footer. The design's tablet `MobilePopularCard stack` is a
+  column footer — `deviation(reason: app pattern is row-when-wide; 377px has ample room)`. If the
+  owner later prefers the design's stacked tablet footer, raise the footer stack threshold above
+  377px instead (separate call, not this phase).
+
+### Success Criteria
+
+#### Automated Verification
+
+- Types: `npx astro check` · Lint: `npm run lint` · Build: `npm run build`
+
+#### Manual Verification
+
+- At **834**: Popularne is **2 columns** (2 cards row 1, 1 card row 2); spec values show **in full**
+  with no truncation/ellipsis and no collision.
+- At **390**: 1 column (unchanged). At **1440**: 3 columns (unchanged).
+
+---
+
 ## Testing Strategy
 
 - **No new logic** → no new unit suites. Keep the existing unit + integration suites green
@@ -327,6 +435,33 @@ may touch `supabase/seed.sql` (data only).
 - [x] 4.1 Located the non-vehicle photo source (seed vs production)
 - [x] 4.2 Seed fixed (real photos or cleared → silhouette), or production finding handed off
 - [x] 4.3 Cards never show an unrelated stock photo
+
+### Phase 5: TypeSelector — remove active pill state, hover-only, crimson only on "Cała flota"
+
+#### Automated
+
+- [x] 5.1 Types pass: `npx astro check`
+- [x] 5.2 Lint passes: `npm run lint` (no unused `cn` / `active`)
+- [x] 5.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [x] 5.4 No pill is crimson/active at any breakpoint; hover lightens (desktop #F1F2F5 + darker text; mobile/tablet #F6F7F9 + #D7DCE5 border)
+- [x] 5.5 The only crimson in the section is the "Cała flota →" CTA
+- [x] 5.6 Pills still route to `/fleet?category=…`
+
+### Phase 6: Popularne — 2-column grid on tablet (removes truncation)
+
+#### Automated
+
+- [ ] 6.1 Types pass: `npx astro check`
+- [ ] 6.2 Lint passes: `npm run lint`
+- [ ] 6.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 6.4 At 834: Popularne is 2 columns; spec values show in full — no truncation/collision
+- [ ] 6.5 At 390: 1 column (unchanged); at 1440: 3 columns (unchanged)
 
 ### Final gate
 
