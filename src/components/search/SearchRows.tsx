@@ -102,6 +102,22 @@ function EnterChip() {
   );
 }
 
+/**
+ * The trailing affordance on rows the mockup draws with a chevron. On the ACTIVE
+ * row the chevron gives way to the `↵` chip: a chevron says "click me", but the
+ * highlighted row is the one Enter opens, and leaving a dead arrow there while the
+ * footer advertises "↵ otwórz" tells the user the wrong thing. On the results page
+ * nothing is ever selected, so the chevron simply stays.
+ */
+function TrailingAffordance() {
+  return (
+    <>
+      <ChevronRight className="text-muted-foreground size-4 shrink-0 group-data-[selected=true]:hidden" />
+      <EnterChip />
+    </>
+  );
+}
+
 // Every row spreads its remaining props onto the anchor. This is what makes
 // `<Command.Item asChild><ReservationRow …/></Command.Item>` work: cmdk hands the
 // child its `cmdk-item` marker, `data-selected`, id and ref through Slot, and a
@@ -165,7 +181,7 @@ export function ReturnRow({
           {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> · {relativeDayPl(row.return_date, today)}
         </span>
       </span>
-      <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+      <TrailingAffordance />
     </a>
   );
 }
@@ -194,7 +210,7 @@ export function VehicleRow({
         </span>
       </span>
       {!row.is_active && <Pill label="Wycofany" tone="neutral" />}
-      <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+      <TrailingAffordance />
     </a>
   );
 }
