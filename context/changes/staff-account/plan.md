@@ -364,9 +364,9 @@ None — no schema change, no data migration, no RPC.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check` — 3a7aa37
+- [x] 2.2 Linting passes: `npm run lint` — 3a7aa37
+- [x] 2.3 Build passes: `npm run build` — 3a7aa37
 
 #### Manual
 
@@ -379,10 +379,10 @@ None — no schema change, no data migration, no RPC.
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Integration test: wrong-current rejected + unchanged; correct-current updates (`npm run test:integration`)
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
+- [x] 3.4 Integration test: wrong-current rejected + unchanged; correct-current updates (`npm run test:integration`)
 
 #### Manual
 
