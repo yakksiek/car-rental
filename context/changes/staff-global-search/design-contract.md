@@ -93,6 +93,7 @@ Same base map as the cohort (`bg→--background`, `card→--card`, `ink→--fore
 - **D13 `deviation(reuse)`** — the results page's topbar search field is the shell's own 520px field, not a second 420px one. Since the shell's top bar is always on (Phase 2), a page-local field would be a duplicate; the results page composes only the topbar's left block, through a new `header-title` slot.
 - **D14 `deviation(no-mockup-state)`** — `/dashboard/search` with a blank `?q=` (reachable only by hand-editing the URL) shows **Zacznij pisać, aby wyszukać** / **Szukaj po numerze rezerwacji, nazwisku klienta lub rejestracji pojazdu.** and returns HTTP 400. The mockup has no such state, and the no-results copy would render as `Brak wyników dla „”`.
 - **D15 `deviation(no-data)`** — the Zwroty row's mono id is the **reservation** reference (`R-0012`), not the mockup's separate return-protocol number (`RET-1204`): return protocols carry no human-facing reference of their own in this schema.
+- **D16 `deviation(affordance)`** — in the **dropdown**, the Zwroty and Pojazdy rows swap their trailing chevron for the `↵` chip while active, instead of keeping the chevron the mockup draws in every state. The mockup only ever shows an active _reservation_ row, so the case never appears in it; leaving an inert arrow on the highlighted row contradicts the footer's own "↵ otwórz" hint (owner-reported, 2026-08-10). The results page has no selection, so its chevrons are unchanged.
 
 ---
 
