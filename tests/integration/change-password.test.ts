@@ -45,8 +45,12 @@ async function signIn(password: string) {
   return anonClient().auth.signInWithPassword({ email: EMAIL, password });
 }
 
-/** An authed employee context for the disposable user, posting a native form. */
-async function employeeContext(formBody: Record<string, string>, origin?: string) {
+/**
+ * An authed employee context for the disposable user, posting a native form.
+ * `origin` defaults to same-origin; pass a foreign origin for a cross-site POST,
+ * or `null` to send no Origin header at all.
+ */
+async function employeeContext(formBody: Record<string, string>, origin?: string | null) {
   const client = anonClient();
   const { data, error } = await client.auth.signInWithPassword({ email: EMAIL, password: ORIGINAL });
   if (error) {
@@ -122,6 +126,31 @@ describe("POST /api/auth/change-password", () => {
     expect((await signIn(ORIGINAL)).error).not.toBeNull();
   });
 
+  it("revokes other sessions but keeps the caller signed in", async () => {
+    // A session on another device, established before the change. `updateUser`
+    // revokes nothing on its own, so this is the property that has to be asserted
+    // explicitly — a stolen cookie must not outlive the password change.
+    const other = await signIn(ORIGINAL);
+    if (other.error) {
+      throw other.error;
+    }
+    const otherRefreshToken = other.data.session.refresh_token;
+
+    const context = await employeeContext({ current: ORIGINAL, password: NEXT, confirm: NEXT });
+    const response = await changePasswordPOST(context);
+    expect(response.headers.get("location")).toBe(`${PAGE}?done=1`);
+
+    const refreshed = await anonClient().auth.refreshSession({ refresh_token: otherRefreshToken });
+    expect(refreshed.error).not.toBeNull();
+
+    // …and the caller is still authenticated on the session (e) minted for them.
+    const callerClient = context.locals.supabase;
+    if (!callerClient) {
+      throw new Error("expected a Supabase client on locals");
+    }
+    expect((await callerClient.auth.getUser()).error).toBeNull();
+  });
+
   it("rejects a mismatched confirmation before touching the password", async () => {
     const context = await employeeContext({ current: ORIGINAL, password: NEXT, confirm: `${NEXT}-inne` });
 
@@ -146,6 +175,18 @@ describe("POST /api/auth/change-password", () => {
 
   it("rejects a cross-origin POST before any work", async () => {
     const context = await employeeContext({ current: ORIGINAL, password: NEXT, confirm: NEXT }, "https://evil.example");
+
+    const response = await changePasswordPOST(context);
+
+    expect(response.status).toBe(403);
+    expect((await signIn(ORIGINAL)).error).toBeNull();
+  });
+
+  it("rejects a POST with no Origin header at all", async () => {
+    // A same-origin form always sends Origin; its absence is a non-browser or
+    // stripped-header caller. The check must fail CLOSED — `null !== url.origin` —
+    // rather than treat "no Origin" as "no cross-origin problem".
+    const context = await employeeContext({ current: ORIGINAL, password: NEXT, confirm: NEXT }, null);
 
     const response = await changePasswordPOST(context);
 

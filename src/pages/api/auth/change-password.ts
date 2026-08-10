@@ -30,6 +30,7 @@ const PAGE = "/dashboard/account/password";
 const MSG = {
   wrongCurrent: "Nieprawidłowe obecne hasło",
   badPassword: "Nieprawidłowe hasło.",
+  rateLimited: "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
 } as const;
 
 const fail = (context: Parameters<APIRoute>[0], message: string) =>
@@ -54,12 +55,21 @@ export const POST: APIRoute = async (context) => {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // (d) Validate.
-  const form = await context.request.formData();
+  // (d) Validate. An unparseable body is a malformed request rather than a user
+  // error, so answer before the schema ever runs — same shape as vehicles.ts.
+  let form: FormData;
+  try {
+    form = await context.request.formData();
+  } catch {
+    return fail(context, MSG.badPassword);
+  }
+
+  // `form.get` yields null for an absent field, which fails zod's *type* check
+  // rather than `.min(1)` — that surfaces zod's English default in a Polish UI.
   const parsed = schema.safeParse({
-    current: form.get("current"),
-    password: form.get("password"),
-    confirm: form.get("confirm"),
+    current: form.get("current") ?? "",
+    password: form.get("password") ?? "",
+    confirm: form.get("confirm") ?? "",
   });
   if (!parsed.success) {
     return fail(context, parsed.error.issues[0]?.message ?? MSG.badPassword);
@@ -73,7 +83,10 @@ export const POST: APIRoute = async (context) => {
     password: parsed.data.current,
   });
   if (reauthError) {
-    return fail(context, MSG.wrongCurrent);
+    // GoTrue's sign-in limit is keyed on the caller's IP, which behind Cloudflare
+    // Workers is the Worker's egress IP — one bucket shared by every user. Saying
+    // "wrong password" to a throttled staffer sends them chasing the wrong problem.
+    return fail(context, reauthError.status === 429 ? MSG.rateLimited : MSG.wrongCurrent);
   }
 
   // (f) Only now the actual change.
@@ -81,6 +94,15 @@ export const POST: APIRoute = async (context) => {
   if (error) {
     return fail(context, error.message);
   }
+
+  // (g) Revoke every OTHER session for this user. `updateUser` revokes nothing on
+  // its own, so without this a stolen cookie outlives the password change — the one
+  // remedy a compromised staffer has would not actually remedy anything. It also
+  // clears the session the caller arrived with, which (e) orphaned by minting a
+  // fresh one. Verified against local GoTrue: "others" kills the orphan and every
+  // other device while leaving this caller signed in. A failure here is not worth
+  // failing the request over — the password has already changed.
+  await supabase.auth.signOut({ scope: "others" });
 
   return context.redirect(`${PAGE}?done=1`);
 };

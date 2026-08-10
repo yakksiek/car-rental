@@ -126,7 +126,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       <a
         href="/dashboard/account"
         aria-current={active === "me" ? "page" : undefined}
-        aria-label="Profil"
+        aria-label={`Profil — ${displayName}`}
         title="Profil"
         class:list={[
           "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
@@ -187,8 +187,14 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   </div>
 
   {/* ── Floating tab bar (below md) ───────────────────────────────── */}
+  {
+    /* The pill grows with the nav: an admin is at 8 items = 360px, exactly a
+    360px viewport's width, and S-13 appends a ninth. Cap it to the viewport and
+    let it scroll rather than clip — same idiom as FleetTypeScroll's dark pill.
+    Items are `shrink-0` so they keep their 40px hit target instead of squeezing. */
+  }
   <nav
-    class="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-1 rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] md:hidden"
+    class="fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-24px)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
   >
     {
       /* Icon-only so the pill stays compact regardless of item count (the active
@@ -201,7 +207,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           aria-current={active === n.id ? "page" : undefined}
           aria-label={n.label}
           class:list={[
-            "relative flex size-10 items-center justify-center rounded-full transition-colors",
+            "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
             active === n.id ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
           ]}
         >
