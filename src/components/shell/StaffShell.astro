@@ -126,6 +126,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       <a
         href="/dashboard/account"
         aria-current={active === "me" ? "page" : undefined}
+        aria-label="Profil"
         title="Profil"
         class:list={[
           "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
