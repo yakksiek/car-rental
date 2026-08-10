@@ -55,6 +55,12 @@ export interface BuildApiContextOptions {
    */
   rawBody?: string;
   /**
+   * Form-encoded request body, for the routes fed by a native `<form method="POST">`
+   * (the auth endpoints read `request.formData()`, not `request.json()`). Sent as
+   * `application/x-www-form-urlencoded`. Takes precedence over `body`/`rawBody`.
+   */
+  formBody?: Record<string, string>;
+  /**
    * `Origin` header. Defaults to the same origin as `path` (passes the CSRF
    * check). Pass a foreign origin to test a cross-site POST, or `null` to send
    * no Origin header at all.
@@ -66,13 +72,15 @@ export interface BuildApiContextOptions {
 export function buildApiContext(opts: BuildApiContextOptions): APIContext {
   const url = new URL(opts.path, BASE_ORIGIN);
 
-  // `rawBody` wins over `body`: it carries a (possibly malformed) string verbatim.
-  const hasBody = opts.rawBody !== undefined || opts.body !== undefined;
-  const serializedBody = opts.rawBody ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
+  // Precedence: `formBody` (urlencoded) > `rawBody` (verbatim, possibly malformed)
+  // > `body` (JSON-serialized).
+  const form = opts.formBody !== undefined ? new URLSearchParams(opts.formBody).toString() : undefined;
+  const hasBody = form !== undefined || opts.rawBody !== undefined || opts.body !== undefined;
+  const serializedBody = form ?? opts.rawBody ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
 
   const headers = new Headers();
   if (hasBody) {
-    headers.set("content-type", "application/json");
+    headers.set("content-type", form !== undefined ? "application/x-www-form-urlencoded" : "application/json");
   }
   // `origin: null` → send no Origin header; otherwise default to same-origin.
   if (opts.origin !== null) {
@@ -89,6 +97,10 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
     request,
     url,
     params: opts.params ?? {},
+    // Redirect-shaped routes (the native-<form> auth endpoints) answer with
+    // `context.redirect(...)`, which Astro injects at runtime. Mirror its default:
+    // a 302 carrying `Location`.
+    redirect: (path: string, status = 302) => new Response(null, { status, headers: { location: path } }),
     locals: {
       supabase: opts.supabase,
       user: opts.user ?? null,
