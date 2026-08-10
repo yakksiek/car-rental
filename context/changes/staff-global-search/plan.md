@@ -420,10 +420,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build passes: `npm run build`
-- [x] 3.4 Unit: debounce/cancellation (or results-grouping mapper)
+- [x] 3.1 Type checking passes: `npx astro check` — 9aa5656
+- [x] 3.2 Linting passes: `npm run lint` — 9aa5656
+- [x] 3.3 Build passes: `npm run build` — 9aa5656
+- [x] 3.4 Unit: debounce/cancellation (or results-grouping mapper) — 9aa5656
 
 #### Manual
 
@@ -436,9 +436,9 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build passes: `npm run build`
 
 #### Manual
 

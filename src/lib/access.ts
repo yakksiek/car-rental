@@ -40,6 +40,10 @@ export const ROUTE_ROLES: { prefix: string; role: AppRole }[] = [
   // Return-protocol worklist (S-06) — employee. Covered by /dashboard; this
   // explicit entry documents intent (the return view reuses /dashboard/protocols).
   { prefix: "/dashboard/returns", role: "employee" },
+  // Global-search results page (S-13) — employee. Covered by /dashboard; this
+  // explicit entry documents intent. The data behind it is gated independently by
+  // the `search_staff` RPC's own role check, so this only governs page access.
+  { prefix: "/dashboard/search", role: "employee" },
   // Authenticated staff area — any role with a profile.
   { prefix: "/dashboard", role: "employee" },
 ];
