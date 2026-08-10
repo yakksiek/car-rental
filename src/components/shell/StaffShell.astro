@@ -185,13 +185,21 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     <header class="border-border bg-card hidden items-center justify-between gap-4 border-b px-8 py-[22px] md:flex">
       <div class="min-w-0">
         {
-          showHeader && (
-            <>
-              <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-              {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-            </>
-          )
+          /* `header-title` lets a page compose its own left block when the plain
+            title/subtitle pair cannot express it — the search results page needs an
+            eyebrow ABOVE a mixed-weight headline. Everything else falls through to
+            the default below. */
         }
+        <slot name="header-title">
+          {
+            showHeader && (
+              <>
+                <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+                {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+              </>
+            )
+          }
+        </slot>
       </div>
       <div class="flex min-w-0 items-center justify-end gap-3">
         <slot name="header-action" />
