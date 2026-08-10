@@ -320,20 +320,21 @@ export default function GlobalSearch({
                 ) : total === 0 ? (
                   <NoResults query={trimmed} mobile />
                 ) : (
-                  <ResultGroups results={results} query={trimmed} today={today} />
+                  <>
+                    <ResultGroups results={results} query={trimmed} today={today} />
+                    {/* The "see all" button scrolls WITH the results (contract Surface 4),
+                        it is not pinned to the viewport bottom — the floating tab bar
+                        already owns that band. */}
+                    <a
+                      href={resultsHref}
+                      className="bg-foreground text-background mx-4 mt-3 mb-2 flex h-12 items-center justify-center gap-2 rounded-[12px] text-[14.5px] font-[650]"
+                    >
+                      <Search className="size-4" />
+                      {COPY.seeAll} · {total} {pluralPl(total, RESULT_FORMS)}
+                    </a>
+                  </>
                 )}
               </Command.List>
-
-              {!resting && total > 0 && (
-                <div className="border-t border-[var(--flota-hair-2)] p-4">
-                  <a
-                    href={resultsHref}
-                    className="bg-foreground text-background flex h-12 items-center justify-center gap-2 rounded-[12px] text-[14.5px] font-[650]"
-                  >
-                    {COPY.seeAll} · {total}
-                  </a>
-                </div>
-              )}
             </Command>
           </div>,
           document.body,
