@@ -451,9 +451,9 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check` — 65078c9
+- [x] 4.2 Linting passes: `npm run lint` — 65078c9
+- [x] 4.3 Build passes: `npm run build` — 65078c9
 
 #### Manual
 
