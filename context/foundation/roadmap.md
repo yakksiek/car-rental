@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-08-02
+updated: 2026-08-10
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -27,33 +27,37 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID   | Change ID                   | Outcome (user can …)                                                                                                                       | Prerequisites | PRD refs                             | Status  |
-| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------ | ------- |
-| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule                                                                 | —             | FR-005, Guardrails                   | done    |
-| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated                                                                   | —             | Access Control                       | done    |
-| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card                                                                              | F-01          | US-01, FR-001/002/003                | done    |
-| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit                                                                   | F-01, S-01    | US-01, FR-004/005                    | done    |
-| S-03 | reservation-approval        | view pending requests and accept or reject them                                                                                            | F-02, S-02    | US-01, FR-009/010                    | done    |
-| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)                                                                 | F-01, F-02    | FR-011                               | done    |
-| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed                                                                | F-02, S-03    | US-02, FR-006/008, NFR               | done    |
-| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed                                                                          | S-05          | US-02, FR-007/008, NFR               | done    |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                                                                                 | F-02, S-02    | FR-012                               | done    |
-| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password                                                                        | F-02          | FR-013                               | done    |
-| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01    | FR-003 reuse; post-v1                | done    |
-| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01          | FR-001/002/003 reuse; US-01; post-v1 | backlog |
+| ID   | Change ID                   | Outcome (user can …)                                                                                                                       | Prerequisites    | PRD refs                             | Status  |
+| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------ | ------- |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule                                                                 | —                | FR-005, Guardrails                   | done    |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated                                                                   | —                | Access Control                       | done    |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card                                                                              | F-01             | US-01, FR-001/002/003                | done    |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit                                                                   | F-01, S-01       | US-01, FR-004/005                    | done    |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                                                                                            | F-02, S-02       | US-01, FR-009/010                    | done    |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)                                                                 | F-01, F-02       | FR-011                               | done    |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed                                                                | F-02, S-03       | US-02, FR-006/008, NFR               | done    |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed                                                                          | S-05             | US-02, FR-007/008, NFR               | done    |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                                                                                 | F-02, S-02       | FR-012                               | done    |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password                                                                        | F-02             | FR-013                               | done    |
+| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01       | FR-003 reuse; post-v1                | done    |
+| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | backlog |
+| S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | backlog |
+| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | backlog |
+| S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                       | Chain                             | Note                                                                                                                                                                                                                                                                     |
-| ------ | --------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`          | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.                                                                                                                                                                                      |
-| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06` | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.                                                                                                                                                                                    |
-| C      | Fleet & account admin       | `S-04` / `S-08`                   | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever.                                                                                                                                                                           |
-| D      | Operations visibility       | `S-07`                            | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after.                                                                                                                                                                           |
-| E      | Public content pages        | `S-09`                            | Informational pages over the existing public shell; About/FAQ static, Cennik reads live pricing (F-01, read-only). No auth. Independent — schedule anytime.                                                                                                              |
-| F      | Public UI polish            | `S-10`                            | Restyle + responsiveness for the landing & fleet pages, plus the landing type-explorer→Popularne interaction. Chains off `S-01` (needs the `/fleet?category=` deep-link + `listVehicles`); builds on the shipped `landing-redesign` hero. Standalone — schedule anytime. |
+| Stream | Theme                       | Chain                             | Note                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------ | --------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A      | Public booking funnel       | `F-01` → `S-01` → `S-02`          | The must-have path to a first deploy (main_goal `speed`); `S-02` is the north star.                                                                                                                                                                                                                                                                                                                                |
+| B      | Employee handover lifecycle | `F-02` → `S-03` → `S-05` → `S-06` | `S-03` needs `S-02` (a reservation) from Stream A before there's anything to approve.                                                                                                                                                                                                                                                                                                                              |
+| C      | Fleet & account admin       | `S-04` / `S-08`                   | Both branch off `F-02`; independent admin/CRUD work — parallelize to spend the capacity lever.                                                                                                                                                                                                                                                                                                                     |
+| D      | Operations visibility       | `S-07`                            | Overdue dashboard; joins Stream A at `S-02` and needs `F-02`. Read-only, run it anytime after.                                                                                                                                                                                                                                                                                                                     |
+| E      | Public content pages        | `S-09`                            | Informational pages over the existing public shell; About/FAQ static, Cennik reads live pricing (F-01, read-only). No auth. Independent — schedule anytime.                                                                                                                                                                                                                                                        |
+| F      | Public UI polish            | `S-10`                            | Restyle + responsiveness for the landing & fleet pages, plus the landing type-explorer→Popularne interaction. Chains off `S-01` (needs the `/fleet?category=` deep-link + `listVehicles`); builds on the shipped `landing-redesign` hero. Standalone — schedule anytime.                                                                                                                                           |
+| G      | Staff console               | `S-11` / `S-12` / `S-13`          | Three staff-facing features, all branching off `F-02` (every prereq done). Parallel with light coordination on the one shared surface — the `StaffShell` nav registry. **Sequence `S-13` (global search) last**: it's the invasive shell change (adds a persistent header search where none exists today), so `S-11`/`S-12` land rebase-free first. Framing cohort: `context/changes/staff-ops-features/frame.md`. |
 
 ## Baseline
 
@@ -248,6 +252,89 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** The current `TypeSelector` is a **static** click-to-route Astro component — the `landing-redesign` slice explicitly **deferred** the hover-preview ("no hover-preview this slice — click-to-route only, deviation(scope)"); S-10 finishes that. It becomes a **React island** that forks behavior by input: **desktop hover = preview** (swap the Popularne cards + badge + the "Wszystkie" target), **desktop click = navigate** (`/fleet?category=<type>`), **mobile tap = select** (swap; no hover). The interaction-heavy parts are that hover/tap fork, keeping the pill and "Wszystkie" targets as **real anchors** (SEO + no-JS fallback + view-transitions), and swapping the Popularne strip without a flash. Extract the per-category "top-N" grouping as a **pure, Vitest-tested helper** — the empty/thin-category edges live there, and no UI test runner ships on the public pages. The **fleet restyle** is mostly visual (lower risk), but the type-pill-bar reconciliation touches the **deep-link contract** the landing's pre-filter buttons depend on — get the URL/`category` behavior right or those links break. Built over existing tokens + data (no `global.css` edit expected) and the shipped fonts; **Polish copy is canonical**, ported verbatim from the mockup ("Wybierz typ pojazdu.", "Popularne", "Wszystkie", "Cała flota", the badges _Furgony / Busy osobowe / Autolawety / Chłodnie / Skrzyniowe_, and the hint _"Najedź, aby podejrzeć modele poniżej · kliknij, aby otworzyć ekran kategorii"_). Design Alignment Audit runs against `customer-desktop.jsx` (`ScreenDesktopHome` / `DesktopTypeExplorer`, `ScreenDesktopFleet` / `ScreenTabletFleet` / `ScreenMobileFleet`, `ScreenMobileHome`) per `context/foundation/lessons.md`.
 - **Status:** backlog
 
+### S-11: Staff self-service account (My account)
+
+- **Outcome:** A logged-in employee opens their own **Profil** screen (desktop + mobile), sees their
+  contact and work details, **changes their own password while signed in** (no email round-trip), and can
+  log out. Read-only identity display + password change — not a full profile editor.
+- **Change ID:** staff-account
+- **PRD refs:** — (net-new; extends **F-02** auth/role, done). Adds no new FR.
+- **Prerequisites:** **F-02** (roles/auth, done). The in-session `updateUser` primitive already exists.
+- **Parallel with:** S-12, S-13 (light coordination on the `StaffShell` nav registry).
+- **Blockers:** none — mockup exists (`staff-profile.jsx`, live in Claude Design).
+- **Unknowns:**
+  - The mockup's **Powiadomienia** (notifications) toggle maps to **no** v1 system (PRD non-goal) — drop or
+    render disabled. Owner: user. Block: no.
+  - The **Oddział** (branch) field is not in the data model — drop or hardcode. Block: no.
+  - Inline edit of `full_name` is **RLS-blocked for non-admins** (`profiles_update_authenticated` requires
+    admin) — needs a self-row policy/RPC **only if** editing (vs display) is in scope. Block: no.
+  - Whether "Zmień hasło" must **confirm the current password** (Supabase `updateUser` does not) — a net-new
+    verification if wanted. Block: no.
+- **Risk:** Lowest-risk of the cohort. Reuses the in-session `updateUser({ password })` already at
+  `src/pages/api/auth/reset-password.ts:45` and the `ResetPasswordForm` atoms; the screen is mostly display
+  over `App.Locals.user`. The only shell edit is making the existing account chip (`StaffShell.astro:121-134`)
+  a link and/or adding the pre-declared "Profil" nav entry (`StaffShell.astro:14-15`). Design Alignment Audit
+  runs against `staff-profile.jsx`; Polish copy canonical (Profil, Kontakt, Praca, Konto, Zmień hasło, Wyloguj się).
+- **Status:** backlog
+
+### S-12: Manual reservation (staff-created confirmed booking)
+
+- **Outcome:** A logged-in employee creates a **confirmed** reservation by hand for a phone-in customer —
+  pick vehicle + dates/times, enter customer name/phone/email, with a **live availability check** — and the
+  slot is blocked in the calendar and the customer is emailed a confirmation. The booking is tagged
+  **"Ręczna"** (manual).
+- **Change ID:** manual-reservation
+- **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-009** (confirmed state); adds no new FR.
+- **Prerequisites:** **F-02** (roles), **S-02** (reservation model + overlap rule), **S-03** (the confirmed
+  state) — all done.
+- **Parallel with:** S-11, S-13.
+- **Blockers:** none — mockup exists (`manual-reservation.jsx`, live in Claude Design).
+- **Unknowns:**
+  - **New `create_confirmed_reservation` definer RPC required** — `create_reservation_request` hardcodes
+    `status='pending'` (`…reservation_b2b_fields.sql:71-78`) and `decide_reservation` only transitions existing
+    rows. The new RPC gates on `current_app_role() IN ('employee','admin')`, inserts `status='confirmed'`, and
+    mints the reference via the existing sequence; the `EXCLUDE` constraint protects it atomically. Block: no.
+  - **Two entry points** in the mockup — a header quick-add menu **and** a calendar-cell click → confirm. The
+    calendar-cell path touches `/dashboard/calendar`; it can be a follow-up. Block: no.
+  - The quick-action menu also lists **Nowy klient / Dodaj pojazd / Szybkie wydanie** — out of this slice;
+    "Nowy klient" implies a customer database v1 lacks. Block: no.
+- **Risk:** Reuses the overlap `EXCLUDE` + `isVehicleAvailable` pre-check and the confirmed-email template, and
+  can fork `ReservationForm`. Net-new surface is one RPC + a staff form/modal + an entry-point button. The
+  "Odbiór od 14:00 · zwrot do 10:00" window and deposit/rate math match the existing model. Design Alignment
+  Audit against `manual-reservation.jsx`; Polish copy canonical (Nowa rezerwacja, Ręczna, Utwórz rezerwację,
+  Termin wolny/zajęty, kaucja).
+- **Status:** backlog
+
+### S-13: Staff global search
+
+- **Outcome:** A logged-in employee searches across **reservations, returns, vehicles, and customers** from a
+  **header ⌘K search box** — grouped live results in a dropdown, a resting state (recent searches +
+  quick-jumps), a no-results state, and **Enter → a full results page** with filter chips. Desktop dropdown +
+  mobile full-screen.
+- **Change ID:** staff-global-search
+- **PRD refs:** — (net-new operational aid). Adds no new FR.
+- **Prerequisites:** **F-02** (roles), **S-02/S-03** (reservations to search), **S-04** (vehicles),
+  **S-05/S-06** (returns) — all done.
+- **Parallel with:** S-11, S-12 — **but this is the invasive `StaffShell` change; sequence it last.**
+- **Blockers:** none — mockup exists (`search-flow.jsx`, live in Claude Design).
+- **Unknowns:**
+  - **New role-gated search RPC(s) required** — reservation table SELECT is revoked and existing RPCs are
+    pending-only/calendar-only; search over reservations (name/phone/reference/plate/dates) needs a new definer
+    RPC. Vehicle search can reuse `listFleet`. Block: no.
+  - The **Klienci** group must be **derived from denormalized reservation fields** (no customer entity);
+    **Zwroty** = return protocols (S-06). Block: no.
+  - **Shell restructure** — the staff header has no action slot today and several pages set `showHeader={false}`
+    and draw their own headers; a persistent global search bar is a structural `StaffShell` change touching all
+    staff pages (search was deliberately deferred — `dashboard.astro:67,88`). Block: no (but it's why this
+    sequences last).
+  - **⌘K** global shortcut + a full results page/route are net-new. Block: no.
+- **Risk:** Highest-surface of the cohort (new RPC + shell restructure + a results route), and the one
+  shared-surface conflict point with S-11/S-12's nav edits — so land those first and let search rebase over a
+  settled shell. Client-side search patterns to mirror exist (`StaffList`/`FleetList`). Design Alignment Audit
+  against `search-flow.jsx`; Polish copy canonical (Szukaj rezerwacji, pojazdu, rejestracji…, Rezerwacje,
+  Zwroty, Klienci, Pojazdy, Zobacz wszystkie wyniki).
+- **Status:** backlog
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                                            | Ready for `/10x-plan` | Notes                                                                                                                                                                                                                                                                                                                                                                |
@@ -265,6 +352,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-08       | employee-account-management | Admin employee accounts + self-service password reset            | no                    | Needs F-02; parallelizable                                                                                                                                                                                                                                                                                                                                           |
 | S-09       | public-info-pages           | Public About/FAQ pages + dynamic pricing (Cennik)                | yes                   | Net-new (post-v1). About/FAQ static; Cennik reads live fleet pricing (F-01). Mockups supplied at plan start — reconcile Cennik's pricing model vs. our rate fields. Run `/10x-new public-info-pages` → `/10x-plan public-info-pages`.                                                                                                                                |
 | S-10       | landing-fleet-restyle       | Restyle + responsive landing & fleet + type-explorer → Popularne | yes                   | Net-new UI polish (post-v1). Mockups live in Claude Design `customer-desktop.jsx` (`ScreenDesktopHome`/`DesktopTypeExplorer`, `ScreenDesktop/Tablet/MobileFleet`, `ScreenMobileHome`). Reconcile empty/thin categories, "Popularne" ordering, and the fleet URL-vs-instant filter at plan. Run `/10x-new landing-fleet-restyle` → `/10x-plan landing-fleet-restyle`. |
+| S-11       | staff-account               | Staff self-service account + in-session password change          | yes                   | Net-new (post-v1); extends F-02 (done). Mockup `staff-profile.jsx` (live). Trim the notifications/branch rows (no v1 backing). Parallel; run `/10x-new staff-account` → `/10x-plan staff-account`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                             |
+| S-12       | manual-reservation          | Staff-created confirmed reservation (phone-in)                   | yes                   | Needs S-02/S-03 (done). Mockup `manual-reservation.jsx` (live). New `create_confirmed_reservation` definer RPC; reuses overlap rule + confirmed-email. Parallel; run `/10x-new manual-reservation`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                            |
+| S-13       | staff-global-search         | Header ⌘K omnisearch (reservations/returns/vehicles/customers)   | yes                   | Needs S-02/S-03/S-04/S-05/S-06 (done). Mockup `search-flow.jsx` (live). New role-gated search RPC + `StaffShell` restructure — **sequence last**. Run `/10x-new staff-global-search`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                                          |
 
 ## Open Roadmap Questions
 
