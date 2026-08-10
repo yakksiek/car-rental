@@ -398,7 +398,7 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Manual
 
-- [ ] 1.5 Hand-run `search_staff('krzy')` returns sensible grouped rows
+- [x] 1.5 Hand-run `search_staff('krzy')` returns sensible grouped rows — 7ecbc37
 
 ### Phase 2: StaffShell restructure + search entry (shared surface)
 
@@ -411,10 +411,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Manual
 
-- [ ] 2.5 Desktop search field on all 10 staff pages; the 5 custom-header pages migrated onto the shell slots (single header band, no right-slot clash)
-- [ ] 2.6 ⌘K/Ctrl+K opens/focuses from any page incl. post-view-transition; Esc closes; mobile tab-bar icon opens full-screen
-- [ ] 2.7 No regression to nav items/badges, sign-out, or S-11's Profil chip
-- [ ] 2.8 Mobile tab bar does not overflow/clip at 360px with Profil + search (+ admin Zespół); density fallback applied if needed
+- [x] 2.5 Desktop search field on all 10 staff pages; the 5 custom-header pages migrated onto the shell slots (single header band, no right-slot clash) — 7e3b1df
+- [x] 2.6 ⌘K/Ctrl+K opens/focuses from any page incl. post-view-transition; Esc closes; mobile tab-bar icon opens full-screen — 7e3b1df
+- [x] 2.7 No regression to nav items/badges, sign-out, or S-11's Profil chip — 7e3b1df
+- [x] 2.8 Mobile tab bar does not overflow/clip at 360px with Profil + search (+ admin Zespół); density fallback applied if needed — 7e3b1df
 
 ### Phase 3: Live dropdown results + keyboard nav + deep-links
 
@@ -427,22 +427,22 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Manual
 
-- [ ] 3.5 Grouped live results with highlighting; ↑↓ + Enter select
-- [ ] 3.6 Each result type deep-links correctly (reservation→calendar focus; return→return flow; vehicle→edit)
-- [ ] 3.7 Resting quick-jumps counts + targets; no-results state; mobile full-screen parity
-- [ ] 3.8 Vision-diff dropdown (resting/results/no-results, desktop+mobile) clean apart from deviations
+- [x] 3.5 Grouped live results with highlighting; ↑↓ + Enter select — 9aa5656
+- [x] 3.6 Each result type deep-links correctly (reservation→calendar focus; return→return flow; vehicle→edit) — 9aa5656
+- [x] 3.7 Resting quick-jumps counts + targets; no-results state; mobile full-screen parity — 9aa5656
+- [x] 3.8 Vision-diff dropdown (resting/results/no-results, desktop+mobile) clean apart from deviations — ac1dde7
 
 ### Phase 4: Full results page (/dashboard/search)
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check` — 6d31629
+- [x] 4.2 Linting passes: `npm run lint` — 6d31629
+- [x] 4.3 Build passes: `npm run build` — 6d31629
 
 #### Manual
 
-- [ ] 4.4 /dashboard/search?q= renders count + chips + sectioned results; deep-linked URL renders without hydration flash
-- [ ] 4.5 Chips filter groups; rows deep-link; Enter from the dropdown lands here
-- [ ] 4.6 Mobile results page (back + scrollable chips + card sections) matches the contract
-- [ ] 4.7 Vision-diff results page (desktop + mobile) clean apart from deviations
+- [x] 4.4 /dashboard/search?q= renders count + chips + sectioned results; deep-linked URL renders without hydration flash — 6d31629
+- [x] 4.5 Chips filter groups; rows deep-link; Enter from the dropdown lands here — 6d31629
+- [x] 4.6 Mobile results page (back + scrollable chips + card sections) matches the contract — ac1dde7
+- [x] 4.7 Vision-diff results page (desktop + mobile) clean apart from deviations — 6d31629
