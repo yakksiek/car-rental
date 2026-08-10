@@ -146,6 +146,10 @@ export interface CalendarReservation {
   id: string;
   reference: string;
   status: "pending" | "confirmed";
+  // Origin marker (S-12). Orthogonal to `status`: it says who entered the
+  // booking, not where it is in its lifecycle. Surfaced as a "Ręczna" chip in
+  // the read-only detail; the bar colours and the 2-item legend are unchanged.
+  source: "public" | "manual";
   customer_name: string;
   vehicle_id: string;
   vehicle_make: string | null;
