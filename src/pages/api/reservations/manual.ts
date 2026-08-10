@@ -1,0 +1,91 @@
+// core
+import type { APIRoute } from "astro";
+
+// others
+import { isRoleSufficient } from "../../../lib/access";
+import { manualReservationSchema } from "../../../lib/reservation-schema";
+import { notifyReservationConfirmed } from "../../../lib/services/reservation-email";
+import { createConfirmedReservation } from "../../../lib/services/reservations";
+
+// Manual-reservation create endpoint (S-12). A staff-only sibling of the public
+// funnel: same atomic write guarantee, but the row lands `confirmed` +
+// `source='manual'` and the customer gets the standard confirmation immediately.
+//
+// Self-gate order (the /api tree is outside middleware's gate — every route
+// gates itself):
+//   (a) same-origin `Origin` check (CSRF) before any work,
+//   (b) auth — a signed-out caller is 401,
+//   (c) role — employee or above, else 403 (the RPC gates a third time),
+//   (d) zod body validation (`manualReservationSchema`) → 400 `{ errors }`,
+//   (e) the atomic write; a lost race is a typed `conflict` 409, never a 500,
+//   (f) best-effort confirmation email — the booking is already committed.
+
+const MSG = {
+  badOrigin: "Nieprawidłowe źródło żądania.",
+  badBody: "Nieprawidłowe zgłoszenie.",
+  unauthenticated: "Wymagane logowanie.",
+  forbidden: "Brak uprawnień.",
+  conflict: "Ten pojazd ma już rezerwację w wybranych dniach.",
+  unavailable: "Ten pojazd nie jest już dostępny.",
+} as const;
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+/** First zod message per top-level field — the island mirrors this shape. */
+function fieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of issues) {
+    const key = String(issue.path[0] ?? "form");
+    errors[key] ??= issue.message;
+  }
+  return errors;
+}
+
+export const POST: APIRoute = async (context) => {
+  // (a) CSRF: reject anything not same-origin before doing any work.
+  const origin = context.request.headers.get("origin");
+  if (origin !== context.url.origin) {
+    return json(403, { error: MSG.badOrigin });
+  }
+
+  // (b) + (c) Auth then role: a signed-out caller is 401, a non-staff role 403.
+  if (!context.locals.user) {
+    return json(401, { error: MSG.unauthenticated });
+  }
+  if (!isRoleSufficient(context.locals.role, "employee")) {
+    return json(403, { error: MSG.forbidden });
+  }
+
+  let payload: unknown;
+  try {
+    payload = await context.request.json();
+  } catch {
+    return json(400, { error: MSG.badBody, errors: {} });
+  }
+
+  // (d) Validate — the same schema the modal island runs client-side.
+  const parsed = manualReservationSchema.safeParse(payload);
+  if (!parsed.success) {
+    return json(400, { errors: fieldErrors(parsed.error.issues) });
+  }
+
+  // (e) The atomic write. The modal's live availability check is advisory; the
+  // EXCLUDE constraint inside the RPC is what actually prevents a double booking,
+  // so a range taken between the check and the submit lands here as `conflict`.
+  const result = await createConfirmedReservation(context.locals.supabase, parsed.data);
+  switch (result.status) {
+    case "unauthorized":
+      return json(403, { error: MSG.forbidden });
+    case "unavailable":
+      return json(409, { error: MSG.unavailable, reason: "unavailable" });
+    case "conflict":
+      return json(409, { error: MSG.conflict, reason: "conflict" });
+    case "created":
+      // (f) Best-effort confirmation — shared with the decision endpoint's
+      // confirmed branch, so both paths send the identical email.
+      await notifyReservationConfirmed(context.locals.supabase, result.email, context.url.origin, result.id);
+      return json(201, { reference: result.reference, token: result.token });
+  }
+};

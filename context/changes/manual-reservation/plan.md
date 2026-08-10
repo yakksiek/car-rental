@@ -409,10 +409,10 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly against local Supabase
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 Integration: RPC creates confirmed/manual + reference + email cols; conflict on overlap; unauthorized non-staff; unavailable inactive vehicle; anon cannot execute recreated calendar RPC
+- [x] 1.1 Migration applies cleanly against local Supabase — 4cc2bb8
+- [x] 1.2 Type checking passes: `npx astro check` — 4cc2bb8
+- [x] 1.3 Linting passes: `npm run lint` — 4cc2bb8
+- [x] 1.4 Integration: RPC creates confirmed/manual + reference + email cols; conflict on overlap; unauthorized non-staff; unavailable inactive vehicle; anon cannot execute recreated calendar RPC — 4cc2bb8
 
 #### Manual
 
@@ -422,10 +422,10 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression
 
 #### Manual
 

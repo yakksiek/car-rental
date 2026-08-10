@@ -108,6 +108,36 @@ export type DecideReservationResult =
   | { status: "unauthorized" }
   | { status: "invalid_reason" };
 
+// ---------------------------------------------------------------------------
+// Manual reservation (S-12) — the staff-created confirmed booking. A third write
+// path alongside the public funnel and the decision: `create_confirmed_reservation`
+// INSERTS a confirmed row rather than transitioning one, so `conflict` here comes
+// from the EXCLUDE constraint firing on the insert itself.
+// ---------------------------------------------------------------------------
+
+// Deliberately narrower than CreateReservationInput: no `terms_accepted` (the
+// customer is on the phone, not on the site) and no B2B fields (out of scope —
+// design contract D5). Email + phone are required, unlike the mockup's name-only
+// enable (D1): the email drives the confirmation and both columns are NOT NULL.
+export interface ManualReservationInput {
+  vehicle_id: string;
+  pickup: string;
+  return: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+}
+
+// Typed union over the RPC's result tag. `created` carries the reservation id
+// (the `email_deliveries` entityId) plus a DecisionEmailPayload — the RPC returns
+// exactly the 11 columns `decide_reservation` does, which is what lets the
+// confirmed-email path be reused unchanged.
+export type ManualReservationResult =
+  | { status: "created"; id: string; reference: string; token: string; email: DecisionEmailPayload }
+  | { status: "conflict" }
+  | { status: "unavailable" }
+  | { status: "unauthorized" };
+
 // One reservation bar for the resource-timeline calendar (S-03 Phase 6): the
 // fields needed to plot it (no PII beyond the customer name shown on the bar).
 // Read through the role-gated `list_reservations_for_calendar` definer RPC;

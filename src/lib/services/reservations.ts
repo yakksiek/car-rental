@@ -8,6 +8,8 @@ import type {
   CreateReservationInput,
   CreateReservationResult,
   DecideReservationResult,
+  ManualReservationInput,
+  ManualReservationResult,
   PendingReservation,
   RejectionReason,
   ReservationStatusView,
@@ -72,6 +74,60 @@ export async function createReservationRequest(
       return { status: "unavailable" };
     default:
       throw new Error(`create_reservation_request returned an unexpected result: ${JSON.stringify(data)}`);
+  }
+}
+
+/**
+ * Create a staff-entered CONFIRMED reservation via the `create_confirmed_reservation`
+ * definer RPC (S-12). Unlike `decideReservation` — which flips a pending row that
+ * already holds its slot — this INSERTS into the `reservations_no_overlap` EXCLUDE
+ * set, so a lost race surfaces as the typed `conflict` tag rather than a 23P01
+ * throw. The live availability GET the modal runs is advisory; this is the
+ * TOCTOU-safe authority.
+ *
+ * On `created` the RPC's 11 email columns are split out as a `DecisionEmailPayload`
+ * so the caller can hand them straight to the shared confirmed-email helper.
+ *
+ * A `null` client (or malformed vehicle id) degrades to `unauthorized` — the
+ * caller cannot create anything, which the endpoint surfaces as a 403.
+ */
+export async function createConfirmedReservation(
+  client: ReservationClient | null,
+  input: ManualReservationInput,
+): Promise<ManualReservationResult> {
+  if (!client || !UUID_RE.test(input.vehicle_id)) {
+    return { status: "unauthorized" };
+  }
+
+  const { data, error } = await client.rpc("create_confirmed_reservation", {
+    p_vehicle_id: input.vehicle_id,
+    p_pickup: input.pickup,
+    p_return: input.return,
+    p_customer_name: input.customer_name,
+    p_customer_email: input.customer_email,
+    p_customer_phone: input.customer_phone,
+  });
+  if (error) {
+    throw error;
+  }
+
+  // The RPC always returns exactly one row with a result tag.
+  const row = data.at(0);
+  switch (row?.result) {
+    case "created": {
+      // Strip the two non-email columns; what remains is exactly the shape
+      // `decide_reservation` returns, i.e. a DecisionEmailPayload.
+      const { result, id, ...email } = row;
+      return { status: "created", id, reference: email.reference, token: email.access_token, email };
+    }
+    case "conflict":
+      return { status: "conflict" };
+    case "unavailable":
+      return { status: "unavailable" };
+    case "unauthorized":
+      return { status: "unauthorized" };
+    default:
+      throw new Error(`create_confirmed_reservation returned an unexpected result: ${JSON.stringify(data)}`);
   }
 }
 
