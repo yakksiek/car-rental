@@ -55,33 +55,27 @@ const initialSection = parseSection(Astro.url.searchParams.get("section"));
 <Layout title="Pulpit — Flota">
   <StaffShell
     active="dash"
-    title="Pulpit"
+    title={`Dzień dobry, ${firstName}`}
+    subtitle="Oto Twój dzień w oddziale Warszawa"
     user={user}
     role={role}
     pendingCount={pending.length}
     overdueCount={overdueCount}
-    showHeader={false}
   >
     {
-      /* Desktop greeting header — replaces the shell's generic title bar
-        (`showHeader={false}`), full-bleed like it. Search is deferred, so the
-        band carries only the calendar button (design-contract §A). */
+      /* The greeting used to be a hand-rolled full-bleed band identical to the
+        shell's own. S-13 made the shell's top bar always-on (it carries the global
+        search), so the greeting moved onto its title/subtitle slot and the calendar
+        shortcut onto its action slot — one band, not two. */
     }
-    <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
-      <div>
-        <div class="text-foreground text-[21px] leading-[1.1] font-bold tracking-[-0.5px]">
-          Dzień dobry, {firstName}
-        </div>
-        <div class="text-muted-foreground mt-[3px] text-[13px]">Oto Twój dzień w oddziale Warszawa</div>
-      </div>
-      <a
-        href="/dashboard/calendar"
-        aria-label="Kalendarz"
-        class="border-border bg-card flex size-[38px] items-center justify-center rounded-[10px] border text-[var(--flota-ink-2)]"
-      >
-        <NavIcon glyph="calendar" size={16} />
-      </a>
-    </header>
+    <a
+      slot="header-action"
+      href="/dashboard/calendar"
+      aria-label="Kalendarz"
+      class="border-border bg-card flex size-[38px] shrink-0 items-center justify-center rounded-[10px] border text-[var(--flota-ink-2)]"
+    >
+      <NavIcon glyph="calendar" size={16} />
+    </a>
 
     <main class="mx-auto w-full max-w-[1440px] px-4 py-6 lg:p-8">
       {

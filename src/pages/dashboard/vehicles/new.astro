@@ -12,7 +12,9 @@ import { listPendingReservations } from "../../../lib/services/reservations";
 // (/dashboard prefix); renders the shared VehicleForm island in create mode. The
 // island POSTs /api/vehicles and, on success, hard-navigates to the fleet list.
 // The pending queue is loaded only for the shell's nav badge (consistency with
-// the other staff pages).
+// the other staff pages). Since S-13 the shell's desktop top bar is always on
+// (global search), so the title comes from the shell and the form's own band is
+// mobile-only — no doubled header.
 const { user, role, supabase } = Astro.locals;
 const [pending, overdueCount] = await Promise.all([listPendingReservations(supabase), countOverdueReturns(supabase)]);
 ---
@@ -25,7 +27,6 @@ const [pending, overdueCount] = await Promise.all([listPendingReservations(supab
     role={role}
     pendingCount={pending.length}
     overdueCount={overdueCount}
-    showHeader={false}
   >
     <VehicleForm client:load mode="create" />
   </StaffShell>

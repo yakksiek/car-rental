@@ -31,6 +31,12 @@ const { id } = Astro.params;
 
 // Overdue-returns badge count for the shell nav (S-07) — consistent with every
 // other staff page (this route previously passed no nav badge at all).
+//
+// `showHeader={false}` survives the S-13 shell restructure on purpose: the
+// ProtocolView island's header is a CARD inside the content area (not a full-bleed
+// band), and it carries context the shell's title slot cannot — reference ·
+// customer · vehicle · plate · time. So the always-on top bar renders search-only
+// here: still one band, and no duplicated heading.
 const overdueCount = await countOverdueReturns(supabase);
 
 const protocol = id ? await getProtocol(supabase, id) : null;
