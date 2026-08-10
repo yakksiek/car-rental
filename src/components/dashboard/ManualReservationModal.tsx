@@ -1,0 +1,470 @@
+// core
+import * as React from "react";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+import { AlertTriangle, CalendarDays, Check, ChevronDown, Truck, X } from "lucide-react";
+
+// others
+import { cn } from "../../lib/utils";
+import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
+import { estimatedTotal, formatDailyRate, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { canCreateReservation, type AvailabilityState } from "../../lib/manual-availability";
+import { manualReservationSchema } from "../../lib/reservation-schema";
+import { useAvailability, useManualReservation } from "../hooks/useManualReservation";
+import type { Vehicle } from "../../types";
+
+// The manual-reservation modal (S-12): desktop-centered / mobile bottom sheet,
+// ported from the design source `manual-reservation.jsx` (MrD_FormOk /
+// MrD_FormConflict / MrD_Done + MrM_*). Overlay shell reuses the house idiom
+// from ReservationDecision.tsx (design contract D6), overriding its md:max-w-md
+// to the mockup's 560px desktop width.
+//
+// Recorded deviations it implements (design-contract.md): D1 name+e-mail+phone
+// all required (the mockup enables on a name alone); D2 plain conflict message,
+// no clashing-booking card and no "next free" hint; D3 no "Pojazd w serwisie"
+// state (only active vehicles are selectable); D5 no company/VAT/notes.
+
+// Verbatim Polish copy — canonical, transcribed from the design source.
+const COPY = {
+  title: "Nowa rezerwacja",
+  badge: "Ręczna",
+  subtitle: "Wynajem dodawany przez pracownika",
+  close: "Zamknij",
+  vehicle: "Pojazd",
+  term: "Termin",
+  pickup: "Odbiór",
+  return: "Zwrot",
+  hours: "Odbiór od 14:00 · zwrot do 10:00",
+  customer: "Klient",
+  namePlaceholder: "Imię i nazwisko / firma",
+  phonePlaceholder: "Telefon",
+  emailPlaceholder: "E-mail",
+  avIdle: "Wybierz pojazd i termin, aby sprawdzić dostępność.",
+  avChecking: "Sprawdzanie dostępności…",
+  avAvailable: "Termin wolny",
+  avAvailableSub: "Można utworzyć rezerwację.",
+  avConflict: "Termin zajęty",
+  avConflictSub: "Ten pojazd ma już rezerwację w wybranych dniach.",
+  avError: "Nie udało się sprawdzić dostępności.",
+  submit: "Utwórz rezerwację",
+  submitting: "Tworzenie…",
+  doneTitle: "Rezerwacja utworzona",
+  doneSub: "Termin zablokowany w kalendarzu. Klient dostanie potwierdzenie e-mailem.",
+  seeCalendar: "Zobacz w kalendarzu",
+  done: "Gotowe",
+  errorCreate: "Nie udało się utworzyć rezerwacji. Spróbuj ponownie.",
+  errorConflict: "Termin został właśnie zajęty. Wybierz inny termin.",
+  errorUnavailable: "Ten pojazd nie jest już dostępny.",
+} as const;
+
+/** `"Renault Master"`, falling back to the fleet name when make/model are absent. */
+function vehicleTitle(vehicle: Vehicle): string {
+  return [vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.name;
+}
+
+/** `"1 kwi"` — the mockup's short day label. */
+function formatDayShort(iso: string): string {
+  const date = fromIsoDate(iso);
+  return date ? format(date, "d MMM", { locale: pl }) : iso;
+}
+
+// ── availability panel ───────────────────────────────────────────────────────
+
+function MrAvailability({ availability }: { availability: AvailabilityState }) {
+  const box = "flex items-start gap-[11px] rounded-[13px] px-[13px] py-3 md:px-[15px] md:py-[13px]";
+
+  if (availability.state === "idle") {
+    return (
+      <div className={cn(box, "bg-secondary")}>
+        <CalendarDays className="text-muted-foreground size-[18px] shrink-0" />
+        <div className="text-muted-foreground pt-px text-[12.5px] font-[540]">{COPY.avIdle}</div>
+      </div>
+    );
+  }
+
+  if (availability.state === "checking") {
+    return (
+      <div className={cn(box, "bg-secondary items-center")}>
+        <span className="size-[17px] shrink-0 animate-spin rounded-full border-2 border-[var(--flota-hair)] border-t-[var(--flota-ink-2)] [animation-duration:0.7s]" />
+        <div className="text-[12.5px] font-semibold text-[var(--flota-ink-2)]">{COPY.avChecking}</div>
+      </div>
+    );
+  }
+
+  // `invalid` (a malformed range, caught locally) and `error` (the check itself
+  // failed) share the warning treatment: both mean "we cannot confirm this yet".
+  if (availability.state === "invalid" || availability.state === "error") {
+    return (
+      <div className={cn(box, "bg-[var(--flota-warning-soft)]")}>
+        <AlertTriangle className="text-warning size-[18px] shrink-0" />
+        <div className="text-warning pt-px text-[12.5px] font-semibold">
+          {availability.state === "invalid" ? availability.message : COPY.avError}
+        </div>
+      </div>
+    );
+  }
+
+  if (availability.state === "conflict") {
+    return (
+      <div className={cn(box, "bg-[var(--flota-danger-soft)]")}>
+        <AlertTriangle className="text-destructive size-[18px] shrink-0" />
+        <div className="pt-px">
+          <div className="text-destructive text-[13px] font-bold tracking-[-0.1px]">{COPY.avConflict}</div>
+          <div className="text-destructive mt-0.5 text-[12px] opacity-85">{COPY.avConflictSub}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(box, "bg-[var(--flota-success-soft)]")}>
+      <Check className="text-success size-[18px] shrink-0" />
+      <div className="pt-px">
+        <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{COPY.avAvailable}</div>
+        <div className="text-success mt-0.5 text-[12px] opacity-85">{COPY.avAvailableSub}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── done panel ───────────────────────────────────────────────────────────────
+
+// Centered on BOTH breakpoints (the design's done step is a card, not a sheet).
+function DonePanel({
+  reference,
+  customerName,
+  vehicle,
+  pickup,
+  returnDate,
+  onClose,
+}: {
+  reference: string;
+  customerName: string;
+  vehicle: Vehicle;
+  pickup: string;
+  returnDate: string;
+  onClose: () => void;
+}) {
+  const days = rentalDays(pickup, returnDate);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(20,18,22,0.55)] px-4 backdrop-blur-sm md:p-8">
+      <div className="bg-card shadow-overlay w-full rounded-[22px] p-7 text-center md:w-[440px] md:rounded-[20px]">
+        <div className="mx-auto mb-4 flex size-[62px] items-center justify-center rounded-full bg-[var(--flota-success-soft)]">
+          <Check className="text-success size-[30px]" />
+        </div>
+        <div className="text-foreground text-[21px] font-bold tracking-[-0.5px]">{COPY.doneTitle}</div>
+        <div className="mt-[7px] text-[13.5px] leading-[1.5] text-[var(--flota-ink-2)]">{COPY.doneSub}</div>
+
+        <div className="bg-background mt-5 mb-[22px] rounded-[14px] p-4 text-left">
+          <div className="flex items-center justify-between">
+            <span className="text-foreground font-mono text-[13px] font-bold">{reference}</span>
+            <span className="bg-accent text-primary rounded-full px-2 py-[3px] text-[10px] font-bold tracking-[0.4px] uppercase">
+              {COPY.badge}
+            </span>
+          </div>
+          <div className="text-foreground mt-2.5 text-sm font-[650] tracking-[-0.2px]">{customerName}</div>
+          <div className="text-muted-foreground mt-[3px] text-[12.5px]">{vehicleTitle(vehicle)}</div>
+          <div className="mt-[7px] text-[13px] font-[650] text-[var(--flota-ink-2)] tabular-nums">
+            {formatDayShort(pickup)} – {formatDayShort(returnDate)}{" "}
+            <span className="text-muted-foreground font-[540]">· {formatDuration(days)}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2.5">
+          <a
+            href="/dashboard/calendar"
+            className="bg-card flex h-[46px] flex-1 items-center justify-center rounded-xl border border-[var(--flota-hair)] text-sm font-semibold text-[var(--flota-ink-2)]"
+          >
+            {COPY.seeCalendar}
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="bg-primary flex h-[46px] flex-1 items-center justify-center rounded-xl text-sm font-[650] text-white"
+          >
+            {COPY.done}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── the modal ────────────────────────────────────────────────────────────────
+
+export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () => void }) {
+  const today = React.useMemo(() => toIsoDate(new Date()), []);
+
+  const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id ?? "");
+  const [pickup, setPickup] = React.useState("");
+  const [returnDate, setReturnDate] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [banner, setBanner] = React.useState<string | null>(null);
+  const [created, setCreated] = React.useState<string | null>(null);
+
+  const availability = useAvailability(vehicleId, pickup, returnDate);
+  const { busy, create } = useManualReservation();
+
+  const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
+
+  const payload = {
+    vehicle_id: vehicleId,
+    pickup,
+    return: returnDate,
+    customer_name: name,
+    customer_email: email,
+    customer_phone: phone,
+  };
+  // The same schema the endpoint validates with, so the button cannot enable on
+  // input the server would reject (D1: all three customer fields required).
+  const customerValid = manualReservationSchema.safeParse(payload).success;
+  const canCreate = canCreateReservation(availability, customerValid);
+
+  const days = pickup && returnDate ? Math.max(rentalDays(pickup, returnDate), 0) : 0;
+  const total = estimatedTotal(vehicle.daily_rate, days);
+
+  async function submit() {
+    setBanner(null);
+    const outcome = await create(payload);
+    if (outcome.status === "created") {
+      setCreated(outcome.reference);
+      return;
+    }
+    if (outcome.status === "conflict") {
+      setBanner(COPY.errorConflict);
+      return;
+    }
+    if (outcome.status === "unavailable") {
+      setBanner(COPY.errorUnavailable);
+      return;
+    }
+    setBanner(COPY.errorCreate);
+  }
+
+  if (created) {
+    return (
+      <DonePanel
+        reference={created}
+        customerName={name}
+        vehicle={vehicle}
+        pickup={pickup}
+        returnDate={returnDate}
+        onClose={onClose}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center md:p-8"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        className="bg-card shadow-overlay flex max-h-[94%] w-full flex-col overflow-hidden rounded-t-[26px] md:max-h-[90%] md:w-[560px] md:rounded-[20px]"
+      >
+        {/* header */}
+        <div className="flex items-start justify-between border-b border-[var(--flota-hair-2)] px-[18px] pt-[18px] pb-[14px] md:px-6 md:pt-[22px] md:pb-4">
+          <div>
+            <div className="flex items-center gap-[9px]">
+              <span className="text-foreground text-[18px] font-bold tracking-[-0.4px] md:text-[19px]">
+                {COPY.title}
+              </span>
+              <span className="bg-accent text-primary rounded-full px-2 py-[3px] text-[9.5px] font-bold tracking-[0.4px] uppercase">
+                {COPY.badge}
+              </span>
+            </div>
+            <div className="text-muted-foreground mt-[3px] text-[12.5px]">{COPY.subtitle}</div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={COPY.close}
+            className="bg-card flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-[var(--flota-hair)]"
+          >
+            <X className="size-4 text-[var(--flota-ink-2)]" />
+          </button>
+        </div>
+
+        {/* body */}
+        <div className="flex-1 overflow-auto">
+          <div className="flex flex-col gap-[18px] px-[18px] pt-4 pb-2 md:px-6 md:pt-5">
+            {/* Pojazd */}
+            <div>
+              <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
+                {COPY.vehicle}
+              </div>
+              <div className="bg-background relative flex items-center gap-3 rounded-[13px] px-3 py-2.5">
+                <div className="bg-card shadow-card flex h-[42px] w-16 shrink-0 items-center justify-center rounded-[9px]">
+                  <Truck className="text-foreground size-6" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-foreground text-sm font-[650] tracking-[-0.2px]">{vehicleTitle(vehicle)}</div>
+                  <div className="text-muted-foreground mt-0.5 text-[11.5px]">
+                    <span className="font-mono">{vehicle.plate}</span> · {formatDailyRate(vehicle.daily_rate)}
+                  </div>
+                </div>
+                <span className="bg-card shadow-card flex size-[30px] shrink-0 items-center justify-center rounded-lg">
+                  <ChevronDown className="size-[15px] text-[var(--flota-ink-2)]" />
+                </span>
+                {/* The mockup's own affordance: a real <select> laid transparently
+                    over the card, so the styling is exact and the control stays
+                    natively keyboard- and screen-reader-accessible. */}
+                <select
+                  aria-label={COPY.vehicle}
+                  value={vehicleId}
+                  onChange={(e) => {
+                    setVehicleId(e.target.value);
+                  }}
+                  className="absolute inset-0 size-full cursor-pointer appearance-none border-none opacity-0"
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {vehicleTitle(v)} · {v.plate}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Termin */}
+            <div>
+              <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
+                {COPY.term}
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label
+                    htmlFor="mr-pickup"
+                    className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
+                  >
+                    {COPY.pickup}
+                  </label>
+                  <input
+                    id="mr-pickup"
+                    type="date"
+                    min={today}
+                    value={pickup}
+                    onChange={(e) => {
+                      setPickup(e.target.value);
+                    }}
+                    className="text-foreground bg-card h-10 w-full rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] outline-none"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="mr-return"
+                    className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
+                  >
+                    {COPY.return}
+                  </label>
+                  <input
+                    id="mr-return"
+                    type="date"
+                    min={pickup || today}
+                    value={returnDate}
+                    onChange={(e) => {
+                      setReturnDate(e.target.value);
+                    }}
+                    className="text-foreground bg-card h-10 w-full rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] outline-none"
+                  />
+                </div>
+              </div>
+              <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
+              <div className="mt-2.5">
+                <MrAvailability availability={availability} />
+              </div>
+            </div>
+
+            {/* Klient */}
+            <div>
+              <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
+                {COPY.customer}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  aria-label={COPY.namePlaceholder}
+                  placeholder={COPY.namePlaceholder}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                  }}
+                  className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    aria-label={COPY.phonePlaceholder}
+                    placeholder={COPY.phonePlaceholder}
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                    }}
+                    className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
+                  />
+                  <input
+                    aria-label={COPY.emailPlaceholder}
+                    placeholder={COPY.emailPlaceholder}
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                    }}
+                    className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {banner && (
+              <div className="text-destructive rounded-[13px] bg-[var(--flota-danger-soft)] px-[13px] py-3 text-[12.5px] font-semibold">
+                {banner}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* footer */}
+        <div className="bg-card flex items-center gap-3 border-t border-[var(--flota-hair-2)] px-[18px] pt-3 pb-[18px] md:px-6 md:pt-3.5 md:pb-5">
+          <div className="min-w-0 flex-1">
+            <div className="text-muted-foreground text-[11px] font-semibold tracking-[0.3px] uppercase">
+              {formatDuration(days)} × {formatPln(vehicle.daily_rate)}
+            </div>
+            <div className="text-foreground mt-px text-[18px] font-[750] tracking-[-0.5px] tabular-nums">
+              {formatPln(total)}{" "}
+              <span className="text-muted-foreground text-[11.5px] font-semibold">
+                + {formatPln(vehicle.deposit)} kaucji
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={!canCreate || busy}
+            onClick={() => void submit()}
+            className={cn(
+              "bg-primary inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-[650] text-white",
+              canCreate && !busy ? "shadow-[0_8px_22px_rgba(180,54,56,0.24)]" : "opacity-40",
+            )}
+          >
+            {busy ? (
+              <>
+                <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                {COPY.submitting}
+              </>
+            ) : (
+              <>
+                <Check className="size-4" />
+                {COPY.submit}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
