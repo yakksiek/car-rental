@@ -391,10 +391,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly against local Supabase
-- [ ] 1.2 Type checking passes: `npx astro check`
-- [ ] 1.3 Linting passes: `npm run lint`
-- [ ] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q
+- [x] 1.1 Migration applies cleanly against local Supabase
+- [x] 1.2 Type checking passes: `npx astro check`
+- [x] 1.3 Linting passes: `npm run lint`
+- [x] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q
 
 #### Manual
 
