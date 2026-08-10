@@ -11,11 +11,11 @@ import { staffIdentity } from "../../lib/staff-identity";
 // a left sidebar with a user chip at md+, a floating dark tab bar below md —
 // wrapping every staff page so the queue and calendar are reachable without
 // bouncing through /dashboard. Source: design `staff-desktop.jsx` StaffShell +
-// `shared.jsx` TabBar. Future tabs (Flota S-04, Profil S-08, Po terminie S-07)
-// are intentionally omitted until those slices land.
+// `shared.jsx` TabBar. Profil (S-11) hangs off the account chip and a mobile
+// tab rather than the Operacje nav list — matching the design.
 
 interface Props {
-  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff";
+  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff" | "me";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -32,7 +32,7 @@ interface Props {
 const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
-type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
+type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
@@ -119,8 +119,20 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     </nav>
 
     <div class="mt-auto w-full">
-      <div
-        class="bg-background lg:bg-background flex items-center rounded-lg md:justify-center md:bg-transparent md:p-0 lg:justify-start lg:gap-2.5 lg:p-3"
+      {
+        /* The chip is the desktop entry point to Profil (S-11) — the design reaches
+        the account screen from here rather than from an Operacje nav row. */
+      }
+      <a
+        href="/dashboard/account"
+        aria-current={active === "me" ? "page" : undefined}
+        title="Profil"
+        class:list={[
+          "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
+          active === "me"
+            ? "bg-background ring-foreground/15 ring-2"
+            : "bg-background lg:bg-background md:hover:bg-background md:bg-transparent",
+        ]}
       >
         <span
           class="bg-foreground text-background flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
@@ -131,7 +143,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <span class="text-foreground block truncate text-[12px] font-[650] tracking-tight">{displayName}</span>
           <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · Warszawa</span>
         </span>
-      </div>
+      </a>
       <form method="POST" action="/api/auth/signout" class="mt-2 w-full" data-signout>
         <button
           type="submit"
@@ -205,6 +217,23 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         </a>
       ))
     }
+    {
+      /* Profil (S-11) — appended after NAV rather than added to it, so it stays
+         out of the desktop Operacje sidebar (the chip is that entry point) and
+         gives mobile its only account + sign-out affordance. Icon-only, no
+         badge: S-13 appends a second tab, so the pill has to stay lean. */
+    }
+    <a
+      href="/dashboard/account"
+      aria-current={active === "me" ? "page" : undefined}
+      aria-label="Profil"
+      class:list={[
+        "relative flex size-10 items-center justify-center rounded-full transition-colors",
+        active === "me" ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
+      ]}
+    >
+      <NavIcon glyph="user" size={18} />
+    </a>
   </nav>
 </div>
 

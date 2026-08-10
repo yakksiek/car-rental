@@ -350,9 +350,9 @@ None — no schema change, no data migration, no RPC.
 
 #### Automated
 
-- [ ] 1.1 Type checking passes: `npx astro check`
-- [ ] 1.2 Linting passes: `npm run lint`
-- [ ] 1.3 Build passes: `npm run build`
+- [x] 1.1 Type checking passes: `npx astro check`
+- [x] 1.2 Linting passes: `npm run lint`
+- [x] 1.3 Build passes: `npm run build`
 
 #### Manual
 
