@@ -2,6 +2,7 @@
 // components
 import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
+import GlobalSearch from "../search/GlobalSearch";
 
 // others
 import type { AppRole } from "../../types";
@@ -15,7 +16,10 @@ import { staffIdentity } from "../../lib/staff-identity";
 // are intentionally omitted until those slices land.
 
 interface Props {
-  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff";
+  // "search" is the /dashboard/search results page (S-13). It deliberately
+  // highlights no nav item — search is reached from the header field / ⌘K / the
+  // mobile magnifier, not from a tab.
+  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff" | "search";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -24,15 +28,17 @@ interface Props {
   overdueCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
-  // Full-page forms (e.g. add/edit vehicle) render their own eyebrow+title header,
-  // so they suppress the shell's desktop title bar to avoid a duplicate heading.
+  // The desktop top bar itself is ALWAYS rendered (S-13: it carries the global
+  // search field on every staff page). `showHeader` now governs only its LEFT
+  // slot — pages whose island already renders a title in context (e.g. the
+  // protocol view's card header) suppress it to avoid a duplicate heading.
   showHeader?: boolean;
 }
 
 const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
-type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
+type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "search";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
@@ -159,23 +165,45 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   {/* ── Content column ────────────────────────────────────────────── */}
   <div class="flex min-w-0 flex-1 flex-col">
     {
-      showHeader && (
-        <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
-          <div>
-            <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-            {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-          </div>
-        </header>
-      )
+      /* Desktop top bar (S-13) — ALWAYS rendered, because it is where the global
+        search field lives on every staff page. Two slots: the title/subtitle block
+        on the left (only when `showHeader`) and, on the right, an optional page
+        action followed by the search island. Pages that used to hand-roll their own
+        full-bleed `border-b` band migrated onto these slots — there must never be a
+        second band stacked under this one. */
     }
+    <header class="border-border bg-card hidden items-center justify-between gap-4 border-b px-8 py-[22px] md:flex">
+      <div class="min-w-0">
+        {
+          showHeader && (
+            <>
+              <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+              {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+            </>
+          )
+        }
+      </div>
+      <div class="flex min-w-0 items-center justify-end gap-3">
+        <slot name="header-action" />
+        <GlobalSearch client:load pendingCount={pendingCount} overdueCount={overdueCount} />
+      </div>
+    </header>
     <div class="pb-28 md:pb-0">
       <slot />
     </div>
   </div>
 
   {/* ── Floating tab bar (below md) ───────────────────────────────── */}
+  {
+    /* DENSITY (S-13 `deviation(density)`): the pill grew from 7 entries to 8 (admin,
+      with the search magnifier) and will reach 9 once S-11's "Profil" tab merges.
+      At the 360px floor the old sizing (size-10 + gap-1 + p-1.5) needs 40·9 + 4·8 +
+      12 = 404px and would overflow. Below `sm` the icons therefore tighten to
+      size-9 + gap-0.5 + p-1 → 36·9 + 2·8 + 8 = 348px, which clears 360px with room
+      to spare; from `sm` up the original sizing is restored. */
+  }
   <nav
-    class="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-1 rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] md:hidden"
+    class="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-0.5 rounded-full bg-[#0A0A0F] p-1 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] sm:gap-1 sm:p-1.5 md:hidden"
   >
     {
       /* Icon-only so the pill stays compact regardless of item count (the active
@@ -188,7 +216,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           aria-current={active === n.id ? "page" : undefined}
           aria-label={n.label}
           class:list={[
-            "relative flex size-10 items-center justify-center rounded-full transition-colors",
+            "relative flex size-9 items-center justify-center rounded-full transition-colors sm:size-10",
             active === n.id ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
           ]}
         >
@@ -205,6 +233,22 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         </a>
       ))
     }
+    {
+      /* Search — not a NAV entry (it has no route of its own; the results page is
+        reached by submitting a query). A button rather than a link, because it asks
+        the GlobalSearch island to open its full-screen view via a document event. */
+    }
+    <button
+      type="button"
+      data-search-trigger
+      aria-label="Szukaj"
+      class:list={[
+        "relative flex size-9 items-center justify-center rounded-full transition-colors sm:size-10",
+        active === "search" ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
+      ]}
+    >
+      <NavIcon glyph="search" size={18} />
+    </button>
   </nav>
 </div>
 
@@ -226,4 +270,20 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     });
   }
   document.addEventListener("astro:page-load", bindSignout);
+
+  // The mobile tab bar's magnifier lives in this (Astro) shell, while the search UI
+  // is a React island — so the button asks for the overlay through a document event
+  // the island listens for. Same per-element `dataset.bound` guard as above: this IS
+  // an element, unlike the island's document-level ⌘K listener, which needs a
+  // module-scoped singleton instead (see useGlobalSearchHotkey.ts).
+  function bindSearchTrigger() {
+    document.querySelectorAll<HTMLButtonElement>("button[data-search-trigger]").forEach((button) => {
+      if (button.dataset.bound) return;
+      button.dataset.bound = "1";
+      button.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("flota:search-open"));
+      });
+    });
+  }
+  document.addEventListener("astro:page-load", bindSearchTrigger);
 </script>

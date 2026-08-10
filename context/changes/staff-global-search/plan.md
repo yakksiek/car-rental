@@ -391,10 +391,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly against local Supabase
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q
+- [x] 1.1 Migration applies cleanly against local Supabase — 7ecbc37
+- [x] 1.2 Type checking passes: `npx astro check` — 7ecbc37
+- [x] 1.3 Linting passes: `npm run lint` — 7ecbc37
+- [x] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q — 7ecbc37
 
 #### Manual
 
@@ -404,10 +404,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 cmdk resolves and the island bundles (build green)
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 cmdk resolves and the island bundles (build green)
 
 #### Manual
 

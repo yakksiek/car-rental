@@ -2,7 +2,7 @@
 // Inline nav glyphs for the staff shell (lucide-style 24×24 stroked paths,
 // matching design `shared.jsx` Icon). Kept as a switch so we avoid `set:html`.
 interface Props {
-  glyph: "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
+  glyph: "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "search";
   size?: number;
 }
 const { glyph, size = 18 } = Astro.props;
@@ -51,6 +51,15 @@ const { glyph, size = 18 } = Astro.props;
       (handover) for the Zwroty tab. Matches the design mockup's `↓ Returns` tab glyph. */
   }
   {glyph === "return" && <path d="M12 5v14M6 13l6 6 6-6" />}
+  {/* `search` — the mobile tab bar's magnifier, which opens the full-screen search (S-13). */}
+  {
+    glyph === "search" && (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </>
+    )
+  }
   {/* `users` — the admin-only "Zespół" tab glyph (lucide `users`, two people). */}
   {
     glyph === "users" && (

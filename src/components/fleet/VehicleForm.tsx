@@ -423,11 +423,14 @@ export default function VehicleForm({ mode, vehicle }: Props) {
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="w-full">
-      {/* Header — a full-bleed white strip matching the dashboard chrome (StaffShell
-          header), with back arrow + eyebrow + title (left) and the actions (right,
-          desktop only — mobile gets a bottom bar). */}
-      <div className="border-border bg-card border-b">
-        <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
+      {/* Header — a full-bleed white strip below md, where no shell header exists:
+          back arrow + eyebrow + title (left) and the actions (right; the narrowest
+          widths get a bottom bar instead). At md+ StaffShell's always-on top bar
+          (S-13) carries the eyebrow-equivalent title, so this collapses to a
+          transparent toolbar holding only what cannot leave the form island — the
+          back link and the submit actions. One band, never two. */}
+      <div className="border-border bg-card border-b md:border-b-0 md:bg-transparent">
+        <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5 md:pb-0">
           <div className="flex min-w-0 items-center gap-3">
             <a
               href="/dashboard/vehicles"
@@ -436,7 +439,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
             >
               <ArrowLeft className="size-[18px]" />
             </a>
-            <div className="min-w-0">
+            <div className="min-w-0 md:hidden">
               <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
                 {COPY.eyebrow}
               </p>
