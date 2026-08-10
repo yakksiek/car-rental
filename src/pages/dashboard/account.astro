@@ -32,6 +32,19 @@ const [profileResult, pending, overdueCount] = await Promise.all([
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 const fullName = profileResult.data?.full_name ?? null;
 const name = fullName ?? displayName;
+
+// The hero avatar has to agree with the name printed beside it. `staffIdentity`
+// derives initials from the email local-part only (S-08 predates `full_name`), so
+// on a named profile it would pair "Karolina Mazur" with an "E" from
+// employee@… — take the initials from whichever source won the name above.
+const initialsOf = (value: string) =>
+  value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
 ---
 
 <Layout title="Profil — Flota">
@@ -51,14 +64,14 @@ const name = fullName ?? displayName;
         <h1 class="text-foreground text-[17px] font-[650] tracking-[-0.2px]">Profil</h1>
       </header>
 
-      <div class="flex flex-col gap-[18px] md:gap-5">
+      <div class="flex flex-col gap-[18px] pt-1.5 md:gap-5 md:pt-0">
         {/* ── Identity ────────────────────────────────────────────────── */}
         <section class="bg-card shadow-card rounded-lg md:rounded-[18px]">
           <div class="flex items-center gap-4 p-[18px] md:p-[22px]">
             <span
               class="bg-primary text-primary-foreground flex size-[60px] shrink-0 items-center justify-center rounded-full text-[20px] font-semibold tracking-[0.5px] shadow-[0_4px_14px_rgba(180,54,56,0.30)] md:size-[72px] md:text-[24px]"
             >
-              {initials}
+              {avatarInitials}
             </span>
             <div class="min-w-0">
               <div class="text-foreground truncate text-[18px] font-bold tracking-[-0.4px] md:text-[22px]">{name}</div>

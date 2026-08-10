@@ -44,6 +44,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | backlog |
 | S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | backlog |
 | S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
+| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | backlog |
 
 ## Streams
 
@@ -335,6 +336,32 @@ Foundations below assume these are present and do NOT re-scaffold them.
   Zwroty, Klienci, Pojazdy, Zobacz wszystkie wyniki).
 - **Status:** backlog
 
+### S-14: Auth surface hardening (recovery-session gate + error whitelist)
+
+- **Outcome:** `/auth/reset-password` sets a password only for a session that actually came from a recovery
+  or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from
+  `?error=`, and Supabase's English error strings stop reaching a Polish UI.
+- **Change ID:** auth-surface-hardening
+- **PRD refs:** — (hardening of **F-02** auth/role, done). Adds no new FR.
+- **Prerequisites:** **S-08** (employee account management, done) — this is its surface. **S-11**
+  (staff-account) is the slice whose implementation review surfaced both findings; full write-up with a
+  scripted reproduction lives at `context/changes/staff-account/follow-ups/review-fixes.md`.
+- **Parallel with:** anything; touches no shared UI shell.
+- **Blockers:** none.
+- **Unknowns:**
+  - Whether local GoTrue populates the JWT `amr` claim usefully for the recovery exchange, or whether
+    `/auth/callback` must stamp its own one-shot marker. Owner: implementer. Block: no — both viable.
+  - Whether `secure_password_change = true` is a shortcut. Probably not: it would demand a
+    `current_password` from the recovery and invite flows, which by definition don't have one. Block: no.
+- **Risk:** Medium. **F1 is a reproduced critical**: an ordinary password sign-in followed by one POST to
+  `/api/auth/reset-password` changes the password with no current password supplied — which bypasses the
+  reauthentication gate S-11 built at `src/pages/api/auth/change-password.ts`. The code change is small but
+  sits on the invite-acceptance path, where a wrong gate locks new employees out of setting their first
+  password, so `e2e/staff-auth.spec.ts`'s invite + recovery specs are the real gate and must be green (they
+  currently fail in a fresh worktree without Resend/SMTP config — fix that first or the slice cannot be
+  validated). F6 (the `?error=` whitelist) is warning-severity and rides along because it shares the file set.
+- **Status:** backlog
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                                            | Ready for `/10x-plan` | Notes                                                                                                                                                                                                                                                                                                                                                                |
@@ -355,6 +382,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-11       | staff-account               | Staff self-service account + in-session password change          | yes                   | Net-new (post-v1); extends F-02 (done). Mockup `staff-profile.jsx` (live). Trim the notifications/branch rows (no v1 backing). Parallel; run `/10x-new staff-account` → `/10x-plan staff-account`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                             |
 | S-12       | manual-reservation          | Staff-created confirmed reservation (phone-in)                   | yes                   | Needs S-02/S-03 (done). Mockup `manual-reservation.jsx` (live). New `create_confirmed_reservation` definer RPC; reuses overlap rule + confirmed-email. Parallel; run `/10x-new manual-reservation`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                            |
 | S-13       | staff-global-search         | Header ⌘K omnisearch (reservations/returns/vehicles/customers)   | yes                   | Needs S-02/S-03/S-04/S-05/S-06 (done). Mockup `search-flow.jsx` (live). New role-gated search RPC + `StaffShell` restructure — **sequence last**. Run `/10x-new staff-global-search`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                                          |
+| S-14       | auth-surface-hardening      | Gate the recovery set-password route + whitelist auth `?error=`  | yes                   | **Contains a reproduced critical**: an ordinary password session can POST `/api/auth/reset-password` and change the password with no current password, bypassing S-11's reauth gate. Problem statement + scripted repro: `context/changes/staff-account/follow-ups/review-fixes.md`. Run `/10x-new auth-surface-hardening`.                                          |
 
 ## Open Roadmap Questions
 

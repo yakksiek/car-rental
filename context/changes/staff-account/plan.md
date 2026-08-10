@@ -200,8 +200,8 @@ danger row). Render a mobile "Profil" heading in-content (the shell has no mobil
 pass `title="Profil"`, `subtitle="Twoje konto pracownika"` for the desktop header.
 
 **Contract**: Route `/dashboard/account` (gated employee+ by the existing `/dashboard` prefix in
-`ROUTE_ROLES`). Own-profile read: `supabase.from("profiles").select("full_name, role,
-created_at").eq("user_id", user.id).maybeSingle()` (tolerant — a missing row degrades to no `full_name`
+`ROUTE_ROLES`). Own-profile read: `supabase.from("profiles").select("full_name").eq("user_id",
+user.id).maybeSingle()` (tolerant — a missing row degrades to no `full_name`
 i.e. the `staffIdentity(email)` fallback, rather than `.single()` throwing a 500). `StaffShell active="me" title="Profil"
 subtitle="Twoje konto pracownika" user={user} role={role} pendingCount={…} overdueCount={…}`.
 Card structure and copy per `design-contract.md` (SpIdentity / SpCard / SpRow analogues).
