@@ -256,6 +256,80 @@ export type CreateReturnProtocolResult =
 export type DeliveryStatus = "sent" | "failed";
 
 // ---------------------------------------------------------------------------
+// Staff global search (S-13) — the ⌘K omnisearch contracts.
+//
+// `search_staff` returns ONE union-shaped row per hit, tagged by `kind`, with the
+// columns that don't apply to that kind left null (a vehicle row has no customer or
+// dates; a reservation row has no `is_active` state). The generated RPC row type
+// therefore can't express nullability — supabase-js types every out-column as
+// non-null — so `SearchRow` re-states it truthfully and the service narrows the
+// tagged rows into the three groups the UI renders.
+// ---------------------------------------------------------------------------
+
+/** One raw `search_staff` row, with the per-kind nullability the generator loses. */
+export interface SearchRow {
+  kind: string;
+  id: string;
+  reference: string | null;
+  customer_name: string | null;
+  vehicle_id: string;
+  vehicle_name: string;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_plate: string;
+  vehicle_category: string;
+  pickup_date: string | null;
+  return_date: string | null;
+  status: string;
+  daily_rate: string | number;
+}
+
+/** A reservation hit — deep-links to the calendar focus for its vehicle + pickup date. */
+export interface SearchResultReservation {
+  id: string;
+  reference: string;
+  customer_name: string;
+  vehicle_id: string;
+  vehicle_name: string;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  vehicle_plate: string;
+  pickup_date: string;
+  return_date: string;
+  /** The BASE reservation status (design-contract D4 — no derived "Zakończona"). */
+  status: ReservationStatus;
+  daily_rate: string | number;
+}
+
+/**
+ * A return hit — an issued (`type='issue'` protocol present) confirmed rental.
+ * `status` is derived in the RPC: `returned` once a return protocol exists,
+ * otherwise `due` (the actionable ones the "Na dziś" pill expects).
+ */
+export type SearchResultReturn = Omit<SearchResultReservation, "status"> & {
+  status: "due" | "returned";
+};
+
+/** A fleet hit — deep-links to the vehicle edit form. */
+export interface SearchResultVehicle {
+  id: string;
+  name: string;
+  make: string | null;
+  model: string | null;
+  plate: string;
+  category: VehicleCategory;
+  is_active: boolean;
+  daily_rate: string | number;
+}
+
+/** The grouped shape the endpoint returns and every search surface renders. */
+export interface SearchResults {
+  reservations: SearchResultReservation[];
+  returns: SearchResultReturn[];
+  vehicles: SearchResultVehicle[];
+}
+
+// ---------------------------------------------------------------------------
 // Public catalog (S-01) — filter state carried in the URL and read by the
 // fleet listing + filter island. `pickup`/`return` are ISO `YYYY-MM-DD` strings
 // (or null when no range is set); presence of a *valid* range routes the query

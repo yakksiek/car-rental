@@ -701,6 +701,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      search_staff: {
+        Args: { p_query: string }
+        Returns: {
+          customer_name: string
+          daily_rate: number
+          id: string
+          kind: string
+          pickup_date: string
+          reference: string
+          return_date: string
+          status: string
+          vehicle_category: string
+          vehicle_id: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_name: string
+          vehicle_plate: string
+        }[]
+      }
       set_protocol_pdf: {
         Args: { p_id: string; p_path: string }
         Returns: {
