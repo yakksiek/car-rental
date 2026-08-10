@@ -1,7 +1,7 @@
 ---
 change_id: manual-reservation
 title: Manual reservation — staff-created confirmed booking for a phone-in customer
-status: planned
+status: implementing
 created: 2026-08-10
 updated: 2026-08-10
 archived_at: null
