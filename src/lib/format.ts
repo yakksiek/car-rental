@@ -1,5 +1,5 @@
 // others
-import type { RejectionReason, Transmission, VehicleCategory } from "../types";
+import type { RejectionReason, ReservationStatus, Transmission, VehicleCategory } from "../types";
 
 // Pure, I/O-free presentation helpers for the public catalog. Two quirks they
 // own so call sites don't have to:
@@ -201,4 +201,21 @@ const REJECTION_REASON_LABELS_PL: Record<RejectionReason, string> = {
 /** Polish label for a rejection-reason enum value. */
 export function rejectionReasonLabelPl(reason: RejectionReason): string {
   return REJECTION_REASON_LABELS_PL[reason];
+}
+
+// Canonical Polish labels for the reservation status pill. Extracted from
+// `ReservationStatusCard.astro`, which owned the only copy, so the S-13 search
+// result rows show the SAME words as the status card rather than a second map
+// that can drift. Tints stay per-surface (each pill idiom differs); only the
+// wording is shared.
+const RESERVATION_STATUS_LABELS_PL: Record<ReservationStatus, string> = {
+  pending: "Oczekuje",
+  confirmed: "Potwierdzone",
+  rejected: "Odrzucone",
+  cancelled: "Anulowane",
+};
+
+/** Polish label for a reservation status enum value. */
+export function reservationStatusLabelPl(status: ReservationStatus): string {
+  return RESERVATION_STATUS_LABELS_PL[status];
 }
