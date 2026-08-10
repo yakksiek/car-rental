@@ -7,6 +7,7 @@ import GlobalSearch from "../search/GlobalSearch";
 // others
 import type { AppRole } from "../../types";
 import { staffIdentity } from "../../lib/staff-identity";
+import { countReturnsDueToday } from "../../lib/services/protocols";
 
 // Shared staff app-shell (S-03 follow-up L1/L2/L6): a single responsive nav —
 // a left sidebar with a user chip at md+, a floating dark tab bar below md —
@@ -37,6 +38,15 @@ interface Props {
 
 const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+
+// The search dropdown's third quick-jump ("Dzisiejsze zwroty") needs a count no
+// page currently threads. It is read HERE rather than added to all 10 staff pages'
+// `Promise.all`s: one call site cannot drift, and the helper degrades to 0 instead
+// of throwing, so the shell can never take a page down. `today` is the server's UTC
+// calendar date — the same basis `dashboard.astro` / `returns.astro` use, and it is
+// handed to the island so its "dziś / wczoraj" wording survives hydration.
+const today = new Date().toISOString().slice(0, 10);
+const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "search";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
@@ -185,7 +195,13 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       </div>
       <div class="flex min-w-0 items-center justify-end gap-3">
         <slot name="header-action" />
-        <GlobalSearch client:load pendingCount={pendingCount} overdueCount={overdueCount} />
+        <GlobalSearch
+          client:load
+          pendingCount={pendingCount}
+          overdueCount={overdueCount}
+          dueTodayCount={dueTodayCount}
+          today={today}
+        />
       </div>
     </header>
     <div class="pb-28 md:pb-0">

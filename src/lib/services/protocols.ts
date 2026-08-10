@@ -7,6 +7,7 @@ import { protocolIssuedEmail, protocolReturnedEmail } from "../email/templates";
 import { computeReturnDeltas } from "../protocol-delta";
 import { PHOTO_SLOTS } from "../protocol-schema";
 import type { ProtocolInput } from "../protocol-schema";
+import { captionOf } from "../returns-filter";
 import type { ReturnProtocolInput } from "../return-protocol-schema";
 import { sendTracked } from "./email-delivery";
 import type {
@@ -392,6 +393,34 @@ export async function countOverdueReturns(client: ProtocolClient | null): Promis
     throw error;
   }
   return data;
+}
+
+/**
+ * Returns due TODAY and still open — the third quick-jump count in the S-13 search
+ * dropdown, and the complement of `countOverdueReturns` (which is strictly
+ * overdue, `return_date < current_date`).
+ *
+ * Derived from `list_returns_today` rather than a new scalar RPC, and classified
+ * through `captionOf` — the SAME function `ReturnQueue` paints its rows with — so
+ * the count and the view it links to cannot disagree about what "due today" means.
+ *
+ * Never throws: the search dropdown's resting state is decoration on every staff
+ * page, so a failed read degrades to `0` (no count pill) rather than 500-ing an
+ * otherwise-working page — the same posture as `getVehicleBusyRanges`.
+ */
+export async function countReturnsDueToday(client: ProtocolClient | null, today: string): Promise<number> {
+  if (!client) {
+    return 0;
+  }
+
+  try {
+    const rows = await listReturnsToday(client);
+    return rows.filter((row) => captionOf(row, today) === "due").length;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("[countReturnsDueToday] read failed; the quick-jump shows no count:", error);
+    return 0;
+  }
 }
 
 /**

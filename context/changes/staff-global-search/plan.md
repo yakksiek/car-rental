@@ -404,10 +404,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 cmdk resolves and the island bundles (build green)
+- [x] 2.1 Type checking passes: `npx astro check` — 7e3b1df
+- [x] 2.2 Linting passes: `npm run lint` — 7e3b1df
+- [x] 2.3 Build passes: `npm run build` — 7e3b1df
+- [x] 2.4 cmdk resolves and the island bundles (build green) — 7e3b1df
 
 #### Manual
 
@@ -420,10 +420,10 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Unit: debounce/cancellation (or results-grouping mapper)
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
+- [x] 3.4 Unit: debounce/cancellation (or results-grouping mapper)
 
 #### Manual
 
