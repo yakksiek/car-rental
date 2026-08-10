@@ -3,18 +3,24 @@
 import Layout from "../../layouts/Layout.astro";
 import StaffShell from "../../components/shell/StaffShell.astro";
 import PendingQueue from "../../components/dashboard/PendingQueue";
+import NewReservationButton from "../../components/dashboard/NewReservationButton";
 
 // others
 import { countOverdueReturns } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
+import { listFleet } from "../../lib/services/vehicles";
 
 // Employee pending-request queue (S-03). The /dashboard/reservations route is
 // gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
 // pending list through the role-gated definer RPC and mounts the decision island.
 const { user, role, supabase } = Astro.locals;
-const [reservations, overdueCount] = await Promise.all([
+// The active fleet feeds the manual-reservation modal's vehicle picker (S-12) —
+// only bookable vehicles are offered (design contract D3: there is no
+// maintenance state in the model).
+const [reservations, overdueCount, fleet] = await Promise.all([
   listPendingReservations(supabase),
   countOverdueReturns(supabase),
+  listFleet(supabase),
 ]);
 const count = reservations.length;
 const countLabel = `${count} oczekuje na decyzję`;
@@ -37,6 +43,14 @@ const fromDashboard = Astro.url.searchParams.get("from") === "pulpit";
     overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">
+      {
+        /* Manual-reservation entry point (S-12), right-aligned above the queue.
+          Page-owned on purpose: the frame keeps S-12 off the shell nav, which
+          S-11 owns. */
+      }
+      <div class="mb-4 flex justify-end">
+        <NewReservationButton client:load vehicles={fleet} />
+      </div>
       {
         /* The mobile list header (design 08) lives inside the island so it shows
           only in the queue state and disappears on the request detail — passing

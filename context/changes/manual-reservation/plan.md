@@ -422,10 +422,10 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression
+- [x] 2.1 Type checking passes: `npx astro check` — d96357b
+- [x] 2.2 Linting passes: `npm run lint` — d96357b
+- [x] 2.3 Build passes: `npm run build` — d96357b
+- [x] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression — d96357b
 
 #### Manual
 
@@ -435,9 +435,9 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
 
 #### Manual
 
