@@ -7,7 +7,14 @@ import { AlertTriangle, CalendarDays, Check, ChevronDown, Truck, X } from "lucid
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDailyRate, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import {
+  estimatedTotal,
+  formatDailyRate,
+  formatDuration,
+  formatPln,
+  formatPlnAmount,
+  rentalDays,
+} from "../../lib/format";
 import { canCreateReservation, type AvailabilityState } from "../../lib/manual-availability";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useAvailability, useManualReservation } from "../hooks/useManualReservation";
@@ -446,8 +453,8 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
             </div>
             <div className="text-foreground mt-px text-[18px] font-[750] tracking-[-0.5px] tabular-nums">
               {formatPln(total)}{" "}
-              <span className="text-muted-foreground text-[11.5px] font-semibold">
-                + {formatPln(vehicle.deposit)} kaucji
+              <span className="text-muted-foreground text-[11.5px] font-semibold whitespace-nowrap">
+                + {formatPlnAmount(vehicle.deposit)} kaucji
               </span>
             </div>
           </div>

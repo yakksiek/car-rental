@@ -25,18 +25,26 @@ function groupThousands(intPart: string): string {
 }
 
 /**
+ * The number half of a PLN amount, without the currency — `320`, `1,20`,
+ * `5 900`. For the second amount in a pair that already carries the unit
+ * (e.g. "1 745 zł + 3 000 kaucji"), where repeating "zł" is noise.
+ */
+export function formatPlnAmount(value: string | number): string {
+  const n = toNumber(value);
+  const fixed = Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2);
+  const [intPart, decPart] = fixed.split(".");
+  const grouped = groupThousands(intPart);
+  return decPart ? `${grouped},${decPart}` : grouped;
+}
+
+/**
  * Format a PLN amount, e.g. `formatPln("320.00") -> "320 zł"`,
  * `formatPln(1.2) -> "1,20 zł"`, `formatPln(5900) -> "5 900 zł"`.
  * Whole amounts drop the decimal part; fractional amounts show two digits
  * with a comma separator (Polish convention).
  */
 export function formatPln(value: string | number): string {
-  const n = toNumber(value);
-  const fixed = Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2);
-  const [intPart, decPart] = fixed.split(".");
-  const grouped = groupThousands(intPart);
-  const body = decPart ? `${grouped},${decPart}` : grouped;
-  return `${body} zł`;
+  return `${formatPlnAmount(value)} zł`;
 }
 
 /** Daily-rate display, e.g. `"320 zł/doba"`. */
