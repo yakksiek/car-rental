@@ -83,7 +83,7 @@ afterAll(async () => {
 });
 
 describe("POST /api/reservations/manual (S-12)", () => {
-  it("staff create returns 201 {reference, token}, writes a confirmed manual row, and logs the confirmation", async () => {
+  it("staff create returns 201 {reference}, writes a confirmed manual row, and logs the confirmation", async () => {
     const { messages } = captureEmails();
 
     const res = await manualPOST(
@@ -95,9 +95,12 @@ describe("POST /api/reservations/manual (S-12)", () => {
     );
     expect(res.status).toBe(201);
 
-    const payload = (await res.json()) as { reference: string; token: string };
+    // Reference ONLY: the customer's secret access_token must not ride a staff
+    // response nobody reads it from (asserted on the key set, so a re-added
+    // field fails here rather than leaking quietly).
+    const payload = (await res.json()) as { reference: string };
     expect(payload.reference).toMatch(/^R-[0-9A-Z]{4,}$/);
-    expect(payload.token).toEqual(expect.any(String));
+    expect(Object.keys(payload)).toEqual(["reference"]);
 
     const { data: row } = await svc
       .from("reservations")

@@ -27,6 +27,7 @@ const MSG = {
   forbidden: "Brak uprawnień.",
   conflict: "Ten pojazd ma już rezerwację w wybranych dniach.",
   unavailable: "Ten pojazd nie jest już dostępny.",
+  serverError: "Nie udało się utworzyć rezerwacji.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -74,7 +75,20 @@ export const POST: APIRoute = async (context) => {
   // (e) The atomic write. The modal's live availability check is advisory; the
   // EXCLUDE constraint inside the RPC is what actually prevents a double booking,
   // so a range taken between the check and the submit lands here as `conflict`.
-  const result = await createConfirmedReservation(context.locals.supabase, parsed.data);
+  //
+  // `createConfirmedReservation` THROWS on an RPC error (e.g. the migration's
+  // deliberate `raise` after 3 reference-clash retries). Unhandled, that renders
+  // Astro's 500 HTML page where the island expects JSON — so catch it and answer
+  // in shape, matching the sibling `api/availability.ts`.
+  let result: Awaited<ReturnType<typeof createConfirmedReservation>>;
+  try {
+    result = await createConfirmedReservation(context.locals.supabase, parsed.data);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("[api/reservations/manual] create failed:", error);
+    return json(500, { error: MSG.serverError });
+  }
+
   switch (result.status) {
     case "unauthorized":
       return json(403, { error: MSG.forbidden });
@@ -86,6 +100,10 @@ export const POST: APIRoute = async (context) => {
       // (f) Best-effort confirmation — shared with the decision endpoint's
       // confirmed branch, so both paths send the identical email.
       await notifyReservationConfirmed(context.locals.supabase, result.email, context.url.origin, result.id);
-      return json(201, { reference: result.reference, token: result.token });
+      // Reference only. The customer's `access_token` is their secret /r/<token>
+      // credential; the public funnel returns it because it redirects the
+      // customer there, but no staff caller reads it — the modal shows the
+      // reference and links to the calendar.
+      return json(201, { reference: result.reference });
   }
 };
