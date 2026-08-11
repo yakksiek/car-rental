@@ -11,12 +11,12 @@ Source of truth: **`manual-reservation.jsx`** (`ManualResFlow` — confirm→for
 
 ### Freshness audit (repo vs canonical)
 
-| Artifact                                 | Status      | Note                                                                                                             |
-| ---------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| `manual-reservation.jsx` (design source) | **current** | Pulled this session; the exact-values source below.                                                              |
-| `manual-reservation` screenshot in repo  | **missing** | New mockup — not in the `design-system.md` catalog. → outstanding input for the downstream rendered vision-diff. |
-| `ReservationDecision.tsx` overlay idiom  | **current** | Reused as the modal shell (see D6).                                                                              |
-| Calendar designs (rows 16/22)            | **current** | Phase 4 only adds a chip to the read-only detail — no restyle.                                                   |
+| Artifact                                 | Status      | Note                                                                                                                                                                                          |
+| ---------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `manual-reservation.jsx` (design source) | **current** | Pulled this session; the exact-values source below.                                                                                                                                           |
+| `manual-reservation` screenshot in repo  | **current** | 10 canonical PNGs landed in `design-review/` (desktop + mobile × menu / confirm / form-available / form-conflict / created). Mirrored at `exports/manual-reservation/` in the Design project. |
+| `ReservationDecision.tsx` overlay idiom  | **current** | Reused as the modal shell (see D6).                                                                                                                                                           |
+| Calendar designs (rows 16/22)            | **current** | Phase 4 only adds a chip to the read-only detail — no restyle.                                                                                                                                |
 
 ### New-design quality audit (gaps in the provided mockup)
 
@@ -39,10 +39,16 @@ Source of truth: **`manual-reservation.jsx`** (`ManualResFlow` — confirm→for
 
 ### Verdict
 
-**PASS (paper audit)** — 4 surfaces aligned; 0 repo designs superseded; **7 deviations recorded (D1–D7)**.
-Outstanding input for `/10x-implement`: drop the canonical **manual-reservation mockup PNGs** (desktop +
-mobile: form-ok, form-conflict, done) into `context/changes/manual-reservation/design-review/`. The
-exact-values contract below is transcribed from the code-backed source, so planning is not blocked.
+**PASS (paper audit)** — 4 surfaces aligned; 0 repo designs superseded; **9 deviations recorded (D1–D9)**
+plus the inline `deviation(undrawn-state)` / `deviation(busy-guard)` lines below.
+
+**Revised 2026-08-11 (S-12 Phase 7)** after the implementation review re-pulled `manual-reservation.jsx`
+via DesignSync. Three contract lines were wrong and the code was right — the modal is a more faithful port
+than this document was a record of it. Corrected: **D6** (mobile top radius is 26px `exact`, and the modal
+has no drag handle), **D8** (the native-`<select>` overlay is the source's own affordance, not a
+substitution to be undone), **D9** (the invalid-range copy must cover `ret == pick`). Two `exact` values
+the code got wrong were fixed instead — the `12`/`8` radii, see the note under Surface 2. Every value in
+`ManualReservationModal.tsx` now maps to an `exact` line or a recorded `deviation(reason)` here.
 
 ---
 
@@ -87,20 +93,23 @@ exact-values contract below is transcribed from the code-backed source, so plann
 - **D3 `deviation(no-data)`** — no **"Pojazd w serwisie"** availability state (no maintenance status in the model; only active vehicles are selectable).
 - **D4 `deviation(scope)`** — no calendar-cell confirm step and no quick-action menu; the entry point is a **single "Nowa rezerwacja" button** that opens the modal directly. (Menu extras Nowy klient / Dodaj pojazd / Szybkie wydanie are out of scope.)
 - **D5 `deviation(scope)`** — no company / VAT / notes fields on the staff form (columns stay null).
-- **D6 `deviation(reuse-overlay)`** — the modal reuses `ReservationDecision.tsx`'s overlay shell (`fixed inset-0 z-[60] … bg-card shadow-overlay`, mobile `rounded-t-[28px]` sheet with drag-handle, scrim `rgba(20,18,22,0.55)`), overriding its `md:max-w-md` to **`md:max-w-[560px]`** to match the mockup's 560px desktop width.
+- **D6 `deviation(reuse-overlay)`** — the modal reuses `ReservationDecision.tsx`'s overlay shell (`fixed inset-0 z-[60] … bg-card shadow-overlay`, scrim `rgba(20,18,22,0.55)`), overriding its `md:max-w-md` to **`md:w-[560px]`** to match the mockup's 560px desktop width. The mobile top radius is **`exact` 26px** (`rounded-t-[26px]`) and there is **no drag handle** — corrected 2026-08-11 against the design source: `ManualResFlow`'s shell is `borderTopLeftRadius/borderTopRightRadius: 26` with children header → scroll body → footer. The only drag handle in `manual-reservation.jsx` (`{width:40, height:4, borderRadius:99}`) belongs to the **quick-action sheet**, which D4 puts out of scope. The earlier "reuse `rounded-t-[28px]` sheet with drag-handle" line described a surface that does not exist.
 - **D7 `deviation(added-min)`** — "Ręczna" surfaces as a chip in the calendar's read-only confirmed detail; the calendar keeps its 2-color bars + 2-item legend (no new color).
+- **D8 `deviation(native-select)`** — the vehicle picker is a **transparent native `<select>` laid over the card** (`position:absolute; inset:0; opacity:0`, `aria-label="Pojazd"`, whole card as hit target), **not** `ui/select.tsx`. Corrected 2026-08-11: this overlay is the design source's own affordance, so the styling is an exact port, and it keeps the native mobile picker plus keyboard/screen-reader behaviour for free. The earlier "Select via `ui/select.tsx`" line was a plan-time substitution the source does not support.
+- **D9 `deviation(same-day-rejected)`** — the invalid-range copy ships as **"Data zwrotu musi być późniejsza niż data odbioru."** (`validateDateRange`, `catalog-filters.ts:29`) rather than the source's "Data zwrotu jest wcześniejsza niż odbiór." The source's guard is `new Date(ret) < new Date(pick)`, so a **same-day** range is valid there; our stack rejects it because `reserved_period` is `tsrange(pickup + 14:00, return + 10:00)` and inverts when `ret == pick` (hardened in both create RPCs by migration `20260810140000`). For the equal-dates case the source's wording is literally false, so the copy must cover it.
 
 ---
 
 ## Surface 1 — Modal shell
 
-- **Desktop**: centered; panel `width: 560px`, `max-height: 90%`, `bg-card`, `rounded-[20px]`, `shadow-overlay`, flex column, `overflow-hidden`. Scrim reused from the overlay idiom (D6). `exact` width; `deviation(reuse-overlay)` scrim/radius alignment.
-- **Mobile**: bottom sheet; `border-top-radius 26px` (reuse `rounded-t-[28px]`, D6), `max-height 94%`, `shadow [0_-10px_40px_rgba(0,0,0,0.22)]`, drag-handle bar.
+- **Desktop**: centered; panel `width: 560px` (`md:w-[560px]`), `max-height: 90%`, `bg-card`, `rounded-[20px]` (`md:rounded-[20px]`), `shadow-overlay`, flex column, `overflow-hidden`. Scrim reused from the overlay idiom (D6). `exact` — both 560 and 20 verified against the source.
+- **Mobile**: bottom sheet; `border-top-radius 26px` → `rounded-t-[26px]` **`exact`**, `max-height 94%`, `shadow-overlay`. **No drag-handle bar** (D6).
+- **Close button while a create is in flight**: `disabled` + `opacity 0.4`. `deviation(busy-guard)` — the source draws no disabled close state; 0.4 is the source's own disabled opacity (see `mrBtnPrimary` below), reused so the modal cannot be dismissed mid-POST and orphan a committed booking.
 
 **Header** — padding desktop `22px 24px 16px` / mobile `18px 18px 14px`, `border-bottom: 1px var(--flota-hair-2)`. `exact`.
 
 - Title **Nowa rezerwacja** `font-size:19` (desktop) / `18` (mobile), `weight:700`, `letter-spacing:-0.4`. `exact`.
-- **Ręczna** badge: `font-size:9.5 / weight:700 / letter-spacing:0.4 / uppercase`, `bg-accent`, `text-[var(--primary)]`, `padding:3px 8px`, `rounded-full`. `exact`.
+- **Ręczna** badge: `font-size:9.5` (header — the done panel's is `10`) `/ weight:700 / letter-spacing:0.4 / uppercase`, `bg-accent`, `text-[var(--primary)]`, `padding:3px 8px`, `rounded-full`. `exact` — both sizes verified against the source.
 - Subtitle **Wynajem dodawany przez pracownika** `font-size:12.5`, `text-muted-foreground`, `margin-top:3`. `exact`.
 - Close button `34×34`, `rounded-[10px]`, `border 1px var(--flota-hair)`, `bg-card`, close icon 16 `text-[var(--flota-ink-2)]`. `exact`.
 
@@ -111,11 +120,13 @@ Padding desktop `20px 24px 8px` / mobile `16px 18px 8px`, flex column `gap:18`. 
 
 **Pojazd** — vehicle card: `bg-background`, `rounded-[13px]`, `padding:10px 12px`, flex `gap:12`; silhouette tile
 `64×42` `rounded-[9px]` `bg-card` `shadow-card`; brand/model `font-size:14 / weight:650 / -0.2`; plate (mono) +
-`… zł/doba` `font-size:11.5` muted; a `30×30` `rounded-[8px]` chevron affordance. Select via `ui/select.tsx`
-(replaces the mockup's native `<select>` overlay). Options = **active fleet only** (D3). `exact` values; component substitution noted.
+`… zł/doba` `font-size:11.5` muted; a `30×30` `rounded-[8px]` (`rounded-sm`) chevron affordance. The picker is
+the source's own **transparent native `<select>` over the whole card** (`deviation(native-select)`, D8).
+Options = **active fleet only** (D3). `exact` values.
 
-**Termin** — grid `2 cols gap:10`; per field: caption (`mrFieldCap`: `font-size:10.5 / weight:600 / uppercase /
-muted / margin-bottom:5`) **Odbiór** / **Zwrot** + `<input type="date">` (`height:40 / rounded-[10px] /
+**Termin** — grid `2 cols gap:10`; per field: caption (`mrFieldCap`: `font-size:10.5 / weight:600 /
+letter-spacing:0.3 / uppercase / muted / margin-bottom:5` — the `0.3` is `exact`, → `tracking-[0.3px]`)
+**Odbiór** / **Zwrot** + `<input type="date">` (`height:40 / rounded-[10px] /
 border 1px var(--flota-hair) / bg-card / px-2.5 / font-size:13`), `min` = today. Note **Odbiór od 14:00 · zwrot
 do 10:00** `font-size:11.5` muted `margin-top:8`. Availability panel `margin-top:10`. `exact`.
 
@@ -124,7 +135,8 @@ items-start. States:
 
 - **idle** — `bg-secondary`, calendar icon 18 muted, `font-size:12.5 / weight:540` muted: "Wybierz pojazd i termin, aby sprawdzić dostępność." `exact`.
 - **checking** — `bg-secondary`, `17×17` spinner (`border:2px var(--flota-hair)`, top `var(--flota-ink-2)`, spin .7s), `font-size:12.5 / weight:600` ink2: "Sprawdzanie dostępności…" `exact`.
-- **invalid** — `bg-[var(--flota-warning-soft)]`, warning icon warning, `font-size:12.5 / weight:600` warning: "Data zwrotu jest wcześniejsza niż odbiór." `exact`.
+- **invalid** — `bg-[var(--flota-warning-soft)]`, warning icon warning, `font-size:12.5 / weight:600` warning: **"Data zwrotu musi być późniejsza niż data odbioru."** `deviation(same-day-rejected)` (D9) — the source's "Data zwrotu jest wcześniejsza niż odbiór." is false for `ret == pick`, which our stack rejects. Styling `exact`.
+- **error** — the check itself failed. Shares the `invalid` warning treatment (same box, icon and type): "Nie udało się sprawdzić dostępności." `deviation(undrawn-state)` — the source has no failed-check state; the app can fail the GET, so it needs one, and reusing the warning look keeps "we cannot confirm this yet" as one visual idea.
 - **conflict** — `bg-[var(--flota-danger-soft)]`, warning icon destructive, title **Termin zajęty** `font-size:13 / weight:700` destructive + "Ten pojazd ma już rezerwację w wybranych dniach." `font-size:12` destructive `opacity:0.85`. `deviation(D2)`: clashing-booking card omitted.
 - **available** — `bg-[var(--flota-success-soft)]`, check icon success, title **Termin wolny** `font-size:13 / weight:700` success + subtext `font-size:12` success `opacity:0.85`. `deviation(D2)`: "next free" hint replaced with a generic line (e.g. "Można utworzyć rezerwację.").
 
@@ -133,21 +145,38 @@ px-3.25 / font-size:13.5`), placeholder **Imię i nazwisko / firma**; grid `2 co
 inputs. All three **required** (`deviation(D1)`). `exact` styling.
 
 **Footer** — padding desktop `14px 24px 20px` / mobile `12px 18px 18px`, `border-top: 1px var(--flota-hair-2)`,
-flex `gap:12`. Left: **{days} dni × {daily} zł** (`font-size:11 / weight:600 / uppercase` muted) + total
-(`font-size:18 / weight:750 / -0.5` ink, `tabular-nums`) + **+ {deposit} kaucji** (`font-size:11.5` muted).
+flex `gap:12`. Left: **{days} dni × {daily} zł** (`font-size:11 / weight:600 / letter-spacing:0.3 / uppercase`
+muted — the `0.3` is `exact`, → `tracking-[0.3px]`) + total (`font-size:18 / weight:750 / -0.5` ink,
+`tabular-nums`) + **+ {deposit} kaucji** (`font-size:11.5` muted).
 Button **Utwórz rezerwację** (`mrBtnPrimary`: `height:46 / rounded-[12px] / bg-primary / text-white / font-size:14
 / weight:650`, check icon; `disabled → opacity:0.4`, enabled shadow `0_8px_22px_rgba(180,54,56,0.24)`). Math via
-`format.ts` (`rentalDays`, `estimatedTotal`, `formatPln`, `formatDailyRate`). Pending spinner on submit. `exact`.
+`format.ts` (`rentalDays`, `estimatedTotal`, `formatPln`, `formatDailyRate`). `exact`.
+
+> **Radius `12` is `rounded-md`, not `rounded-xl`.** This project overrides the Tailwind radius scale
+> (`global.css:71` → `:162`): `rounded-xl` renders **20px**, `rounded-md` **12px**, `rounded-sm` **8px**.
+> So `mrBtnPrimary` / `mrBtnGhost` (12) → `rounded-md` and the chevron (8) → `rounded-sm`. Corrected
+> 2026-08-11 (three buttons + the chevron had shipped 8px too round).
+
+**Pending state** — while the create is in flight the submit button is `disabled` and swaps its check icon +
+label for a spinner + **Tworzenie…** (house async-button rule, `CLAUDE.md`). `deviation(undrawn-state)` — the
+source draws no in-flight state.
+
+**Create-failure banner** — above the footer, in the scroll body: `rounded-[13px]`,
+`bg-[var(--flota-danger-soft)]`, padding `13px` / `12px`, `font-size:12.5 / weight:600` destructive. One of
+three strings, by outcome. `deviation(undrawn-state)` — the source has no create-failure state (it always
+succeeds); a 409 or a 500 must say something.
 
 ## Surface 3 — Done panel
 
-Desktop `width:440`, `rounded-[20px]`, `padding:28`, `text-align:center`. Check circle `62×62` `rounded-full`
+Desktop `width:440`, `rounded-[20px]` (`md:rounded-[20px]`) / mobile `rounded-[22px]` — both `exact`;
+`padding:28`, `text-align:center`. Check circle `62×62` `rounded-full`
 `bg-[var(--flota-success-soft)]`, check icon 30 success. Title **Rezerwacja utworzona** `font-size:21 / weight:700
 / -0.5`. Subtitle **Termin zablokowany w kalendarzu. Klient dostanie potwierdzenie e-mailem.** `font-size:13.5`
 ink2. Summary card `bg-background rounded-[14px] p-4 text-left`: reference (mono `font-size:13 / weight:700`) +
 **Ręczna** badge; customer name `font-size:14 / weight:650`; vehicle `font-size:12.5` muted; dates `font-size:13
-/ weight:650` ink2 `tabular-nums`. Buttons **Zobacz w kalendarzu** (ghost → `/dashboard/calendar`) / **Gotowe**
-(primary → close). `exact`.
+/ weight:650` ink2 `tabular-nums`. The **Ręczna** badge here is `font-size:10` (the header's is `9.5`) — `exact`.
+Buttons **Zobacz w kalendarzu** (`mrBtnGhost`) / **Gotowe** (`mrBtnPrimary`), both `height:46 /
+rounded-[12px]` → `rounded-md` (see the radius note under Surface 2). `exact`.
 
 ## Surface 4 — Trigger + Ręczna calendar chip
 
@@ -161,10 +190,28 @@ rounded-[10px] / bg-foreground / text-white / font-size:13 / weight:650`, plus i
 
 ## Verbatim Polish copy (canonical)
 
+**Ported from the source, verbatim:**
+
 `Nowa rezerwacja` · `Ręczna` · `Wynajem dodawany przez pracownika` · `Pojazd` · `Termin` · `Odbiór` · `Zwrot` ·
 `Odbiór od 14:00 · zwrot do 10:00` · `Klient` · `Imię i nazwisko / firma` · `Telefon` · `E-mail` ·
-`Wybierz pojazd i termin, aby sprawdzić dostępność.` · `Sprawdzanie dostępności…` ·
-`Data zwrotu jest wcześniejsza niż odbiór.` · `Termin wolny` · `Termin zajęty` ·
-`Ten pojazd ma już rezerwację w wybranych dniach.` · `Utwórz rezerwację` · `{n} dni × {rate} zł` ·
-`+ {deposit} kaucji` · `Rezerwacja utworzona` ·
+`Wybierz pojazd i termin, aby sprawdzić dostępność.` · `Sprawdzanie dostępności…` · `Termin wolny` ·
+`Termin zajęty` · `Ten pojazd ma już rezerwację w wybranych dniach.` · `Utwórz rezerwację` ·
+`{n} dni × {rate} zł` · `+ {deposit} kaucji` · `Rezerwacja utworzona` ·
 `Termin zablokowany w kalendarzu. Klient dostanie potwierdzenie e-mailem.` · `Zobacz w kalendarzu` · `Gotowe`.
+
+**Diverges from the source** — `deviation(same-day-rejected)`, D9:
+
+- invalid range → `Data zwrotu musi być późniejsza niż data odbioru.` (the source has
+  `Data zwrotu jest wcześniejsza niż odbiór.`, which is false for `ret == pick`).
+
+**Not in the source** — `deviation(undrawn-state)`. These cover states the mockup never draws; all are
+new canonical Polish, so they are as binding as the ported strings:
+
+- availability check failed → `Nie udało się sprawdzić dostępności.`
+- create failed, generic (incl. 500) → `Nie udało się utworzyć rezerwacji. Spróbuj ponownie.`
+- create lost the race (409 `conflict`) → `Termin został właśnie zajęty. Wybierz inny termin.`
+- create found the vehicle gone (409 `unavailable`) → `Ten pojazd nie jest już dostępny.`
+- submit button, in flight → `Tworzenie…`
+- close button, `aria-label` → `Zamknij`
+
+Vehicle option label (native `<select>`, D8) → `{make} {model} · {plate}`.
