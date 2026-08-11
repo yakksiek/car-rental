@@ -119,7 +119,9 @@ Padding desktop `20px 24px 8px` / mobile `16px 18px 8px`, flex column `gap:18`. 
 `font-size:11 / weight:700 / letter-spacing:0.4 / uppercase`, `text-muted-foreground`, `margin-bottom:8`. `exact`.
 
 **Pojazd** — vehicle card: `bg-background`, `rounded-[13px]`, `padding:10px 12px`, flex `gap:12`; silhouette tile
-`64×42` `rounded-[9px]` `bg-card` `shadow-card`; brand/model `font-size:14 / weight:650 / -0.2`; plate (mono) +
+`64×42` `rounded-[9px]` `bg-card` `shadow-card` — the glyph inside is the house lucide `Truck`
+(`size-6`, `strokeWidth 1.5`), `deviation(icon-set)`: the source draws a bespoke van line-art the app has
+no equivalent for, and every other vehicle affordance in the console already uses this icon; brand/model `font-size:14 / weight:650 / -0.2`; plate (mono) +
 `… zł/doba` `font-size:11.5` muted; a `30×30` `rounded-[8px]` (`rounded-sm`) chevron affordance. The picker is
 the source's own **transparent native `<select>` over the whole card** (`deviation(native-select)`, D8).
 Options = **active fleet only** (D3). `exact` values.
@@ -147,7 +149,10 @@ inputs. All three **required** (`deviation(D1)`). `exact` styling.
 **Footer** — padding desktop `14px 24px 20px` / mobile `12px 18px 18px`, `border-top: 1px var(--flota-hair-2)`,
 flex `gap:12`. Left: **{days} dni × {daily} zł** (`font-size:11 / weight:600 / letter-spacing:0.3 / uppercase`
 muted — the `0.3` is `exact`, → `tracking-[0.3px]`) + total (`font-size:18 / weight:750 / -0.5` ink,
-`tabular-nums`) + **+ {deposit} kaucji** (`font-size:11.5` muted).
+`tabular-nums`) + **+ {deposit} kaucji** (`font-size:11.5` muted). `exact`, and **the deposit carries no
+`zł`** — the total immediately before it already does. Rendered with `formatPlnAmount` (not `formatPln`)
+and `whitespace-nowrap`; with the currency repeated, "kaucji" orphaned onto a third line at 390px and
+overflowed the mobile sheet's footer — caught by the Phase 8 vision-diff.
 Button **Utwórz rezerwację** (`mrBtnPrimary`: `height:46 / rounded-[12px] / bg-primary / text-white / font-size:14
 / weight:650`, check icon; `disabled → opacity:0.4`, enabled shadow `0_8px_22px_rgba(180,54,56,0.24)`). Math via
 `format.ts` (`rentalDays`, `estimatedTotal`, `formatPln`, `formatDailyRate`). `exact`.

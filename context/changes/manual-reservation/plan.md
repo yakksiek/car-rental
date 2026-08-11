@@ -706,7 +706,7 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 7.1 (none — documentation only)
+- [x] 7.1 (none — documentation only) — d0a4322
 
 #### Manual
 
@@ -719,7 +719,7 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [ ] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration`
+- [x] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration`
 
 #### Manual
 
