@@ -357,9 +357,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
   `/api/auth/reset-password` changes the password with no current password supplied — which bypasses the
   reauthentication gate S-11 built at `src/pages/api/auth/change-password.ts`. The code change is small but
   sits on the invite-acceptance path, where a wrong gate locks new employees out of setting their first
-  password, so `e2e/staff-auth.spec.ts`'s invite + recovery specs are the real gate and must be green (they
-  currently fail in a fresh worktree without Resend/SMTP config — fix that first or the slice cannot be
-  validated). F6 (the `?error=` whitelist) is warning-severity and rides along because it shares the file set.
+  password, so `e2e/staff-auth.spec.ts`'s invite + recovery specs are the real gate and must be green.
+  **Run those two specs with the dev server on port 4321** — `supabase/config.toml`'s
+  `additional_redirect_urls` allow-lists only `localhost:4321`, so GoTrue silently discards a `redirectTo`
+  on any other port and falls back to `site_url`; the emailed link then points at whatever is serving 4321
+  (verified 2026-08-10 — a run on :4331 was driving a different worktree's server, which is the whole reason
+  those two specs looked broken). F6 (the `?error=` whitelist) is warning-severity and rides along because it
+  shares the file set.
 - **Status:** backlog
 
 ## Backlog Handoff
