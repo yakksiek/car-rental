@@ -681,10 +681,10 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx astro check`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Build passes: `npm run build`
-- [x] 5.4 Unit tests pass: `npm test`
+- [x] 5.1 Type checking passes: `npx astro check` — aa98711
+- [x] 5.2 Linting passes: `npm run lint` — aa98711
+- [x] 5.3 Build passes: `npm run build` — aa98711
+- [x] 5.4 Unit tests pass: `npm test` — aa98711
 
 #### Manual
 
@@ -696,11 +696,11 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [ ] 6.1 Migration applies cleanly against local Supabase
-- [ ] 6.2 Type checking passes: `npx astro check`
-- [ ] 6.3 Linting passes: `npm run lint`
-- [ ] 6.4 Build passes: `npm run build`
-- [ ] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green
+- [x] 6.1 Migration applies cleanly against local Supabase
+- [x] 6.2 Type checking passes: `npx astro check`
+- [x] 6.3 Linting passes: `npm run lint`
+- [x] 6.4 Build passes: `npm run build`
+- [x] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green
 
 ### Phase 7: Design-contract corrections
 

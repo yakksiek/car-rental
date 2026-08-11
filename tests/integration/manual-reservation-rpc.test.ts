@@ -193,6 +193,28 @@ describe("create_confirmed_reservation (S-12)", () => {
     expect(row?.result).toBe("unavailable");
   });
 
+  it("a same-day or inverted range is unavailable, not a raw data_exception", async () => {
+    const staff = await as("employee");
+
+    // reserved_period is tsrange(pickup + 14:00, return + 10:00), so ret == pick
+    // inverts the range (14:00 > 10:00). Without the Phase 6 guard Postgres
+    // raises a data_exception that neither exception arm catches, and the caller
+    // gets an error instead of a typed tag.
+    const sameDay = await callRpc(staff, ACTIVE_VEHICLE_ID, "2031-09-01", "2031-09-01");
+    expect(sameDay.error).toBeNull();
+    expect(sameDay.row?.result).toBe("unavailable");
+
+    const inverted = await callRpc(staff, ACTIVE_VEHICLE_ID, "2031-09-10", "2031-09-05");
+    expect(inverted.error).toBeNull();
+    expect(inverted.row?.result).toBe("unavailable");
+
+    const { count } = await svc
+      .from("reservations")
+      .select("id", { count: "exact", head: true })
+      .eq("vehicle_id", ACTIVE_VEHICLE_ID);
+    expect(count).toBe(0);
+  });
+
   it("anon is refused at the grant layer, beneath the in-RPC role gate", async () => {
     const { error } = await callRpc(anonClient(), ACTIVE_VEHICLE_ID, "2031-08-01", "2031-08-05");
     expect(error?.code === "42501" || /permission denied/i.test(error?.message ?? "")).toBe(true);
