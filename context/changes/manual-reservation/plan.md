@@ -356,6 +356,223 @@ when `source === 'manual'`.
 
 ---
 
+## Phase 5: Review fixes — modal correctness + design radii
+
+### Overview
+
+Three modal fixes from the implementation review (`reviews/impl-review.md` F1, F2, F6). The radii are
+verified against the **design source** (`manual-reservation.jsx`, pulled via DesignSync), not the screenshots.
+
+### Changes Required:
+
+#### 1. A conflict invalidates the availability panel (F1)
+
+**File**: `src/components/hooks/useManualReservation.ts` + `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: After a 409 the modal currently shows the green "Termin wolny" panel **and** the red
+"Termin został właśnie zajęty" banner at once, and `canCreate` stays true so the button re-arms for an
+identical retry. `useAvailability` derives only from (vehicle, pickup, return), so the POST's answer never
+reaches it.
+
+**Contract**: `useAvailability` returns the state plus a `markConflict()` that sets `resolved` to
+`{state:"conflict"}`. `ManualReservationModal.submit()` calls it in the `conflict` and `unavailable`
+branches (`:236-243`) before setting the banner. No extra clearing is needed — the render-phase input-key
+reset (`useManualReservation.ts:54-59`) already drops it the moment any of vehicle/pickup/return changes.
+`canCreate` then falls false through the existing `canCreateReservation` path; do not add new gating logic.
+
+#### 2. Button + chevron radii match the design source (F2)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: `rounded-xl` is **20px** in this project (`src/styles/global.css:71` → `:162`), not Tailwind's
+stock 12px. The source has `mrBtnPrimary`/`mrBtnGhost` at `borderRadius: 12` and the chevron span at
+`{ width: 30, height: 30, borderRadius: 8 }`.
+
+**Contract**: `:450` (footer submit), `:177` and `:184` (done-panel ghost + primary) `rounded-xl` →
+`rounded-md` (`--flota-radius-md` = 12px). `:312` chevron `rounded-lg` → `rounded-sm` (8px). **No other
+radius changes** — `rounded-t-[26px]`, `md:rounded-[20px]` and `rounded-[22px]` were verified exact against
+the source and must stay.
+
+#### 3. Close affordances guard on `busy` (F6)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: Closing mid-POST unmounts the modal while the request completes — the booking is created and the
+customer emailed, but the employee never sees the reference and may re-enter it into a 409.
+
+**Contract**: scrim `:263` and X button `:286` → `onClick={busy ? undefined : onClose}`; add
+`disabled={busy}` on the X so it reads as inert. The submit button is already guarded (`:447`).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- A lost race (create against a range taken meanwhile) flips the panel to "Termin zajęty" and disables the submit button; editing a date re-checks.
+- Clicking the scrim or X during a create does nothing until the request settles.
+
+---
+
+## Phase 6: Review fixes — endpoint response + RPC date-order hardening
+
+### Overview
+
+Endpoint hygiene and the one data-layer gap the review found (F8, F10, F9).
+
+### Changes Required:
+
+#### 1. Drop the unused `token` from the manual create response (F8)
+
+**File**: `src/pages/api/reservations/manual.ts` + `tests/integration/manual-reservation-api.test.ts`
+
+**Intent**: The 201 body returns the customer's secret `/r/<token>` credential, but nothing consumes it
+(`useManualReservation.ts:124-127` reads only `reference`; `DonePanel` links to `/dashboard/calendar`). It
+was copied from the public `POST /api/reservations`, which needs it for its redirect.
+
+**Contract**: `:89` → `json(201, { reference: result.reference })`. Update the assertion at
+`manual-reservation-api.test.ts:100`. `ManualReservationResult` keeps `token` (it mirrors the RPC's shape);
+only the wire response narrows.
+
+#### 2. JSON 500 on an RPC throw (F10)
+
+**File**: `src/pages/api/reservations/manual.ts`
+
+**Intent**: `createConfirmedReservation` throws on RPC error (`src/lib/services/reservations.ts:110-112`) —
+e.g. the migration's deliberate `raise` after 3 `unique_violation` retries — yielding Astro's 500 HTML where
+the island expects JSON. The sibling route shipped in the same phase already handles this.
+
+**Contract**: wrap the call at `:77` in try/catch; on throw `return json(500, { error: MSG.serverError })`,
+adding `serverError` to the route's local `MSG`. Mirror `src/pages/api/availability.ts:63-75`.
+
+#### 3. Date-order guard in **both** create RPCs (F9)
+
+**File**: `supabase/migrations/20260810140000_reservation_date_order_guard.sql` (new)
+
+**Intent**: `reserved_period` is `tsrange(pickup_date + 14:00, return_date + 10:00)`
+(`20260603155136_booking_integrity_data.sql:104-105`) while `reservations_dates_ordered` only requires
+`return_date >= pickup_date` (`:109`). So `p_return = p_pickup` inverts the range → a `data_exception`
+caught by neither exception arm, and the RPC errors instead of returning a typed tag. Unreachable through the
+endpoints (the zod schema requires start < end via `catalog-filters.ts:135-136`) but reachable directly
+through PostgREST — by any employee for `create_confirmed_reservation`, and by **anon** for
+`create_reservation_request`. The design source treats a same-day range as valid, so it is a shape people try.
+
+**Contract**: `create or replace function` for **both** `public.create_confirmed_reservation(uuid, date,
+date, text, text, text)` and the live 10-arg `public.create_reservation_request(...)`
+(`20260613090000_reservation_b2b_fields.sql`), each gaining an early guard before the vehicle lookup:
+`if p_return <= p_pickup then return query select 'unavailable'::text, …; return; end if;`.
+**Use `create or replace`, never `drop` + `create`** — replace preserves existing privileges, so the
+revoke/grant pairs stay intact; a drop+create would silently re-open the built-in PUBLIC execute grant (see
+the "Revoke EXECUTE before granting it" lesson). `create_reservation_request` keeps its intentional anon
+grant. No signature change → **no `database.types.ts` regen needed**.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Migration applies cleanly against local Supabase
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Integration tests pass (`npm run test:integration`): both RPCs return `unavailable` (not an error) for `p_return = p_pickup` and for an inverted range; `POST /api/reservations/manual` returns `201 {reference}` with no `token` key; `rpc-execute-grants.test.ts` still passes unchanged (privileges survive `create or replace`).
+
+#### Manual Verification:
+
+- None beyond the automated suite.
+
+---
+
+## Phase 7: Design-contract corrections
+
+### Overview
+
+Doc-only. The review's design-source pull found the **contract** wrong in three places and the code right;
+recording that is what lets the Phase 8 vision-diff converge instead of re-flagging exact ports (F3, F4, F5).
+
+### Changes Required:
+
+#### 1. Record the three deviations
+
+**File**: `context/changes/manual-reservation/design-contract.md`
+
+**Contract**:
+
+- **`:114` (F3)** — "Select via `ui/select.tsx` (replaces the mockup's native `<select>` overlay)" →
+  `deviation(native-select)`: the shipped transparent-`<select>`-over-card is the source's own affordance
+  (`position:absolute; inset:0; opacity:0`, `aria-label="Pojazd"`, whole card as hit target) and keeps the
+  native mobile picker + screen-reader behaviour.
+- **`:90` (D6) and `:98` (F4)** — the source has `borderTopLeftRadius/borderTopRightRadius: 26` and **no drag
+  handle** on this modal (the handle belongs to the quick-action sheet, which is out of scope). Record the
+  mobile top radius as **exact 26px** and delete the "reuse `rounded-t-[28px]`" claim and the drag-handle bar.
+- **`:127` and the verbatim list at `:167` (F5)** — the shipped string is
+  "Data zwrotu musi być późniejsza niż data odbioru."; record
+  `deviation(same-day-rejected)`: the source treats `ret == pick` as valid, our stack rejects it because
+  `tsrange(pickup+14:00, return+10:00)` inverts, so the source's "jest wcześniejsza niż odbiór" is false for
+  the equal-dates case. Add the four states/strings the contract never defined —
+  `avError` ("Nie udało się sprawdzić dostępności.") and the three create-failure banners
+  (`ManualReservationModal.tsx:48, :55-57`).
+
+#### 2. Record the confirmed-exact lines
+
+**File**: same
+
+**Intent**: Stop the vision-diff re-litigating values already verified against the source.
+
+**Contract**: note as `exact` — `mrFieldCap` and the footer left label `letterSpacing: 0.3`; the Ręczna badge
+at `10` (done panel) / `9.5` (header); the done panel at `22` mobile / `20` desktop; the desktop shell at
+`560px` / radius `20`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- None (documentation only).
+
+#### Manual Verification:
+
+- Every value in `ManualReservationModal.tsx` maps to an `exact` line or a recorded `deviation(reason)` in the contract.
+
+---
+
+## Phase 8: Manual verification + vision-diff gate
+
+### Overview
+
+Close the gates the epilogue commit (`757d2aa`) left open (F7). Runs **after** Phases 5 and 7, so the diff
+compares corrected code against a corrected contract.
+
+### Changes Required:
+
+#### 1. Run every outstanding manual gate
+
+**File**: `context/changes/manual-reservation/plan.md` (Progress) + `context/changes/manual-reservation/change.md`
+
+**Contract**: execute Progress items 1.5, 2.5, 3.4–3.7, 4.4 and 4.5 and check them off with evidence. Then run
+**3.8**, the rendered vision-diff: render the modal's form / available / conflict / done states at desktop and
+mobile and hand the screenshots plus the canonical mockups to a vision subagent (mockups on disk at
+`context/changes/manual-reservation/design-review/*.png`; same set live at
+`exports/manual-reservation/` in the Design project `352d78a6-84fd-49a2-8b38-2fe289691fc3`). Iterate the
+punch-list to empty apart from the deviations recorded in Phase 7. Finally set `change.md` `status:` past
+`implementing`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration`
+
+#### Manual Verification:
+
+- All Progress checkboxes for Phases 1–7 are `[x]` with evidence.
+- The vision-diff punch-list is empty apart from recorded deviations.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -459,3 +676,53 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 - [ ] 4.4 A manual confirmed booking shows a Ręczna chip in its calendar detail; a public one shows none
 - [ ] 4.5 No change to calendar colors or the 2-item legend
+
+### Phase 5: Review fixes — modal correctness + design radii
+
+#### Automated
+
+- [x] 5.1 Type checking passes: `npx astro check`
+- [x] 5.2 Linting passes: `npm run lint`
+- [x] 5.3 Build passes: `npm run build`
+- [x] 5.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 5.5 F1 — a lost race flips the panel to "Termin zajęty" and disables submit; editing a date re-checks
+- [ ] 5.6 F2 — submit + both done-panel buttons render 12px, the chevron 8px (no other radius changed)
+- [ ] 5.7 F6 — scrim and X are inert while a create is in flight
+
+### Phase 6: Review fixes — endpoint response + RPC date-order hardening
+
+#### Automated
+
+- [ ] 6.1 Migration applies cleanly against local Supabase
+- [ ] 6.2 Type checking passes: `npx astro check`
+- [ ] 6.3 Linting passes: `npm run lint`
+- [ ] 6.4 Build passes: `npm run build`
+- [ ] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green
+
+### Phase 7: Design-contract corrections
+
+#### Automated
+
+- [ ] 7.1 (none — documentation only)
+
+#### Manual
+
+- [ ] 7.2 F3 — `:114` records `deviation(native-select)`
+- [ ] 7.3 F4 — D6 `:90` / `:98` record mobile top radius `exact 26px` and drop the drag-handle clause
+- [ ] 7.4 F5 — `:127` / `:167` record `deviation(same-day-rejected)` + the four undocumented states/strings
+- [ ] 7.5 Confirmed-exact lines recorded (tracking 0.3; badge 10 / 9.5; done panel 22 / 20; shell 560 / 20)
+
+### Phase 8: Manual verification + vision-diff gate
+
+#### Automated
+
+- [ ] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration`
+
+#### Manual
+
+- [ ] 8.2 Progress items 1.5, 2.5, 3.4–3.7, 4.4, 4.5 executed and checked with evidence
+- [ ] 8.3 3.8 vision-diff run against the 10 canonical mockups; punch-list empty apart from Phase 7 deviations
+- [ ] 8.4 `change.md` status moved past `implementing`
