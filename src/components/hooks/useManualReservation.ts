@@ -35,12 +35,23 @@ export interface ManualReservationPayload {
   customer_phone: string;
 }
 
+export interface AvailabilityHandle {
+  availability: AvailabilityState;
+  /**
+   * Force the panel to `conflict`. The create is the only other source of truth
+   * about this range — a lost race answers 409 long after the GET said "free" —
+   * and without this the panel would keep showing the stale green state (and
+   * keep the submit button armed for an identical retry).
+   */
+  markConflict: () => void;
+}
+
 /**
  * Debounced availability lookup for the current (vehicle, pickup, return).
  * Returns `idle`/`invalid` without a request when the input cannot be asked
  * about; otherwise goes `checking` → `available`/`conflict`/`error`.
  */
-export function useAvailability(vehicleId: string, pickup: string, returnDate: string): AvailabilityState {
+export function useAvailability(vehicleId: string, pickup: string, returnDate: string): AvailabilityHandle {
   const classified = classifyAvailabilityInput(vehicleId, pickup, returnDate);
 
   // Only the SERVER's answer is stored; `idle` / `invalid` / `checking` are
@@ -93,15 +104,22 @@ export function useAvailability(vehicleId: string, pickup: string, returnDate: s
     };
   }, [vehicleId, pickup, returnDate, classified.kind]);
 
+  // Writes into the SAME slot the fetch resolves into, so there is one source of
+  // truth for the panel. No clearing is needed on top: the render-phase reset
+  // above drops it the moment vehicle/pickup/return changes, which re-checks.
+  const markConflict = React.useCallback(() => {
+    setResolved({ state: "conflict" });
+  }, []);
+
   if (classified.kind === "idle") {
-    return { state: "idle" };
+    return { availability: { state: "idle" }, markConflict };
   }
   if (classified.kind === "invalid") {
-    return { state: "invalid", message: classified.message };
+    return { availability: { state: "invalid", message: classified.message }, markConflict };
   }
   // Well-formed input with no answer yet — the debounce or the request is in
   // flight.
-  return resolved ?? { state: "checking" };
+  return { availability: resolved ?? { state: "checking" }, markConflict };
 }
 
 /**

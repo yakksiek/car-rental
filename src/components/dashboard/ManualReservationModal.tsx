@@ -174,14 +174,14 @@ function DonePanel({
         <div className="flex gap-2.5">
           <a
             href="/dashboard/calendar"
-            className="bg-card flex h-[46px] flex-1 items-center justify-center rounded-xl border border-[var(--flota-hair)] text-sm font-semibold text-[var(--flota-ink-2)]"
+            className="bg-card flex h-[46px] flex-1 items-center justify-center rounded-md border border-[var(--flota-hair)] text-sm font-semibold text-[var(--flota-ink-2)]"
           >
             {COPY.seeCalendar}
           </a>
           <button
             type="button"
             onClick={onClose}
-            className="bg-primary flex h-[46px] flex-1 items-center justify-center rounded-xl text-sm font-[650] text-white"
+            className="bg-primary flex h-[46px] flex-1 items-center justify-center rounded-md text-sm font-[650] text-white"
           >
             {COPY.done}
           </button>
@@ -205,7 +205,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
 
-  const availability = useAvailability(vehicleId, pickup, returnDate);
+  const { availability, markConflict } = useAvailability(vehicleId, pickup, returnDate);
   const { busy, create } = useManualReservation();
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
@@ -233,11 +233,16 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
       setCreated(outcome.reference);
       return;
     }
+    // The create is the newer, authoritative answer about this range: flip the
+    // panel with it, so the employee never sees a green "Termin wolny" over a red
+    // banner — and `canCreate` falls false, disarming an identical retry.
     if (outcome.status === "conflict") {
+      markConflict();
       setBanner(COPY.errorConflict);
       return;
     }
     if (outcome.status === "unavailable") {
+      markConflict();
       setBanner(COPY.errorUnavailable);
       return;
     }
@@ -260,7 +265,10 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center md:p-8"
-      onClick={onClose}
+      // Inert while a create is in flight: unmounting mid-POST would still commit
+      // the booking and email the customer, but the employee would never see the
+      // reference — and might re-enter it straight into a 409.
+      onClick={busy ? undefined : onClose}
     >
       <div
         onClick={(e) => {
@@ -283,9 +291,10 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={busy ? undefined : onClose}
+            disabled={busy}
             aria-label={COPY.close}
-            className="bg-card flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-[var(--flota-hair)]"
+            className="bg-card flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-[var(--flota-hair)] disabled:opacity-40"
           >
             <X className="size-4 text-[var(--flota-ink-2)]" />
           </button>
@@ -309,7 +318,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     <span className="font-mono">{vehicle.plate}</span> · {formatDailyRate(vehicle.daily_rate)}
                   </div>
                 </div>
-                <span className="bg-card shadow-card flex size-[30px] shrink-0 items-center justify-center rounded-lg">
+                <span className="bg-card shadow-card flex size-[30px] shrink-0 items-center justify-center rounded-sm">
                   <ChevronDown className="size-[15px] text-[var(--flota-ink-2)]" />
                 </span>
                 {/* The mockup's own affordance: a real <select> laid transparently
@@ -447,7 +456,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
             disabled={!canCreate || busy}
             onClick={() => void submit()}
             className={cn(
-              "bg-primary inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-[650] text-white",
+              "bg-primary inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-md px-5 text-sm font-[650] text-white",
               canCreate && !busy ? "shadow-[0_8px_22px_rgba(180,54,56,0.24)]" : "opacity-40",
             )}
           >
