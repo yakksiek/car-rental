@@ -696,17 +696,17 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 6.1 Migration applies cleanly against local Supabase
-- [x] 6.2 Type checking passes: `npx astro check`
-- [x] 6.3 Linting passes: `npm run lint`
-- [x] 6.4 Build passes: `npm run build`
-- [x] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green
+- [x] 6.1 Migration applies cleanly against local Supabase — 3ab8a62
+- [x] 6.2 Type checking passes: `npx astro check` — 3ab8a62
+- [x] 6.3 Linting passes: `npm run lint` — 3ab8a62
+- [x] 6.4 Build passes: `npm run build` — 3ab8a62
+- [x] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green — 3ab8a62
 
 ### Phase 7: Design-contract corrections
 
 #### Automated
 
-- [ ] 7.1 (none — documentation only)
+- [x] 7.1 (none — documentation only)
 
 #### Manual
 
