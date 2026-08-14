@@ -1,6 +1,9 @@
 // core
 import type { APIRoute } from "astro";
 
+// others
+import { LINK_ORIGIN_COOKIE, linkCookieOptions } from "../../lib/auth-session";
+
 // Recovery / invite-accept callback (S-08). The custom email templates
 // (supabase/templates/{invite,recovery}.html) link here with a self-contained
 // `?token_hash=&type=`, which `verifyOtp` exchanges server-side with NO
@@ -47,6 +50,15 @@ export const GET: APIRoute = async (context) => {
   } catch {
     return context.redirect("/auth/forgot-password?expired=1");
   }
+
+  // (S-14) Stamp the one-shot marker — ON SUCCESS ONLY. This is the app's single
+  // choke point for minting a link session, and the only place that *knows* the
+  // navigation came from a link: `context.locals` is rebuilt from cookies after
+  // the redirect, so without this stamp the downstream gate has nothing to read.
+  // It also carries the mode, so the set-password page no longer takes it from
+  // the attacker-settable `?mode=invite` query string. The failure branches above
+  // stamp nothing.
+  context.cookies.set(LINK_ORIGIN_COOKIE, invite ? "invite" : "recovery", linkCookieOptions(url));
 
   return context.redirect(`/auth/reset-password${mode}`);
 };

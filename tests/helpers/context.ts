@@ -15,9 +15,10 @@ import { anonClient, as, type SeededRole } from "./clients";
 //
 // The handlers read ONLY `context.request` (Origin header + `.json()`),
 // `context.url` (`.origin`, `.searchParams`), `context.locals` (`.supabase`,
-// `.user`, `.role`) and `context.params` (`.id`). A minimal object covers all of
-// them; the single `as unknown as APIContext` cast below is the one type escape
-// (Astro's real `APIContext` is far larger than any handler uses).
+// `.user`, `.role`), `context.params` (`.id`) and — since S-14's session-origin
+// gate — `context.cookies`. A minimal object covers all of them; the single
+// `as unknown as APIContext` cast below is the one type escape (Astro's real
+// `APIContext` is far larger than any handler uses).
 //
 // ROLE CONSISTENCY: `buildApiContext` keeps no invariant on its own — a caller
 // could pass a mismatched client/role. Prefer the `asContext` / `anonContext`
@@ -66,6 +67,36 @@ export interface BuildApiContextOptions {
    * no Origin header at all.
    */
   origin?: string | null;
+  /**
+   * Incoming cookies, name → value. Backed by a Map the handler also writes
+   * through, so a `set` / `delete` it performs is observable afterwards via
+   * `context.cookies.get(name)` — which is how the S-14 one-shot marker
+   * (spent on success, kept on a validation failure) is asserted.
+   */
+  cookies?: Record<string, string>;
+}
+
+/**
+ * Minimal `AstroCookies` stand-in over a Map. Covers the four members the
+ * handlers use — `get` (value only), `set`, `delete`, `has` — and nothing else;
+ * Astro's real class also does signing, JSON coercion and header serialization,
+ * none of which a route gate touches.
+ */
+function buildCookies(initial: Record<string, string>) {
+  const jar = new Map<string, string>(Object.entries(initial));
+  return {
+    get: (key: string) => {
+      const value = jar.get(key);
+      return value === undefined ? undefined : { value };
+    },
+    set: (key: string, value: string) => {
+      jar.set(key, value);
+    },
+    delete: (key: string) => {
+      jar.delete(key);
+    },
+    has: (key: string) => jar.has(key),
+  };
 }
 
 /** Assemble the minimal `APIContext` the route handlers read. */
@@ -101,6 +132,7 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
     // `context.redirect(...)`, which Astro injects at runtime. Mirror its default:
     // a 302 carrying `Location`.
     redirect: (path: string, status = 302) => new Response(null, { status, headers: { location: path } }),
+    cookies: buildCookies(opts.cookies ?? {}),
     locals: {
       supabase: opts.supabase,
       user: opts.user ?? null,
