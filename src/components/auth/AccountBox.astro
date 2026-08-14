@@ -1,0 +1,39 @@
+---
+import { cn } from "../../lib/utils";
+import { staffInitials } from "../../lib/staff-format";
+
+// Account box for the auth cards (S-14, design `password-reset.jsx` `acctBox()`).
+// One component, two labels: `Zalogowano jako` names the session that is in the
+// way (R11/R12), `Ustawiasz hasło dla` names the account whose password is being
+// set (R3/R9, R6/R10 — Phase 4). The latter is the one mitigation available on
+// the irreducible branch: server-side, "Anna clicked her own link" and "Anna
+// clicked Bartek's link" are identical requests, so printing the address lets a
+// human catch what the server structurally cannot.
+//
+// `fullName` comes from the user's `user_metadata.full_name`, written alongside
+// the profiles row at invite time (services/staff.ts:192-202), so the initials
+// need no extra query. Absent it, `staffInitials` falls back to the email.
+interface Props {
+  label: string;
+  email: string;
+  fullName?: string | null;
+  class?: string;
+}
+
+const { label, email, fullName = null, class: className } = Astro.props;
+---
+
+<div
+  class:list={cn(
+    "bg-background flex min-w-0 items-center gap-2.5 rounded-xl border border-[var(--flota-hair)] px-3.5 py-3",
+    className,
+  )}
+>
+  <div class="bg-card shadow-card flex size-[34px] shrink-0 items-center justify-center rounded-[9px]">
+    <span class="text-foreground text-[12.5px] font-bold">{staffInitials(fullName, email)}</span>
+  </div>
+  <div class="min-w-0">
+    <div class="text-muted-foreground mb-0.5 text-[10.5px] font-[650] tracking-[0.4px] uppercase">{label}</div>
+    <div class="text-foreground truncate font-mono text-[13.5px]">{email}</div>
+  </div>
+</div>

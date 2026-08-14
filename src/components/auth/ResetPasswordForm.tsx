@@ -7,7 +7,9 @@ import { ServerError } from "./ServerError";
 
 interface Props {
   // "recovery" (R3/R9 — set a new password) or "invite" (R6/R10 — first password,
-  // crimson WELCOME eyebrow + "Aktywuj konto"). Chosen from the callback link type.
+  // crimson WELCOME eyebrow + "Aktywuj konto"). Read server-side from the marker
+  // cookie /auth/callback stamped — the form no longer posts it, because a field
+  // the client controls has no business steering a security-adjacent route (S-14).
   mode: "recovery" | "invite";
   serverError?: string | null;
 }
@@ -50,8 +52,6 @@ export default function ResetPasswordForm({ mode, serverError }: Props) {
       onSubmit={handleSubmit}
       noValidate
     >
-      <input type="hidden" name="mode" value={mode} />
-
       <div>
         {invite && (
           <div className="text-primary mb-1.5 text-[11px] font-bold tracking-wide uppercase">Witaj w Flocie</div>

@@ -1,0 +1,60 @@
+---
+import { cn } from "../../lib/utils";
+
+// Status head for the auth state cards (S-14, design `password-reset.jsx`
+// `statusHead()`): a 56px tinted tile carrying a 27px glyph, left-aligned with
+// the title. Every state card gets one — the three new screens (R11/R12/R13)
+// ship with it, and Phase 4 retrofits R2/R4/R5 so the surface stays coherent.
+//
+// Glyphs are inline SVG rather than lucide-react: this is an Astro component and
+// the auth shell already hand-rolls its SVGs. Paths are transcribed verbatim from
+// `lucide-react@1.14.0` so the set stays consistent with the React islands.
+// The design uses its own icon set, so the mapping is an approximation confirmed
+// against the mockups (design-contract §7.1) — `settings` is the crosshair-like
+// mark in `auth-inapp-m.png`, which is lucide's `locate-fixed`, not a cog.
+interface Props {
+  tone: "ink" | "green" | "red";
+  icon: "info" | "settings";
+  class?: string;
+}
+
+const { tone, icon, class: className } = Astro.props;
+
+const TONES: Record<Props["tone"], string> = {
+  ink: "bg-secondary text-[var(--flota-ink-2)]",
+  green: "bg-[var(--flota-success-soft)] text-success",
+  red: "bg-[var(--flota-danger-soft)] text-destructive",
+};
+---
+
+<div class:list={cn("mb-5 flex size-14 items-center justify-center rounded-[16px]", TONES[tone], className)}>
+  <svg
+    class="size-[27px]"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    {
+      icon === "info" ? (
+        <Fragment>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
+        </Fragment>
+      ) : (
+        <Fragment>
+          <line x1="2" x2="5" y1="12" y2="12" />
+          <line x1="19" x2="22" y1="12" y2="12" />
+          <line x1="12" x2="12" y1="2" y2="5" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="3" />
+        </Fragment>
+      )
+    }
+  </svg>
+</div>
