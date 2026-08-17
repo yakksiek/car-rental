@@ -509,10 +509,10 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly against local Supabase
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 Integration suite passes: `npm run test:integration`
+- [x] 1.1 Migration applies cleanly against local Supabase — 56eb8ac
+- [x] 1.2 Type checking passes: `npx astro check` — 56eb8ac
+- [x] 1.3 Linting passes: `npm run lint` — 56eb8ac
+- [x] 1.4 Integration suite passes: `npm run test:integration` — 56eb8ac
 
 #### Manual
 
@@ -522,10 +522,10 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Production build succeeds: `npm run build`
-- [ ] 2.4 Unit tests pass: `npm test`
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Production build succeeds: `npm run build`
+- [x] 2.4 Unit tests pass: `npm test`
 
 #### Manual
 

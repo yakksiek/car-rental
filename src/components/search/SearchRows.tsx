@@ -8,10 +8,11 @@ import { estimatedTotal, formatPln, rentalDays, reservationStatusLabelPl } from 
 import { highlightSegments, relativeDayPl, searchDateRange } from "../../lib/search-format";
 import type { SearchResultReservation, SearchResultReturn, SearchResultVehicle } from "../../types";
 
-// The three result rows shared by the ⌘K dropdown (Phase 3) and the full results
-// page (Phase 4), built to design-contract.md Surface 2. Each renders a complete
-// `<a>` so the caller only decides the wrapper: cmdk's `Command.Item asChild` in
-// the dropdown, a plain list item on the results page.
+// The three result rows of the ⌘K dropdown and its mobile full-screen twin, built
+// to design-contract.md Surface 2. Each renders a complete `<a>` and the caller
+// only supplies the wrapper — cmdk's `Command.Item asChild`. They took a
+// `className` override while a full results page reshaped them; that page is gone,
+// so the row shell has exactly one shape.
 //
 // The thumbnail is a lucide `<Truck>` in a tinted box, not `VehicleSilhouette`
 // (contract D3 — the silhouette is an Astro component, and every other React list
@@ -106,8 +107,8 @@ function EnterChip() {
  * The trailing affordance on rows the mockup draws with a chevron. On the ACTIVE
  * row the chevron gives way to the `↵` chip: a chevron says "click me", but the
  * highlighted row is the one Enter opens, and leaving a dead arrow there while the
- * footer advertises "↵ otwórz" tells the user the wrong thing. On the results page
- * nothing is ever selected, so the chevron simply stays.
+ * footer advertises "↵ otwórz" tells the user the wrong thing. The design keeps
+ * both side by side — swapping them is a recorded deviation (contract D16).
  */
 function TrailingAffordance() {
   return (
@@ -127,14 +128,13 @@ type RowAnchorProps = Omit<React.ComponentPropsWithRef<"a">, "children">;
 export function ReservationRow({
   row,
   query,
-  className,
   ...anchor
 }: { row: SearchResultReservation; query: string } & RowAnchorProps) {
   const days = rentalDays(row.pickup_date, row.return_date);
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
 
   return (
-    <a href={searchHref.reservation(row)} {...anchor} className={cn(ROW_SHELL, className)}>
+    <a href={searchHref.reservation(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
@@ -160,14 +160,13 @@ export function ReturnRow({
   row,
   query,
   today,
-  className,
   ...anchor
 }: { row: SearchResultReturn; query: string; today: string } & RowAnchorProps) {
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
   const returned = row.status === "returned";
 
   return (
-    <a href={searchHref.return(row)} {...anchor} className={cn(ROW_SHELL, className)}>
+    <a href={searchHref.return(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
@@ -186,16 +185,11 @@ export function ReturnRow({
   );
 }
 
-export function VehicleRow({
-  row,
-  query,
-  className,
-  ...anchor
-}: { row: SearchResultVehicle; query: string } & RowAnchorProps) {
+export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle; query: string } & RowAnchorProps) {
   const spec = [row.make, row.model].filter(Boolean).join(" ");
 
   return (
-    <a href={searchHref.vehicle(row)} {...anchor} className={cn(ROW_SHELL, className)}>
+    <a href={searchHref.vehicle(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
       <span className="min-w-0 flex-1">
         <span className="text-foreground block truncate text-[13.5px] font-[600]">
