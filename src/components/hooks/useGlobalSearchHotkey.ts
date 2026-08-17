@@ -24,6 +24,14 @@ export interface GlobalSearchHotkeyHandlers {
   onOpen: () => void;
   /** Esc — close whatever is open. */
   onClose: () => void;
+  /**
+   * Claim the shortcut on this page? Default `true`. The two vehicle-form
+   * sub-screens pass `false`: search is a navigation affordance, and on a page
+   * whose whole job is data entry a shortcut that leaves it is a footgun. With
+   * this off nothing registers, so the listener below returns early and ⌘K falls
+   * through to the browser's own binding.
+   */
+  enabled?: boolean;
 }
 
 let installed = false;
@@ -71,7 +79,22 @@ export function useGlobalSearchHotkey(handlers: GlobalSearchHotkeyHandlers): voi
     latest.current = handlers;
   });
 
+  const enabled = handlers.enabled ?? true;
+
   useEffect(() => {
+    // Rules of hooks: the hook is always CALLED; only the registration is gated.
+    //
+    // CLEAR rather than merely skip. A view-transition swap mounts the new island
+    // before the old one is cleaned up — and per the note above, Astro does not
+    // reliably run React cleanup for a swapped-away island at all. Simply returning
+    // would leave the previous page's registration alive, so ⌘K would keep firing
+    // (into a stale handler) on a page that opted out. This branch deliberately
+    // registers NO cleanup: by the time one would run, the next page's island may
+    // already have claimed the slot, and clearing it then would break that page.
+    if (!enabled) {
+      activeHandlers = null;
+      return;
+    }
     const registration: GlobalSearchHotkeyHandlers = {
       onOpen: () => {
         latest.current.onOpen();
@@ -93,5 +116,5 @@ export function useGlobalSearchHotkey(handlers: GlobalSearchHotkeyHandlers): voi
       }
       document.removeEventListener("astro:page-load", install);
     };
-  }, []);
+  }, [enabled]);
 }
