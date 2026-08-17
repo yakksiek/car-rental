@@ -90,7 +90,7 @@ test("invite-accept: admin invite → emailed link → first password → sign i
   await page.waitForURL(/\/auth\/reset-password\?mode=invite/);
   await waitForIslands(page);
   await expect(page.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(page.getByText("Witaj w Flocie")).toBeVisible();
+  await expect(page.getByText("Witaj we Flocie")).toBeVisible();
 
   // Set the first password.
   await fillHydrated(page.getByRole("textbox", { name: "Nowe hasło" }), password);

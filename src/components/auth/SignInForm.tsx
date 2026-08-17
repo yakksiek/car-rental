@@ -113,7 +113,7 @@ export default function SignInForm({ serverError, redirectTo }: Props) {
           href="/auth/forgot-password"
           className="text-muted-foreground hover:text-foreground text-[13px] transition-colors"
         >
-          Zapomniałeś hasła?
+          Nie pamiętasz hasła?
         </a>
       </div>
 

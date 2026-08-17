@@ -1,0 +1,6 @@
+---
+// `/auth` is not a screen — without this it served Astro's unstyled default 404.
+// Sign-in is the only sensible entry point to the staff auth surface, and every
+// other /auth/* route either has a screen or redirects here itself.
+return Astro.redirect("/auth/signin");
+---

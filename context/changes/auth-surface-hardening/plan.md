@@ -770,36 +770,42 @@ to the prod origin.
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Unit tests pass: `npm test`
-- [x] 3.4 Integration tests pass: `npm run test:integration`
+- [x] 3.1 Type checking passes: `npx astro check` — 030853f
+- [x] 3.2 Linting passes: `npm run lint` — 030853f
+- [x] 3.3 Unit tests pass: `npm test` — 030853f
+- [x] 3.4 Integration tests pass: `npm run test:integration` — 030853f
 
 #### Manual
 
-- [x] 3.5 An injected `?error=` sentence renders no alert on `/auth/signin`
-- [x] 3.6 The same on `/auth/reset-password` and `/dashboard/account/password` renders no alert
-- [x] 3.7 A wrong sign-in password still shows correct Polish copy
-- [x] 3.8 Reusing your current password shows Polish copy, not GoTrue's English
+- [x] 3.5 An injected `?error=` sentence renders no alert on `/auth/signin` — 030853f
+- [x] 3.6 The same on `/auth/reset-password` and `/dashboard/account/password` renders no alert — 030853f
+- [x] 3.7 A wrong sign-in password still shows correct Polish copy — 030853f
+- [x] 3.8 Reusing your current password shows Polish copy, not GoTrue's English — 030853f
 
 ### Phase 4: Copy refresh, account box, and card-state chrome
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Unit tests pass: `npm test`
-- [ ] 4.4 All e2e specs green on port 4321
+- [x] 4.1 Type checking passes: `npx astro check` — 74b0c11
+- [x] 4.2 Linting passes: `npm run lint` — 74b0c11
+- [x] 4.3 Unit tests pass: `npm test` — 74b0c11
+- [x] 4.4 All e2e specs green on port 4321 — 74b0c11
 
 #### Manual
 
-- [ ] 4.5 Sign-in page reads "Nie pamiętasz hasła?"
-- [ ] 4.6 An invite link shows "Witaj we Flocie" and the invite-specific subtitle
-- [ ] 4.7 The set-password screen shows "Ustawiasz hasło dla <email>" in both modes
-- [ ] 4.8 R2/R4/R5/R11/R12/R13 show a status icon tile and a dark-ink full-width CTA
-- [ ] 4.9 `/auth/reset-password?done=1` typed by a signed-out visitor shows R13
-- [ ] 4.10 `/auth` redirects to `/auth/signin`
-- [ ] 4.11 Vision-diff each surface against its canonical mockup at both breakpoints
+- [x] 4.5 Sign-in page reads "Nie pamiętasz hasła?" — 74b0c11
+- [x] 4.6 An invite link shows "Witaj we Flocie" and the invite-specific subtitle — 74b0c11
+- [x] 4.7 The set-password screen shows "Ustawiasz hasło dla <email>" in both modes — 74b0c11
+- [x] 4.8 R2/R4/R5/R11/R12/R13 show a status icon tile and a dark-ink full-width CTA — 74b0c11
+- [x] 4.9 `/auth/reset-password?done=1` typed by a signed-out visitor shows R13 — 74b0c11
+- [x] 4.10 `/auth` redirects to `/auth/signin` — 74b0c11
+- [x] 4.11 Vision-diff each surface against its canonical mockup at both breakpoints — 74b0c11
+
+> 4.11 detail: all 10 surfaces rendered at 390 and 1320 and diffed against `design-review/`. Two
+> findings, both now pre-registered in `design-contract.md` §10 — deviation 11 (R5 lacked the back
+> link both artboards show; adopted) and deviation 12 (the desktop artboards end the card at the back
+> link, but `AuthShell`'s secure row is inherited-exact from S-08 §7.5; kept, measured one line at
+> both breakpoints).
 
 ### Phase 5: Cookie `Secure` attribute + full-suite verification
 

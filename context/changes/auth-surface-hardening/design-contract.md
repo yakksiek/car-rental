@@ -345,7 +345,17 @@ alert-line strings, not screen copy, and extend the shipped `MSG` idiom at
 9. **`httpOnly: false` on the Supabase auth cookies retained** — knowing product trade
    (`storage.ts:15-19`); recorded, not fixed.
 10. **404 / 500 pages out of scope** despite existing designs — their own change.
-11. **Sign-in "forgot password" link keeps its shipped muted styling.** `auth-signin-d.png` renders
+11. **R5 gains the `Powrót do logowania` back link.** Both `auth-expired-d.png` and `auth-expired-m.png`
+    render one under the CTA; the shipped card had none, and §8 never gave R5 a per-surface entry
+    because the plan scoped Phase 4's R5 work to the status head and the CTA. Added during the
+    vision-diff gate — it is the same `AuthBackLink` R2 and R13 already use, and both R5 branches
+    (`reset-password.astro` marker-absent and `forgot-password.astro` `?expired=1`) now carry it.
+12. **Desktop state cards keep the secure-row footer the mockups omit.** `auth-expired-d.png` (and its
+    siblings) end the card at the back link, but `AuthShell` renders the footer on every auth surface —
+    §7.5 marks that shell `exact` and inherited from S-08. Adopting the mockup here would strip the
+    footer from six shipped screens for no functional gain. Verified one line at both breakpoints per
+    §2a (18.8 px measured at 390 and 1320). Recorded so the next diff stops re-flagging it.
+13. **Sign-in "forgot password" link keeps its shipped muted styling.** `auth-signin-d.png` renders
     `Nie pamiętasz hasła?` in **crimson** (`tokens.accent`, weight 600); the app ships
     `text-muted-foreground hover:text-foreground text-[13px]`. Phase 4 changes the **string only** —
     a secondary action shouldn't compete with the primary CTA, and S-08 §3.14 already reconciled this
@@ -372,7 +382,7 @@ and diff against its mockup. All 21 mockups are in `design-review/` and ready.
 | R6/R10      | `auth-invite-d.png`      | `auth-invite-m.png`  |
 | Sign in     | `auth-signin-d.png`      | `auth-signin-m.png`  |
 
-Iterate to an empty punch-list, minus the ten deviations in §10 **and the pre-registered export
+Iterate to an empty punch-list, minus the thirteen deviations in §10 **and the pre-registered export
 artifact in §2a**.
 
 The secure-row export artifact is **fixed at source and fully re-exported** (§2a) — no false
