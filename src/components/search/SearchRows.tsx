@@ -185,9 +185,15 @@ export function ReturnRow({
   );
 }
 
+/**
+ * The design draws this row (it did not when the row was first authored — its demo
+ * fleet was empty), so the spec line follows it exactly: the MAKE only, separated
+ * from the plate by a round dot rather than a `·` character. The model is not
+ * rendered — the name already carries it (`Mercedes Sprinter 315 CDI` /
+ * `Mercedes-Benz` / `Sprinter`). The `Wycofany` pill is the whole of D9: the design
+ * has no retired state because its demo fleet has no retired vehicle.
+ */
 export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle; query: string } & RowAnchorProps) {
-  const spec = [row.make, row.model].filter(Boolean).join(" ");
-
   return (
     <a href={searchHref.vehicle(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
@@ -195,10 +201,14 @@ export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle
         <span className="text-foreground block truncate text-[13.5px] font-[600]">
           <Highlight text={row.name} query={query} />
         </span>
-        <span className="text-muted-foreground block truncate text-[12px]">
-          {spec}
-          {spec && " · "}
-          <span className="font-mono">
+        <span className="mt-0.5 flex items-center gap-[7px] overflow-hidden whitespace-nowrap">
+          {row.make && (
+            <>
+              <span className="text-muted-foreground text-[12px]">{row.make}</span>
+              <span className="size-[3px] shrink-0 rounded-full bg-[var(--flota-hair)]" aria-hidden="true" />
+            </>
+          )}
+          <span className="font-mono text-[11.5px] font-[600] text-[var(--flota-ink-2)]">
             <Highlight text={row.plate} query={query} />
           </span>
         </span>

@@ -61,6 +61,24 @@ results page, and mobile full-screen match the design contract on a vision-diff.
 - **No nav tab for search** — search is reached from the box/⌘K, not a nav item (an `active="search"` state highlights nothing in the nav).
 - **No search on the 2 full-screen protocol flows** — `pickups/[reservationId].astro` and `returns/[reservationId].astro` deliberately don't render `StaffShell` (focused task screens), so the header field + ⌘K are absent there. Accepted — "all staff pages" means the **10 `StaffShell` pages**. (If truly-global search is later wanted, hoist the ⌘K listener to `Layout.astro`.)
 
+> **Superseded 2026-08-17 by `staff-search-dashboard-only`** — two things this plan built were removed before
+> S-13 ever merged, so a reader of the shipped code will not find them. Recorded here rather than rewritten
+> above, because the Progress rows and their SHAs describe what actually landed at the time.
+>
+> - **No full results page.** `/dashboard/search` (Phase 4 below), `SearchResults.tsx`, the filter chips, the
+>   `header-title` slot and every route into them are deleted. Search resolves entirely in the dropdown: the
+>   grouped list scrolls, and clicking or `↵` on a row jumps straight to that item. "Zobacz wszystkie wyniki"
+>   no longer exists as a destination, and `search_staff`'s per-group cap rose 8 → 25 so the dropdown can
+>   carry the whole result set (`20260817120000_search_staff_widen_cap.sql`).
+> - **No per-screen entry points.** The desktop field renders on **Pulpit only** (the design's `StaffTopbar`
+>   takes `search`, and only `ScreenStaffDash` passes it), and the mobile magnifier moved from the floating
+>   tab bar to the dashboard hero. The island stays mounted on all 10 pages so ⌘K and the mobile overlay keep
+>   working off-Pulpit; at `md+` on a fieldless page ⌘K navigates to `/dashboard?search=1`. An icon inherits
+>   its scope from its container, so a magnifier in a section header would read as "search this section".
+>
+> Kept: the Phase 2 shell restructure. Its original justification (carrying the field on every page) is gone,
+> but it is now what gives every staff page one consistent title/action band.
+
 ## Implementation Approach
 
 Backend first (the RPC + endpoint), then the invasive shell restructure isolated in its own phase (so the
