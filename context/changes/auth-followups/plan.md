@@ -420,33 +420,33 @@ S-08 production rollout chain.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npx astro check`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Unit tests pass: `npm test`
-- [x] 1.4 Integration tests pass: `npm run test:integration`
-- [x] 1.5 Full e2e suite passes on port 4321
+- [x] 1.1 Type checking passes: `npx astro check` — fe3a695
+- [x] 1.2 Linting passes: `npm run lint` — fe3a695
+- [x] 1.3 Unit tests pass: `npm test` — fe3a695
+- [x] 1.4 Integration tests pass: `npm run test:integration` — fe3a695
+- [x] 1.5 Full e2e suite passes on port 4321 — fe3a695
 
 #### Manual
 
-- [x] 1.6 A deactivated staffer on a live recovery link sees `Konto jest nieaktywne`
-- [x] 1.7 An ordinary signed-in staffer still sees R12 — the new branch did not shadow it
-- [x] 1.8 A normal recovery link still reaches the form and sets a password
+- [x] 1.6 A deactivated staffer on a live recovery link sees `Konto jest nieaktywne` — fe3a695
+- [x] 1.7 An ordinary signed-in staffer still sees R12 — the new branch did not shadow it — fe3a695
+- [x] 1.8 A normal recovery link still reaches the form and sets a password — fe3a695
 
 ### Phase 2: Marker value from the validated `type`, not `?flow` (F3)
 
 #### Automated
 
-- [ ] 2.1 Probe test shows a type-mismatched `verifyOtp` is REJECTED
-- [ ] 2.2 Type checking passes: `npx astro check`
-- [ ] 2.3 Linting passes: `npm run lint`
-- [ ] 2.4 Integration tests pass: `npm run test:integration`
-- [ ] 2.5 Full e2e suite passes on port 4321
+- [x] 2.1 Probe test shows a type-mismatched `verifyOtp` is REJECTED
+- [x] 2.2 Type checking passes: `npx astro check`
+- [x] 2.3 Linting passes: `npm run lint`
+- [x] 2.4 Integration tests pass: `npm run test:integration`
+- [x] 2.5 Full e2e suite passes on port 4321
 
 #### Manual
 
-- [ ] 2.6 A real invite link still shows `Witaj we Flocie` and the invite subtitle
-- [ ] 2.7 A real recovery link still shows the recovery copy
-- [ ] 2.8 `&flow=invite` on a recovery link no longer flips it to the invite screen
+- [x] 2.6 A real invite link still shows `Witaj we Flocie` and the invite subtitle
+- [x] 2.7 A real recovery link still shows the recovery copy
+- [x] 2.8 `&flow=invite` on a recovery link no longer flips it to the invite screen
 
 ### Phase 3: Hygiene — body guard, import headers, cookie double (F5, F6, F7)
 
