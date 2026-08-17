@@ -112,6 +112,7 @@ Same base map as the cohort (`bg→--background`, `card→--card`, `ink→--fore
 - **D16 `deviation(affordance)`** — **now a live deviation from a drawn state.** The Zwroty and Pojazdy rows swap their trailing chevron for the `↵` chip while active. The design draws the active row with the chip **beside** the retained chevron; leaving an inert arrow on the highlighted row contradicts the footer's own "↵ otwórz" hint (owner-reported, `f00ffec`). Previously justified as "the mockup never draws this case" — it does now, so this is deliberate divergence rather than an undrawn gap.
 - **D17 `deviation(no-design-state)`** — at `md+` on a page with no field, ⌘K navigates to `/dashboard?search=1` and the dropdown opens on arrival (the parameter is stripped so a refresh cannot re-trigger it). The design has no drawn state for this, though `useSX()` carries unrendered copy asserting ⌘K works "z dowolnego ekranu". (`staff-search-dashboard-only` **N3**.)
 - **D18 `deviation(platform)`** — the `<GlobalSearch>` island stays mounted on all 10 staff pages while the field renders on one. The design has no notion of mounting; this is what keeps ⌘K and the mobile overlay alive off-Pulpit, and it is why the overlay works in place below `md` on every page. (`staff-search-dashboard-only` **N2**.)
+- **D19 `deviation(no-design-state)`** — below `md` the active row's background is **`bg-card`**, not the design's `tokens.bg`. `search-flow.jsx` gives `RowShell` a single active treatment tuned against the desktop `SearchPanel`, whose container is `tokens.card`; `MobileSearchShell`'s body is itself `tokens.bg`, so there the drawn value paints the color already underneath it and only the `rgba(15,23,42,0.08)` ring remains. The mock never exposed the collision because **no mobile screen passes `active`** (`ScreenSearchLive` sets `active={i === 0}`; `ScreenSearchMobileLive` sets it on nothing) — we render it for real, since cmdk always keeps a row selected. Figure and ground therefore swap below `md`; the inset ring is unchanged on both surfaces, and the desktop panel keeps the drawn value exactly. **Do not "correct" this back to `tokens.bg`** — and do not fix it by making the overlay body `tokens.card` instead, which would contradict a value the mock draws across all three mobile screens. Owner-reported, 2026-08-17.
 
 ---
 
@@ -139,7 +140,8 @@ field (radix Popover, D7). `exact`.
 letter-spacing:0.5 / uppercase` muted + `· {count}`. `exact`.
 
 **RowShell** — `flex gap:12`, `padding:9px 12px`, `margin:0 6px`, `rounded-[11px]`; active → `bg-background` +
-`inset 0 0 0 1px var(--flota-hair)`. `exact`.
+`inset 0 0 0 1px var(--flota-hair)`. `exact` on this surface — the mobile overlay needs a different active
+background for the same reason it needs no anchor: see **D19**.
 
 **Rows** (reuse `<Truck>` thumb D3, `Badge` tint pills, `formatPln`, mono ref, query `<mark>`):
 
@@ -180,7 +182,8 @@ mobile entry point — the floating tab bar deliberately carries no magnifier. `
 Top band `padding:52px 16px 12px`, bg card, border-bottom hair2: field `h:44 rounded-[12px] bg-background
 border 1.5px var(--foreground)` (search icon + placeholder/query + clear-X) + **Anuluj** (`--primary`,
 `14.5 weight:650`). Body scrolls, `padding:4px 0 24px`: resting (quick-jumps, `34×34` icon tiles), results
-(the three groups, and **nothing after the last row**), no-results (`60×60` icon + text). `exact`.
+(the three groups, and **nothing after the last row**), no-results (`60×60` icon + text). `exact` — the body
+stays `tokens.bg` as drawn; the row that sits on it takes the **D19** active background.
 
 ---
 
