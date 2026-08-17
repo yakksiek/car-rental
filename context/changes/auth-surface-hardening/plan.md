@@ -811,12 +811,12 @@ to the prod origin.
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx astro check`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Unit tests pass: `npm test`
-- [x] 5.4 Full integration suite passes
-- [x] 5.5 Full e2e suite passes on port 4321
-- [x] 5.6 Production build succeeds: `npm run build`
+- [x] 5.1 Type checking passes: `npx astro check` — 4954d60
+- [x] 5.2 Linting passes: `npm run lint` — 4954d60
+- [x] 5.3 Unit tests pass: `npm test` — 4954d60
+- [x] 5.4 Full integration suite passes — 4954d60
+- [x] 5.5 Full e2e suite passes on port 4321 — 4954d60
+- [x] 5.6 Production build succeeds: `npm run build` — 4954d60
 
 > 5.1–5.6 detail: astro check 0 errors (255 files); lint 0 errors (2 pre-existing
 > `react-hooks/incompatible-library` warnings on the RHF protocol forms); unit 340/340 (+3 new for
@@ -841,7 +841,7 @@ to the prod origin.
 
 #### Manual
 
-- [x] 5.7 Local dev over `http://localhost:4321` still holds a session
-- [x] 5.8 `npm run preview` emits `Secure` on the auth cookies
-- [x] 5.9 Full recovery walkthrough: forgot → email → set → signed out → sign in with the new password
-- [x] 5.10 Full invite walkthrough: invite → email → "Witaj we Flocie" → activate → sign in
+- [x] 5.7 Local dev over `http://localhost:4321` still holds a session — 4954d60
+- [x] 5.8 `npm run preview` emits `Secure` on the auth cookies — 4954d60
+- [x] 5.9 Full recovery walkthrough: forgot → email → set → signed out → sign in with the new password — 4954d60
+- [x] 5.10 Full invite walkthrough: invite → email → "Witaj we Flocie" → activate → sign in — 4954d60
