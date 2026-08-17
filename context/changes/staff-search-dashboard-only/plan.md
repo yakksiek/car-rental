@@ -853,6 +853,21 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 7.5 Half-fill `/dashboard/vehicles/new`, press ⌘K at desktop width → the browser asks before leaving
+- [ ] 7.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser asks before leaving. (Restated: Phase 8 removed ⌘K from this page, so the original ⌘K trigger no longer exists. Reload is the same code path — a full-document navigation.)
 - [ ] 7.6 A successful save still redirects to `/dashboard/vehicles` with no prompt
-- [ ] 7.7 Opening `/dashboard/vehicles/{id}/edit` and changing nothing → ⌘K leaves without a prompt
+- [ ] 7.7 Opening `/dashboard/vehicles/{id}/edit` and changing nothing, then reloading → no prompt
+
+### Phase 8: No ⌘K on the two form sub-screens
+
+#### Automated
+
+- [x] 8.1 Type checking passes: `npx astro check` — 29d9fbf
+- [x] 8.2 Linting passes: `npm run lint` — 29d9fbf
+- [x] 8.3 Production build succeeds: `npm run build` — 29d9fbf
+- [x] 8.4 Unit tests pass: `npm test` — 29d9fbf
+
+#### Manual
+
+- [ ] 8.5 ⌘K on `/dashboard/vehicles/new` and `/dashboard/vehicles/{id}/edit` does nothing in the app
+- [ ] 8.6 ⌘K still works on the seven nav pages and on `/dashboard/protocols/{id}`
+- [ ] 8.7 ⌘K still works after navigating _away_ from a form page to a nav page (the singleton re-arms)
