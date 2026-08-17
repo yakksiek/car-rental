@@ -55,6 +55,14 @@ Astro.slots.has("header-action")`; the island is rendered in the else-branch too
 because it owns the ⌘K listener and the mobile overlay and gating it with the bar
 would kill both on that page.
 
+**Phase 7** closed a second consequence of the same Phase 3 fallback: ⌘K's
+`location.assign` discarded a part-filled `VehicleForm` on `vehicles/new` and
+`vehicles/{id}/edit`, with no `beforeunload` guard anywhere in `src`. The form now
+guards itself while dirty. Known limit recorded in the plan: `<ClientRouter>` swaps
+the DOM without unloading, so in-app link clicks still aren't caught — that needs
+its own `astro:before-preparation` guard and is a separate UX decision, as is the
+larger option of replacing the ⌘K navigation with an unanchored desktop palette.
+
 ## Where things stand
 
 - Worktree: /Users/user/git/przeprogramowani/fleet-rent-staff-global-search

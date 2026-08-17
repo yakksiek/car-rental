@@ -774,10 +774,10 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [ ] 7.1 Type checking passes: `npx astro check`
-- [ ] 7.2 Linting passes: `npm run lint`
-- [ ] 7.3 Production build succeeds: `npm run build`
-- [ ] 7.4 Unit tests pass: `npm test`
+- [x] 7.1 Type checking passes: `npx astro check` — f0fd51a
+- [x] 7.2 Linting passes: `npm run lint` — f0fd51a
+- [x] 7.3 Production build succeeds: `npm run build` — f0fd51a
+- [x] 7.4 Unit tests pass: `npm test` — f0fd51a
 
 #### Manual
 
