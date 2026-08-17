@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createClient } from "../../../lib/supabase";
 import { safeRedirectPath } from "../../../lib/safe-redirect";
 import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages";
+import { shouldSecureCookies } from "../../../lib/secure-cookies";
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
@@ -18,7 +19,11 @@ export const POST: APIRoute = async (context) => {
   const back = (code: AuthErrorCode) =>
     context.redirect(`/auth/signin?error=${code}&redirect=${encodeURIComponent(target)}`);
 
-  const supabase = createClient(context.request.headers, context.cookies);
+  // Session cookies are minted here, so this call site carries `secure` too
+  // (S-14) — not just middleware's refresh path.
+  const supabase = createClient(context.request.headers, context.cookies, {
+    secure: shouldSecureCookies(context.url),
+  });
   if (!supabase) {
     return back("unconfigured");
   }

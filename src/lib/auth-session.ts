@@ -1,6 +1,9 @@
 // core
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+// others
+import { shouldSecureCookies } from "./secure-cookies";
+
 // ---------------------------------------------------------------------------
 // Session origin (S-14) — the single answer to "how was this session minted?".
 //
@@ -41,8 +44,9 @@ export const PW_SET_DONE_COOKIE = "flota-pw-set-done";
 // `path: "/"` is load-bearing: the page lives at /auth/reset-password but its
 // form posts to /api/auth/reset-password, so an `/auth`-scoped cookie would be
 // invisible to the handler. `maxAge` matches the reset window (15 min); `secure`
-// is NOT here because it must be derived per request — local dev runs over
-// http://localhost, where a blanket `secure: true` drops the cookie entirely.
+// is NOT here because it is decided per request — under `npm run dev` the app is
+// served over plain http, where a blanket `secure: true` drops the cookie
+// entirely and takes the whole reset flow down with it.
 export const LINK_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: "lax",
@@ -50,9 +54,13 @@ export const LINK_COOKIE_OPTIONS = {
   maxAge: 900,
 } as const;
 
-/** `LINK_COOKIE_OPTIONS` plus a `secure` derived from *this* request's protocol. */
+/**
+ * `LINK_COOKIE_OPTIONS` plus the `secure` for *this* request. Shares the one
+ * rule with the session cookies (`shouldSecureCookies`), so the marker can never
+ * end up with a weaker posture than the session it gates.
+ */
 export function linkCookieOptions(url: URL) {
-  return { ...LINK_COOKIE_OPTIONS, secure: url.protocol === "https:" };
+  return { ...LINK_COOKIE_OPTIONS, secure: shouldSecureCookies(url) };
 }
 
 /** Narrow a raw marker-cookie value to a known link origin; anything else → null. */
