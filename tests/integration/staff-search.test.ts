@@ -23,8 +23,11 @@ import { anonContext, asContext } from "../helpers/context";
 //      and anon cannot execute the function at all (the revoke, not just the gate).
 //      The endpoint answers 401 anon / 403 role-null before it ever reaches the DB.
 //   4. INPUT HANDLING — a sub-2-character query returns nothing rather than the whole
-//      table, ILIKE metacharacters are escaped instead of widening the match, and the
-//      per-group cap holds.
+//      table, ILIKE metacharacters are escaped instead of widening the match, and a
+//      group wider than the old cap of 8 comes back whole. The per-group cap is now
+//      25 (20260817120000_search_staff_widen_cap.sql) and this fixture does NOT reach
+//      it — the upper bound is deliberately unverified, so do not read a green run as
+//      proof that 25 holds.
 //
 // SERVICE-ROLE ISOLATION: every access assertion runs through `as(role)` /
 // `anonClient()` / a constructed APIContext carrying those clients. `serviceClient()`
@@ -81,7 +84,8 @@ const V_DUE = "e1000000-0000-0000-0000-000000000001";
 const V_RETURNED = "e1000000-0000-0000-0000-000000000002";
 const V_PENDING = "e1000000-0000-0000-0000-000000000003";
 const V_NO_ISSUE = "e1000000-0000-0000-0000-000000000004";
-// Nine more vehicles sharing one token, to prove the per-group LIMIT 8.
+// Nine more vehicles sharing one token — one past the retired LIMIT 8, so the group
+// coming back whole is what proves the cap was widened.
 const V_CAP = Array.from({ length: 9 }, (_, i) => `e1000000-0000-0000-0000-0000000000c${i + 1}`);
 const VEHICLE_IDS = [V_DUE, V_RETURNED, V_PENDING, V_NO_ISSUE, ...V_CAP];
 
@@ -354,12 +358,14 @@ describe("search_staff + GET /api/search (S-13 Phase 1)", () => {
     expect(rows<SearchRowShape>(underscore.data)).toHaveLength(0);
   });
 
-  it("caps each group at 8 rows", async () => {
+  it("returns a group of nine whole — past the retired cap of 8", async () => {
     const employee = await as("employee");
     const res = await employee.rpc("search_staff", { p_query: CAP_TOKEN });
     const vehicles = rows<SearchRowShape>(res.data).filter((r) => r.kind === "vehicle");
-    // Nine vehicles carry the token; the RPC returns the first eight.
-    expect(vehicles).toHaveLength(8);
+    // Nine vehicles carry the token and all nine come back. Under the old cap this
+    // returned 8; the dropdown is now the only search surface, so match #9 has to be
+    // reachable. The current cap (25) is above what this fixture can prove.
+    expect(vehicles).toHaveLength(9);
   });
 
   // -------------------------------------------------------------------------
