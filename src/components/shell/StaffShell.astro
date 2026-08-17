@@ -39,6 +39,12 @@ interface Props {
   // Ask the island to open its search surface on mount. Set by Pulpit when it was
   // reached through ⌘K from a fieldless page (`/dashboard?search=1`).
   autoOpen?: boolean;
+  // Claim ⌘K on this page? Default true. The two vehicle-form sub-screens pass
+  // false: search is a navigation affordance, and the desktop shortcut leaves the
+  // page — on a screen whose whole job is data entry that abandons the form. The
+  // line is "reached from the menu" (keeps it) vs "reached from inside a screen
+  // and holds a form" (doesn't). `protocols/[id]` is a read-only view, so it keeps it.
+  searchHotkey?: boolean;
 }
 
 const {
@@ -52,6 +58,7 @@ const {
   showHeader = true,
   search = false,
   autoOpen = false,
+  searchHotkey = true,
 } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
@@ -82,6 +89,7 @@ const searchProps = {
   today,
   field: search,
   autoOpen,
+  hotkey: searchHotkey,
 };
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";

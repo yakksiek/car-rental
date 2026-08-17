@@ -27,6 +27,7 @@ const [pending, overdueCount] = await Promise.all([listPendingReservations(supab
     role={role}
     pendingCount={pending.length}
     overdueCount={overdueCount}
+    searchHotkey={false}
   >
     <VehicleForm client:load mode="create" />
   </StaffShell>

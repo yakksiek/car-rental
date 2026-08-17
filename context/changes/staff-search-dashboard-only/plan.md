@@ -625,6 +625,78 @@ draw, so it is its own decision.
 
 ---
 
+## Phase 8: No ⌘K on the two form sub-screens
+
+### Overview
+
+Owner decision after Phase 7: rather than warn before abandoning a form, don't offer the
+shortcut that abandons it. Search is a **navigation** affordance, and on a focused sub-screen
+whose whole job is data entry, a shortcut that leaves the page is a footgun regardless of the
+guard in front of it.
+
+The line is "reached from the menu" vs "reached from inside a screen". Seven of the ten shell
+pages are nav destinations (`Pulpit / Wnioski / Wydania / Zwroty / Kalendarz / Flota / Zespół`)
+and keep ⌘K. Three are sub-screens; the two that carry `VehicleForm` lose it.
+`protocols/[id]` **keeps** it — it is a read-only view (two `useState`s, no form), so there is
+nothing to abandon.
+
+Not derived from the URL, though the nav hrefs would allow it: "has a form" is a property of
+the page, not of its path, and a future sub-screen with a form would silently inherit the
+wrong answer.
+
+### Changes Required:
+
+#### 1. An opt-out prop, threaded to the hook
+
+**File**: `src/components/shell/StaffShell.astro`, `src/components/search/GlobalSearch.tsx`,
+`src/components/hooks/useGlobalSearchHotkey.ts`
+
+**Intent**: `StaffShell` gains `searchHotkey?: boolean` (default `true`), passed to the island
+as `hotkey`, which passes `enabled` to `useGlobalSearchHotkey`. The hook must still be
+**called** unconditionally — rules of hooks — so the flag gates registration inside it, not the
+call site.
+
+**Contract**: with `enabled: false` the hook does not write `activeHandlers`, so the
+module-scoped document listener finds no handler and returns early; ⌘K falls through to the
+browser's own binding. The singleton install and the `astro:page-load` re-arm are unchanged, so
+a page that _does_ want the shortcut still gets it after a view transition. The island still
+mounts (it owns the mobile overlay), and the `flota:search-open` listener is unaffected.
+
+#### 2. Opt the two form pages out
+
+**File**: `src/pages/dashboard/vehicles/new.astro`, `src/pages/dashboard/vehicles/[id]/edit.astro`
+
+**Intent**: both render `<VehicleForm client:load>` inside `StaffShell`; both pass
+`searchHotkey={false}`.
+
+**Contract**: `<StaffShell active="fleet" … searchHotkey={false}>`. Neither page renders a
+search field or a mobile magnifier already, so after this they offer no route into search at
+all — which is the intent: get to Pulpit first, or finish the form.
+
+#### 3. Keep Phase 7's guard
+
+Phase 7 is **not** reverted. Its trigger is gone, but a `beforeunload` on a dirty ~18-field
+form still covers a reload, a closed tab and an external link. It is now belt-and-braces
+rather than the primary fix, and the plan says so instead of leaving a reader to wonder why
+both exist.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- ⌘K on `/dashboard/vehicles/new` and `/dashboard/vehicles/{id}/edit` does nothing in the app
+- ⌘K still works on all seven nav pages and on `/dashboard/protocols/{id}`
+- ⌘K still works after navigating _away_ from a form page to a nav page (the singleton re-arms)
+
+---
+
 ## Testing Strategy
 
 Depth is **minimal by decision** — the suite is repaired, not extended.

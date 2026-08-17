@@ -90,6 +90,13 @@ export interface GlobalSearchProps {
    * page. The parameter is stripped on open so a refresh cannot re-trigger it.
    */
   autoOpen?: boolean;
+  /**
+   * Claim ⌘K on this page? Default `true`. The two vehicle-form sub-screens pass
+   * `false` — search is a navigation affordance, and on a page whose whole job is
+   * data entry the shortcut would abandon the form. The island still mounts (it
+   * owns the mobile overlay); only the hotkey registration is skipped.
+   */
+  hotkey?: boolean;
 }
 
 interface QuickJump {
@@ -113,6 +120,7 @@ export default function GlobalSearch({
   today,
   field = true,
   autoOpen = false,
+  hotkey = true,
 }: GlobalSearchProps) {
   const [query, setQuery] = React.useState("");
   const [desktopOpen, setDesktopOpen] = React.useState(false);
@@ -179,7 +187,7 @@ export default function GlobalSearch({
     setMobileOpen(false);
   }, []);
 
-  useGlobalSearchHotkey({ onOpen: openSearch, onClose: closeSearch });
+  useGlobalSearchHotkey({ onOpen: openSearch, onClose: closeSearch, enabled: hotkey });
 
   // Arriving from ⌘K on a fieldless page (`/dashboard?search=1`): open as soon as
   // the island has hydrated, and strip the parameter in the SAME effect — leaving it
