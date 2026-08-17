@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "../../../lib/supabase";
 import { safeRedirectPath } from "../../../lib/safe-redirect";
+import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages";
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
@@ -12,17 +13,22 @@ export const POST: APIRoute = async (context) => {
   // landing page (A1). Carried back on failure so a retry keeps the target.
   const redirectParam = form.get("redirect");
   const target = safeRedirectPath(typeof redirectParam === "string" ? redirectParam : null);
-  const back = (msg: string) =>
-    context.redirect(`/auth/signin?error=${encodeURIComponent(msg)}&redirect=${encodeURIComponent(target)}`);
+  // Only a short code travels in the URL (S-14, F6) — the page resolves it to
+  // Polish. Codes are ASCII identifiers from a closed set, so no encoding needed.
+  const back = (code: AuthErrorCode) =>
+    context.redirect(`/auth/signin?error=${code}&redirect=${encodeURIComponent(target)}`);
 
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return back("Supabase is not configured");
+    return back("unconfigured");
   }
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return back(error.message);
+    // Never `error.message` — GoTrue answers in English, and a wrong password
+    // and an unknown address both come back as 400 `invalid_credentials`, which
+    // is also the non-enumerable answer we want to give.
+    return back(gotrueErrorCode(error));
   }
 
   return context.redirect(target);

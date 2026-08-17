@@ -3,12 +3,17 @@ import Layout from "../../layouts/Layout.astro";
 import SignInForm from "../../components/auth/SignInForm";
 import Brand from "../../components/brand/Brand.astro";
 import { safeRedirectPath } from "../../lib/safe-redirect";
+import { resolveAuthError } from "../../lib/auth-messages";
 
 // Staff sign-in ("Strefa pracownika"). Mobile: dark ink brand band over a white
 // form. Desktop: a centered 440px modal card over a blurred dispatch-workspace
 // backdrop + dark scrim. Source: design `staff-login.jsx` (Screen…Mobile /
 // Screen…Desktop + LoginForm), copy from `shared.jsx` STR.PL.login.
-const error = Astro.url.searchParams.get("error");
+//
+// `?error=` carries a short code, never a sentence (S-14, F6). Anything we don't
+// recognise resolves to null and the alert is not rendered at all, so a crafted
+// link can no longer put words in the app's mouth on this URL.
+const error = resolveAuthError("signin", Astro.url.searchParams.get("error"));
 const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
 ---
 

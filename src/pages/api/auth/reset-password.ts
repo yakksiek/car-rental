@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // others
 import { requireRole } from "../../../lib/access";
+import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages";
 import {
   LINK_ORIGIN_COOKIE,
   PW_SET_DONE_COOKIE,
@@ -33,24 +34,26 @@ import {
 //
 // The enforced minimum matches the config.toml policy (6); the design's "10
 // chars" checklist is a UI hint only (S-08 deviation 7).
+//
+// Zod's messages ARE the error codes (S-14, F6): no Polish sentence travels in a
+// URL any more, so `issues[0].message` goes onto the redirect as-is and the page
+// resolves it via `resolveAuthError`.
 const schema = z
   .object({
-    password: z.string().min(6, "Hasło musi mieć co najmniej 6 znaków"),
+    password: z.string().min(6, "tooShort"),
     confirm: z.string(),
   })
-  .refine((v) => v.password === v.confirm, { message: "Hasła nie są takie same", path: ["confirm"] });
+  .refine((v) => v.password === v.confirm, { message: "mismatch", path: ["confirm"] });
 
 const PAGE = "/auth/reset-password";
-const MSG = {
-  badPassword: "Nieprawidłowe hasło.",
-} as const;
 
 // `mode` is cosmetic on the redirect — the page now reads it from the marker
 // cookie — but it keeps the URL shape stable for anyone who bookmarked it.
 const modeQs = (mode: LinkOrigin) => (mode === "invite" ? "&mode=invite" : "");
 
-const fail = (context: Parameters<APIRoute>[0], mode: LinkOrigin, message: string) =>
-  context.redirect(`${PAGE}?error=${encodeURIComponent(message)}${modeQs(mode)}`);
+// Codes are ASCII identifiers from a closed set, so no encoding is needed.
+const fail = (context: Parameters<APIRoute>[0], mode: LinkOrigin, code: AuthErrorCode) =>
+  context.redirect(`${PAGE}?error=${code}${modeQs(mode)}`);
 
 export const POST: APIRoute = async (context) => {
   // (a) CSRF: same-origin only, before any work. Fails closed on a missing
@@ -94,11 +97,12 @@ export const POST: APIRoute = async (context) => {
   try {
     form = await context.request.formData();
   } catch {
-    return fail(context, mode, MSG.badPassword);
+    return fail(context, mode, "generic");
   }
 
   // `form.get` yields null for an absent field, which fails zod's *type* check
-  // rather than `.min(6)` — that surfaces zod's English default in a Polish UI.
+  // rather than `.min(6)` — that surfaces zod's English default, which would now
+  // reach the page as an unrecognised code and render nothing.
   const parsed = schema.safeParse({
     password: form.get("password") ?? "",
     confirm: form.get("confirm") ?? "",
@@ -106,13 +110,15 @@ export const POST: APIRoute = async (context) => {
   if (!parsed.success) {
     // THE MARKER SURVIVES. A typo'd confirmation must leave the user able to
     // retry; spending it here would bounce them to "Link wygasł" over a typo.
-    return fail(context, mode, parsed.error.issues[0]?.message ?? MSG.badPassword);
+    return fail(context, mode, (parsed.error.issues[0]?.message ?? "generic") as AuthErrorCode);
   }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    // Marker survives here too — a rejected password is retryable.
-    return fail(context, mode, error.message);
+    // Marker survives here too — a rejected password is retryable. `error.message`
+    // is never forwarded: it is English, and this is where `same_password` and
+    // `weak_password` would otherwise land in an all-Polish UI.
+    return fail(context, mode, gotrueErrorCode(error));
   }
 
   // (g) Success. Spend the marker, hand the page a one-shot success token (the
