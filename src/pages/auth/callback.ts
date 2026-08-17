@@ -17,6 +17,20 @@ import { LINK_ORIGIN_COOKIE, linkCookieOptions } from "../../lib/auth-session";
 // its invite-accept mode. An expired/invalid link redirects to the
 // forgot-password expired state (R5) — never a 500.
 export const GET: APIRoute = async (context) => {
+  // (S-14, R3) Never install a session over an existing one. This is a GET-only
+  // session *installer*, and Astro exempts safe methods from its origin check,
+  // so without this a crafted top-level navigation would silently switch a
+  // victim's browser onto the attacker's account — every protocol, signature and
+  // photo they filed afterwards landing in it. OWASP treats session renewal on a
+  // privilege change as mandatory; refusing the link satisfies that directly.
+  //
+  // Placed before both exchange branches on purpose: returning here means the
+  // token is NOT consumed, so the link still works once the current user signs
+  // out. That is what the R11 copy promises them.
+  if (context.locals.user) {
+    return context.redirect("/auth/link-conflict");
+  }
+
   const supabase = context.locals.supabase;
   if (!supabase) {
     return context.redirect("/auth/forgot-password?expired=1");
