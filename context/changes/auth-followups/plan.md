@@ -54,10 +54,15 @@ Full evidence: `context/changes/auth-surface-hardening/reviews/impl-review.md`.
 ## Desired End State
 
 `/auth/reset-password` explains every one of the route's five refusals on-screen, so no
-staff member ever meets a bare `Forbidden`. The marker cookie's value derives only from a
-parameter the exchange validated. `signin.ts` handles a malformed body like its three
-siblings. New `.astro` files carry the project's import headers, and the cookie test double
-can observe attributes.
+staff member meets a bare `Forbidden` **on this surface**. The marker cookie's value derives
+only from a parameter the exchange validated. `signin.ts` handles a malformed body like its
+three siblings. New `.astro` files carry the project's import headers, and the cookie test
+double can observe attributes.
+
+Middleware's own 403 (`middleware.ts:57-59`) is untouched and still reachable: a deactivated
+staffer meets it on any `/dashboard` route, including immediately after a successful sign-in,
+since `signin.ts` never checks role. Different surface, its own fix — see "What We're NOT
+Doing".
 
 Verified by: a new e2e spec for the deactivated case; a probe proving GoTrue rejects a
 type-mismatched token; the full existing suite staying green.
@@ -66,6 +71,9 @@ type-mismatched token; the full existing suite staying green.
 
 - **Not** changing the route's 403. Hard security rejections keep answering with a status —
   the page mirrors them, it does not replace them (S-14's stated idiom).
+- **Not** giving middleware's own 403 a screen. A deactivated staffer who signs in normally
+  still lands on a bare `Forbidden` at `/dashboard` — that is every gated route
+  (`middleware.ts:57-59`), not this page, and needs its own slice.
 - **Not** filtering deactivated accounts in `forgot-password.ts`. It would leak account
   state, which that route deliberately avoids.
 - **Not** acting on F10 (global-scope `signOut`). It needs a product decision first; see
@@ -89,13 +97,21 @@ Give the fifth refusal its screen, so the page keeps the promise its own comment
 **Intent**: Mirror gate (c) of `src/pages/api/auth/reset-password.ts`, which the page
 currently skips.
 
-**Contract**: Read `Astro.locals.role` and insert **one** branch between the existing
-`origin !== "link"` branch and the `!mode` branch, so the order becomes: done cookie →
-`!user` → `origin !== "link"` → **role insufficient** → `!mode` → form. Use
-`isRoleSufficient(role, "employee")` from `src/lib/access.ts` rather than `requireRole`,
-which takes an `APIContext`-shaped `locals`. Placement matters: it must sit _after_ the
-origin check so an ordinary signed-in staffer still gets R12, and _before_ the marker check
-so a deactivated staffer gets this card rather than "Link wygasł".
+**Contract**: Insert **one** branch immediately after the existing `!user` branch, so the
+order becomes: done cookie → `!user` → **role insufficient** → `origin !== "link"` →
+`!mode` → form. Use `requireRole(Astro.locals, "employee")` from `src/lib/access.ts` — the
+same call `reset-password.ts:75` makes, so the page's branch and the gate it mirrors read
+identically. (`requireRole` takes `App.Locals`, and `Astro.locals` in a `.astro` file _is_
+`App.Locals`; its own doc comment names it the in-handler guard for "pages/API routes".)
+
+**Placement — before the origin check, not after.** A role-sufficient staffer passes this
+branch either way, so the ordering decides nothing for them. What it decides is the
+deactivated staffer holding an ordinary **password** session: placed after the origin check
+they would still get R12, whose CTA is `/dashboard/account/password` — a `/dashboard` path,
+so `middleware.ts:57-59` answers them a bare `Forbidden`. That is the exact defect this
+phase removes, relocated one click downstream. Placed here, both deactivated paths — password
+session and link session — reach this card, and a deactivated staffer never sees "Link
+wygasł" either.
 
 #### 2. The refusal card
 
@@ -116,6 +132,12 @@ other four states use (`text-[28px] leading-[1.05] font-bold tracking-[-0.8px]` 
 Use the typographic apostrophe/quote conventions already in this file; no ASCII
 substitutes.
 
+The copy asserts deactivation, which is exact for the reachable path. The new-hire race
+(Key Discoveries) lands on the same branch with `role = null` and would read it as false —
+but that window is two sequential awaits wide (`services/staff.ts:191-205`), narrower than
+an email round-trip, so it is accepted knowingly rather than genericising the copy for a
+case a click cannot fit inside.
+
 #### 3. Register the new state in the design contract
 
 **File**: `context/changes/auth-surface-hardening/design-contract.md`
@@ -129,17 +151,28 @@ are inherited-exact from §7.1/§7.3, so only the _state_ is new, not any dimens
 
 #### 4. E2E cover
 
-**File**: `e2e/auth-hardening.spec.ts`
+**Files**: `e2e/fixtures/staff.ts`, `e2e/auth-hardening.spec.ts`
 
 **Intent**: There is no way to assert this at the integration layer (see Key Discoveries),
 and it is exactly the "screen instead of a raw status" property e2e already covers for R11.
 
-**Contract**: Create an active employee, set `profiles.deactivated_at`, mint a recovery
-link via the existing `recoveryCallbackLink` fixture, open it signed-out, and assert the
-page shows `Konto jest nieaktywne` — **not** the password form and not a bare `Forbidden`.
-Unique timestamped fixture email, cleanup in `afterEach`, no `waitForTimeout`,
-`waitForIslands` before interacting. Runs on **:4321** (the emailed-link port constraint
-applies to any spec touching `/auth/callback`).
+**Contract (fixture)**: `e2e/fixtures/staff.ts` exports no way to deactivate, and its
+service-role `admin()` client is module-private on purpose (file header: accounts are
+provisioned through it, never by driving the UI). Add one export alongside
+`createActiveEmployee` — `deactivateStaffUser(id)`, writing `profiles.deactivated_at`
+through that same private client. Not the `deactivate_staff` RPC: it carries self /
+last-admin guards a fixture has no reason to satisfy.
+
+**Contract (spec)**: Create an active employee, call `deactivateStaffUser(id)`, mint a
+recovery link via the existing `recoveryCallbackLink` fixture, open it **signed-out**, and
+assert the page shows `Konto jest nieaktywne` — **not** the password form and not a bare
+`Forbidden`. "Signed-out" means a fresh anonymous context,
+`browser.newContext({ storageState: { cookies: [], origins: [] } })` — the pattern already
+at `auth-hardening.spec.ts:86-87` and `:108-110`. A file-level `test.use` would break the
+four existing tests in that file, which need the chromium project's default `employee`
+storage state. Unique timestamped fixture email, cleanup in `afterEach`, no
+`waitForTimeout`, `waitForIslands` before interacting. Runs on **:4321** (the emailed-link
+port constraint applies to any spec touching `/auth/callback`).
 
 ### Success Criteria:
 
@@ -168,17 +201,22 @@ Make the marker's value as trustworthy as its presence.
 
 ### Changes Required:
 
-#### 1. Probe the assumption first
+#### 1. Probe the assumption first — as a committed test
 
-**File**: throwaway script (not committed)
+**File**: `tests/integration/auth-callback.test.ts` (new)
 
 **Intent**: `lessons.md` §"A typed, accepted API parameter is not evidence that it is
-enforced" — do not build on "GoTrue validates `type`" without proving it.
+enforced" — do not build on "GoTrue validates `type`" without proving it. Committed rather
+than run from a scratch script, because the whole phase rests on this one property: a
+throwaway proves it today and pins nothing against a future GoTrue version, and criterion
+2.1 has to stay re-runnable.
 
-**Contract**: Mint a **recovery** token with `generateLink`, call
-`verifyOtp({ token_hash, type: "invite" })` against the local stack, and assert it is
-**rejected**. If it is _accepted_, this phase's premise is wrong: stop and fall back to
-softening the comment in `reset-password.astro` instead (the alternative the review named).
+**Contract**: Mint a **recovery** token with `serviceClient().auth.admin.generateLink`, then
+call `anonClient().auth.verifyOtp({ token_hash, type: "invite" })` and assert it **errors**.
+Both hops already exist in `tests/helpers/link-session.ts:57-70` — this is that sequence with
+a deliberately mismatched `type`, ~10 lines. If the exchange is _accepted_, this phase's
+premise is wrong: stop, fall back to softening the comment in `reset-password.astro` instead
+(the alternative the review named), and Phase 2's remaining steps do not apply.
 
 #### 2. Drop the `flow` clause
 
@@ -207,7 +245,7 @@ derives from the `type` the exchange validated.
 
 #### Automated Verification:
 
-- The probe in step 1 shows a type-mismatched `verifyOtp` is REJECTED
+- The probe test in step 1 shows a type-mismatched `verifyOtp` is REJECTED
 - Type checking passes: `npx astro check`
 - Linting passes: `npm run lint`
 - Integration tests pass: `npm run test:integration`
@@ -236,9 +274,26 @@ Three independent, mechanical edits. No behaviour change except F5's error path.
 **Intent**: It is the only auth handler that can 500 on a malformed body, and its
 `as string` casts are false — `form.get` returns `null` for an absent field.
 
-**Contract**: Wrap `await context.request.formData()` in try/catch returning
-`back("generic")`, and replace both `as string` casts with `?? ""`. Mirror
-`reset-password.ts:96-101` and `change-password.ts:61-67` exactly.
+**Contract**: Guard `await context.request.formData()` with try/catch, and replace both
+`as string` casts with `?? ""`.
+
+`back(...)` cannot be called from that catch: it is defined below the parse
+(`signin.ts:19-20`) and closes over `target`, which is itself read out of the form
+(`signin.ts:15-16`). `reset-password.ts:96-101` escapes this only because its `fail()` takes
+what it needs as arguments. So the catch redirects directly, on the default target:
+
+```ts
+let form: FormData;
+try {
+  form = await context.request.formData();
+} catch {
+  const target = encodeURIComponent(safeRedirectPath(null));
+  return context.redirect(`/auth/signin?error=generic&redirect=${target}`);
+}
+```
+
+`generic` is already in the signin table in `auth-messages.ts`, so the page renders "Nie
+udało się zalogować. Spróbuj ponownie." — no new copy.
 
 #### 2. Import-order headers (F6)
 
@@ -258,11 +313,40 @@ these five files.
 **Intent**: `path` is called "load-bearing" in `auth-session.ts` and `secure` has a whole
 module, yet neither can be asserted at the integration layer today.
 
-**Contract**: Store `{ value, options }` in the jar so `set`/`delete` record their third
-argument; keep `get` returning `{ value }` so **no existing test changes**. Add one
-assertion to `tests/integration/reset-password.test.ts` pinning that the marker is written
-with `path: "/"` — the property whose breakage would silently disable the gate's freshness
-half.
+**Contract**: Leave the value jar exactly as it is — live cookies only, so `delete` really
+removes the key and `get` / `has` answer as they do today. Record the third argument in a
+**second** map, reachable through a typed export:
+
+```ts
+import type { AstroCookieSetOptions } from "astro"; // public export
+
+const COOKIE_OPTIONS = new WeakMap<object, Map<string, AstroCookieSetOptions>>();
+// in buildCookies: `const options = new Map()`, written by BOTH `set` and `delete`,
+// registered via COOKIE_OPTIONS.set(api, options) before the double is returned.
+
+/** The options a handler passed to `cookies.set` / `cookies.delete` for `name`. */
+export function cookieOptions(context: APIContext, name: string): AstroCookieSetOptions | undefined {
+  return COOKIE_OPTIONS.get(context.cookies)?.get(name);
+}
+```
+
+The second map is not decoration — a `{ value, options }` jar entry breaks two things:
+
+- **`reset-password.test.ts:154`** asserts `get(LINK_ORIGIN_COOKIE)` is `undefined` after a
+  successful POST spends the marker. An entry recording a _delete_'s options leaves the key
+  present and turns that red. With the value jar untouched, all four existing cookie
+  assertions (154, 155, 238, 249) keep passing — which is what "no existing test changes"
+  requires.
+- **Type-checking.** `buildApiContext` returns `... as unknown as APIContext`
+  (`context.ts:141`), so a test sees Astro's `AstroCookies`, whose `get()` yields
+  `{ value, json(), number(), boolean() }` — there is no `options` on that type.
+  `tsconfig.json` includes `**/*` and ESLint runs `projectService: true`, so
+  `get(X)?.options` fails criteria **3.1 and 3.2**, not just the assertion. Going through
+  the exported function needs no cast.
+
+Then add one assertion to `tests/integration/reset-password.test.ts` —
+`expect(cookieOptions(context, LINK_ORIGIN_COOKIE)?.path).toBe("/")` — pinning the property
+whose breakage would silently disable the gate's freshness half.
 
 ### Success Criteria:
 
@@ -290,11 +374,14 @@ possible but does not add one.
 
 ### Integration Tests
 
+- One new file, `tests/integration/auth-callback.test.ts`: a recovery token presented as
+  `type=invite` is rejected by `verifyOtp` — the property Phase 2 rests on.
 - One new assertion in `tests/integration/reset-password.test.ts`: the marker cookie is
-  written with `path: "/"` (enabled by F7).
+  written with `path: "/"` (enabled by F7's `cookieOptions`).
 
 ### E2E Tests
 
+- One new fixture export in `e2e/fixtures/staff.ts`: `deactivateStaffUser(id)`.
 - One new spec in `e2e/auth-hardening.spec.ts`: a deactivated staffer on a live recovery
   link sees the refusal card, not the form and not a bare `Forbidden`.
 - Existing invite/recovery specs must stay green — they are the real gate for Phase 2.
@@ -333,23 +420,23 @@ S-08 production rollout chain.
 
 #### Automated
 
-- [ ] 1.1 Type checking passes: `npx astro check`
-- [ ] 1.2 Linting passes: `npm run lint`
-- [ ] 1.3 Unit tests pass: `npm test`
-- [ ] 1.4 Integration tests pass: `npm run test:integration`
-- [ ] 1.5 Full e2e suite passes on port 4321
+- [x] 1.1 Type checking passes: `npx astro check`
+- [x] 1.2 Linting passes: `npm run lint`
+- [x] 1.3 Unit tests pass: `npm test`
+- [x] 1.4 Integration tests pass: `npm run test:integration`
+- [x] 1.5 Full e2e suite passes on port 4321
 
 #### Manual
 
-- [ ] 1.6 A deactivated staffer on a live recovery link sees `Konto jest nieaktywne`
-- [ ] 1.7 An ordinary signed-in staffer still sees R12 — the new branch did not shadow it
-- [ ] 1.8 A normal recovery link still reaches the form and sets a password
+- [x] 1.6 A deactivated staffer on a live recovery link sees `Konto jest nieaktywne`
+- [x] 1.7 An ordinary signed-in staffer still sees R12 — the new branch did not shadow it
+- [x] 1.8 A normal recovery link still reaches the form and sets a password
 
 ### Phase 2: Marker value from the validated `type`, not `?flow` (F3)
 
 #### Automated
 
-- [ ] 2.1 Probe shows a type-mismatched `verifyOtp` is REJECTED
+- [ ] 2.1 Probe test shows a type-mismatched `verifyOtp` is REJECTED
 - [ ] 2.2 Type checking passes: `npx astro check`
 - [ ] 2.3 Linting passes: `npm run lint`
 - [ ] 2.4 Integration tests pass: `npm run test:integration`

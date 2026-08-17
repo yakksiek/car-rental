@@ -361,6 +361,39 @@ alert-line strings, not screen copy, and extend the shipped `MSG` idiom at
     a secondary action shouldn't compete with the primary CTA, and S-08 §3.14 already reconciled this
     shell to shipped values. Recorded here so the vision-diff stops re-flagging it. Cheap to adopt
     later if the product owner prefers the crimson.
+14. **`Konto jest nieaktywne` — a sixth state card on `reset-password.astro`, with no artboard.**
+    `deviation(no artboard — refusal state discovered in impl-review)`. The set-password page mirrored
+    four of the route's five gates but not the role check, so a **deactivated** staffer reached the
+    full form and got an unstyled `Forbidden` on submit. Added in `auth-followups` Phase 1 (plan:
+    `context/changes/auth-followups/plan.md` §"Phase 1"; evidence: `reviews/impl-review.md` F1).
+    No mockup exists — the state was discovered after the design session closed — so **every
+    dimension is inherited-exact, not invented**: status head `tone="ink"` / `icon="user"` per §7.1
+    (the same pair R11 uses — the refusal is about _who the account is_, which is what that glyph
+    already means on this surface), title/subtitle metrics per §7.5, and CTA per §7.3
+    `AuthPrimaryLink`. Only the **state** is new. New verbatim Polish copy, gender-neutral per §9:
+    - title — `Konto jest nieaktywne`
+    - subtitle — `Nie można ustawić hasła do nieaktywnego konta. Jeśli to pomyłka, skontaktuj się z administratorem.`
+    - CTA — `Wróć do logowania` → `/auth/signin`
+
+    The subtitle was re-authored by the owner at the Phase 1 gate; the plan's draft read as a
+    translation. Three things were wrong with it: `hasło **dla** konta` (the Polish collocation is
+    `hasło **do** konta` — the main tell), an opening clause that merely restated the title, and a
+    trailing conditional where Polish fronts it. The impersonal `Nie można…` is in-style here — cf.
+    the shipped `Linki resetujące są ważne 60 minut.` — even though the neighbouring cards address
+    the reader directly.
+
+    **No `AuthBackLink`** (owner decision at the Phase 1 gate, refining the plan's contract): this
+    card's CTA already targets `/auth/signin`, so a back link would be a second control to the same
+    place under a near-identical label. That matches R4 success and the `dashboard/account/password`
+    success card, both of which omit it for exactly that reason; R5 and R13 keep theirs because
+    their CTA goes to `/auth/forgot-password` instead.
+
+    The copy asserts deactivation rather than hedging. Owner decision (`auth-followups/change.md`,
+    2026-08-17): the reader already controls the mailbox that received the link, so the
+    account-state disclosure is narrow, and a real ex-employee is otherwise left with no
+    explanation. It is exact for the reachable path; the new-hire race (`services/staff.ts:191-205`
+    invites before inserting the profiles row) lands here too and would read it as false, but that
+    window is two sequential awaits wide — knowingly accepted rather than genericising the copy.
 
 ---
 

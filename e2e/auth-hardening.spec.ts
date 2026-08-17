@@ -3,7 +3,13 @@ import { test, expect } from "@playwright/test";
 
 // others
 import { waitForIslands } from "./support/hydration";
-import { createActiveEmployee, deleteStaffUser, inviteCallbackLink, recoveryCallbackLink } from "./fixtures/staff";
+import {
+  createActiveEmployee,
+  deactivateStaffUser,
+  deleteStaffUser,
+  inviteCallbackLink,
+  recoveryCallbackLink,
+} from "./fixtures/staff";
 
 // ---------------------------------------------------------------------------
 // AUTH HARDENING — R3, the session-fixation refusal (S-14, plan Phase 2)
@@ -26,7 +32,13 @@ import { createActiveEmployee, deleteStaffUser, inviteCallbackLink, recoveryCall
 //
 // Runs on the chromium project's default `employee` storage state — this spec
 // NEEDS a signed-in browser, which is why it cannot live in `staff-auth.spec.ts`
-// (that file opts the whole file out of auth at `test.use`).
+// (that file opts the whole file out of auth at `test.use`). The tests that need
+// a signed-OUT browser open their own anonymous context instead; a file-level
+// `test.use` would take the storage state away from the ones that need it.
+//
+// The last test carries a second, later risk (auth-followups, F1): the same
+// "explain the refusal, don't answer a raw status" property, for the deactivated
+// staffer the set-password page used to walk all the way to the submit button.
 // ---------------------------------------------------------------------------
 
 let cleanupId: string | undefined;
@@ -114,6 +126,45 @@ test("an INVITE link behaves the same — refused, not consumed, still activatab
   // recovery screen's "Ustaw nowe hasło".
   await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
   await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
+  await anon.close();
+});
+
+test("a deactivated staffer on a live recovery link is told why, not shown the form", async ({ browser }) => {
+  // WHY A BROWSER. The refusal lives on the PAGE, and nothing in the repo renders
+  // an `.astro` page under Vitest — `tests/integration/pages-authz.test.ts` drives
+  // `middleware.ts` with a synthetic context and never renders anything. So this
+  // branch is covered here or nowhere.
+  //
+  // WHY IT IS REACHABLE AT ALL. `/api/auth/forgot-password` sends a reset link to
+  // any valid address — it must, since it deliberately never reveals whether an
+  // account exists — and GoTrue knows nothing about `profiles.deactivated_at`. So
+  // the link is real and the session it mints is real; only the app's own role
+  // gate refuses. Before this fix the page skipped that gate, so an ex-employee
+  // typed a new password, submitted, and got an unstyled `Forbidden`.
+  const { id, email } = await createActiveEmployee("Fl0ta-E2E-Dezaktywacja-2026!");
+  cleanupId = id;
+  await deactivateStaffUser(id);
+  const link = await recoveryCallbackLink(email);
+
+  // Signed-OUT, in its own context: the four tests above need the chromium
+  // project's `employee` storage state, so the opt-out is per-test (same pattern
+  // as the two anonymous contexts above).
+  const anon = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const anonPage = await anon.newPage();
+
+  const response = await anonPage.goto(link);
+  await anonPage.waitForURL(/\/auth\/reset-password/);
+
+  // A real page, not a status. `Forbidden` is a 403 with no markup at all — the
+  // exact thing this branch exists to replace.
+  expect(response?.status()).toBe(200);
+  await expect(anonPage.getByRole("heading", { name: "Konto jest nieaktywne" })).toBeVisible();
+
+  // And NOT the form. The island is server-rendered before it hydrates, so this
+  // heading would already be in the HTML if the page had fallen through.
+  await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toHaveCount(0);
+  await expect(anonPage.getByLabel("Nowe hasło")).toHaveCount(0);
+
   await anon.close();
 });
 

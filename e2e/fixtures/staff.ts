@@ -46,6 +46,23 @@ export async function createActiveEmployee(password: string): Promise<StaffFixtu
   return { id: data.user.id, email };
 }
 
+/**
+ * Soft-remove a staffer: set `profiles.deactivated_at`, which is what middleware
+ * reads to resolve their app role to `null` (`middleware.ts:36`).
+ *
+ * Written straight through the private service-role client rather than the
+ * `deactivate_staff` RPC: that RPC carries self- and last-admin guards a fixture
+ * has no reason to satisfy, and the property under test is what the APP does with
+ * a role-less session, not how the row got that way.
+ */
+export async function deactivateStaffUser(id: string): Promise<void> {
+  const db = admin();
+  const { error } = await db.from("profiles").update({ deactivated_at: new Date().toISOString() }).eq("user_id", id);
+  if (error) {
+    throw new Error(`fixture: deactivate failed — ${error.message}`);
+  }
+}
+
 /** An INVITED employee (invite email sent, no password yet) for the accept flow. */
 export async function inviteEmployee(): Promise<StaffFixture> {
   const db = admin();
