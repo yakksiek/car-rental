@@ -582,7 +582,7 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 1.5 A query matching more than 8 vehicles returns them all from `GET /api/search`
+- [x] 1.5 A query matching more than 8 vehicles returns them all from `GET /api/search` — 56eb8ac
 
 ### Phase 2: Delete the full results page
 
@@ -595,9 +595,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 2.5 `/dashboard/search` returns 404
-- [ ] 2.6 The dropdown footer shows the keyboard hints in all three phases
-- [ ] 2.7 The mobile results list ends with the last Pojazdy row — no button below it
+- [x] 2.5 `/dashboard/search` returns 404 — f3e7860
+- [x] 2.6 The dropdown footer shows the keyboard hints in all three phases — f3e7860
+- [x] 2.7 The mobile results list ends with the last Pojazdy row — no button below it — f3e7860
 
 ### Phase 3: Pulpit-only entry points + ⌘K routing
 
@@ -609,12 +609,12 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 3.4 The 520px field appears on `/dashboard` only; the other 9 staff pages show no field
-- [ ] 3.5 On `/dashboard` the field sits to the LEFT of the calendar button
-- [ ] 3.6 ⌘K from `/dashboard/returns` at desktop width lands on Pulpit with the dropdown open and a clean URL
-- [ ] 3.7 ⌘K below `md` opens the full-screen overlay in place on a non-Pulpit page
-- [ ] 3.8 The mobile hero shows the magnifier left of the avatar and it opens the overlay
-- [ ] 3.9 The mobile tab bar has no magnifier, and the pill does not overflow at a 360px viewport
+- [x] 3.4 The 520px field appears on `/dashboard` only; the other 9 staff pages show no field — 2b74c2c
+- [x] 3.5 On `/dashboard` the field sits to the LEFT of the calendar button — 2b74c2c
+- [x] 3.6 ⌘K from `/dashboard/returns` at desktop width lands on Pulpit with the dropdown open and a clean URL — 2b74c2c
+- [x] 3.7 ⌘K below `md` opens the full-screen overlay in place on a non-Pulpit page — 2b74c2c
+- [x] 3.8 The mobile hero shows the magnifier left of the avatar and it opens the overlay — 2b74c2c
+- [x] 3.9 The mobile tab bar has no magnifier, and the pill does not overflow at a 360px viewport — 2b74c2c
 
 ### Phase 4: Vehicle row fidelity + design contract
 
@@ -626,8 +626,8 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 4.4 The Pojazdy row reads `Mercedes-Benz ● WX 5519M` under the vehicle name
-- [ ] 4.5 Every deviation in `design-contract.md` describes something still true of the app
+- [x] 4.4 The Pojazdy row reads `Mercedes-Benz ● WX 5519M` under the vehicle name — 885a187
+- [x] 4.5 Every deviation in `design-contract.md` describes something still true of the app — 885a187
 - [ ] 4.6 Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations
 
 ### Phase 5: Mobile active-row contrast
@@ -640,5 +640,5 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 5.4 At 390×844 the highlighted row is clearly distinct from its neighbours, resting and results alike
-- [ ] 5.5 The desktop dropdown's active row is unchanged
+- [x] 5.4 At 390×844 the highlighted row is clearly distinct from its neighbours, resting and results alike — 89f8350
+- [x] 5.5 The desktop dropdown's active row is unchanged — 89f8350
