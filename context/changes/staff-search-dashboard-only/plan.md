@@ -446,6 +446,72 @@ the two pre-existing deltas listed under "Known deltas" in the contract.
 
 ---
 
+## Phase 5: Mobile active-row contrast
+
+### Overview
+
+On the mobile overlay the highlighted row is invisible — it paints the exact color it sits on,
+leaving only a `rgba(15,23,42,0.08)` hairline. Owner-reported after the Phase 3 walkthrough.
+
+**Root cause, confirmed against the design source.** `search-flow.jsx`'s `RowShell` is shared by
+both surfaces and defines `background: active ? tokens.bg : 'transparent'` +
+`inset 0 0 0 1px tokens.hair`. That reads on **desktop**, where `SearchPanel`'s container is
+`tokens.card`. But `MobileSearchShell`'s body is itself `background: tokens.bg`, so the active
+background is a no-op there. The mock never exposed it because **no mobile screen passes
+`active`** — `ScreenSearchLive` sets `active={i === 0}`, `ScreenSearchMobileLive` sets it on
+nothing. We render it for real because cmdk always keeps a row selected. Our tree reproduces the
+design exactly (`GlobalSearch.tsx` overlay is `bg-background`; `ROW_SHELL` is
+`data-[selected=true]:bg-background`), so this is a design gap inherited faithfully, not a
+porting error.
+
+Affects every row in the overlay — the quick-jumps in the resting state as well as the three
+result groups.
+
+### Changes Required:
+
+#### 1. A mobile-only active treatment
+
+**File**: `src/components/search/SearchRows.tsx`
+
+**Intent**: Invert figure and ground below `md`: the active row becomes `bg-card` against the
+overlay's `bg-background`, keeping the same hairline inset ring. Do **not** change the overlay
+body to `bg-card` instead — the mock _draws_ that body as `tokens.bg` across all three mobile
+screens, so changing it contradicts a drawn value and would light up the vision diff, whereas
+defining a mobile active state fills a gap the design left empty.
+
+**Contract**: `ROW_SHELL` keeps `data-[selected=true]:bg-background` at `md+` and resolves to
+`bg-card` below it (`max-md:data-[selected=true]:bg-card`, or split the shell into a shared base
+plus a per-surface active class if the variant stacking reads badly). The
+`inset_0_0_0_1px_var(--flota-hair)` ring is unchanged on both. No change to the desktop panel,
+whose `bg-card` container already gives the drawn treatment its contrast.
+
+#### 2. Record the deviation
+
+**File**: `context/changes/staff-global-search/design-contract.md`
+
+**Intent**: The design has no mobile active row, so this is a new `deviation(no-design-state)` —
+**D19** — and Surface 4's line gains the active treatment. Note the shared-`RowShell` collision
+in the deviation text so a future reader does not "fix" it back to the design's literal value.
+
+**Contract**: **D19 `deviation(no-design-state)`** — below `md` the active row is `bg-card`, not
+the design's `tokens.bg`, which is the overlay's own ground. Surfaces 2 and 4 cross-reference it.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+
+#### Manual Verification:
+
+- At 390×844 the highlighted row is clearly distinct from its neighbours, in both the resting
+  (quick-jump) and results phases
+- The desktop dropdown's active row is unchanged
+
+---
+
 ## Testing Strategy
 
 Depth is **minimal by decision** — the suite is repaired, not extended.
@@ -563,3 +629,16 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 - [ ] 4.4 The Pojazdy row reads `Mercedes-Benz ● WX 5519M` under the vehicle name
 - [ ] 4.5 Every deviation in `design-contract.md` describes something still true of the app
 - [ ] 4.6 Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations
+
+### Phase 5: Mobile active-row contrast
+
+#### Automated
+
+- [x] 5.1 Type checking passes: `npx astro check`
+- [x] 5.2 Linting passes: `npm run lint`
+- [x] 5.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 5.4 At 390×844 the highlighted row is clearly distinct from its neighbours, resting and results alike
+- [ ] 5.5 The desktop dropdown's active row is unchanged

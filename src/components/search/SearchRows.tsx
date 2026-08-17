@@ -27,9 +27,21 @@ export const searchHref = {
   vehicle: (row: SearchResultVehicle) => `/dashboard/vehicles/${row.id}/edit`,
 };
 
-/** Row chrome shared by every result and quick-jump row — contract Surface 2 `RowShell`. */
+/**
+ * Row chrome shared by every result and quick-jump row — contract Surface 2 `RowShell`.
+ *
+ * THE ACTIVE BACKGROUND IS PER-SURFACE (contract D19), because the two surfaces sit on
+ * different grounds. The design gives `RowShell` one active treatment — `tokens.bg` plus a
+ * hairline inset ring — which reads on the desktop panel (`tokens.card`) but is a no-op inside
+ * the mobile overlay, whose own body is `tokens.bg`: the row paints the exact color underneath
+ * it and only the `rgba(15,23,42,0.08)` ring survives. The mock never exposed this because no
+ * mobile screen passes `active`; we render it for real, since cmdk always keeps a row selected.
+ * So below `md` figure and ground swap — white row on the grey overlay — and the ring is
+ * unchanged on both. The two branches use disjoint media conditions rather than an override, so
+ * neither depends on the other's position in the generated stylesheet.
+ */
 export const ROW_SHELL =
-  "group mx-1.5 flex cursor-default items-center gap-3 rounded-[11px] px-3 py-[9px] data-[selected=true]:bg-background data-[selected=true]:shadow-[inset_0_0_0_1px_var(--flota-hair)]";
+  "group mx-1.5 flex cursor-default items-center gap-3 rounded-[11px] px-3 py-[9px] data-[selected=true]:shadow-[inset_0_0_0_1px_var(--flota-hair)] max-md:data-[selected=true]:bg-card md:data-[selected=true]:bg-background";
 
 /** Wrap the parts of `text` that the query matched, so a row shows WHY it is here. */
 export function Highlight({ text, query }: { text: string; query: string }) {
