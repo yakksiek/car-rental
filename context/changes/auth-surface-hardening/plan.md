@@ -786,20 +786,20 @@ to the prod origin.
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check` — 74b0c11
-- [x] 4.2 Linting passes: `npm run lint` — 74b0c11
-- [x] 4.3 Unit tests pass: `npm test` — 74b0c11
-- [x] 4.4 All e2e specs green on port 4321 — 74b0c11
+- [x] 4.1 Type checking passes: `npx astro check` — 82159e4
+- [x] 4.2 Linting passes: `npm run lint` — 82159e4
+- [x] 4.3 Unit tests pass: `npm test` — 82159e4
+- [x] 4.4 All e2e specs green on port 4321 — 82159e4
 
 #### Manual
 
-- [x] 4.5 Sign-in page reads "Nie pamiętasz hasła?" — 74b0c11
-- [x] 4.6 An invite link shows "Witaj we Flocie" and the invite-specific subtitle — 74b0c11
-- [x] 4.7 The set-password screen shows "Ustawiasz hasło dla <email>" in both modes — 74b0c11
-- [x] 4.8 R2/R4/R5/R11/R12/R13 show a status icon tile and a dark-ink full-width CTA — 74b0c11
-- [x] 4.9 `/auth/reset-password?done=1` typed by a signed-out visitor shows R13 — 74b0c11
-- [x] 4.10 `/auth` redirects to `/auth/signin` — 74b0c11
-- [x] 4.11 Vision-diff each surface against its canonical mockup at both breakpoints — 74b0c11
+- [x] 4.5 Sign-in page reads "Nie pamiętasz hasła?" — 82159e4
+- [x] 4.6 An invite link shows "Witaj we Flocie" and the invite-specific subtitle — 82159e4
+- [x] 4.7 The set-password screen shows "Ustawiasz hasło dla <email>" in both modes — 82159e4
+- [x] 4.8 R2/R4/R5/R11/R12/R13 show a status icon tile and a dark-ink full-width CTA — 82159e4
+- [x] 4.9 `/auth/reset-password?done=1` typed by a signed-out visitor shows R13 — 82159e4
+- [x] 4.10 `/auth` redirects to `/auth/signin` — 82159e4
+- [x] 4.11 Vision-diff each surface against its canonical mockup at both breakpoints — 82159e4
 
 > 4.11 detail: all 10 surfaces rendered at 390 and 1320 and diffed against `design-review/`. Two
 > findings, both now pre-registered in `design-contract.md` §10 — deviation 11 (R5 lacked the back
