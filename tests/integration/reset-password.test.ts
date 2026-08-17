@@ -233,7 +233,8 @@ describe("POST /api/auth/reset-password — validation and CSRF", () => {
     const response = await resetPasswordPOST(context);
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(`${PAGE}?error=${encodeURIComponent("Hasła nie są takie same")}`);
+    // A code, not a sentence (S-14 F6) — the page resolves it to Polish.
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=mismatch`);
     expect(context.cookies.get(LINK_ORIGIN_COOKIE)?.value).toBe("recovery");
     expect((await signIn(EMAIL, ORIGINAL)).error).toBeNull();
   });
@@ -244,9 +245,7 @@ describe("POST /api/auth/reset-password — validation and CSRF", () => {
     const response = await resetPasswordPOST(context);
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(
-      `${PAGE}?error=${encodeURIComponent("Hasło musi mieć co najmniej 6 znaków")}`,
-    );
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=tooShort`);
     expect(context.cookies.get(LINK_ORIGIN_COOKIE)?.value).toBe("recovery");
   });
 

@@ -754,33 +754,33 @@ to the prod origin.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Integration tests pass: `npm run test:integration`
-- [x] 2.4 New and existing e2e specs green on port 4321
+- [x] 2.1 Type checking passes: `npx astro check` — 061b832
+- [x] 2.2 Linting passes: `npm run lint` — 061b832
+- [x] 2.3 Integration tests pass: `npm run test:integration` — 061b832
+- [x] 2.4 New and existing e2e specs green on port 4321 — 061b832
 
 #### Manual
 
-- [x] 2.5 Signed in as A, opening B's invite link shows R11 naming A's email; A's session is intact
-- [x] 2.6 The sign-out button shows the spinner and "Wylogowywanie…"
-- [x] 2.7 After signing out from R11, the same link still reaches the set-password form
-- [x] 2.8 `/auth/link-conflict` while signed out redirects to `/auth/signin`
+- [x] 2.5 Signed in as A, opening B's invite link shows R11 naming A's email; A's session is intact — 061b832
+- [x] 2.6 The sign-out button shows the spinner and "Wylogowywanie…" — 061b832
+- [x] 2.7 After signing out from R11, the same link still reaches the set-password form — 061b832
+- [x] 2.8 `/auth/link-conflict` while signed out redirects to `/auth/signin` — 061b832
 
 ### Phase 3: Error-code whitelist across the auth surfaces
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Unit tests pass: `npm test`
-- [ ] 3.4 Integration tests pass: `npm run test:integration`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Unit tests pass: `npm test`
+- [x] 3.4 Integration tests pass: `npm run test:integration`
 
 #### Manual
 
-- [ ] 3.5 An injected `?error=` sentence renders no alert on `/auth/signin`
-- [ ] 3.6 The same on `/auth/reset-password` and `/dashboard/account/password` renders no alert
-- [ ] 3.7 A wrong sign-in password still shows correct Polish copy
-- [ ] 3.8 Reusing your current password shows Polish copy, not GoTrue's English
+- [x] 3.5 An injected `?error=` sentence renders no alert on `/auth/signin`
+- [x] 3.6 The same on `/auth/reset-password` and `/dashboard/account/password` renders no alert
+- [x] 3.7 A wrong sign-in password still shows correct Polish copy
+- [x] 3.8 Reusing your current password shows Polish copy, not GoTrue's English
 
 ### Phase 4: Copy refresh, account box, and card-state chrome
 
