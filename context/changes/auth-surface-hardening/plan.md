@@ -811,16 +811,37 @@ to the prod origin.
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npx astro check`
-- [ ] 5.2 Linting passes: `npm run lint`
-- [ ] 5.3 Unit tests pass: `npm test`
-- [ ] 5.4 Full integration suite passes
-- [ ] 5.5 Full e2e suite passes on port 4321
-- [ ] 5.6 Production build succeeds: `npm run build`
+- [x] 5.1 Type checking passes: `npx astro check`
+- [x] 5.2 Linting passes: `npm run lint`
+- [x] 5.3 Unit tests pass: `npm test`
+- [x] 5.4 Full integration suite passes
+- [x] 5.5 Full e2e suite passes on port 4321
+- [x] 5.6 Production build succeeds: `npm run build`
+
+> 5.1–5.6 detail: astro check 0 errors (255 files); lint 0 errors (2 pre-existing
+> `react-hooks/incompatible-library` warnings on the RHF protocol forms); unit 340/340 (+3 new for
+> `shouldSecureCookies`); integration 214/214; e2e 13/13 on :4321 including both invite/recovery
+> specs; build clean.
+>
+> **Adaptation to §1 (approved by the owner mid-phase).** The contract said derive `secure` from
+> `context.url.protocol === "https:"` alone. Probing showed that value is `http:` in _every_ local
+> mode — `astro dev`, `astro preview`, and even `wrangler dev --local-protocol https`, where wrangler
+> terminates TLS at its proxy and forwards plain http (no `X-Forwarded-Proto` either). So a
+> protocol-only rule can never emit `Secure` locally, making manual check 5.8 unsatisfiable as
+> written and leaving the whole property resting on an untestable assumption about Cloudflare's
+> `request.url` — the failure shape `lessons.md:97-102` warns about. Shipped instead:
+> `shouldSecureCookies(url) = import.meta.env.PROD || url.protocol === "https:"`
+> (`src/lib/secure-cookies.ts`), one shared rule used by all three `createClient` call sites **and**
+> `linkCookieOptions`, so the S-14 marker cookies can't drift weaker than the session they gate.
+> `npm run dev` is not a production build, so dev and the e2e suite are untouched.
+>
+> Wiring proven empirically, not inferred: forcing `cookieOptions: { secure: true }` emitted
+> `; Secure`, confirming the `createServerClient` → `setAll` → `cookies.set` path carries the
+> attribute. Post-change, `npm run preview` emits `Secure` and `npm run dev` does not.
 
 #### Manual
 
-- [ ] 5.7 Local dev over `http://localhost:4321` still holds a session
-- [ ] 5.8 `npm run preview` emits `Secure` on the auth cookies
-- [ ] 5.9 Full recovery walkthrough: forgot → email → set → signed out → sign in with the new password
-- [ ] 5.10 Full invite walkthrough: invite → email → "Witaj we Flocie" → activate → sign in
+- [x] 5.7 Local dev over `http://localhost:4321` still holds a session
+- [x] 5.8 `npm run preview` emits `Secure` on the auth cookies
+- [x] 5.9 Full recovery walkthrough: forgot → email → set → signed out → sign in with the new password
+- [x] 5.10 Full invite walkthrough: invite → email → "Witaj we Flocie" → activate → sign in
