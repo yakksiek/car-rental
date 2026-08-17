@@ -1,7 +1,7 @@
 ---
 change_id: staff-search-dashboard-only
 title: Global search becomes Pulpit-only and dropdown-only (no results page)
-status: new
+status: implementing
 created: 2026-08-11
 updated: 2026-08-17
 archived_at: null
