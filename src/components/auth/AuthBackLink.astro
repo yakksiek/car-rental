@@ -1,0 +1,27 @@
+---
+import { cn } from "../../lib/utils";
+
+// The muted "back to sign-in" link under a state card's primary action
+// (design-contract §7.5, `backToLogin`). Copy and destination are fixed — every
+// card that shows it shows the same one — so it takes no props beyond a class
+// escape hatch.
+//
+// Extracted in Phase 4: R2 sent and R13 noLink each had their own copy of this
+// markup, and R5 expired needed a third (both its branches render it in
+// `auth-expired-{d,m}.png`).
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<a
+  href="/auth/signin"
+  class:list={cn(
+    "text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1.5 text-sm transition-colors",
+    className,
+  )}
+>
+  <span aria-hidden="true">‹</span> Powrót do logowania
+</a>

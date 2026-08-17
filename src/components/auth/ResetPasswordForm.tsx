@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import { Lock, Check } from "lucide-react";
 import { FormField } from "./FormField";
 import { PasswordToggle } from "./PasswordToggle";
@@ -12,6 +12,11 @@ interface Props {
   // the client controls has no business steering a security-adjacent route (S-14).
   mode: "recovery" | "invite";
   serverError?: string | null;
+  // The `Ustawiasz hasło dla <email>` account box, slotted in from
+  // reset-password.astro so R3/R9 and R6/R10 reuse AccountBox.astro rather than a
+  // React copy of it. Astro renders it to static HTML before hydration, so it is
+  // inert markup as far as this island is concerned.
+  children?: ReactNode;
 }
 
 // Set-password form (S-08, designs R3/R9 recovery + R6/R10 invite-accept). The
@@ -19,7 +24,7 @@ interface Props {
 // so this posts natively to /api/auth/reset-password → updateUser({ password }).
 // The enforced minimum is the config.toml policy (6); the "10 chars / number or
 // symbol" checklist in the design is an illustrative hint, not a policy change.
-export default function ResetPasswordForm({ mode, serverError }: Props) {
+export default function ResetPasswordForm({ mode, serverError, children }: Props) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -54,15 +59,22 @@ export default function ResetPasswordForm({ mode, serverError }: Props) {
     >
       <div>
         {invite && (
-          <div className="text-primary mb-1.5 text-[11px] font-bold tracking-wide uppercase">Witaj w Flocie</div>
+          <div className="text-primary mb-1.5 text-[11px] font-bold tracking-wide uppercase">Witaj we Flocie</div>
         )}
         <h1 className="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">
           {invite ? "Ustaw hasło" : "Ustaw nowe hasło"}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm leading-[1.45]">
-          Wybierz silne hasło, którego nie używasz nigdzie indziej.
+          {invite
+            ? "Masz zaproszenie do zespołu dyspozytorni. Utwórz hasło, aby aktywować konto."
+            : "Wybierz silne hasło, którego nie używasz nigdzie indziej."}
         </p>
       </div>
+
+      {/* Account box (`Ustawiasz hasło dla`). A direct flex child, so the form's
+          own gap-[18px] supplies the 18px the design puts above and below it —
+          no margin of its own. */}
+      {children}
 
       <div className="flex flex-col gap-3.5">
         <FormField

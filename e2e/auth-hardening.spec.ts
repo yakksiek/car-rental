@@ -113,7 +113,7 @@ test("an INVITE link behaves the same — refused, not consumed, still activatab
   // Invite mode specifically — the welcome eyebrow and "Ustaw hasło", not the
   // recovery screen's "Ustaw nowe hasło".
   await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(anonPage.getByText("Witaj w Flocie")).toBeVisible();
+  await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
   await anon.close();
 });
 
