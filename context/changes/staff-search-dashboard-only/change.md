@@ -46,13 +46,14 @@ design). `design-export-request.md` is retained, marked not-run, in case the gat
 is wanted later. `design-system.md` catalog rows 09/20 are stale for unrelated
 reasons and are still slated for re-export at archive.
 
-One item remains open:
-
-- **Empty header band on `/dashboard/protocols/{id}`** — that page sets
-  `showHeader={false}` and, since Phase 3, renders no search field either, so the
-  always-on top bar draws an empty strip at `md+`. Introduced here, not
-  pre-existing. Fix: gate the `<header>` on
-  `showHeader || search || Astro.slots.has("header-action")`.
+**Phase 6 (`89f8350`'s follow-up) closed the last open item.** The empty header
+band on `/dashboard/protocols/{id}` — that page sets `showHeader={false}`, passes
+no `header-action`, and since Phase 3 renders no search field, so the always-on
+top bar drew an empty strip at `md+`. Introduced by Phase 3, not pre-existing.
+The bar is now gated on `showBar = showHeader || search ||
+Astro.slots.has("header-action")`; the island is rendered in the else-branch too,
+because it owns the ⌘K listener and the mobile overlay and gating it with the bar
+would kill both on that page.
 
 ## Where things stand
 

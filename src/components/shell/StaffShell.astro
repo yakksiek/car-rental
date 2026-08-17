@@ -64,6 +64,26 @@ const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 const today = new Date().toISOString().slice(0, 10);
 const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 
+// The top bar draws only when something goes in it. Every staff page satisfies this
+// except `protocols/[id]`, which suppresses its title (its island renders one in the
+// card header), passes no action, and — since search became Pulpit-only — carries no
+// field either. Left slot empty + right slot empty = `px-8 py-[22px]` of nothing above
+// a `border-b`. Until the field went away it filled the right slot on every page, which
+// is what made an always-on bar safe in the first place.
+const showBar = showHeader || search || Astro.slots.has("header-action");
+
+// Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
+// on all 10 pages whether or not the bar draws — it owns the ⌘K listener and the mobile
+// overlay, and gating it with the bar would kill both on the one page that hides it.
+const searchProps = {
+  pendingCount,
+  overdueCount,
+  dueTodayCount,
+  today,
+  field: search,
+  autoOpen,
+};
+
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
@@ -191,38 +211,38 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   {/* ── Content column ────────────────────────────────────────────── */}
   <div class="flex min-w-0 flex-1 flex-col">
     {
-      /* Desktop top bar — ALWAYS rendered: it is the one consistent title/action
-        band across all 10 staff pages. Two slots: the title/subtitle block on the
-        left (only when `showHeader`) and, on the right, the search island followed
-        by an optional page action — that order, because the design's `StaffTopbar`
-        draws field → calendar → QuickAdd. Pages that used to hand-roll their own
-        full-bleed `border-b` band migrated onto these slots — there must never be a
-        second band stacked under this one. */
+      /* Desktop top bar — the one consistent title/action band across the staff
+        pages that have anything to put in it (`showBar`). Two slots: the
+        title/subtitle block on the left (only when `showHeader`) and, on the right,
+        the search island followed by an optional page action — that order, because
+        the design's `StaffTopbar` draws field → calendar → QuickAdd. Pages that used
+        to hand-roll their own full-bleed `border-b` band migrated onto these slots —
+        there must never be a second band stacked under this one.
+
+        When the bar does NOT draw, the island still mounts (see `searchProps`): with
+        `field` false it emits no box of its own — the cmdk root is `display: contents`
+        and its only child is an `sr-only` label — so the page starts at its content. */
     }
-    <header class="border-border bg-card hidden items-center justify-between gap-3 border-b px-8 py-[22px] md:flex">
-      <div class="min-w-0">
-        {
-          showHeader && (
-            <>
-              <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-              {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-            </>
-          )
-        }
-      </div>
-      <div class="flex min-w-0 items-center justify-end gap-3">
-        <GlobalSearch
-          client:load
-          pendingCount={pendingCount}
-          overdueCount={overdueCount}
-          dueTodayCount={dueTodayCount}
-          today={today}
-          field={search}
-          autoOpen={autoOpen}
-        />
-        <slot name="header-action" />
-      </div>
-    </header>
+    {
+      showBar ? (
+        <header class="border-border bg-card hidden items-center justify-between gap-3 border-b px-8 py-[22px] md:flex">
+          <div class="min-w-0">
+            {showHeader && (
+              <>
+                <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+                {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+              </>
+            )}
+          </div>
+          <div class="flex min-w-0 items-center justify-end gap-3">
+            <GlobalSearch client:load {...searchProps} />
+            <slot name="header-action" />
+          </div>
+        </header>
+      ) : (
+        <GlobalSearch client:load {...searchProps} />
+      )
+    }
     <div class="pb-28 md:pb-0">
       <slot />
     </div>
