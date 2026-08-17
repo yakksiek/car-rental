@@ -512,6 +512,59 @@ the design's `tokens.bg`, which is the overlay's own ground. Surfaces 2 and 4 cr
 
 ---
 
+## Phase 6: Don't draw an empty top bar
+
+### Overview
+
+`/dashboard/protocols/{id}` renders a ~45px empty band at `md+`. Owner-reported after the
+Phase 5 walkthrough; introduced by Phase 3.
+
+Three conditions coincide on exactly that page: it sets `showHeader={false}` (its
+`ProtocolView` island draws its own title, so the shell's would duplicate it), it passes no
+`header-action`, and since Phase 3 it renders no search field. Both slots of the always-on
+bar are empty, leaving `px-8 py-[22px]` of nothing above a `border-b`. Until Phase 3 the
+520px field filled the right slot on every page — which is precisely what made an always-on
+bar safe in S-13.
+
+### Changes Required:
+
+#### 1. Render the bar only when it has content
+
+**File**: `src/components/shell/StaffShell.astro`
+
+**Intent**: Gate the `<header>` on there being something to put in it. **The island cannot be
+gated with it** — `<GlobalSearch>` lives inside that header and owns the ⌘K listener and the
+mobile overlay, so hiding the header would unmount it and kill both on that page. It is
+therefore rendered in the else-branch too, from a single shared props object so the two call
+sites cannot drift.
+
+**Contract**: `Astro.slots.has("header-action")` feeds a `showBar = showHeader || search ||
+hasHeaderAction` flag. When `showBar` the tree is unchanged. When not, only
+`<GlobalSearch client:load {...searchProps} />` renders in the content column — no `<header>`,
+no border, no padding. `field` is necessarily `false` in that branch (a page passing `search`
+satisfies `showBar`), so nothing visible is emitted: the cmdk root is `display: contents` and
+its only child is an `sr-only` label.
+
+**Not doing**: giving `protocols/[id]` a title instead. Its island already renders one in the
+card header — that is why `showHeader={false}` is there, and the plan's "What We're NOT Doing"
+keeps `showHeader` governing the left slot alone.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+
+#### Manual Verification:
+
+- `/dashboard/protocols/{id}` at `md+` has no empty band above the protocol card
+- The other 9 staff pages' bars are unchanged
+- ⌘K and the mobile overlay still work on `/dashboard/protocols/{id}`
+
+---
+
 ## Testing Strategy
 
 Depth is **minimal by decision** — the suite is repaired, not extended.
@@ -642,3 +695,17 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 - [x] 5.4 At 390×844 the highlighted row is clearly distinct from its neighbours, resting and results alike — 89f8350
 - [x] 5.5 The desktop dropdown's active row is unchanged — 89f8350
+
+### Phase 6: Don't draw an empty top bar
+
+#### Automated
+
+- [ ] 6.1 Type checking passes: `npx astro check`
+- [ ] 6.2 Linting passes: `npm run lint`
+- [ ] 6.3 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 6.4 `/dashboard/protocols/{id}` at `md+` has no empty band above the protocol card
+- [ ] 6.5 The other 9 staff pages' bars are unchanged
+- [ ] 6.6 ⌘K and the mobile overlay still work on `/dashboard/protocols/{id}`
