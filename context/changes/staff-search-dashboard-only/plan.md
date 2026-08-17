@@ -565,6 +565,66 @@ keeps `showHeader` governing the left slot alone.
 
 ---
 
+## Phase 7: Don't let ⌘K discard a part-filled form
+
+### Overview
+
+Phase 3's desktop fallback is `window.location.assign("/dashboard?search=1")` — a **full
+navigation**. Two of the nine fieldless pages carry the ~18-field `VehicleForm` island
+(`vehicles/new.astro:31`, `vehicles/[id]/edit.astro:44`), and `grep -rn "beforeunload" src`
+returns nothing, so pressing ⌘K mid-form silently discards everything typed. Owner-reported;
+introduced by Phase 3.
+
+Blast radius is desktop-only (below `md` the overlay opens in place and nothing navigates) and
+limited to those two pages — but it lands on exactly the power user who knows the shortcut.
+
+### Changes Required:
+
+#### 1. Guard the form while it is dirty
+
+**File**: `src/components/fleet/VehicleForm.tsx`
+
+**Intent**: Register a `beforeunload` handler whenever the form differs from the values it
+opened with, so a full navigation asks for confirmation instead of dropping the work. Dirtiness
+is a **comparison against a pristine snapshot**, not a flag each of the ~18 field handlers
+would have to remember to set.
+
+**Contract**: a `pristine` memo captures `initialStrings(vehicle)` plus the three
+separately-held values (`category`, `transmission`, `photos`) exactly as the `useState`
+initialisers do. `dirty` is a field-by-field comparison against it. The effect is armed on
+`dirty && !submitting` and removes its listener on cleanup. **Disarming on `submitting` is
+load-bearing**: the success path is `window.location.assign("/dashboard/vehicles")`, which
+would otherwise prompt the user on a save that worked. `setSubmitting(false)` in the `finally`
+re-arms it after a failed submit.
+
+**Known limit, stated rather than papered over**: `<ClientRouter>` is app-wide, so an in-app
+link click is a DOM swap that never unloads the document and therefore never fires this
+handler. The guard covers full-document navigations — ⌘K's `location.assign`, a reload, a
+closed tab, an external link. Catching in-app navigation needs a separate
+`astro:before-preparation` guard and is a UX decision of its own, not part of this fix.
+
+**Not doing**: removing the ⌘K navigation. Making the shortcut open an unanchored command
+palette at `md+` would delete the failure mode rather than warn about it, and would drop a
+full page reload from every ⌘K on nine pages — but it is a desktop surface the design does not
+draw, so it is its own decision.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- Half-fill `/dashboard/vehicles/new`, press ⌘K at desktop width → the browser asks before leaving
+- A successful save still redirects to `/dashboard/vehicles` with no prompt
+- Opening `/dashboard/vehicles/{id}/edit` and changing nothing → ⌘K leaves without a prompt
+
+---
+
 ## Testing Strategy
 
 Depth is **minimal by decision** — the suite is repaired, not extended.
@@ -709,3 +769,18 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 - [ ] 6.4 `/dashboard/protocols/{id}` at `md+` has no empty band above the protocol card
 - [ ] 6.5 The other 9 staff pages' bars are unchanged
 - [ ] 6.6 ⌘K and the mobile overlay still work on `/dashboard/protocols/{id}`
+
+### Phase 7: Don't let ⌘K discard a part-filled form
+
+#### Automated
+
+- [ ] 7.1 Type checking passes: `npx astro check`
+- [ ] 7.2 Linting passes: `npm run lint`
+- [ ] 7.3 Production build succeeds: `npm run build`
+- [ ] 7.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 7.5 Half-fill `/dashboard/vehicles/new`, press ⌘K at desktop width → the browser asks before leaving
+- [ ] 7.6 A successful save still redirects to `/dashboard/vehicles` with no prompt
+- [ ] 7.7 Opening `/dashboard/vehicles/{id}/edit` and changing nothing → ⌘K leaves without a prompt
