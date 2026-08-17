@@ -19,18 +19,28 @@ import type { SearchResults } from "../../types";
 // Polish copy canonical.
 //
 // Two surfaces, one component, because they share the query and the ⌘K entry:
-//   * DESKTOP (md+) — a 520px field living in StaffShell's always-on top bar, with
-//     the panel in a radix Popover anchored under it (contract D7).
-//   * MOBILE (below md) — a full-screen overlay opened from the floating tab bar's
-//     magnifier, which dispatches `flota:search-open` on the document (the tab bar
-//     is Astro markup, so a DOM event is the seam between it and this island).
+//   * DESKTOP (md+) — a 520px field living in StaffShell's top bar, with the panel
+//     in a radix Popover anchored under it (contract D7). The field renders on
+//     PULPIT ONLY (`field`); every other staff page mounts the island without it.
+//   * MOBILE (below md) — a full-screen overlay opened from the dashboard hero's
+//     magnifier, which dispatches `flota:search-open` on the document (the hero is
+//     Astro markup, so a DOM event is the seam between it and this island).
+//
+// The island stays mounted on all 10 staff pages even where no field renders
+// (contract N2): it owns the ⌘K listener and the mobile overlay, and the overlay
+// needs no anchor, so below `md` the shortcut opens in place anywhere. At md+ on a
+// fieldless page there is nothing to anchor to, so ⌘K navigates to Pulpit instead
+// (contract N3).
 //
 // cmdk owns the list semantics and ↑↓/Enter roving focus (contract D5). Filtering
 // is `shouldFilter={false}` — the server already ranked and capped the rows, so
 // re-filtering client-side would fight the RPC's ordering.
 
-/** The document event the Astro tab-bar magnifier fires to open the mobile view. */
+/** The document event the Astro hero magnifier fires to open the mobile view. */
 export const SEARCH_OPEN_EVENT = "flota:search-open";
+
+/** Where ⌘K sends a desktop user who is on a page with no search field. */
+const PULPIT_WITH_SEARCH = "/dashboard?search=1";
 
 const COPY = {
   placeholder: "Szukaj rezerwacji, pojazdu, rejestracji…",
@@ -67,6 +77,19 @@ export interface GlobalSearchProps {
    * row and its hydrated counterpart cannot disagree.
    */
   today: string;
+  /**
+   * Render the desktop search field? Pulpit passes `true`; every other staff page
+   * mounts the island without a field (contract Surface B). With no field there is
+   * no `PopoverAnchor` and no input to focus, so the desktop branch of `openSearch`
+   * navigates to Pulpit instead of opening nothing.
+   */
+  field?: boolean;
+  /**
+   * Open the matching surface for the current width as soon as the island hydrates.
+   * Set by Pulpit when it was reached via `?search=1` — i.e. by ⌘K from a fieldless
+   * page. The parameter is stripped on open so a refresh cannot re-trigger it.
+   */
+  autoOpen?: boolean;
 }
 
 interface QuickJump {
@@ -88,6 +111,8 @@ export default function GlobalSearch({
   overdueCount = 0,
   dueTodayCount = 0,
   today,
+  field = true,
+  autoOpen = false,
 }: GlobalSearchProps) {
   const [query, setQuery] = React.useState("");
   const [desktopOpen, setDesktopOpen] = React.useState(false);
@@ -133,15 +158,21 @@ export default function GlobalSearch({
   // exists at md+, so below that the shortcut opens the full-screen view.
   const openSearch = React.useCallback(() => {
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-    if (isDesktop) {
-      setDesktopOpen(true);
-      // The field is already in the DOM, but focus must wait for the popover's
-      // own open-frame or radix's autofocus handling races it.
-      requestAnimationFrame(() => desktopInputRef.current?.focus());
-    } else {
+    if (!isDesktop) {
       setMobileOpen(true);
+      return;
     }
-  }, []);
+    if (!field) {
+      // Nothing to anchor a popover to and no input to focus on this page, so the
+      // shortcut takes the user where both exist and asks Pulpit to open on arrival.
+      window.location.assign(PULPIT_WITH_SEARCH);
+      return;
+    }
+    setDesktopOpen(true);
+    // The field is already in the DOM, but focus must wait for the popover's
+    // own open-frame or radix's autofocus handling races it.
+    requestAnimationFrame(() => desktopInputRef.current?.focus());
+  }, [field]);
 
   const closeSearch = React.useCallback(() => {
     setDesktopOpen(false);
@@ -150,7 +181,27 @@ export default function GlobalSearch({
 
   useGlobalSearchHotkey({ onOpen: openSearch, onClose: closeSearch });
 
-  // The mobile tab bar is Astro markup; it asks for the overlay by event.
+  // Arriving from ⌘K on a fieldless page (`/dashboard?search=1`): open as soon as
+  // the island has hydrated, and strip the parameter in the SAME effect — leaving it
+  // in the URL would re-open search on a refresh or for anyone handed the link.
+  //
+  // The open is deferred by a frame: `openSearch` sets state, and doing that
+  // synchronously in an effect body cascades a render (react-hooks/set-state-in-effect).
+  // The deferral also matches the focus timing the desktop branch already needs.
+  React.useEffect(() => {
+    if (!autoOpen) {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("search");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    const frame = requestAnimationFrame(openSearch);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [autoOpen, openSearch]);
+
+  // The dashboard hero's magnifier is Astro markup; it asks for the overlay by event.
   React.useEffect(() => {
     function onRequest() {
       setMobileOpen(true);
@@ -188,70 +239,76 @@ export default function GlobalSearch({
 
   return (
     <>
-      {/* ── Desktop: the persistent header field + anchored panel (md+) ─────── */}
+      {/* ── Desktop: the Pulpit-only header field + anchored panel (md+) ──────
+          The cmdk root stays even where the field does not, so the island's shape
+          is the same on all 10 pages; only the anchored subtree is conditional. */}
       <Command shouldFilter={false} loop label={COPY.ariaLabel} className="contents">
-        <Popover open={desktopOpen} onOpenChange={setDesktopOpen} modal={false}>
-          <PopoverAnchor asChild>
-            <div
-              ref={fieldRef}
-              className={cn(
-                "bg-card hidden h-11 w-[520px] max-w-full items-center gap-2 rounded-[12px] border-[1.5px] px-3 transition-[border-color,box-shadow] md:flex",
-                desktopOpen ? "border-foreground shadow-[0_0_0_4px_rgba(15,23,42,0.06)]" : "border-[var(--flota-hair)]",
-              )}
-            >
-              <Search
-                className={cn("size-[17px] shrink-0", desktopOpen ? "text-[var(--flota-ink-2)]" : "text-muted-foreground")} // prettier-ignore
-              />
-              <Command.Input
-                ref={desktopInputRef}
-                value={query}
-                onValueChange={setQuery}
-                placeholder={COPY.placeholder}
-                onFocus={() => {
-                  setDesktopOpen(true);
-                }}
-                className="text-foreground placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-[14px] outline-none"
-              />
-              {query ? (
-                <button
-                  type="button"
-                  aria-label={COPY.clear}
-                  onClick={() => {
-                    setQuery("");
-                    desktopInputRef.current?.focus();
+        {field && (
+          <Popover open={desktopOpen} onOpenChange={setDesktopOpen} modal={false}>
+            <PopoverAnchor asChild>
+              <div
+                ref={fieldRef}
+                className={cn(
+                  "bg-card hidden h-11 w-[520px] max-w-full items-center gap-2 rounded-[12px] border-[1.5px] px-3 transition-[border-color,box-shadow] md:flex",
+                  desktopOpen
+                    ? "border-foreground shadow-[0_0_0_4px_rgba(15,23,42,0.06)]"
+                    : "border-[var(--flota-hair)]",
+                )}
+              >
+                <Search
+                  className={cn("size-[17px] shrink-0", desktopOpen ? "text-[var(--flota-ink-2)]" : "text-muted-foreground")} // prettier-ignore
+                />
+                <Command.Input
+                  ref={desktopInputRef}
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder={COPY.placeholder}
+                  onFocus={() => {
+                    setDesktopOpen(true);
                   }}
-                  className="bg-background text-muted-foreground hover:text-foreground flex size-[22px] shrink-0 items-center justify-center rounded-[7px]"
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : (
-                <span className="flex shrink-0 items-center gap-1">
-                  <Kbd>⌘</Kbd>
-                  <Kbd>K</Kbd>
-                </span>
-              )}
-            </div>
-          </PopoverAnchor>
+                  className="text-foreground placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-[14px] outline-none"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    aria-label={COPY.clear}
+                    onClick={() => {
+                      setQuery("");
+                      desktopInputRef.current?.focus();
+                    }}
+                    className="bg-background text-muted-foreground hover:text-foreground flex size-[22px] shrink-0 items-center justify-center rounded-[7px]"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : (
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Kbd>⌘</Kbd>
+                    <Kbd>K</Kbd>
+                  </span>
+                )}
+              </div>
+            </PopoverAnchor>
 
-          <PopoverContent
-            align="end"
-            sideOffset={8}
-            // Focus stays in the anchored input — the panel is a results surface,
-            // not a focus trap; and clicking the field itself must not close it.
-            onOpenAutoFocus={(event) => {
-              event.preventDefault();
-            }}
-            onInteractOutside={(event) => {
-              if (fieldRef.current?.contains(event.target as Node)) {
+            <PopoverContent
+              align="end"
+              sideOffset={8}
+              // Focus stays in the anchored input — the panel is a results surface,
+              // not a focus trap; and clicking the field itself must not close it.
+              onOpenAutoFocus={(event) => {
                 event.preventDefault();
-              }
-            }}
-            className="bg-card w-[520px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[16px] border border-[var(--flota-hair)] p-0 shadow-[0_4px_12px_rgba(15,23,42,0.08),0_24px_60px_rgba(15,23,42,0.16)]"
-          >
-            <Command.List className="max-h-[460px] overflow-y-auto py-1.5">{body}</Command.List>
-            <PanelFooter />
-          </PopoverContent>
-        </Popover>
+              }}
+              onInteractOutside={(event) => {
+                if (fieldRef.current?.contains(event.target as Node)) {
+                  event.preventDefault();
+                }
+              }}
+              className="bg-card w-[520px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[16px] border border-[var(--flota-hair)] p-0 shadow-[0_4px_12px_rgba(15,23,42,0.08),0_24px_60px_rgba(15,23,42,0.16)]"
+            >
+              <Command.List className="max-h-[460px] overflow-y-auto py-1.5">{body}</Command.List>
+              <PanelFooter />
+            </PopoverContent>
+          </Popover>
+        )}
       </Command>
 
       {/* ── Mobile: full-screen search (below md) ─────────────────────────────
