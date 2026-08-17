@@ -1,7 +1,7 @@
 ---
 change_id: staff-search-dashboard-only
 title: Global search becomes Pulpit-only and dropdown-only (no results page)
-status: implementing
+status: implemented
 created: 2026-08-11
 updated: 2026-08-17
 archived_at: null
@@ -11,6 +11,23 @@ archived_at: null
 
 Two decisions, one landing. The change_id predates the second one and is now
 narrower than the scope — kept as-is so the folder doesn't move.
+
+**Implemented 2026-08-17** across five phases (`56eb8ac`, `f3e7860`, `2b74c2c`,
+`885a187`, `89f8350`). Phase 5 was added during the walkthrough: the mobile
+overlay's active row was invisible because the design's single `RowShell` active
+background is the overlay's own ground (contract D19).
+
+Two items remain open and do NOT belong to a later slice:
+
+- **Progress row 4.6** — the `v2-` screenshot export has not been run, so the
+  rendered vision-diff gate has not executed and the 8 superseded S-13 PNGs are
+  unpruned. `design-review/README.md` holds the destination and audit steps.
+  `/10x-archive` will surface this row as a warning.
+- **Empty header band on `/dashboard/protocols/{id}`** — that page sets
+  `showHeader={false}` and, since Phase 3, renders no search field either, so the
+  always-on top bar draws an empty strip at `md+`. Introduced here, not
+  pre-existing. Fix: gate the `<header>` on
+  `showHeader || search || Astro.slots.has("header-action")`.
 
 ## Where things stand
 
