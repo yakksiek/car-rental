@@ -1,5 +1,15 @@
 # Export request — global search after the Pulpit-only / dropdown-only rewrite
 
+> ## NOT RUN — closed by owner decision, 2026-08-17
+>
+> The change shipped without the rendered vision-diff gate: its values came from the
+> code-backed JSX rather than from screenshots, and the gate would have passed **D19**, the
+> one real defect found. Reasoning in `change.md`; summary in `design-review/README.md`.
+>
+> **This request is still accurate** and can be run later if the gate is wanted. It is kept
+> for that reason, not because anything is pending. The stale 2026-08-10 PNGs it was written
+> to replace were deleted rather than re-exported, so nothing in the repo is waiting on it.
+
 Send the block below to Claude in the Design app for project `Rental car company`
 (`352d78a6-84fd-49a2-8b38-2fe289691fc3`). Rendering to PNG cannot be driven through
 `DesignSync` (it reads and writes files only), so this one has to be asked for.

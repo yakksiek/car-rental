@@ -628,7 +628,7 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 - [x] 4.4 The Pojazdy row reads `Mercedes-Benz ● WX 5519M` under the vehicle name — 885a187
 - [x] 4.5 Every deviation in `design-contract.md` describes something still true of the app — 885a187
-- [ ] 4.6 Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations
+- [x] 4.6 ~~Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations~~ — **NOT RUN, closed by owner decision 2026-08-17**: this slice's values were transcribed from the code-backed JSX, not measured off screenshots, so the gate would have re-verified a rendering of its own source. Rationale in `change.md`; the 8 superseded S-13 PNGs were pruned instead.
 
 ### Phase 5: Mobile active-row contrast
 

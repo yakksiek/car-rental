@@ -24,7 +24,7 @@ noresults], the three result rows, and the mobile `MobileSearchShell` / `ScreenS
 | `search-flow.jsx` (design source)                 | **current**               | Rewritten dropdown-only. `ScreenSearchResultsPage` / `ScreenSearchMobilePage` deleted with `ResultSection` / `SectionLabel` and the `showEnter` footer branch; `ScreenSearchLiveScrolled` added; `VehicleRow` drawn for the first time. |
 | `staff-desktop.jsx` (`StaffTopbar`)               | **current**               | `StaffTopbar({title, sub, search, searchQuery, searchFocused})`; only `ScreenStaffDash` passes `search`.                                                                                                                                |
 | `staff-screens.jsx` (`ScreenWorkerDash`)          | **current**               | Carries the 44×44 hero magnifier left of the avatar; its `TabBar` has no search entry.                                                                                                                                                  |
-| `design-review/*.png` (8 files, dated 2026-08-10) | **outdated (superseded)** | Two of them render the deleted results page. Replaced by the `v2-` export (6 desktop + 4 mobile) requested in `../staff-search-dashboard-only/design-export-request.md`, which lands in that change's `design-review/`.                 |
+| `design-review/*.png` (8 files, dated 2026-08-10) | **pruned 2026-08-17**     | Two of them rendered the deleted results page. Deleted rather than re-exported — the `v2-` request in `../staff-search-dashboard-only/design-export-request.md` is retained but not run. See the verdict.                               |
 | `design-system.md` screenshot catalog rows 09/20  | **outdated (superseded)** | Staff-shell shots predate both the S-13 restructure and this narrowing. Re-export at archive.                                                                                                                                           |
 
 ### New-design quality audit (gaps in the canonical source)
@@ -52,10 +52,15 @@ noresults], the three result rows, and the mobile `MobileSearchShell` / `ScreenS
 ### Verdict
 
 **PASS (paper audit)** — app and design agree on every surface. **D1**, **D2**, **D13** and **D14** are
-retired; **D6**, **D9**, **D10** and **D16** are amended; **D17** and **D18** are new. The rendered
-vision-diff gate runs against the `v2-` export in
-`../staff-search-dashboard-only/design-review/` and must come back empty apart from the deviations below and
-the two "Known deltas" recorded in that change's contract.
+retired; **D6**, **D9**, **D10** and **D16** are amended; **D17**, **D18** and **D19** are new.
+
+**The rendered vision-diff gate was skipped by owner decision (2026-08-17)** rather than run against a `v2-`
+export. Reasoning in `../staff-search-dashboard-only/change.md`: every value here was transcribed from the
+code-backed JSX, so the diff would have re-verified the transcription rather than the design — and it would
+have passed **D19**, since the mock renders no active mobile row on either side. The 8 stale PNGs that used
+to sit in this folder were pruned in the same pass; two of them rendered `ScreenSearchResultsPage`, which
+exists in neither the app nor the design. `design-system.md` catalog rows 09/20 are stale for unrelated
+reasons and are still slated for re-export at archive.
 
 ---
 

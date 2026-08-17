@@ -15,14 +15,14 @@ Values transcribed exactly; each line `exact` or `deviation(reason)`. Polish cop
 
 ### Freshness audit (repo vs canonical)
 
-| Artifact                                            | Status                    | Note                                                                                                                                           |
-| --------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search-flow.jsx`                                   | **current**               | Pulled this session. Results page + mobile page deleted; `ScreenSearchLiveScrolled` added; `VehicleRow` drawn for the first time.              |
-| `staff-desktop.jsx`                                 | **current**               | `StaffTopbar({title, sub, search, searchQuery, searchFocused})`; only `ScreenStaffDash` passes `search`.                                       |
-| `staff-screens.jsx`                                 | **current**               | `ScreenWorkerDash` carries the 44×44 magnifier; its `TabBar` has no search entry.                                                              |
-| `staff-global-search/design-review/*.png` (8 files) | **outdated (superseded)** | Dated 2026-08-10. Two render `ScreenSearchResultsPage` / `ScreenSearchMobilePage`, which no longer exist. Prune at Phase 4.                    |
-| `exports/global-search/` in the design project      | **ambiguous**             | Holds two overlapping sets — three request-named files plus an `s1-*` set of 10. Neither verified. Superseded by the rewritten export request. |
-| `design-system.md` screenshot catalog rows 09 / 20  | **outdated (superseded)** | Staff shell shots predate the S-13 restructure and this narrowing. Re-export at archive.                                                       |
+| Artifact                                            | Status                    | Note                                                                                                                                                           |
+| --------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search-flow.jsx`                                   | **current**               | Pulled this session. Results page + mobile page deleted; `ScreenSearchLiveScrolled` added; `VehicleRow` drawn for the first time.                              |
+| `staff-desktop.jsx`                                 | **current**               | `StaffTopbar({title, sub, search, searchQuery, searchFocused})`; only `ScreenStaffDash` passes `search`.                                                       |
+| `staff-screens.jsx`                                 | **current**               | `ScreenWorkerDash` carries the 44×44 magnifier; its `TabBar` has no search entry.                                                                              |
+| `staff-global-search/design-review/*.png` (8 files) | **pruned 2026-08-17**     | Dated 2026-08-10. Two rendered `ScreenSearchResultsPage` / `ScreenSearchMobilePage`, which no longer exist. Deleted rather than re-exported — see the verdict. |
+| `exports/global-search/` in the design project      | **ambiguous**             | Holds two overlapping sets — three request-named files plus an `s1-*` set of 10. Neither verified. Superseded by the rewritten export request.                 |
+| `design-system.md` screenshot catalog rows 09 / 20  | **outdated (superseded)** | Staff shell shots predate the S-13 restructure and this narrowing. Re-export at archive.                                                                       |
 
 ### New-design quality audit (gaps in the canonical source)
 
@@ -51,13 +51,17 @@ Values transcribed exactly; each line `exact` or `deviation(reason)`. Polish cop
 
 ### Verdict
 
-**BLOCKED (by agreement) — canonical screenshots not yet captured.** 9 surfaces aligned;
-3 repo design artifacts superseded; 4 deviations carried or added (N1–N3 plus the amended
-D9/D16); 2 pre-existing deltas recorded below without a phase. Exact values are transcribed
-from the code-backed JSX, so **implementation is not blocked** — only the rendered
-vision-diff gate is. Per your instruction the export request is rewritten as the final
-planning step; you run it, then we audit the returned PNGs into
-`context/changes/staff-search-dashboard-only/design-review/`.
+**PASS — implemented; the rendered vision-diff gate was skipped by decision.** 9 surfaces
+aligned; 3 repo design artifacts superseded; 5 deviations carried or added (N1–N3 plus the
+amended D9/D16, and D19 from Phase 5); 2 pre-existing deltas recorded below without a phase.
+
+Exact values were transcribed from the code-backed JSX, so implementation was never blocked —
+only the gate was, and on 2026-08-17 the owner closed it unrun (Progress row 4.6). Full
+reasoning in `change.md`; the short version is that diffing a render of the app against a
+render of the same source re-verifies the transcription rather than the design, and the gate
+would have passed this change's one real defect (D19 — the mock renders no active mobile row
+either). The `v2-` export request is retained, marked not-run. The 8 superseded S-13 PNGs were
+pruned rather than replaced.
 
 ---
 

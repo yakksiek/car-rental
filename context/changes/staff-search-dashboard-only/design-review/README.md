@@ -1,35 +1,34 @@
 # Canonical screenshots — staff-search-dashboard-only
 
-**Status: outstanding.** This folder is the destination for the `v2-` export described in
-`../design-export-request.md`. Rendering to PNG cannot be driven through `DesignSync`
-(it reads and writes files only), so the export is run by hand in the Design app.
+**Status: not captured, by decision (2026-08-17). This folder is intentionally empty.**
 
-Expected set — 6 desktop at 1440×900, 4 mobile at 390×844:
+The rendered vision-diff gate (`lessons.md` → "Port the design spec … with a vision-diff
+gate", Progress row 4.6) was closed unrun for this change. Full reasoning is in
+`../change.md`; in short:
 
-```
-v2-desktop-01-pulpit-entry.png     v2-mobile-01-pulpit-entry.png
-v2-desktop-02-no-field.png         v2-mobile-02-resting.png
-v2-desktop-03-resting.png          v2-mobile-03-live-results.png
-v2-desktop-04-live-results.png     v2-mobile-04-no-results.png
-v2-desktop-05-live-scrolled.png
-v2-desktop-06-no-results.png
-```
+- Every value in `../design-contract.md` was transcribed from the **code-backed JSX** via
+  `DesignSync get_file`, not measured off a screenshot. The gate exists to catch the lossy
+  _prose distillation_ of a mockup — ranges like "cards 14–18px" that read as implementer
+  license. That never happened here, so a diff would have re-verified the transcription
+  rather than the design.
+- The gate **would have passed this change's one real defect.** D19 — the invisible active
+  row in the mobile overlay — is equally invisible in the mock, because no mobile screen
+  passes `active`. Both sides render no active row and the diff comes back clean. Reading
+  the source found it; comparing renderings could not have.
+- Almost all of this change is removal. The genuinely new drawing — the vehicle row's spec
+  line, the 44×44 hero magnifier, the topbar right-group reorder — was walked by hand at
+  1440×900 and 390×844.
 
-When they land:
+**What this leaves unverified:** cumulative metric drift — a value correct in both files
+that renders differently through a cascade collision or an inherited letter-spacing.
+Accepted.
 
-1. Audit them against the "must appear / must NOT appear" lists at the end of
-   `../design-export-request.md` — in particular that the copy is **Polish**, that no shot
-   shows `Ostatnie wyszukiwania`, `Klienci`, `Zobacz wszystkie wyniki` or a tab-bar
-   magnifier, and that the **Pojazdy** group has real rows in `v2-desktop-05` and
-   `v2-mobile-03`.
-2. Run the rendered vision-diff for every surface in `../design-contract.md`, comparing the
-   real app at 1440×900 and 390×844 against these PNGs. It must come back empty apart from
-   the recorded deviations (D9, D10, D16, N1–N3) and the two "Known deltas" in that
-   contract.
-3. Prune the 8 superseded PNGs in `../../staff-global-search/design-review/` (dated
-   2026-08-10; two of them render the deleted results page). Git keeps the blobs — pruning
-   only stops them being mistaken for current.
+`../design-export-request.md` is retained and still accurate if the gate is ever wanted:
+run it in the Design app, drop the ten `v2-` PNGs here, and diff against the surfaces in
+`../design-contract.md`, expecting only the recorded deviations (D9, D10, D16, D19, N1–N3)
+and the two "Known deltas".
 
-Until then, plan row **4.6** stays unchecked and the audit verdict in `../design-contract.md`
-remains BLOCKED on this input. Implementation is not blocked: every value in the contract is
-transcribed from the code-backed JSX, not measured off a screenshot.
+The 8 superseded PNGs that used to sit in `../../staff-global-search/design-review/` were
+deleted in the same pass — two of them rendered `ScreenSearchResultsPage`, a screen that
+exists in neither the app nor the design. Git keeps the blobs; deleting only stops them
+being read as current.

@@ -17,12 +17,37 @@ narrower than the scope — kept as-is so the folder doesn't move.
 overlay's active row was invisible because the design's single `RowShell` active
 background is the overlay's own ground (contract D19).
 
-Two items remain open and do NOT belong to a later slice:
+**The vision-diff gate was deliberately skipped (row 4.6).** Owner decision,
+2026-08-17. `lessons.md` asks every UI slice to close with a rendered-vs-mockup
+diff, so the divergence is recorded here rather than left silent:
 
-- **Progress row 4.6** — the `v2-` screenshot export has not been run, so the
-  rendered vision-diff gate has not executed and the 8 superseded S-13 PNGs are
-  unpruned. `design-review/README.md` holds the destination and audit steps.
-  `/10x-archive` will surface this row as a warning.
+- The gate exists because a **prose distillation** of a screenshot is lossy —
+  it captures radii and spacing as ranges, which read as implementer license.
+  That failure mode did not occur here: every value in `design-contract.md` was
+  transcribed from the code-backed JSX via `DesignSync get_file`, which is the
+  high-fidelity path the lesson actually asks for. Diffing a render of the app
+  against a render of that same source re-verifies the transcription, not the
+  design.
+- **The gate would have missed this change's only real defect.** The mobile
+  active row (D19) is invisible in the mock too — but no mobile screen passes
+  `active` (`ScreenSearchLive` sets `active={i === 0}`; `ScreenSearchMobileLive`
+  sets it on nothing), so a vision diff renders no active row on either side and
+  passes. Reading the JSX found it; comparing renderings could not have.
+- Nearly all of this change is **removal** — the results page, the per-screen
+  entry points, the tab-bar magnifier. The genuinely new drawing is one row's
+  second line, one 44×44 button and a right-group reorder, all walked by hand.
+- What this leaves unverified: cumulative metric drift — a value correct in both
+  files that renders differently through a cascade collision or inherited
+  letter-spacing. Accepted.
+
+The 8 superseded S-13 PNGs were pruned in the same pass (two of them rendered
+`ScreenSearchResultsPage`, a screen that exists in neither the app nor the
+design). `design-export-request.md` is retained, marked not-run, in case the gate
+is wanted later. `design-system.md` catalog rows 09/20 are stale for unrelated
+reasons and are still slated for re-export at archive.
+
+One item remains open:
+
 - **Empty header band on `/dashboard/protocols/{id}`** — that page sets
   `showHeader={false}` and, since Phase 3, renders no search field either, so the
   always-on top bar draws an empty strip at `md+`. Introduced here, not
