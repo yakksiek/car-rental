@@ -634,9 +634,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx astro check`
-- [x] 5.2 Linting passes: `npm run lint`
-- [x] 5.3 Production build succeeds: `npm run build`
+- [x] 5.1 Type checking passes: `npx astro check` — 89f8350
+- [x] 5.2 Linting passes: `npm run lint` — 89f8350
+- [x] 5.3 Production build succeeds: `npm run build` — 89f8350
 
 #### Manual
 
