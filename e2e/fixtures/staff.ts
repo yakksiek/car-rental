@@ -67,6 +67,59 @@ export async function inviteEmployee(): Promise<StaffFixture> {
   return { id: data.user.id, email };
 }
 
+/**
+ * The `/auth/callback` link a recovery email WOULD carry, minted directly (S-14).
+ *
+ * `generateLink` produces the token without sending mail, so a spec that only
+ * cares what the callback does with a link doesn't burn one of the two emails
+ * `config.toml` allows per hour, and doesn't depend on SMTP timing. The URL is
+ * assembled to match `supabase/templates/recovery.html` — `{{ .SiteURL }}
+ * /auth/callback?token_hash={{ .TokenHash }}&type=recovery`. That the real
+ * template still produces this shape is proven by `staff-auth.spec.ts`, which
+ * reads the actual message out of Mailpit.
+ */
+export async function recoveryCallbackLink(email: string): Promise<string> {
+  const db = admin();
+  const { data, error } = await db.auth.admin.generateLink({ type: "recovery", email });
+  if (error || !data.properties.hashed_token) {
+    throw new Error(`fixture: generateLink failed — ${error?.message ?? "no hashed_token"}`);
+  }
+  return `${BASE_URL}/auth/callback?token_hash=${data.properties.hashed_token}&type=recovery`;
+}
+
+/**
+ * An invited hire plus the `/auth/callback` link their invite email WOULD carry
+ * (S-14). `generateLink({ type: "invite" })` provisions the user the same way
+ * `inviteUserByEmail` does but sends no mail, so this costs none of the two
+ * emails per hour `config.toml` allows. The profiles row mirrors
+ * `services/staff.ts`, which writes one immediately after inviting — that is what
+ * gives a new hire a role before they ever accept.
+ *
+ * SINGLE USE: the token is consumed by the callback's `verifyOtp` exchange — i.e.
+ * the moment it lands on the set-password form, NOT when a password is submitted.
+ * A second open of the same link is correctly refused.
+ */
+export async function inviteCallbackLink(): Promise<StaffFixture & { link: string }> {
+  const db = admin();
+  const email = uniqueEmail("invite-link");
+  const { data, error } = await db.auth.admin.generateLink({ type: "invite", email });
+  if (error || !data.properties.hashed_token) {
+    throw new Error(`fixture: invite generateLink failed — ${error?.message ?? "no hashed_token"}`);
+  }
+  const { error: pErr } = await db
+    .from("profiles")
+    .insert({ user_id: data.user.id, role: "employee", full_name: "E2E Zaproszony Link" });
+  if (pErr) {
+    await db.auth.admin.deleteUser(data.user.id).catch(() => undefined);
+    throw new Error(`fixture: profile insert failed — ${pErr.message}`);
+  }
+  return {
+    id: data.user.id,
+    email,
+    link: `${BASE_URL}/auth/callback?token_hash=${data.properties.hashed_token}&type=invite&flow=invite`,
+  };
+}
+
 /** Tear down a fixture staffer. Safe to call twice / on an already-gone user. */
 export async function deleteStaffUser(id: string): Promise<void> {
   const db = admin();

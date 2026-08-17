@@ -734,37 +734,37 @@ to the prod origin.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npx astro check`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Unit tests pass: `npm test`
-- [x] 1.4 Integration tests pass: `npm run test:integration`
-- [x] 1.5 Both existing e2e specs still green on port 4321
+- [x] 1.1 Type checking passes: `npx astro check` — d1a7d25
+- [x] 1.2 Linting passes: `npm run lint` — d1a7d25
+- [x] 1.3 Unit tests pass: `npm test` — d1a7d25
+- [x] 1.4 Integration tests pass: `npm run test:integration` — d1a7d25
+- [x] 1.5 Both existing e2e specs still green on port 4321 — d1a7d25
 
 #### Manual
 
-- [x] 1.6 Signed in normally, `/auth/reset-password` shows R12 and its CTA reaches the account screen
-- [x] 1.7 Signed out, `/auth/reset-password` shows R13 — not "Link wygasł"
-- [x] 1.8 A real recovery link reaches the form, sets the password, shows "Hasło zaktualizowane"
-- [x] 1.9 After success the browser is signed out and the new password signs in
-- [x] 1.10 Re-opening a used recovery link shows R5 "Link wygasł"
-- [x] 1.11 A mistyped confirmation leaves the form retryable — the marker was not spent
-- [x] 1.12 The `review-fixes.md` reproduction no longer changes the password
+- [x] 1.6 Signed in normally, `/auth/reset-password` shows R12 and its CTA reaches the account screen — d1a7d25
+- [x] 1.7 Signed out, `/auth/reset-password` shows R13 — not "Link wygasł" — d1a7d25
+- [x] 1.8 A real recovery link reaches the form, sets the password, shows "Hasło zaktualizowane" — d1a7d25
+- [x] 1.9 After success the browser is signed out and the new password signs in — d1a7d25
+- [x] 1.10 Re-opening a used recovery link shows R5 "Link wygasł" — d1a7d25
+- [x] 1.11 A mistyped confirmation leaves the form retryable — the marker was not spent — d1a7d25
+- [x] 1.12 The `review-fixes.md` reproduction no longer changes the password — d1a7d25
 
 ### Phase 2: `/auth/callback` refuses an already-signed-in browser
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Integration tests pass: `npm run test:integration`
-- [ ] 2.4 New and existing e2e specs green on port 4321
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Integration tests pass: `npm run test:integration`
+- [x] 2.4 New and existing e2e specs green on port 4321
 
 #### Manual
 
-- [ ] 2.5 Signed in as A, opening B's invite link shows R11 naming A's email; A's session is intact
-- [ ] 2.6 The sign-out button shows the spinner and "Wylogowywanie…"
-- [ ] 2.7 After signing out from R11, the same link still reaches the set-password form
-- [ ] 2.8 `/auth/link-conflict` while signed out redirects to `/auth/signin`
+- [x] 2.5 Signed in as A, opening B's invite link shows R11 naming A's email; A's session is intact
+- [x] 2.6 The sign-out button shows the spinner and "Wylogowywanie…"
+- [x] 2.7 After signing out from R11, the same link still reaches the set-password form
+- [x] 2.8 `/auth/link-conflict` while signed out redirects to `/auth/signin`
 
 ### Phase 3: Error-code whitelist across the auth surfaces
 
