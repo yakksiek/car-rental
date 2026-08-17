@@ -63,6 +63,13 @@ the DOM without unloading, so in-app link clicks still aren't caught — that ne
 its own `astro:before-preparation` guard and is a separate UX decision, as is the
 larger option of replacing the ⌘K navigation with an unanchored desktop palette.
 
+**Phase 8** then took the shortcut off those two screens entirely — owner decision:
+don't warn before abandoning a form, don't offer the thing that abandons it. The
+line is "reached from the menu" (the seven nav destinations keep ⌘K) vs "reached
+from inside a screen and holds a form" (the two `VehicleForm` sub-screens don't).
+`protocols/[id]` keeps it: read-only view, nothing to lose. Phase 7's guard stays
+as belt-and-braces for reload / closed tab / external link.
+
 ## Where things stand
 
 - Worktree: /Users/user/git/przeprogramowani/fleet-rent-staff-global-search
