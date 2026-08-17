@@ -43,15 +43,25 @@ export const PW_SET_DONE_COOKIE = "flota-pw-set-done";
 
 // `path: "/"` is load-bearing: the page lives at /auth/reset-password but its
 // form posts to /api/auth/reset-password, so an `/auth`-scoped cookie would be
-// invisible to the handler. `maxAge` matches the reset window (15 min); `secure`
-// is NOT here because it is decided per request — under `npm run dev` the app is
-// served over plain http, where a blanket `secure: true` drops the cookie
-// entirely and takes the whole reset flow down with it.
+// invisible to the handler.
+//
+// `maxAge` matches the link it gates — `config.toml` sets `otp_expiry = 3600`
+// and `jwt_expiry = 3600`, and the copy tells the user "ważne 60 minut" in three
+// places. It must NOT be shorter: freshness here comes from the marker being
+// stamped by *this* navigation and spent on success, not from its lifetime, so a
+// tighter value buys nothing and strands anyone who takes longer than it to type
+// a password. They would get a false "Link wygasł" while their link session was
+// still alive, and its CTA would send them for a new link that `/auth/callback`
+// then refuses — because they are still signed in.
+//
+// `secure` is NOT here because it is decided per request — under `npm run dev`
+// the app is served over plain http, where a blanket `secure: true` drops the
+// cookie entirely and takes the whole reset flow down with it.
 export const LINK_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: "lax",
   path: "/",
-  maxAge: 900,
+  maxAge: 3600,
 } as const;
 
 /**
@@ -135,6 +145,15 @@ export async function readSessionOrigin(supabase: SupabaseClient): Promise<Sessi
   );
   // GoTrue collapses its distinct Recovery / Invite / MagicLink constants to the
   // single string `otp`, so this proves "came from a link", not which link.
+  //
+  // ⚠ `amr` ACCUMULATES, and `otp` is checked first — so a session carrying BOTH
+  // `password` and `otp` classifies as `"link"`. That shape is unreachable today
+  // only because `/auth/callback` refuses to exchange a token when a session
+  // already exists (`callback.ts:30-32`), and nothing else in the app calls
+  // `verifyOtp` / `exchangeCodeForSession` / `signInWithOtp` / `setSession`. That
+  // guard is therefore not only the R3 anti-fixation fix it is documented as — it
+  // is what stops this OR from promoting an ordinary password session to
+  // link-origin. Any new link-exchange call site must preserve it.
   if (methods.includes("otp")) {
     return "link";
   }
