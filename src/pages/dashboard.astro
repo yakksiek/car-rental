@@ -50,6 +50,11 @@ const dateEyebrow = dateEyebrowPl(now);
 // deep-link (e.g. `?section=wydania`) renders pre-filtered with no client-only read
 // → no hydration flash. Junk validates away to `wszystko` (all sections).
 const initialSection = parseSection(Astro.url.searchParams.get("section"));
+
+// Pulpit is the app's ONLY search entry point, so it is also where ⌘K lands when it
+// is pressed at desktop width on a page that renders no field. `?search=1` is that
+// hand-off; the island opens on mount and strips the parameter from the URL.
+const autoOpenSearch = Astro.url.searchParams.get("search") === "1";
 ---
 
 <Layout title="Pulpit — Flota">
@@ -61,12 +66,15 @@ const initialSection = parseSection(Astro.url.searchParams.get("section"));
     role={role}
     pendingCount={pending.length}
     overdueCount={overdueCount}
+    search
+    autoOpen={autoOpenSearch}
   >
     {
       /* The greeting used to be a hand-rolled full-bleed band identical to the
-        shell's own. S-13 made the shell's top bar always-on (it carries the global
-        search), so the greeting moved onto its title/subtitle slot and the calendar
-        shortcut onto its action slot — one band, not two. */
+        shell's own. S-13 made the shell's top bar always-on, so the greeting moved
+        onto its title/subtitle slot and the calendar shortcut onto its action slot —
+        one band, not two. The shell draws the search field before this slot, giving
+        the design's field → calendar order. */
     }
     <a
       slot="header-action"
@@ -79,19 +87,33 @@ const initialSection = parseSection(Astro.url.searchParams.get("section"));
 
     <main class="mx-auto w-full max-w-[1440px] px-4 py-6 lg:p-8">
       {
-        /* Mobile hero — date eyebrow, title, initials avatar. Search is deferred, so
-          the right slot carries only the avatar (design-contract §E). */
+        /* Mobile hero — date eyebrow, title, and the [magnifier, avatar] pair. The
+          magnifier is the app's ONLY mobile search entry (design `ScreenWorkerDash`;
+          the floating tab bar deliberately has none): a scoped icon in a section
+          header would read as "search this section". It carries
+          `data-search-trigger`, which StaffShell's binder wires to the island's
+          `flota:search-open` event. */
       }
       <header class="flex items-start justify-between gap-4 md:hidden">
         <div>
           <p class="text-muted-foreground text-[12px] font-semibold tracking-[0.3px] uppercase">{dateEyebrow}</p>
           <h1 class="text-foreground mt-1 text-[40px] leading-none font-bold tracking-[-1px]">Pulpit</h1>
         </div>
-        <span
-          class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-[16px] font-medium tracking-[0.4px]"
-        >
-          {initials}
-        </span>
+        <div class="flex shrink-0 items-center gap-2.5">
+          <button
+            type="button"
+            data-search-trigger
+            aria-label="Szukaj"
+            class="bg-card text-foreground shadow-card flex size-11 items-center justify-center rounded-full border border-[var(--flota-hair)] p-0"
+          >
+            <NavIcon glyph="search" size={19} />
+          </button>
+          <span
+            class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-[16px] font-medium tracking-[0.4px]"
+          >
+            {initials}
+          </span>
+        </div>
       </header>
 
       <DispatchBoard

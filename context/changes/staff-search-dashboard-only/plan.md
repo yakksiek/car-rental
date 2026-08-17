@@ -522,10 +522,10 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Production build succeeds: `npm run build`
-- [x] 2.4 Unit tests pass: `npm test`
+- [x] 2.1 Type checking passes: `npx astro check` — f3e7860
+- [x] 2.2 Linting passes: `npm run lint` — f3e7860
+- [x] 2.3 Production build succeeds: `npm run build` — f3e7860
+- [x] 2.4 Unit tests pass: `npm test` — f3e7860
 
 #### Manual
 
@@ -537,9 +537,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Production build succeeds: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Production build succeeds: `npm run build`
 
 #### Manual
 
