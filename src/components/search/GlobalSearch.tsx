@@ -2,7 +2,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { Command } from "cmdk";
-import { AlertTriangle, ArrowDown, ArrowRight, Clock, Search, Tag, Truck, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, Clock, Search, Tag, Truck, X } from "lucide-react";
 
 // components
 import { Popover, PopoverAnchor, PopoverContent } from "../ui/popover";
@@ -10,7 +10,6 @@ import { ReservationRow, ReturnRow, ROW_SHELL, searchHref, VehicleRow } from "./
 
 // others
 import { cn } from "../../lib/utils";
-import { pluralPl } from "../../lib/format";
 import { useGlobalSearchHotkey } from "../hooks/useGlobalSearchHotkey";
 import { useSearch } from "../hooks/useSearch";
 import type { SearchResults } from "../../types";
@@ -45,15 +44,12 @@ const COPY = {
   reservations: "Rezerwacje",
   returns: "Zwroty",
   vehicles: "Pojazdy",
-  seeAll: "Zobacz wszystkie wyniki",
   noResults: "Brak wyników dla",
   noResultsHint: "Sprawdź pisownię lub szukaj po numerze rezerwacji, nazwisku lub rejestracji.",
   navigate: "nawigacja",
   open: "otwórz",
   close: "zamknij",
 };
-
-const RESULT_FORMS: [string, string, string] = ["wynik", "wyniki", "wyników"];
 
 /** Below this length the endpoint (and the RPC) answer with empty groups. */
 const MIN_QUERY_LENGTH = 2;
@@ -105,7 +101,6 @@ export default function GlobalSearch({
   const trimmed = query.trim();
   const resting = trimmed.length < MIN_QUERY_LENGTH;
   const total = resultCount(results);
-  const resultsHref = `/dashboard/search?q=${encodeURIComponent(trimmed)}`;
 
   const quickJumps: QuickJump[] = [
     {
@@ -179,16 +174,6 @@ export default function GlobalSearch({
     };
   }, [mobileOpen]);
 
-  // cmdk keeps a row highlighted whenever the list has one, and Enter opens it
-  // ("↵ otwórz"). With no rows to open — the no-results state — Enter falls
-  // through to the full results page instead of doing nothing.
-  function onListKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "Enter" && !resting && total === 0) {
-      event.preventDefault();
-      window.location.href = resultsHref;
-    }
-  }
-
   const body = (
     <>
       {resting ? (
@@ -204,7 +189,7 @@ export default function GlobalSearch({
   return (
     <>
       {/* ── Desktop: the persistent header field + anchored panel (md+) ─────── */}
-      <Command shouldFilter={false} loop label={COPY.ariaLabel} className="contents" onKeyDown={onListKeyDown}>
+      <Command shouldFilter={false} loop label={COPY.ariaLabel} className="contents">
         <Popover open={desktopOpen} onOpenChange={setDesktopOpen} modal={false}>
           <PopoverAnchor asChild>
             <div
@@ -264,7 +249,7 @@ export default function GlobalSearch({
             className="bg-card w-[520px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[16px] border border-[var(--flota-hair)] p-0 shadow-[0_4px_12px_rgba(15,23,42,0.08),0_24px_60px_rgba(15,23,42,0.16)]"
           >
             <Command.List className="max-h-[460px] overflow-y-auto py-1.5">{body}</Command.List>
-            <PanelFooter seeAll={!resting && total > 0 ? { href: resultsHref, query: trimmed, count: total } : null} />
+            <PanelFooter />
           </PopoverContent>
         </Popover>
       </Command>
@@ -278,13 +263,7 @@ export default function GlobalSearch({
       {mobileOpen &&
         createPortal(
           <div className="bg-background fixed inset-0 z-50 flex flex-col md:hidden">
-            <Command
-              shouldFilter={false}
-              loop
-              label={COPY.ariaLabel}
-              className="flex min-h-0 flex-1 flex-col"
-              onKeyDown={onListKeyDown}
-            >
+            <Command shouldFilter={false} loop label={COPY.ariaLabel} className="flex min-h-0 flex-1 flex-col">
               <div className="bg-card flex items-center gap-3 border-b border-[var(--flota-hair-2)] px-4 pt-[52px] pb-3">
                 <div className="bg-background border-foreground flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[12px] border-[1.5px] px-3">
                   <Search className="size-[17px] shrink-0 text-[var(--flota-ink-2)]" />
@@ -320,19 +299,9 @@ export default function GlobalSearch({
                 ) : total === 0 ? (
                   <NoResults query={trimmed} mobile />
                 ) : (
-                  <>
-                    <ResultGroups results={results} query={trimmed} today={today} />
-                    {/* The "see all" button scrolls WITH the results (contract Surface 4),
-                        it is not pinned to the viewport bottom — the floating tab bar
-                        already owns that band. */}
-                    <a
-                      href={resultsHref}
-                      className="bg-foreground text-background mx-4 mt-3 mb-2 flex h-12 items-center justify-center gap-2 rounded-[12px] text-[14.5px] font-[650]"
-                    >
-                      <Search className="size-4" />
-                      {COPY.seeAll} · {total} {pluralPl(total, RESULT_FORMS)}
-                    </a>
-                  </>
+                  // The list simply ends after the last row (contract Surface 4) —
+                  // there is nothing to link out to, so nothing follows it.
+                  <ResultGroups results={results} query={trimmed} today={today} />
                 )}
               </Command.List>
             </Command>
@@ -496,30 +465,22 @@ function QuickJumpGroup({
 }
 
 /**
- * Desktop panel footer. With results it becomes the accent "see all" line; without
- * them it carries the keyboard hints. `esc zamknij` sits on the right either way.
- * Contract Surface 2 `PanelFooter`.
+ * Desktop panel footer — the keyboard hints, in EVERY phase (contract Surface 2
+ * `PanelFooter`). It used to swap to an accent "see all" line once there were
+ * results; with the results page gone there is nowhere to link out to, and the
+ * design draws the hints unconditionally.
  */
-function PanelFooter({ seeAll }: { seeAll: { href: string; query: string; count: number } | null }) {
+function PanelFooter() {
   return (
     <div className="bg-background flex items-center justify-between gap-3 border-t border-[var(--flota-hair-2)] px-4 py-2.5">
-      {seeAll ? (
-        <a href={seeAll.href} className="text-primary flex min-w-0 items-center gap-1.5 text-[11px] font-[650]">
-          <ArrowRight className="size-3.5 shrink-0" />
-          <span className="truncate">
-            {COPY.seeAll} „{seeAll.query}” · {seeAll.count} {pluralPl(seeAll.count, RESULT_FORMS)}
-          </span>
-        </a>
-      ) : (
-        <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-          <Kbd>↑</Kbd>
-          <Kbd>↓</Kbd>
-          {COPY.navigate}
-          <span className="px-0.5">·</span>
-          <Kbd>↵</Kbd>
-          {COPY.open}
-        </span>
-      )}
+      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+        <Kbd>↑</Kbd>
+        <Kbd>↓</Kbd>
+        {COPY.navigate}
+        <span className="px-0.5">·</span>
+        <Kbd>↵</Kbd>
+        {COPY.open}
+      </span>
       <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-[11px]">
         <Kbd>esc</Kbd>
         {COPY.close}

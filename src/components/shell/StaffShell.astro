@@ -17,10 +17,7 @@ import { countReturnsDueToday } from "../../lib/services/protocols";
 // are intentionally omitted until those slices land.
 
 interface Props {
-  // "search" is the /dashboard/search results page (S-13). It deliberately
-  // highlights no nav item — search is reached from the header field / ⌘K / the
-  // mobile magnifier, not from a tab.
-  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff" | "search";
+  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -185,21 +182,13 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     <header class="border-border bg-card hidden items-center justify-between gap-4 border-b px-8 py-[22px] md:flex">
       <div class="min-w-0">
         {
-          /* `header-title` lets a page compose its own left block when the plain
-            title/subtitle pair cannot express it — the search results page needs an
-            eyebrow ABOVE a mixed-weight headline. Everything else falls through to
-            the default below. */
+          showHeader && (
+            <>
+              <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
+              {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+            </>
+          )
         }
-        <slot name="header-title">
-          {
-            showHeader && (
-              <>
-                <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-                {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-              </>
-            )
-          }
-        </slot>
       </div>
       <div class="flex min-w-0 items-center justify-end gap-3">
         <slot name="header-action" />
@@ -258,18 +247,16 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       ))
     }
     {
-      /* Search — not a NAV entry (it has no route of its own; the results page is
-        reached by submitting a query). A button rather than a link, because it asks
-        the GlobalSearch island to open its full-screen view via a document event. */
+      /* Search — not a NAV entry: it has no route of its own, and now that the
+        results page is gone it can never be the "active" page either. A button
+        rather than a link, because it asks the GlobalSearch island to open its
+        full-screen view via a document event. */
     }
     <button
       type="button"
       data-search-trigger
       aria-label="Szukaj"
-      class:list={[
-        "relative flex size-9 items-center justify-center rounded-full transition-colors sm:size-10",
-        active === "search" ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
-      ]}
+      class="relative flex size-9 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white sm:size-10"
     >
       <NavIcon glyph="search" size={18} />
     </button>
