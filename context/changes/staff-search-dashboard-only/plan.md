@@ -838,9 +838,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 6.4 `/dashboard/protocols/{id}` at `md+` has no empty band above the protocol card
-- [ ] 6.5 The other 9 staff pages' bars are unchanged
-- [ ] 6.6 ⌘K and the mobile overlay still work on `/dashboard/protocols/{id}`
+- [x] 6.4 `/dashboard/protocols/{id}` at `md+` has no empty band above the protocol card — 1f6cd9b
+- [x] 6.5 The other 9 staff pages' bars are unchanged — 1f6cd9b
+- [x] 6.6 ⌘K and the mobile overlay still work on `/dashboard/protocols/{id}` — 1f6cd9b
 
 ### Phase 7: Don't let ⌘K discard a part-filled form
 
@@ -853,9 +853,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 7.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser asks before leaving. (Restated: Phase 8 removed ⌘K from this page, so the original ⌘K trigger no longer exists. Reload is the same code path — a full-document navigation.)
-- [ ] 7.6 A successful save still redirects to `/dashboard/vehicles` with no prompt
-- [ ] 7.7 Opening `/dashboard/vehicles/{id}/edit` and changing nothing, then reloading → no prompt
+- [x] 7.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser asks before leaving. (Restated: Phase 8 removed ⌘K from this page, so the original ⌘K trigger no longer exists. Reload is the same code path — a full-document navigation.) — f0fd51a
+- [x] 7.6 A successful save still redirects to `/dashboard/vehicles` with no prompt — f0fd51a
+- [x] 7.7 Opening `/dashboard/vehicles/{id}/edit` and changing nothing, then reloading → no prompt — f0fd51a
 
 ### Phase 8: No ⌘K on the two form sub-screens
 
@@ -868,6 +868,6 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Manual
 
-- [ ] 8.5 ⌘K on `/dashboard/vehicles/new` and `/dashboard/vehicles/{id}/edit` does nothing in the app
-- [ ] 8.6 ⌘K still works on the seven nav pages and on `/dashboard/protocols/{id}`
-- [ ] 8.7 ⌘K still works after navigating _away_ from a form page to a nav page (the singleton re-arms)
+- [x] 8.5 ⌘K on `/dashboard/vehicles/new` and `/dashboard/vehicles/{id}/edit` does nothing in the app — 29d9fbf
+- [x] 8.6 ⌘K still works on the seven nav pages and on `/dashboard/protocols/{id}` — 29d9fbf
+- [x] 8.7 ⌘K still works after navigating _away_ from a form page to a nav page (the singleton re-arms) — 29d9fbf

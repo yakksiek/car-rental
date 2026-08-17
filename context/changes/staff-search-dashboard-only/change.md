@@ -70,6 +70,12 @@ from inside a screen and holds a form" (the two `VehicleForm` sub-screens don't)
 `protocols/[id]` keeps it: read-only view, nothing to lose. Phase 7's guard stays
 as belt-and-braces for reload / closed tab / external link.
 
+**All 52 Progress rows are green** as of 2026-08-17 — every automated gate plus the
+full manual walkthrough of Phases 1–8. Nothing is pushed; the branch is ready to
+merge on top of its two unmerged siblings (`feature/staff-account` on origin,
+`feature/manual-reservation` in a sibling worktree), which was the point of landing
+this narrowing before S-13 ever merged.
+
 ## Where things stand
 
 - Worktree: /Users/user/git/przeprogramowani/fleet-rent-staff-global-search
