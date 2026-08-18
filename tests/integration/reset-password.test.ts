@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { POST as resetPasswordPOST } from "../../src/pages/api/auth/reset-password";
 import { LINK_ORIGIN_COOKIE, PW_SET_DONE_COOKIE } from "../../src/lib/auth-session";
 import { anonClient, serviceClient } from "../helpers/clients";
-import { anonContext, buildApiContext } from "../helpers/context";
+import { anonContext, buildApiContext, cookieOptions } from "../helpers/context";
 import { linkSessionContext } from "../helpers/link-session";
 
 // Set-password endpoint (S-14 Phase 1). Until this slice the route set a password
@@ -153,6 +153,13 @@ describe("POST /api/auth/reset-password — session origin", () => {
     // a double submit nor a typed `?done=1` can replay either screen.
     expect(context.cookies.get(LINK_ORIGIN_COOKIE)).toBeUndefined();
     expect(context.cookies.get(PW_SET_DONE_COOKIE)?.value).toBe("1");
+
+    // …and it is spent at the path it was written at (auth-followups, F7). The
+    // page lives under /auth while its form posts to /api/auth, so an
+    // `/auth`-scoped clear would leave a real browser's marker standing and the
+    // one-shot would silently stop being one — invisible to every assertion
+    // above, since this double's jar is path-blind.
+    expect(cookieOptions(context, LINK_ORIGIN_COOKIE)?.path).toBe("/");
   });
 
   it("sets the first password for an invite-link session (the new-hire path)", async () => {

@@ -436,28 +436,28 @@ S-08 production rollout chain.
 
 #### Automated
 
-- [x] 2.1 Probe test shows a type-mismatched `verifyOtp` is REJECTED
-- [x] 2.2 Type checking passes: `npx astro check`
-- [x] 2.3 Linting passes: `npm run lint`
-- [x] 2.4 Integration tests pass: `npm run test:integration`
-- [x] 2.5 Full e2e suite passes on port 4321
+- [x] 2.1 Probe test shows a type-mismatched `verifyOtp` is REJECTED — 2e85d2a
+- [x] 2.2 Type checking passes: `npx astro check` — 2e85d2a
+- [x] 2.3 Linting passes: `npm run lint` — 2e85d2a
+- [x] 2.4 Integration tests pass: `npm run test:integration` — 2e85d2a
+- [x] 2.5 Full e2e suite passes on port 4321 — 2e85d2a
 
 #### Manual
 
-- [x] 2.6 A real invite link still shows `Witaj we Flocie` and the invite subtitle
-- [x] 2.7 A real recovery link still shows the recovery copy
-- [x] 2.8 `&flow=invite` on a recovery link no longer flips it to the invite screen
+- [x] 2.6 A real invite link still shows `Witaj we Flocie` and the invite subtitle — 2e85d2a
+- [x] 2.7 A real recovery link still shows the recovery copy — 2e85d2a
+- [x] 2.8 `&flow=invite` on a recovery link no longer flips it to the invite screen — 2e85d2a
 
 ### Phase 3: Hygiene — body guard, import headers, cookie double (F5, F6, F7)
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Unit tests pass: `npm test`
-- [ ] 3.4 Integration tests pass, including the new `path: "/"` assertion
-- [ ] 3.5 Production build succeeds: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Unit tests pass: `npm test`
+- [x] 3.4 Integration tests pass, including the new `path: "/"` assertion
+- [x] 3.5 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 3.6 A wrong sign-in password still shows correct Polish copy
+- [x] 3.6 A wrong sign-in password still shows correct Polish copy
