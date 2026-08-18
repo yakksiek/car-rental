@@ -25,9 +25,11 @@ diff, so the divergence is recorded here rather than left silent:
   it captures radii and spacing as ranges, which read as implementer license.
   That failure mode did not occur here: every value in `design-contract.md` was
   transcribed from the code-backed JSX via `DesignSync get_file`, which is the
-  high-fidelity path the lesson actually asks for. Diffing a render of the app
-  against a render of that same source re-verifies the transcription, not the
-  design.
+  high-fidelity path the lesson actually asks for. **This bullet used to go on to
+  claim that a diff would therefore re-verify the transcription rather than the
+  design — withdrawn 2026-08-17.** That only follows if the app matches the
+  transcription, and the impl review's F2/F4 found two `exact` lines it did not
+  (fixed in Phase 10). The skip decision stands on the two bullets below.
 - **The gate would have missed this change's only real defect.** The mobile
   active row (D19) is invisible in the mock too — but no mobile screen passes
   `active` (`ScreenSearchLive` sets `active={i === 0}`; `ScreenSearchMobileLive`
@@ -70,8 +72,10 @@ from inside a screen and holds a form" (the two `VehicleForm` sub-screens don't)
 `protocols/[id]` keeps it: read-only view, nothing to lose. Phase 7's guard stays
 as belt-and-braces for reload / closed tab / external link.
 
-**All 52 Progress rows are green** as of 2026-08-17 — every automated gate plus the
-full manual walkthrough of Phases 1–8. Nothing is pushed; the branch is ready to
+**51 of the 52 Progress rows for Phases 1–8 are green** as of 2026-08-17 — every
+automated gate plus the full manual walkthrough. The 52nd is row **4.6**, the
+vision-diff gate, which is `[~]`: closed by owner decision without being run, not
+done. Nothing is pushed; the branch is ready to
 merge on top of its two unmerged siblings (`feature/staff-account` on origin,
 `feature/manual-reservation` in a sibling worktree), which was the point of landing
 this narrowing before S-13 ever merged.
