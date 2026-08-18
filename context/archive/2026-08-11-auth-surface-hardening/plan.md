@@ -717,7 +717,7 @@ to the prod origin.
 
 ## References
 
-- Research: `context/changes/auth-surface-hardening/research.md`
+- Research: `context/archive/2026-08-11-auth-surface-hardening/research.md`
 - Problem statement + scripted reproduction: `context/changes/staff-account/follow-ups/review-fixes.md`
 - Roadmap slice: `context/foundation/roadmap.md` §S-14
 - The reference gate to mirror: `src/pages/api/auth/change-password.ts:39-107`

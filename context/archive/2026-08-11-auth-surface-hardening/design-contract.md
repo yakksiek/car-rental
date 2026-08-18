@@ -367,7 +367,7 @@ alert-line strings, not screen copy, and extend the shipped `MSG` idiom at
     `deviation(no artboard — refusal state discovered in impl-review)`. The set-password page mirrored
     four of the route's five gates but not the role check, so a **deactivated** staffer reached the
     full form and got an unstyled `Forbidden` on submit. Added in `auth-followups` Phase 1 (plan:
-    `context/changes/auth-followups/plan.md` §"Phase 1"; evidence: `reviews/impl-review.md` F1).
+    `context/archive/2026-08-17-auth-followups/plan.md` §"Phase 1"; evidence: `reviews/impl-review.md` F1).
     No mockup exists — the state was discovered after the design session closed — so **every
     dimension is inherited-exact, not invented**: status head `tone="ink"` / `icon="user"` per §7.1
     (the same pair R11 uses — the refusal is about _who the account is_, which is what that glyph
@@ -399,7 +399,7 @@ alert-line strings, not screen copy, and extend the shipped `MSG` idiom at
     success card, both of which omit it for exactly that reason; R5 and R13 keep theirs because
     their CTA goes to `/auth/forgot-password` instead.
 
-    The copy asserts deactivation rather than hedging. Owner decision (`auth-followups/change.md`,
+    The copy asserts deactivation rather than hedging. Owner decision (`2026-08-17-auth-followups/change.md`,
     2026-08-17): the reader already controls the mailbox that received the link, so the
     account-state disclosure is narrow, and a real ex-employee is otherwise left with no
     explanation. It is exact for the reachable path. Two other paths land here with `role = null`
@@ -407,7 +407,7 @@ alert-line strings, not screen copy, and extend the shipped `MSG` idiom at
     inserting the profiles row), a window two sequential awaits wide that no click fits inside;
     and — not a window at all — a hire whose profiles insert failed after the invite was already
     sent, who has no profiles row permanently (impl-review F6, rollback queued at
-    `auth-followups/follow-ups/review-fixes.md`). Both knowingly accepted rather than
+    `2026-08-17-auth-followups/follow-ups/review-fixes.md`). Both knowingly accepted rather than
     genericising the copy for cases this surface cannot distinguish.
 
 ---

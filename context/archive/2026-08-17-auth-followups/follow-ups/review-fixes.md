@@ -111,4 +111,4 @@ fixtures (`inviteCallbackLink`) and the existing "refused, not consumed" tests t
 
 **F10 (from the S-14 review) — `/api/auth/signout` runs at supabase-js's default _global_
 scope**, so signing out one browser revokes every device session. Recorded at
-`../../auth-surface-hardening/follow-ups/review-fixes.md`; still needs a product decision.
+`../../2026-08-11-auth-surface-hardening/follow-ups/review-fixes.md`; still needs a product decision.

@@ -2,7 +2,7 @@
 
 # Plan Review: S-14 Review Follow-ups
 
-- **Plan**: `context/changes/auth-followups/plan.md`
+- **Plan**: `context/archive/2026-08-17-auth-followups/plan.md`
 - **Mode**: Deep
 - **Date**: 2026-08-17
 - **Verdict**: REVISE (at review) → **SOUND** after triage, with one accepted risk
