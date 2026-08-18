@@ -36,7 +36,7 @@ import {
 // a signed-OUT browser open their own anonymous context instead; a file-level
 // `test.use` would take the storage state away from the ones that need it.
 //
-// The last test carries a second, later risk (auth-followups, F1): the same
+// The fourth test carries a second, later risk (auth-followups, F1): the same
 // "explain the refusal, don't answer a raw status" property, for the deactivated
 // staffer the set-password page used to walk all the way to the submit button.
 // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ test("a deactivated staffer on a live recovery link is told why, not shown the f
   await deactivateStaffUser(id);
   const link = await recoveryCallbackLink(email);
 
-  // Signed-OUT, in its own context: the four tests above need the chromium
+  // Signed-OUT, in its own context: the three tests above need the chromium
   // project's `employee` storage state, so the opt-out is per-test (same pattern
   // as the two anonymous contexts above).
   const anon = await browser.newContext({ storageState: { cookies: [], origins: [] } });

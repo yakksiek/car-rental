@@ -77,6 +77,20 @@ describe("verifyOtp — the link's type is resolved against the token, not taken
     expect(data.user).toBeNull();
   });
 
+  it("REJECTS a recovery token presented as type=signup", async () => {
+    // `signup` is the second member of `LINK_TYPES` that `callback.ts` treats as
+    // invite-ish, so relabelling a recovery link with it is the same move as the
+    // case above with a different string. Pinned separately (impl-review F5):
+    // one member passing is no evidence for the other.
+    const tokenHash = await mintRecoveryToken();
+
+    const { data, error } = await anonClient().auth.verifyOtp({ token_hash: tokenHash, type: "signup" });
+
+    expect(error).not.toBeNull();
+    expect(data.session).toBeNull();
+    expect(data.user).toBeNull();
+  });
+
   it("accepts the same token shape when the type matches (control)", async () => {
     // Without this the case above proves nothing — a rejection would read the
     // same if the fixture had never minted a usable token at all.
