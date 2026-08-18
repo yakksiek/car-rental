@@ -1,5 +1,5 @@
 // core
-import type { APIContext } from "astro";
+import type { APIContext, AstroCookieSetOptions } from "astro";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 // others
@@ -71,9 +71,38 @@ export interface BuildApiContextOptions {
    * Incoming cookies, name → value. Backed by a Map the handler also writes
    * through, so a `set` / `delete` it performs is observable afterwards via
    * `context.cookies.get(name)` — which is how the S-14 one-shot marker
-   * (spent on success, kept on a validation failure) is asserted.
+   * (spent on success, kept on a validation failure) is asserted. The attributes
+   * of those writes are observable too, via `cookieOptions(context, name)`.
    */
   cookies?: Record<string, string>;
+}
+
+// Attribute side-channel for the cookie double (auth-followups, F7). The double
+// used to drop its third argument entirely, so `path` — called "load-bearing" in
+// auth-session.ts, because an `/auth`-scoped marker is invisible to the handler
+// at `/api/auth/reset-password` — and `secure` were unassertable at this layer.
+//
+// A SECOND map rather than a `{ value, options }` jar entry, for two reasons:
+//   - the value jar must stay live-cookies-only, so a `delete` really removes
+//     the key and `get`/`has` answer exactly as they do today. An entry recording
+//     a delete's options would leave the key present and turn
+//     `reset-password.test.ts`'s "marker is spent" assertion red.
+//   - `buildApiContext` returns `... as unknown as APIContext`, so a test sees
+//     Astro's `AstroCookies`, whose `get()` yields `{ value, json(), … }` and has
+//     no `options` member — `get(X)?.options` would not type-check under
+//     `astro check` / the type-aware lint rules. Going through the exported
+//     function below needs no cast.
+//
+// Keyed by the double itself, so it is reachable from a plain `APIContext`.
+const COOKIE_OPTIONS = new WeakMap<object, Map<string, AstroCookieSetOptions | undefined>>();
+
+/**
+ * The options a handler passed to `cookies.set` / `cookies.delete` for `name` —
+ * the LAST write wins, and `undefined` means either no write or a write that
+ * passed no options.
+ */
+export function cookieOptions(context: APIContext, name: string): AstroCookieSetOptions | undefined {
+  return COOKIE_OPTIONS.get(context.cookies)?.get(name);
 }
 
 /**
@@ -81,22 +110,32 @@ export interface BuildApiContextOptions {
  * handlers use — `get` (value only), `set`, `delete`, `has` — and nothing else;
  * Astro's real class also does signing, JSON coercion and header serialization,
  * none of which a route gate touches.
+ *
+ * Attributes go to the side map above, read back with `cookieOptions()`.
+ * `AstroCookieDeleteOptions` is `Omit<AstroCookieSetOptions, "expires" | "maxAge"
+ * | "encode">` and is not exported from `astro`, so both writers are typed with
+ * the set variant — every delete option is a member of it.
  */
 function buildCookies(initial: Record<string, string>) {
   const jar = new Map<string, string>(Object.entries(initial));
-  return {
+  const options = new Map<string, AstroCookieSetOptions | undefined>();
+  const api = {
     get: (key: string) => {
       const value = jar.get(key);
       return value === undefined ? undefined : { value };
     },
-    set: (key: string, value: string) => {
+    set: (key: string, value: string, opts?: AstroCookieSetOptions) => {
       jar.set(key, value);
+      options.set(key, opts);
     },
-    delete: (key: string) => {
+    delete: (key: string, opts?: AstroCookieSetOptions) => {
       jar.delete(key);
+      options.set(key, opts);
     },
     has: (key: string) => jar.has(key),
   };
+  COOKIE_OPTIONS.set(api, options);
+  return api;
 }
 
 /** Assemble the minimal `APIContext` the route handlers read. */

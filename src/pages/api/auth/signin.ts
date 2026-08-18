@@ -5,9 +5,28 @@ import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages"
 import { shouldSecureCookies } from "../../../lib/secure-cookies";
 
 export const POST: APIRoute = async (context) => {
-  const form = await context.request.formData();
-  const email = form.get("email") as string;
-  const password = form.get("password") as string;
+  // An unparseable body is a malformed request, not a user error — this was the
+  // one auth handler that answered it with a 500 (auth-followups, F5).
+  // `back(...)` is not reachable from the catch: it is defined below and closes
+  // over `target`, which is itself read out of the form. So this redirects
+  // directly, on the default target. `generic` is already in the signin table
+  // (auth-messages.ts), so no new copy.
+  let form: FormData;
+  try {
+    form = await context.request.formData();
+  } catch {
+    const fallback = encodeURIComponent(safeRedirectPath(null));
+    return context.redirect(`/auth/signin?error=generic&redirect=${fallback}`);
+  }
+
+  // `form.get` answers `null` for an absent field and a `File` for a file part,
+  // so the `as string` casts these replace were false on both counts. An empty
+  // string reaches GoTrue instead and comes back as the same non-enumerable
+  // `invalid_credentials` — the narrowing idiom used for `redirect` just below.
+  const emailRaw = form.get("email");
+  const passwordRaw = form.get("password");
+  const email = typeof emailRaw === "string" ? emailRaw : "";
+  const password = typeof passwordRaw === "string" ? passwordRaw : "";
 
   // Where to land after a successful login. Validated to a safe internal path;
   // defaults to the staff dashboard so staff aren't dropped on the public
