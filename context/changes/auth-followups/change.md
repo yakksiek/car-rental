@@ -1,9 +1,9 @@
 ---
 change_id: auth-followups
 title: S-14 review follow-ups — role-gate parity, marker provenance, auth hygiene
-status: implementing
+status: implemented
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 archived_at: null
 ---
 
