@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GET as searchGET } from "../../src/pages/api/search";
 import { anonClient, as, serviceClient } from "../helpers/clients";
 import { anonContext, asContext } from "../helpers/context";
+import { queryDb } from "../helpers/db";
 
 // Staff global search suite (S-13 Phase 1). `search_staff` is the ONLY read path
 // the ⌘K omnisearch has: `reservations` SELECT is revoked and `protocols` carries
@@ -23,11 +24,12 @@ import { anonContext, asContext } from "../helpers/context";
 //      and anon cannot execute the function at all (the revoke, not just the gate).
 //      The endpoint answers 401 anon / 403 role-null before it ever reaches the DB.
 //   4. INPUT HANDLING — a sub-2-character query returns nothing rather than the whole
-//      table, ILIKE metacharacters are escaped instead of widening the match, and a
+//      table, a query past 100 characters is refused with 400 before the RPC is
+//      reached, ILIKE metacharacters are escaped instead of widening the match, and a
 //      group wider than the old cap of 8 comes back whole. The per-group cap is now
-//      25 (20260817120000_search_staff_widen_cap.sql) and this fixture does NOT reach
-//      it — the upper bound is deliberately unverified, so do not read a green run as
-//      proof that 25 holds.
+//      25 (20260817120000_search_staff_widen_cap.sql). Its VALUE is pinned by reading
+//      the shipped function definition out of `pg_catalog`; it is not EXERCISED — the
+//      fixture is nine rows, so a green run proves "> 8 comes back", never "25 does".
 //
 // SERVICE-ROLE ISOLATION: every access assertion runs through `as(role)` /
 // `anonClient()` / a constructed APIContext carrying those clients. `serviceClient()`
@@ -368,6 +370,22 @@ describe("search_staff + GET /api/search (S-13 Phase 1)", () => {
     expect(vehicles).toHaveLength(9);
   });
 
+  it("ships the widened cap of 25 on every group", async () => {
+    // The fixture above reaches 9, so it can only ever prove "> 8" — a
+    // `create or replace` back to `limit 10` would pass it green. Seeding 26 rows per
+    // group to prove 25 end-to-end costs more than it buys, so pin the VALUE instead:
+    // read the definition of the function actually installed in this database. This is
+    // catalog introspection, not data access, so it goes through `queryDb` (see the
+    // note at the top of tests/helpers/db.ts).
+    const [row] = await queryDb<{ def: string }>`
+      select pg_get_functiondef('public.search_staff'::regproc) as def
+    `;
+    const caps = row.def.match(/limit \d+/g) ?? [];
+
+    // One per branch: reservations, returns, vehicles.
+    expect(caps).toEqual(["limit 25", "limit 25", "limit 25"]);
+  });
+
   // -------------------------------------------------------------------------
   // 5. GET /api/search — the endpoint's own gate and grouped response shape.
   // -------------------------------------------------------------------------
@@ -403,5 +421,20 @@ describe("search_staff + GET /api/search (S-13 Phase 1)", () => {
       expect(response.status).toBe(200);
       expect((await response.json()) as GroupedResults).toEqual({ reservations: [], returns: [], vehicles: [] });
     }
+  });
+
+  it("rejects an over-long query with 400 while 100 characters still searches", async () => {
+    // The two length failures answer differently on purpose: too SHORT is the
+    // resting state (200 + empty groups, asserted above), too LONG is a caller
+    // error. Without the upper bound an arbitrarily long ILIKE pattern would reach
+    // the definer RPC on every debounced keystroke.
+    const tooLong = await asContext("employee", { method: "GET", path: `/api/search?q=${"a".repeat(101)}` });
+    const rejected = await searchGET(tooLong);
+    expect(rejected.status).toBe(400);
+
+    const atLimit = await asContext("employee", { method: "GET", path: `/api/search?q=${"a".repeat(100)}` });
+    const accepted = await searchGET(atLimit);
+    expect(accepted.status).toBe(200);
+    expect((await accepted.json()) as GroupedResults).toEqual({ reservations: [], returns: [], vehicles: [] });
   });
 });

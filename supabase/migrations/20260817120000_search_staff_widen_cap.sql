@@ -20,6 +20,12 @@
 -- untouched), same role gate, same 2-character floor, same ILIKE escaping, same
 -- ordering per group.
 --
+-- SHAPE STABILITY, NOT RENDERING: `vehicle_model` and `vehicle_category` are no
+-- longer read by any row component (the vehicle row draws the make and the plate;
+-- category was never drawn). They are kept because freezing the `returns table`
+-- shape is what lets this migration skip type regeneration — not because anything
+-- renders them.
+--
 -- Reversible by a `create or replace` back to `limit 8`.
 
 -- `create or replace` preserves the existing ACL, so the revoke/grant pair at the

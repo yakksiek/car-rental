@@ -7,10 +7,11 @@ import { MONTHS_ABBR_PL } from "./pl-date";
 // testable on their own.
 //
 // Like `pl-date`, dates are handled as ISO `YYYY-MM-DD` STRINGS and never routed
-// through `Intl`: the Cloudflare workerd runtime ships a trimmed ICU and cannot be
-// trusted for Polish month names server-side, and these rows are server-rendered
-// on the results page. Splitting the string also sidesteps the timezone question
-// entirely — a calendar date has no instant to shift.
+// through `Intl`, matching the rest of the app: the Cloudflare workerd runtime ships
+// a trimmed ICU and cannot be trusted for Polish month names server-side. Both call
+// sites are now client-only (the rows render inside the search dropdown), so that is
+// consistency rather than necessity. Splitting the string also sidesteps the timezone
+// question entirely — a calendar date has no instant to shift.
 
 interface IsoParts {
   year: number;

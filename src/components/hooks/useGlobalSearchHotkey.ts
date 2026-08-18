@@ -5,12 +5,14 @@ import { useEffect, useRef } from "react";
 // (S-13 Phase 2). Two things make this trickier than a plain `useEffect`:
 //
 //   1. VIEW TRANSITIONS. `<ClientRouter>` is app-wide (Layout.astro), so a staff
-//      page swap does not reload the document. A listener bound once at module
-//      load would survive (the `document` object is the same across swaps), but the
-//      React island that OWNS the handler is torn down and recreated — and Astro
-//      does not reliably run React cleanup for a swapped-away island. So the
-//      listener is installed ONCE and dispatches to whichever handler is currently
-//      registered, rather than being added and removed per mount.
+//      page swap does not reload the document. The `document` object survives the
+//      swap but the React island that owns the handler does not: it is unmounted
+//      and a new one is created. Cleanup DOES run (astro-island wires
+//      `astro:after-swap` → `unmount()` → `root.unmount()`), which is exactly the
+//      problem — a listener added per mount would be torn down with the island that
+//      added it. So the listener is a module-scoped singleton that OUTLIVES any one
+//      island, installed ONCE and dispatching to whichever handler is currently
+//      registered.
 //
 //   2. THE GUARD SHAPE. StaffShell's signout binder guards per DOM element
 //      (`form.dataset.bound`). That pattern CANNOT work here: a `document`-level
@@ -54,7 +56,7 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
-/** Idempotent: the singleton flag is what keeps `astro:page-load` from stacking handlers. */
+/** Idempotent: the singleton flag is what keeps every island mount from stacking handlers. */
 function install() {
   if (installed) {
     return;
@@ -84,13 +86,13 @@ export function useGlobalSearchHotkey(handlers: GlobalSearchHotkeyHandlers): voi
   useEffect(() => {
     // Rules of hooks: the hook is always CALLED; only the registration is gated.
     //
-    // CLEAR rather than merely skip. A view-transition swap mounts the new island
-    // before the old one is cleaned up — and per the note above, Astro does not
-    // reliably run React cleanup for a swapped-away island at all. Simply returning
-    // would leave the previous page's registration alive, so ⌘K would keep firing
-    // (into a stale handler) on a page that opted out. This branch deliberately
-    // registers NO cleanup: by the time one would run, the next page's island may
-    // already have claimed the slot, and clearing it then would break that page.
+    // CLEAR rather than merely skip. `activeHandlers` outlives every island, and a
+    // view-transition swap mounts the new island BEFORE the outgoing one is cleaned
+    // up — so simply returning would leave the previous page's registration alive
+    // and ⌘K would keep firing (into a stale handler) on a page that opted out.
+    // This branch deliberately registers NO cleanup: by the time one would run, the
+    // next page's island may already have claimed the slot, and clearing it then
+    // would break that page.
     if (!enabled) {
       activeHandlers = null;
       return;
@@ -106,15 +108,11 @@ export function useGlobalSearchHotkey(handlers: GlobalSearchHotkeyHandlers): voi
     activeHandlers = registration;
 
     install();
-    // Defensive re-arm: if a future runtime ever tears the document listener down
-    // across a swap, the next page-load reinstalls it. No-op while it is alive.
-    document.addEventListener("astro:page-load", install);
 
     return () => {
       if (activeHandlers === registration) {
         activeHandlers = null;
       }
-      document.removeEventListener("astro:page-load", install);
     };
   }, [enabled]);
 }
