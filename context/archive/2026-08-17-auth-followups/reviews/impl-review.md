@@ -2,7 +2,7 @@
 
 # Implementation Review: S-14 Review Follow-ups
 
-- **Plan**: `context/changes/auth-followups/plan.md`
+- **Plan**: `context/archive/2026-08-17-auth-followups/plan.md`
 - **Scope**: Phases 1–3 of 3 (full plan)
 - **Date**: 2026-08-18
 - **Verdict**: NEEDS ATTENTION (at review) → **APPROVED** after triage — all 9 findings fixed
@@ -106,7 +106,7 @@ case in the new probe test — both justified workflow artifacts.
 - **Severity**: ⚠️ WARNING
 - **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Plan Adherence
-- **Location**: `context/changes/auth-followups/plan.md:129`, `:131`, `:296`
+- **Location**: `context/archive/2026-08-17-auth-followups/plan.md:129`, `:131`, `:296`
 - **Detail**: Three contract points shipped differently from what the plan still says. All are
   defensible and two are recorded elsewhere, but the plan is what gets archived and read first.
   1. **Subtitle copy.** Plan `:129` says `To konto zostało dezaktywowane, więc nie można ustawić dla niego hasła. Skontaktuj się z administratorem, jeśli to pomyłka.` Shipped (`reset-password.astro:107`) is `Nie można ustawić hasła do nieaktywnego konta. Jeśli to pomyłka, skontaktuj się z administratorem.` — byte-identical to `design-contract.md:375`, where it is justified as an owner re-authoring at the Phase 1 gate.
@@ -120,7 +120,7 @@ case in the new probe test — both justified workflow artifacts.
 - **Severity**: 💡 OBSERVATION
 - **Impact**: 🔎 MEDIUM — real tradeoff; pause to reason through it
 - **Dimension**: Plan Adherence
-- **Location**: `context/changes/auth-followups/plan.md` (Migration Notes)
+- **Location**: `context/archive/2026-08-17-auth-followups/plan.md` (Migration Notes)
 - **Detail**: The plan review's own F3 was ACCEPTED, not fixed: deleting the `?flow` clause is safe
   only if the hosted project's Invite template still carries `type=invite`. This repo can prove
   that for the local stack only — `supabase/config.toml` registers templates by `content_path`, a
@@ -213,7 +213,7 @@ case in the new probe test — both justified workflow artifacts.
 - **Severity**: 💡 OBSERVATION
 - **Impact**: 🏃 LOW — quick decision; fix is obvious and narrowly scoped
 - **Dimension**: Pattern Consistency
-- **Location**: `context/changes/auth-surface-hardening/design-contract.md:364-393`
+- **Location**: `context/archive/2026-08-11-auth-surface-hardening/design-contract.md:364-393`
 - **Detail**: The card itself is clean — wrapper, title, subtitle and button classes are
   byte-identical to the four sibling states in the same file, and it introduces zero new class
   strings, so the "inherited-exact" claim holds literally. Two documentation gaps: (a) the entry
@@ -291,7 +291,7 @@ unchanged. Worth knowing before reading e2e red as a code defect.
 
 ### Queued, not fixed
 
-- **Invite rollback** (F6) — `context/changes/auth-followups/follow-ups/review-fixes.md`.
+- **Invite rollback** (F6) — `context/archive/2026-08-17-auth-followups/follow-ups/review-fixes.md`.
 - **Pre-deploy template check** (F3) — now in the plan's Migration Notes, not just this file.
 - **Five remaining non-conformant import-header files** (F7) — still their own cleanup.
 - **F10 from the S-14 review** (global-scope `signOut`) — unchanged, still needs a product call.

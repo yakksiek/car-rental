@@ -1,7 +1,7 @@
 # Auth Surface Hardening (S-14) — Plan Brief
 
-> Full plan: `context/changes/auth-surface-hardening/plan.md`
-> Research: `context/changes/auth-surface-hardening/research.md`
+> Full plan: `context/archive/2026-08-11-auth-surface-hardening/plan.md`
+> Research: `context/archive/2026-08-11-auth-surface-hardening/research.md`
 
 ## What & Why
 

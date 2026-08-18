@@ -13,7 +13,7 @@ order or stopped after any one. Phase 1 is the only one with user-facing copy.
 ## Current State Analysis
 
 Every finding below was verified against the code during the review, with line numbers.
-Full evidence: `context/changes/auth-surface-hardening/reviews/impl-review.md`.
+Full evidence: `context/archive/2026-08-11-auth-surface-hardening/reviews/impl-review.md`.
 
 | ID  | Severity    | Location                                    | Gap                                                     |
 | --- | ----------- | ------------------------------------------- | ------------------------------------------------------- |
@@ -138,7 +138,7 @@ substitutes.
 
 **Reconciled after implementation (impl-review F2).** Two points were decided at the Phase 1
 gate and shipped differently from this section's first draft. Both are recorded in
-`context/changes/auth-surface-hardening/design-contract.md`; the contract above now states
+`context/archive/2026-08-11-auth-surface-hardening/design-contract.md`; the contract above now states
 what actually shipped:
 
 - **Subtitle re-authored** (`design-contract.md:373-383`) for the `hasło **do** konta`
@@ -168,7 +168,7 @@ Two paths reach the second:
 
 #### 3. Register the new state in the design contract
 
-**File**: `context/changes/auth-surface-hardening/design-contract.md`
+**File**: `context/archive/2026-08-11-auth-surface-hardening/design-contract.md`
 
 **Intent**: This is a user-facing surface with no artboard, so it needs a recorded
 deviation rather than silently inventing values — the project's design rule.
@@ -461,10 +461,10 @@ same class of hosted-config step as the rest of the S-08 rollout chain, where th
 
 ## References
 
-- Review report: `context/changes/auth-surface-hardening/reviews/impl-review.md`
-- Queued findings: `context/changes/auth-surface-hardening/follow-ups/review-fixes.md`
-- Parent slice: `context/changes/auth-surface-hardening/plan.md`
-- Design contract (inherited): `context/changes/auth-surface-hardening/design-contract.md`
+- Review report: `context/archive/2026-08-11-auth-surface-hardening/reviews/impl-review.md`
+- Queued findings: `context/archive/2026-08-11-auth-surface-hardening/follow-ups/review-fixes.md`
+- Parent slice: `context/archive/2026-08-11-auth-surface-hardening/plan.md`
+- Design contract (inherited): `context/archive/2026-08-11-auth-surface-hardening/design-contract.md`
 - Governing lesson for Phase 2's probe: `context/foundation/lessons.md` §"A typed, accepted
   API parameter is not evidence that it is enforced"
 
