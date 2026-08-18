@@ -1175,15 +1175,15 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 11.1 Type checking passes: `npx astro check`
-- [x] 11.2 Linting passes: `npm run lint`
-- [x] 11.3 Production build succeeds: `npm run build`
-- [x] 11.4 Unit tests pass: `npm test`
-- [x] 11.5 Integration suite passes: `npm run test:integration`
-- [x] 11.6 The new cap assertion fails if the expected value is changed (proves it reads the shipped cap)
+- [x] 11.1 Type checking passes: `npx astro check` — bb0480a
+- [x] 11.2 Linting passes: `npm run lint` — bb0480a
+- [x] 11.3 Production build succeeds: `npm run build` — bb0480a
+- [x] 11.4 Unit tests pass: `npm test` — bb0480a
+- [x] 11.5 Integration suite passes: `npm run test:integration` — bb0480a
+- [x] 11.6 The new cap assertion fails if the expected value is changed (proves it reads the shipped cap) — bb0480a
 
 #### Manual
 
-- [x] 11.7 ⌘K works on the seven nav pages and `/dashboard/protocols/{id}`, and does nothing on the two form sub-screens — after a full load and after a view transition
-- [x] 11.8 `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches
-- [x] 11.9 No comment in `src/` describes the results page or a search field on `protocols/[id]`
+- [x] 11.7 ⌘K works on the seven nav pages and `/dashboard/protocols/{id}`, and does nothing on the two form sub-screens — after a full load and after a view transition — bb0480a
+- [x] 11.8 `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches — bb0480a
+- [x] 11.9 No comment in `src/` describes the results page or a search field on `protocols/[id]` — bb0480a
