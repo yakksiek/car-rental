@@ -1,10 +1,10 @@
 ---
 change_id: staff-account
 title: Staff self-service account (My account) — view profile + in-session password change
-status: impl_reviewed
+status: archived
 created: 2026-08-10
-updated: 2026-08-10
-archived_at: null
+updated: 2026-08-18
+archived_at: 2026-08-18T10:52:53Z
 ---
 
 ## Notes
