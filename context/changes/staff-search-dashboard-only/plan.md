@@ -697,6 +697,265 @@ both exist.
 
 ---
 
+## Phase 9: Don't re-arm the unload guard on a successful save
+
+### Overview
+
+Phase 7 declared the `submitting` disarm "load-bearing" on the reading that
+`setSubmitting(false)` in the `finally` "re-arms it after a failure". That reading is
+wrong: the success branch `return`s from **inside** the `try` (`VehicleForm.tsx:423-425`),
+and `try { return } finally {}` always runs the `finally`. So `submitting` flips back to
+false synchronously right after `location.assign("/dashboard/vehicles")`, `dirty` is still
+true, and the effect at `:338` re-attaches `beforeunload` while the redirect is in flight.
+
+Found by `/10x-impl-review` 2026-08-17 (F1). The common case still works — no listener is
+attached at `assign()` time, so the browser's prompt-to-unload check passes before React
+re-attaches — which is why manual step 7.6 was green. It passes by ordering, not by
+construction. What it does not cover: a second navigation during the redirect (back
+button, another click) prompts on a form that was already saved.
+
+The `finally` is **pre-existing** — it arrived with the form at `14db20a`, so Phase 7 built
+on a premise about it that was never true. Resetting pending on success also breaks
+CLAUDE.md's async-button rule verbatim ("Keep the pending state through a success redirect;
+reset only on error"): the button reverts from the spinner to `Zapisz zmiany` mid-redirect,
+which re-opens a duplicate-POST window.
+
+### Changes Required:
+
+#### 1. Reset the pending flag only on the paths that stay on the page
+
+**File**: `src/components/fleet/VehicleForm.tsx`
+
+**Intent**: Take `setSubmitting(false)` out of the `finally` and call it on each path that
+returns the user to the form — the 400-with-field-errors branch, the generic-error branch,
+and the `catch`. The success branch leaves `submitting` true through the redirect, which is
+both what the effect's guard needs and what CLAUDE.md asks for. Rewrite the comment at
+`:335-337` so it describes what the code does rather than what the `finally` was assumed to do.
+
+**Contract**: `handleSubmit` loses its `finally` block; `setSubmitting(false)` appears in the
+`res.status === 400 && body.errors` branch, after `setSubmitError(body.error ?? COPY.genericError)`,
+and in the `catch`. The success branch (`:423-425`) is unchanged and never resets. The effect
+at `:338-353` is untouched — its `!dirty || submitting` guard now holds for the whole
+navigation.
+
+**Not doing**: the same fix on `ReservationForm.tsx:292-294`, which has the identical shape.
+It has no `beforeunload` guard riding on it, so it is a CLAUDE.md-conformance cleanup on its
+own schedule, not part of this defect. Flag it if you would rather land both together.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- Half-fill `/dashboard/vehicles/new`, then reload → the browser still asks before leaving
+- A successful save redirects to `/dashboard/vehicles` with no prompt, and the submit button
+  stays in its `Zapisywanie…` spinner state for the whole redirect
+- A save that fails validation (400) re-enables the button and leaves the guard armed
+- Save successfully, then press Back before the new page paints → no prompt
+
+---
+
+## Phase 10: Close the design contract's `exact` lines
+
+### Overview
+
+Three `exact` lines in `design-contract.md` describe something the app does not do. Two are
+real pixels (F2, F4 from the 2026-08-17 impl review); the third is the bookkeeping around the
+skipped vision-diff gate (F3), which belongs here because F2 and F4 are the evidence it turns on.
+
+The gate's stated rationale was that a diff would "re-verify the transcription, not the
+design", since every value came from code-backed JSX. That only follows if the app matches the
+transcription — and on these two surfaces it doesn't. The other two legs of the rationale
+(the gate would have missed D19; the change is mostly removal) still stand, so the decision to
+skip is kept — the claim that no longer holds is removed from the record.
+
+### Changes Required:
+
+#### 1. Mobile results body padding
+
+**File**: `src/components/search/GlobalSearch.tsx`
+
+**Intent**: The mobile `Command.List` is `py-1.5` (6px top and bottom) where the contract says
+`padding 4px 0 24px`. The class itself did not change in this slice, but the render did:
+until Phase 2 the bottom gap was supplied by the deleted "Zobacz wszystkie wyniki" button
+(`mx-4 mt-3 mb-2` plus its own `h-12`). The last Pojazdy row now sits 6px from the viewport edge.
+
+**Contract**: the mobile `Command.List` at `:361` becomes
+`min-h-0 flex-1 overflow-y-auto pt-1 pb-6`. The **desktop** list at `:315` keeps `py-1.5` —
+the contract gives no desktop body padding, so that value is not in scope.
+
+#### 2. One `Kbd`, at its exact values
+
+**File**: `src/components/search/GlobalSearch.tsx`, `src/components/search/SearchRows.tsx`
+
+**Intent**: `Kbd` (`GlobalSearch.tsx:383`) and `EnterChip` (`SearchRows.tsx:112`) are the same
+chip written twice, differing only by `font-sans` and `EnterChip`'s
+`group-data-[selected=true]:flex` visibility. Both diverge from the contract's single `exact`
+`Kbd` block in the same three ways, so every fix currently has to be made twice. Fold them
+into one exported component and correct the three values there.
+
+**Contract**: `Kbd` moves to a module both files import (`SearchRows.tsx` is the natural home —
+`GlobalSearch.tsx` already imports from it). Its class gains `px-[5px]` (was `px-1` = 4px;
+contract says `padding 0 5px`), `text-[var(--flota-ink-2)]` (was `text-muted-foreground`;
+contract says `tokens.ink2`) and `shadow-[0_1px_0_rgba(15,23,42,0.05)]` (was absent).
+`h-5 min-w-[18px] rounded-[5px] border border-[var(--flota-hair)] bg-card text-[11px] font-[650]`
+are already correct and stay. `EnterChip` wraps `Kbd` and keeps only the visibility class.
+Also: the `PanelFooter` hint spans (`:541`, `:549`) go from `text-[11px]` to `text-[11.5px]` —
+Surface D gives `fontSize 11.5` as `exact`.
+
+#### 3. Make the record match
+
+**File**: `context/changes/staff-search-dashboard-only/plan.md`,
+`context/changes/staff-search-dashboard-only/change.md`,
+`context/changes/staff-search-dashboard-only/design-contract.md`
+
+**Intent**: Restate Progress row 4.6 so it no longer rests on the falsified claim, and stop
+the plan counting a not-run row as done. Fix the one stale line reference in the contract.
+
+**Contract**: row 4.6's note drops the "diffing a render of the app against a render of that
+same source re-verifies the transcription, not the design" sentence and cites this review
+instead; the row is written `- [~]` (closed, not done) with a one-line legend added to the
+Progress convention note, so the completion arithmetic stops reading 52/52. `change.md`'s
+"All 52 Progress rows are green" becomes an accurate count, and its second bullet loses the
+same claim. `design-contract.md:136` updates its `GlobalSearch.tsx:266` citation to `:315`.
+
+**Not doing**: running the gate. The owner decision stands on its remaining two legs; this
+step removes a justification, not the decision.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- At 390×844 the last Pojazdy row clears the viewport edge by 24px, and the resting
+  quick-jump list is unchanged
+- The `⌘`/`K` chips in the field, the footer's `↑ ↓ ↵ esc` chips and the active row's `↵`
+  chip are visually identical to each other, and each carries the 1px bottom shadow
+- The dropdown footer hints read at 11.5px in both the resting and results phases
+- `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run
+
+---
+
+## Phase 11: Clean up what the deletion left behind
+
+### Overview
+
+Five small items from the 2026-08-17 impl review (F5–F9). None is a defect a user can reach;
+all are cases where a type, a comment or a test says something the code no longer does. Grouped
+into one phase because each is a few lines and they share no risk.
+
+### Changes Required:
+
+#### 1. The row type still accepts a dead prop
+
+**File**: `src/components/search/SearchRows.tsx`
+
+**Intent**: Phase 2 #5 said the rows "drop `className` from their props". The runtime half
+landed — `:149`, `:181`, `:210` are all `className={ROW_SHELL}` — but `RowAnchorProps` still
+spreads in `className` from the anchor props, and `{...anchor}` comes **before**
+`className={ROW_SHELL}`, so an override type-checks and is silently discarded.
+
+**Contract**: `RowAnchorProps` (`:138`) becomes
+`Omit<React.ComponentPropsWithRef<"a">, "children" | "className">`.
+
+#### 2. The inert re-arm
+
+**File**: `src/components/hooks/useGlobalSearchHotkey.ts`
+
+**Intent**: The `astro:page-load` re-arm at `:111` cannot do what its comment claims. `install()`
+early-returns on `installed`, which is never reset, so it could not reinstall anything even if
+the event fired; and `install` is one module-level function reference, so `addEventListener`
+dedupes it — the outgoing island's `removeEventListener` at `:117` removes the registration the
+incoming island just added. After the first client-side navigation nothing is registered at all.
+The hook's behaviour is correct regardless (the `document` keydown listener survives every
+swap); only the dead code and the two comments that misdescribe it need to go.
+
+**Contract**: the `document.addEventListener("astro:page-load", install)` at `:111` and its
+`removeEventListener` at `:117` are removed; the `:109-110` comment goes with them. The header
+comment at `:10-13` drops the "Astro does not reliably run React cleanup for a swapped-away
+island" claim — astro-island registers `astro:after-swap` → `unmount()`, which `@astrojs/react`
+wires to `root.unmount()`, so cleanup does run — and states the actual reason the listener is a
+module-scoped singleton: it must outlive the island that registers it. The `:87-93` comment on
+the `!enabled` branch is reworded the same way; **the `activeHandlers = null` clearing itself
+stays** — it is what stops a form page inheriting the previous page's registration.
+
+#### 3. Bound the query length
+
+**File**: `src/pages/api/search.ts`
+
+**Intent**: The deleted results page parsed `q` with
+`z.string().trim().min(MIN_QUERY_LENGTH).max(100)`; the endpoint has never had a `.max()`. With
+the page gone the repo has no length-bounded search entry, so an arbitrarily long ILIKE pattern
+reaches the definer RPC.
+
+**Contract**: `querySchema` (`:17-19`) becomes
+`z.object({ q: z.string().trim().min(MIN_QUERY_LENGTH).max(100) })`. The existing 400 branch
+already covers the failure, so no new response shape.
+
+#### 4. Comments and payload the deletion outdated
+
+**File**: `src/pages/dashboard/protocols/[id].astro`, `src/lib/search-format.ts`,
+`supabase/migrations/20260817120000_search_staff_widen_cap.sql`
+
+**Intent**: Three comments describe a world before Phase 3. `protocols/[id].astro:38-39` says
+"the always-on top bar renders search-only here" — on the one page Phase 6 exists for, which
+now renders no bar at all. `search-format.ts:12-13` says "these rows are server-rendered on the
+results page"; both call sites are client-only now. And the original migration justified two
+extra RPC columns by a `VehicleRow` that rendered make **and** model **and** category — Phase 4
+dropped the model and category was never rendered, so `SearchResultVehicle.model` /
+`.category` (`src/types.ts:318,320`) are dead payload on every keystroke.
+
+**Contract**: the two comments are reworded to the dropdown. The **types and the RPC shape are
+deliberately unchanged** — freezing them is what let Phase 1 skip type regeneration — so this is
+a one-line note in the new migration's header recording that `vehicle_model` and
+`vehicle_category` are carried for shape stability only, not for rendering.
+
+#### 5. Pin the cap value in the test
+
+**File**: `tests/integration/staff-search.test.ts`
+
+**Intent**: `expect(vehicles).toHaveLength(9)` against a nine-row fixture proves "> 8", never 25. The plan already records this under "Known gaps this depth leaves" and the test comments are
+honest about it, so this closes the gap rather than correcting a claim — a
+`create or replace` back to `limit 10` passes green today.
+
+**Contract**: a new assertion reads the shipped cap directly rather than seeding 26 rows —
+query `pg_get_functiondef('public.search_staff'::regproc)` and assert it contains `limit 25`
+(and no `limit 8`). The existing nine-row test and its fixture are unchanged. Update the `:26`
+header comment: the upper bound is now pinned, just not exercised end-to-end.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- Unit tests pass: `npm test`
+- Integration suite passes: `npm run test:integration`
+- The new cap assertion fails if the migration is reverted to `limit 8` (verify by temporarily
+  editing the expected value, not the migration)
+
+#### Manual Verification:
+
+- ⌘K still works on the seven nav pages and on `/dashboard/protocols/{id}`, and still does
+  nothing on the two form sub-screens, after a full load **and** after a view transition
+- `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches
+- No comment in `src/` describes the results page or a search field on `protocols/[id]`
+
+---
+
 ## Testing Strategy
 
 Depth is **minimal by decision** — the suite is repaired, not extended.
@@ -871,3 +1130,58 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 - [x] 8.5 ⌘K on `/dashboard/vehicles/new` and `/dashboard/vehicles/{id}/edit` does nothing in the app — 29d9fbf
 - [x] 8.6 ⌘K still works on the seven nav pages and on `/dashboard/protocols/{id}` — 29d9fbf
 - [x] 8.7 ⌘K still works after navigating _away_ from a form page to a nav page (the singleton re-arms) — 29d9fbf
+
+### Phase 9: Don't re-arm the unload guard on a successful save
+
+> Queued from `reviews/impl-review.md` F1 (2026-08-17).
+
+#### Automated
+
+- [x] 9.1 Type checking passes: `npx astro check`
+- [x] 9.2 Linting passes: `npm run lint`
+- [x] 9.3 Production build succeeds: `npm run build`
+- [x] 9.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [x] 9.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser still asks before leaving
+- [x] 9.6 A successful save redirects with no prompt, and the button stays in `Zapisywanie…` for the whole redirect
+- [x] 9.7 A save that fails validation (400) re-enables the button and leaves the guard armed
+- [x] 9.8 Save successfully, then press Back before the new page paints → no prompt
+
+### Phase 10: Close the design contract's `exact` lines
+
+> Queued from `reviews/impl-review.md` F2, F3, F4 (2026-08-17).
+
+#### Automated
+
+- [ ] 10.1 Type checking passes: `npx astro check`
+- [ ] 10.2 Linting passes: `npm run lint`
+- [ ] 10.3 Production build succeeds: `npm run build`
+- [ ] 10.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 10.5 At 390×844 the last Pojazdy row clears the viewport edge by 24px; the resting quick-jump list is unchanged
+- [ ] 10.6 The field, footer and active-row chips are visually identical and each carries the 1px bottom shadow
+- [ ] 10.7 The dropdown footer hints read at 11.5px in the resting and results phases alike
+- [ ] 10.8 `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run
+
+### Phase 11: Clean up what the deletion left behind
+
+> Queued from `reviews/impl-review.md` F5–F9 (2026-08-17).
+
+#### Automated
+
+- [ ] 11.1 Type checking passes: `npx astro check`
+- [ ] 11.2 Linting passes: `npm run lint`
+- [ ] 11.3 Production build succeeds: `npm run build`
+- [ ] 11.4 Unit tests pass: `npm test`
+- [ ] 11.5 Integration suite passes: `npm run test:integration`
+- [ ] 11.6 The new cap assertion fails if the expected value is changed (proves it reads the shipped cap)
+
+#### Manual
+
+- [ ] 11.7 ⌘K works on the seven nav pages and `/dashboard/protocols/{id}`, and does nothing on the two form sub-screens — after a full load and after a view transition
+- [ ] 11.8 `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches
+- [ ] 11.9 No comment in `src/` describes the results page or a search field on `protocols/[id]`

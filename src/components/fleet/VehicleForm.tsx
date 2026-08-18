@@ -334,7 +334,11 @@ export default function VehicleForm({ mode, vehicle }: Props) {
   //
   // Disarming on `submitting` is load-bearing: the success path is
   // `location.assign("/dashboard/vehicles")`, and leaving the handler attached would
-  // prompt the user on a save that worked. The `finally` re-arms it after a failure.
+  // prompt the user on a save that worked. That only holds because `submitting` stays
+  // true through the redirect — `handleSubmit` resets it on the paths that return the
+  // user to the form (400, generic error, network throw) and never on success. It must
+  // not go back into a `finally`: the success branch `return`s from inside the `try`,
+  // so a `finally` would re-attach this listener while the redirect is in flight.
   React.useEffect(() => {
     if (!dirty || submitting) {
       return;
@@ -429,12 +433,13 @@ export default function VehicleForm({ mode, vehicle }: Props) {
       if (res.status === 400 && body.errors) {
         setFieldErrors(body.errors);
         scrollToFirstError(body.errors);
+        setSubmitting(false);
         return;
       }
       setSubmitError(body.error ?? COPY.genericError);
+      setSubmitting(false);
     } catch {
       setSubmitError(COPY.genericError);
-    } finally {
       setSubmitting(false);
     }
   }
