@@ -151,7 +151,10 @@ function TrailingAffordance() {
 // `<Command.Item asChild><ReservationRow …/></Command.Item>` work: cmdk hands the
 // child its `cmdk-item` marker, `data-selected`, id and ref through Slot, and a
 // component that swallowed them would render a row the keyboard could never reach.
-type RowAnchorProps = Omit<React.ComponentPropsWithRef<"a">, "children">;
+//
+// `className` is excluded from the spread's type: it lands BEFORE
+// `className={ROW_SHELL}`, so an override would type-check and then be discarded.
+type RowAnchorProps = Omit<React.ComponentPropsWithRef<"a">, "children" | "className">;
 
 export function ReservationRow({
   row,

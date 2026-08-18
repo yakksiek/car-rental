@@ -1157,17 +1157,17 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 10.1 Type checking passes: `npx astro check`
-- [x] 10.2 Linting passes: `npm run lint`
-- [x] 10.3 Production build succeeds: `npm run build`
-- [x] 10.4 Unit tests pass: `npm test`
+- [x] 10.1 Type checking passes: `npx astro check` — da3779b
+- [x] 10.2 Linting passes: `npm run lint` — da3779b
+- [x] 10.3 Production build succeeds: `npm run build` — da3779b
+- [x] 10.4 Unit tests pass: `npm test` — da3779b
 
 #### Manual
 
-- [x] 10.5 At 390×844 the last Pojazdy row clears the viewport edge by 24px; the resting quick-jump list is unchanged
-- [x] 10.6 The field, footer and active-row chips are visually identical and each carries the 1px bottom shadow
-- [x] 10.7 The dropdown footer hints read at 11.5px in the resting and results phases alike
-- [x] 10.8 `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run
+- [x] 10.5 At 390×844 the last Pojazdy row clears the viewport edge by 24px; the resting quick-jump list is unchanged — da3779b
+- [x] 10.6 The field, footer and active-row chips are visually identical and each carries the 1px bottom shadow — da3779b
+- [x] 10.7 The dropdown footer hints read at 11.5px in the resting and results phases alike — da3779b
+- [x] 10.8 `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run — da3779b
 
 ### Phase 11: Clean up what the deletion left behind
 
@@ -1175,15 +1175,15 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [ ] 11.1 Type checking passes: `npx astro check`
-- [ ] 11.2 Linting passes: `npm run lint`
-- [ ] 11.3 Production build succeeds: `npm run build`
-- [ ] 11.4 Unit tests pass: `npm test`
-- [ ] 11.5 Integration suite passes: `npm run test:integration`
-- [ ] 11.6 The new cap assertion fails if the expected value is changed (proves it reads the shipped cap)
+- [x] 11.1 Type checking passes: `npx astro check`
+- [x] 11.2 Linting passes: `npm run lint`
+- [x] 11.3 Production build succeeds: `npm run build`
+- [x] 11.4 Unit tests pass: `npm test`
+- [x] 11.5 Integration suite passes: `npm run test:integration`
+- [x] 11.6 The new cap assertion fails if the expected value is changed (proves it reads the shipped cap)
 
 #### Manual
 
-- [ ] 11.7 ⌘K works on the seven nav pages and `/dashboard/protocols/{id}`, and does nothing on the two form sub-screens — after a full load and after a view transition
-- [ ] 11.8 `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches
-- [ ] 11.9 No comment in `src/` describes the results page or a search field on `protocols/[id]`
+- [x] 11.7 ⌘K works on the seven nav pages and `/dashboard/protocols/{id}`, and does nothing on the two form sub-screens — after a full load and after a view transition
+- [x] 11.8 `GET /api/search?q=<101 chars>` returns 400; a 100-char query still searches
+- [x] 11.9 No comment in `src/` describes the results page or a search field on `protocols/[id]`
