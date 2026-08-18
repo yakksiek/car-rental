@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // others
 import { requireRole } from "../../../lib/access";
+import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages";
 
 // In-session change-password endpoint (S-11). Unlike /api/auth/reset-password —
 // where the recovery link itself is the proof of identity — nothing here proves
@@ -18,23 +19,24 @@ import { requireRole } from "../../../lib/access";
 // Responses are redirect-shaped (like the sibling reset-password route) because
 // the caller is a native <form> POST, not a fetch client; only the hard security
 // rejections — which a legitimate form can never trigger — answer with a status.
+//
+// Zod's messages ARE the error codes (S-14, F6): no Polish sentence travels in
+// a URL any more, so `issues[0].message` is handed to the redirect as-is and the
+// page resolves it via `resolveAuthError`. An empty `current` maps to
+// `wrongCurrent` because that is what it is — the reauth below would refuse it
+// anyway, and the client form already catches the blank field before submit.
 const schema = z
   .object({
-    current: z.string().min(1, "Podaj obecne hasło"),
-    password: z.string().min(6, "Hasło musi mieć co najmniej 6 znaków"),
+    current: z.string().min(1, "wrongCurrent"),
+    password: z.string().min(6, "tooShort"),
     confirm: z.string(),
   })
-  .refine((v) => v.password === v.confirm, { message: "Hasła nie są takie same", path: ["confirm"] });
+  .refine((v) => v.password === v.confirm, { message: "mismatch", path: ["confirm"] });
 
 const PAGE = "/dashboard/account/password";
-const MSG = {
-  wrongCurrent: "Nieprawidłowe obecne hasło",
-  badPassword: "Nieprawidłowe hasło.",
-  rateLimited: "Zbyt wiele prób. Spróbuj ponownie za kilka minut.",
-} as const;
 
-const fail = (context: Parameters<APIRoute>[0], message: string) =>
-  context.redirect(`${PAGE}?error=${encodeURIComponent(message)}`);
+// Codes are ASCII identifiers from a closed set, so no encoding is needed.
+const fail = (context: Parameters<APIRoute>[0], code: AuthErrorCode) => context.redirect(`${PAGE}?error=${code}`);
 
 export const POST: APIRoute = async (context) => {
   // (a) CSRF: same-origin only, before any work.
@@ -61,18 +63,19 @@ export const POST: APIRoute = async (context) => {
   try {
     form = await context.request.formData();
   } catch {
-    return fail(context, MSG.badPassword);
+    return fail(context, "generic");
   }
 
   // `form.get` yields null for an absent field, which fails zod's *type* check
-  // rather than `.min(1)` — that surfaces zod's English default in a Polish UI.
+  // rather than `.min(1)` — that surfaces zod's English default, which would now
+  // reach the page as an unrecognised code and render nothing.
   const parsed = schema.safeParse({
     current: form.get("current") ?? "",
     password: form.get("password") ?? "",
     confirm: form.get("confirm") ?? "",
   });
   if (!parsed.success) {
-    return fail(context, parsed.error.issues[0]?.message ?? MSG.badPassword);
+    return fail(context, (parsed.error.issues[0]?.message ?? "generic") as AuthErrorCode);
   }
 
   // (e) Reauth BEFORE updating: a wrong current password must leave the account
@@ -86,13 +89,16 @@ export const POST: APIRoute = async (context) => {
     // GoTrue's sign-in limit is keyed on the caller's IP, which behind Cloudflare
     // Workers is the Worker's egress IP — one bucket shared by every user. Saying
     // "wrong password" to a throttled staffer sends them chasing the wrong problem.
-    return fail(context, reauthError.status === 429 ? MSG.rateLimited : MSG.wrongCurrent);
+    // Deliberately NOT `gotrueErrorCode`: here a 400 `invalid_credentials` means
+    // "the current password is wrong", not "your sign-in failed".
+    return fail(context, reauthError.status === 429 ? "rateLimited" : "wrongCurrent");
   }
 
-  // (f) Only now the actual change.
+  // (f) Only now the actual change. Was forwarding `error.message` verbatim —
+  // the path by which GoTrue's English `same_password` reached a Polish UI.
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    return fail(context, error.message);
+    return fail(context, gotrueErrorCode(error));
   }
 
   // (g) Revoke every OTHER session for this user. `updateUser` revokes nothing on

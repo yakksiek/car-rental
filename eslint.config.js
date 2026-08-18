@@ -79,6 +79,28 @@ const astroConfig = tseslint.config({
     "astro/no-set-html-directive": "error",
     "astro/no-unused-css-selector": "warn",
     "astro/prefer-class-list-directive": "warn",
+    // `checksVoidReturn.returns` CRASHES on a top-level `return` in Astro
+    // frontmatter — `return Astro.redirect(...)`, which is Astro's documented
+    // way to bail out of a page. `astro-eslint-parser` parses frontmatter into
+    // the Program body rather than a function body, so the rule's
+    // `getParentFunctionNode()` finds no parent and throws "Non-null Assertion
+    // Failed: Expected node to have a parent" (verified with typescript-eslint
+    // 8.59.2 + astro-eslint-parser 1.4.0). A rule crash is NOT suppressible by
+    // an eslint-disable comment, so it has to be turned off here.
+    //
+    // Only the ReturnStatement listener is dropped (it is registered solely by
+    // this sub-option) — conditionals, spreads, arguments, properties and
+    // variables still run. Measured, not assumed: a probe .astro carrying one
+    // violation per sub-check reports the SAME 5 errors with `returns` on or
+    // off. It is redundant here by construction — an explicit `: void` function
+    // returning a value is a TypeScript error (caught by `astro check`), and the
+    // contextual-void cases TS does permit are reported at the assignment /
+    // argument / property instead. Upgrading does not help: `checkReturnStatement`
+    // is byte-identical in the latest 8.67.0.
+    //
+    // `attributes: false` is carried over from the base config, which flat
+    // config would otherwise replace wholesale rather than merge.
+    "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false, returns: false } }],
   },
 });
 

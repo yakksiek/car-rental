@@ -5,11 +5,23 @@ import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "astro:env
 
 import type { Database } from "../db/database.types";
 
-export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
+// (S-14) `secure` has to be handed in per request, because `@supabase/ssr`'s
+// `DEFAULT_COOKIE_OPTIONS` contains no `secure` key at all — so with no
+// `cookieOptions` the attribute is simply never emitted on the auth cookies, and
+// OWASP marks it mandatory. Callers pass `shouldSecureCookies(context.url)`, the
+// one shared rule (`src/lib/secure-cookies.ts`), which is where the reasoning
+// for its two signals lives. Omitting the argument keeps the pre-S-14 behaviour,
+// which is what an unconfigured or test path wants.
+export function createClient(requestHeaders: Headers, cookies: AstroCookies, options?: { secure?: boolean }) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return null;
   }
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
+    // Merged over `DEFAULT_COOKIE_OPTIONS` by the library, so `path`, `sameSite`
+    // and `maxAge` keep their defaults; `httpOnly: false` also stays — it is a
+    // knowing trade (`src/components/protocol/storage.ts:15-19` needs the browser
+    // client to read the JWT for Storage uploads), recorded in `known-issues.md`.
+    cookieOptions: { secure: options?.secure ?? false },
     cookies: {
       getAll() {
         return parseCookieHeader(requestHeaders.get("Cookie") ?? "").map(({ name, value }) => ({

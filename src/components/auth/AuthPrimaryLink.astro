@@ -1,0 +1,35 @@
+---
+// others
+import { cn } from "../../lib/utils";
+
+// The primary action on the auth *state cards* (S-14) — a link, not a submit, so
+// it cannot reuse SubmitButton.tsx (a React island wrapping a <button type="submit">).
+// This is that button's ink idiom as an <a>: the spec approved in S-08 §3.14 and
+// restated in this slice's design-contract §7.3.
+//
+// Extracted in Phase 4 because five cards need it — R4 success, R5 expired (both
+// the reset-password and forgot-password branches), R12 inApp and R13 noLink.
+// Two of those (R4, R5) shipped with `bg-primary h-12 rounded-xl text-sm
+// font-semibold`, a crimson 48px button that diverged from the approved spec;
+// correcting them is design-contract deviation 2.
+//
+// The trailing `→` is decorative — the label carries the meaning — so it is
+// aria-hidden rather than exposed to a screen reader as a stray glyph.
+interface Props {
+  href: string;
+  class?: string;
+}
+
+const { href, class: className } = Astro.props;
+---
+
+<a
+  href={href}
+  class:list={cn(
+    "bg-foreground text-background hover:bg-foreground/90 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-[13px] text-[15px] font-[650] tracking-[-0.1px] transition-colors",
+    className,
+  )}
+>
+  <slot />
+  <span aria-hidden="true">→</span>
+</a>
