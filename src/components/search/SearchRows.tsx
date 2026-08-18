@@ -106,13 +106,29 @@ function MonoRef({ children }: { children: React.ReactNode }) {
   return <span className="text-muted-foreground font-mono text-[12px]">{children}</span>;
 }
 
+/**
+ * Keyboard-key chip — contract Surface D `Kbd`, at its exact values. One component
+ * for all three uses (the field's `⌘`/`K`, the panel footer's hints, and the active
+ * row's `↵`) because they are the same chip: written twice, it drifted twice.
+ * `font-sans` is not decoration — it undoes the UA's monospace default on `<kbd>`,
+ * which is what kept the old `<span>` copy looking identical.
+ */
+export function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={cn(
+        "bg-card flex h-5 min-w-[18px] items-center justify-center rounded-[5px] border border-[var(--flota-hair)] px-[5px] font-sans text-[11px] font-[650] text-[var(--flota-ink-2)] shadow-[0_1px_0_rgba(15,23,42,0.05)]",
+        className,
+      )}
+    >
+      {children}
+    </kbd>
+  );
+}
+
 /** The `↵` affordance on the active row (contract Surface 2 ReservationRow). */
 function EnterChip() {
-  return (
-    <span className="bg-card text-muted-foreground hidden h-5 min-w-[18px] items-center justify-center rounded-[5px] border border-[var(--flota-hair)] px-1 text-[11px] font-[650] group-data-[selected=true]:flex">
-      ↵
-    </span>
-  );
+  return <Kbd className="hidden group-data-[selected=true]:flex">↵</Kbd>;
 }
 
 /**

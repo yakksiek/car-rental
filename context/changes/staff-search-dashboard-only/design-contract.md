@@ -133,7 +133,7 @@ variant. `exact`.
 `exact`.
 
 **Results scroll**: `maxHeight 460`, `overflowY auto`. `exact` — already satisfied at
-`GlobalSearch.tsx:266`, no change needed.
+`GlobalSearch.tsx:315`, no change needed.
 
 **Mobile results body**: `padding 4px 0 24px`, the three groups, and **nothing after the last
 row**. `exact`.

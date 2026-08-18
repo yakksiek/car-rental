@@ -1013,7 +1013,9 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 ## Progress
 
-> Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.
+> Convention: `- [ ]` pending, `- [x]` done, `- [~]` **closed without being run** (an owner
+> decision recorded inline; it does NOT count toward the done total). Append ` — <commit sha>`
+> when a step lands. Do not rename step titles. See `references/progress-format.md`.
 
 ### Phase 1: Widen the per-group result cap
 
@@ -1072,7 +1074,7 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 - [x] 4.4 The Pojazdy row reads `Mercedes-Benz ● WX 5519M` under the vehicle name — 885a187
 - [x] 4.5 Every deviation in `design-contract.md` describes something still true of the app — 885a187
-- [x] 4.6 ~~Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations~~ — **NOT RUN, closed by owner decision 2026-08-17**: this slice's values were transcribed from the code-backed JSX, not measured off screenshots, so the gate would have re-verified a rendering of its own source. Rationale in `change.md`; the 8 superseded S-13 PNGs were pruned instead.
+- [~] 4.6 ~~Canonical PNGs landed in `design-review/`; rendered vision-diff empty apart from recorded deviations~~ — **NOT RUN, closed by owner decision 2026-08-17.** The decision stands on two legs: the gate would have missed this change's only real defect (D19, which no mobile mock screen exposes), and nearly all of the change is removal. A third leg — "the values came from the code-backed JSX, so a diff would re-verify the transcription rather than the design" — was **withdrawn on 2026-08-17**: `reviews/impl-review.md` F2/F4 found two `exact` contract lines the app did not meet, so the app did not match the transcription and a diff would have had something to say. Fixed in Phase 10; the gate is still not run. Rationale in `change.md`; the 8 superseded S-13 PNGs were pruned instead.
 
 ### Phase 5: Mobile active-row contrast
 
@@ -1137,17 +1139,17 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [x] 9.1 Type checking passes: `npx astro check`
-- [x] 9.2 Linting passes: `npm run lint`
-- [x] 9.3 Production build succeeds: `npm run build`
-- [x] 9.4 Unit tests pass: `npm test`
+- [x] 9.1 Type checking passes: `npx astro check` — 1559bef
+- [x] 9.2 Linting passes: `npm run lint` — 1559bef
+- [x] 9.3 Production build succeeds: `npm run build` — 1559bef
+- [x] 9.4 Unit tests pass: `npm test` — 1559bef
 
 #### Manual
 
-- [x] 9.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser still asks before leaving
-- [x] 9.6 A successful save redirects with no prompt, and the button stays in `Zapisywanie…` for the whole redirect
-- [x] 9.7 A save that fails validation (400) re-enables the button and leaves the guard armed
-- [x] 9.8 Save successfully, then press Back before the new page paints → no prompt
+- [x] 9.5 Half-fill `/dashboard/vehicles/new`, then reload → the browser still asks before leaving — 1559bef
+- [x] 9.6 A successful save redirects with no prompt, and the button stays in `Zapisywanie…` for the whole redirect — 1559bef
+- [x] 9.7 A save that fails validation (400) re-enables the button and leaves the guard armed — 1559bef
+- [x] 9.8 Save successfully, then press Back before the new page paints → no prompt — 1559bef
 
 ### Phase 10: Close the design contract's `exact` lines
 
@@ -1155,17 +1157,17 @@ unchanged). Reversible by a `create or replace` back to `limit 8`. Nothing is de
 
 #### Automated
 
-- [ ] 10.1 Type checking passes: `npx astro check`
-- [ ] 10.2 Linting passes: `npm run lint`
-- [ ] 10.3 Production build succeeds: `npm run build`
-- [ ] 10.4 Unit tests pass: `npm test`
+- [x] 10.1 Type checking passes: `npx astro check`
+- [x] 10.2 Linting passes: `npm run lint`
+- [x] 10.3 Production build succeeds: `npm run build`
+- [x] 10.4 Unit tests pass: `npm test`
 
 #### Manual
 
-- [ ] 10.5 At 390×844 the last Pojazdy row clears the viewport edge by 24px; the resting quick-jump list is unchanged
-- [ ] 10.6 The field, footer and active-row chips are visually identical and each carries the 1px bottom shadow
-- [ ] 10.7 The dropdown footer hints read at 11.5px in the resting and results phases alike
-- [ ] 10.8 `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run
+- [x] 10.5 At 390×844 the last Pojazdy row clears the viewport edge by 24px; the resting quick-jump list is unchanged
+- [x] 10.6 The field, footer and active-row chips are visually identical and each carries the 1px bottom shadow
+- [x] 10.7 The dropdown footer hints read at 11.5px in the resting and results phases alike
+- [x] 10.8 `plan.md`'s Progress count and `change.md`'s summary agree, and neither claims 4.6 was run
 
 ### Phase 11: Clean up what the deletion left behind
 

@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowDown, Clock, Search, Tag, Truck, X } from "lucide-r
 
 // components
 import { Popover, PopoverAnchor, PopoverContent } from "../ui/popover";
-import { ReservationRow, ReturnRow, ROW_SHELL, searchHref, VehicleRow } from "./SearchRows";
+import { Kbd, ReservationRow, ReturnRow, ROW_SHELL, searchHref, VehicleRow } from "./SearchRows";
 
 // others
 import { cn } from "../../lib/utils";
@@ -358,7 +358,7 @@ export default function GlobalSearch({
                 </button>
               </div>
 
-              <Command.List className="min-h-0 flex-1 overflow-y-auto py-1.5">
+              <Command.List className="min-h-0 flex-1 overflow-y-auto pt-1 pb-6">
                 {resting ? (
                   <QuickJumpGroup jumps={quickJumps} onNavigate={closeSearch} mobile />
                 ) : total === 0 ? (
@@ -374,15 +374,6 @@ export default function GlobalSearch({
           document.body,
         )}
     </>
-  );
-}
-
-/** `⌘` / `K` chip — contract Surface 1. */
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="bg-card text-muted-foreground flex h-5 min-w-[18px] items-center justify-center rounded-[5px] border border-[var(--flota-hair)] px-1 font-sans text-[11px] font-[650]">
-      {children}
-    </kbd>
   );
 }
 
@@ -538,7 +529,7 @@ function QuickJumpGroup({
 function PanelFooter() {
   return (
     <div className="bg-background flex items-center justify-between gap-3 border-t border-[var(--flota-hair-2)] px-4 py-2.5">
-      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+      <span className="text-muted-foreground flex items-center gap-1.5 text-[11.5px]">
         <Kbd>↑</Kbd>
         <Kbd>↓</Kbd>
         {COPY.navigate}
@@ -546,7 +537,7 @@ function PanelFooter() {
         <Kbd>↵</Kbd>
         {COPY.open}
       </span>
-      <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-[11px]">
+      <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-[11.5px]">
         <Kbd>esc</Kbd>
         {COPY.close}
       </span>
