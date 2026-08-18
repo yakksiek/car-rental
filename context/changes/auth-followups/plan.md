@@ -452,12 +452,12 @@ S-08 production rollout chain.
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Unit tests pass: `npm test`
-- [x] 3.4 Integration tests pass, including the new `path: "/"` assertion
-- [x] 3.5 Production build succeeds: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check` — bffb3d6
+- [x] 3.2 Linting passes: `npm run lint` — bffb3d6
+- [x] 3.3 Unit tests pass: `npm test` — bffb3d6
+- [x] 3.4 Integration tests pass, including the new `path: "/"` assertion — bffb3d6
+- [x] 3.5 Production build succeeds: `npm run build` — bffb3d6
 
 #### Manual
 
-- [x] 3.6 A wrong sign-in password still shows correct Polish copy
+- [x] 3.6 A wrong sign-in password still shows correct Polish copy — bffb3d6
