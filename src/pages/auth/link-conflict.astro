@@ -1,0 +1,48 @@
+---
+// components
+import AuthShell from "../../components/auth/AuthShell.astro";
+import AccountBox from "../../components/auth/AccountBox.astro";
+import StatusHead from "../../components/auth/StatusHead.astro";
+import SignOutButton from "../../components/auth/SignOutButton";
+
+// R11 — the link-conflict refusal (S-14, R3). `/auth/callback` sends a browser
+// here instead of exchanging a recovery/invite token over an existing session.
+//
+// It serves two real cases, not a hypothetical one: a signed-in staffer clicking
+// their own recovery link (they can't use the account screen — it demands the
+// current password they've forgotten), and a shared rental-desk workstation
+// where a new hire opens their invite inside a colleague's session. Silently
+// ignoring the link breaks both with no explanation, so this names the account
+// that is in the way and offers the one action that clears it.
+//
+// The token was NOT consumed on the way here, so the link still works after the
+// sign-out — which is exactly what the copy promises.
+const user = Astro.locals.user;
+if (!user) {
+  // Nobody is signed in, so there is no conflict to explain — someone typed the
+  // URL. The screen would have nothing to say.
+  return Astro.redirect("/auth/signin");
+}
+
+const metadata = user.user_metadata as { full_name?: unknown } | undefined;
+const fullName = typeof metadata?.full_name === "string" ? metadata.full_name : null;
+---
+
+<AuthShell pageTitle="Strefa pracownika — przeglądarka już zalogowana">
+  <div class="flex flex-col gap-[18px]">
+    <div>
+      <StatusHead tone="ink" icon="user" />
+      <h1 class="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">
+        Ta przeglądarka jest już zalogowana
+      </h1>
+      <p class="text-muted-foreground mt-2 text-sm leading-[1.45]">
+        Ten link otworzył się w przeglądarce, gdzie zalogowane jest inne konto. Najpierw wyloguj się, a potem otwórz
+        link ponownie z wiadomości.
+      </p>
+    </div>
+    <div>
+      <AccountBox label="Zalogowano jako" email={user.email ?? ""} fullName={fullName} class="mb-[18px]" />
+      <SignOutButton client:load />
+    </div>
+  </div>
+</AuthShell>

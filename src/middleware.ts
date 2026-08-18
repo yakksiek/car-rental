@@ -1,9 +1,15 @@
 import { defineMiddleware } from "astro:middleware";
 import { createClient } from "./lib/supabase";
 import { isRoleSufficient, resolveRequiredRole } from "./lib/access";
+import { shouldSecureCookies } from "./lib/secure-cookies";
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const supabase = createClient(context.request.headers, context.cookies);
+  // `secure` is decided per request by the one shared rule (S-14) — see
+  // `shouldSecureCookies`. Middleware is where a token refresh rewrites the auth
+  // cookies, so it is the call site that matters most.
+  const supabase = createClient(context.request.headers, context.cookies, {
+    secure: shouldSecureCookies(context.url),
+  });
 
   // Expose the per-request client (may be `null` when unconfigured) so pages and
   // services reuse it instead of re-creating one. Consumed by the catalog

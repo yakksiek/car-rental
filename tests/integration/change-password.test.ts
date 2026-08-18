@@ -107,7 +107,8 @@ describe("POST /api/auth/change-password", () => {
     const response = await changePasswordPOST(context);
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(`${PAGE}?error=${encodeURIComponent("Nieprawidłowe obecne hasło")}`);
+    // A code, not a sentence (S-14 F6) — the page resolves it to Polish.
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=wrongCurrent`);
 
     // Unchanged: the old password still signs in and the proposed one does not.
     expect((await signIn(ORIGINAL)).error).toBeNull();
@@ -124,6 +125,23 @@ describe("POST /api/auth/change-password", () => {
 
     expect((await signIn(NEXT)).error).toBeNull();
     expect((await signIn(ORIGINAL)).error).not.toBeNull();
+  });
+
+  it("translates GoTrue's `same_password` refusal into a local code (F6)", async () => {
+    // The concrete defect F6 names: this path used to forward `error.message`
+    // verbatim, putting "New password should be different from the old
+    // password." into an all-Polish UI. Asserted against the real backend rather
+    // than a mock, because the mapping is only worth anything if GoTrue really
+    // does answer `same_password` here (lessons: probe, never infer).
+    const context = await employeeContext({ current: ORIGINAL, password: ORIGINAL, confirm: ORIGINAL });
+
+    const response = await changePasswordPOST(context);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=samePassword`);
+    // No English, and nothing resembling a sentence, left in the URL.
+    expect(response.headers.get("location")).not.toContain("password should be");
+    expect((await signIn(ORIGINAL)).error).toBeNull();
   });
 
   it("revokes other sessions but keeps the caller signed in", async () => {
@@ -157,7 +175,7 @@ describe("POST /api/auth/change-password", () => {
     const response = await changePasswordPOST(context);
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(`${PAGE}?error=${encodeURIComponent("Hasła nie są takie same")}`);
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=mismatch`);
     expect((await signIn(ORIGINAL)).error).toBeNull();
   });
 
@@ -167,9 +185,7 @@ describe("POST /api/auth/change-password", () => {
     const response = await changePasswordPOST(context);
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(
-      `${PAGE}?error=${encodeURIComponent("Hasło musi mieć co najmniej 6 znaków")}`,
-    );
+    expect(response.headers.get("location")).toBe(`${PAGE}?error=tooShort`);
     expect((await signIn(ORIGINAL)).error).toBeNull();
   });
 
