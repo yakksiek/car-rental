@@ -1,4 +1,7 @@
+// core
 import type { APIRoute } from "astro";
+
+// others
 import { createClient } from "../../../lib/supabase";
 import { safeRedirectPath } from "../../../lib/safe-redirect";
 import { gotrueErrorCode, type AuthErrorCode } from "../../../lib/auth-messages";

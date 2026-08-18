@@ -16,6 +16,18 @@ import { LINK_ORIGIN_COOKIE, linkCookieOptions } from "../../lib/auth-session";
 // The invite carries `type=invite`, which is what selects the reset page's
 // invite-accept mode (see the marker below). An expired/invalid link redirects
 // to the forgot-password expired state (R5) — never a 500.
+
+// The link kinds this app actually mints. `?type` is caller-supplied, so it is
+// checked against this closed set before it reaches GoTrue rather than cast to
+// it (impl-review F4): a bare `as` narrows nothing at runtime and would forward
+// `magiclink` / `email_change` — or whatever a later GoTrue adds — verbatim.
+// Anything outside the set falls through to the expired redirect below.
+const LINK_TYPES = ["recovery", "invite", "signup"] as const;
+type LinkType = (typeof LINK_TYPES)[number];
+
+const isLinkType = (raw: string | null): raw is LinkType =>
+  raw !== null && (LINK_TYPES as readonly string[]).includes(raw);
+
 export const GET: APIRoute = async (context) => {
   // (S-14, R3) Never install a session over an existing one. This is a GET-only
   // session *installer*, and Astro exempts safe methods from its origin check,
@@ -41,28 +53,30 @@ export const GET: APIRoute = async (context) => {
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
 
-  // (auth-followups, F3) The marker's VALUE now derives from `type` alone. An
-  // ORed `?flow === "invite"` used to sit here, attacker-settable and validated
-  // by nothing, so appending `&flow=invite` to a genuine recovery link greeted a
-  // password reset with "Witaj we Flocie". `type` is different in kind:
-  // `verifyOtp` resolves the token by hash AND type, so a mismatched pair mints
-  // no session at all — probed, not assumed (lessons: "A typed, accepted API
-  // parameter is not evidence that it is enforced"). Against GoTrue v2.188.1 a
-  // recovery token presented as `type=invite` answers 403 `otp_expired`; the
-  // probe is committed at `tests/integration/auth-callback.test.ts` so a later
-  // GoTrue cannot loosen it silently. By the time the marker is stamped below,
-  // the exchange has therefore already vouched for this value.
+  // (auth-followups, F3) The marker's VALUE derives from `type` — but only on
+  // the arm that validated it. An ORed `?flow === "invite"` used to sit here,
+  // attacker-settable and validated by nothing, so appending `&flow=invite` to a
+  // genuine recovery link greeted a password reset with "Witaj we Flocie".
+  // `type` is different in kind on ONE of the two arms below: `verifyOtp`
+  // resolves the token by hash AND type, so a mismatched pair mints no session
+  // at all — probed, not assumed (lessons: "A typed, accepted API parameter is
+  // not evidence that it is enforced"). Against GoTrue v2.188.1 a recovery token
+  // presented as `type=invite` answers 403 `otp_expired`; the probe is committed
+  // at `tests/integration/auth-callback.test.ts` so a later GoTrue cannot loosen
+  // it silently.
+  //
+  // `exchangeCodeForSession` makes no such promise — it never reads `?type`. So
+  // `invite` is assigned INSIDE the `token_hash` arm, once the exchange has
+  // vouched for the value, and stays false on the `?code=` arm no matter what
+  // the query string claims. Computing it up here instead let `&type=invite` on
+  // a PKCE link resurrect the very defect above (impl-review F1). `recovery` is
+  // the conservative default: labelling an invite as a recovery only costs the
+  // softer welcome; the other way round is the defect. Our own templates never
+  // take the `?code=` arm.
   //
   // The invite template still sends `?flow=invite` — harmless, and editing a
   // template is a prod-rollout concern; nothing reads it any more.
-  //
-  // The PKCE `?code=` branch carries no type at all (`exchangeCodeForSession`
-  // reports no link kind), so `invite` stays false there and the marker is
-  // stamped `recovery`. That is the conservative default: labelling an invite as
-  // a recovery only costs the softer welcome, the other way round is the defect
-  // above. Our own templates never take that branch.
-  const invite = type === "invite" || type === "signup";
-  const mode = invite ? "?mode=invite" : "";
+  let invite = false;
 
   try {
     if (code) {
@@ -70,14 +84,18 @@ export const GET: APIRoute = async (context) => {
       if (error) {
         return context.redirect("/auth/forgot-password?expired=1");
       }
-    } else if (tokenHash && type) {
+    } else if (tokenHash && isLinkType(type)) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
-        type: type as "recovery" | "invite" | "signup" | "email",
+        type,
       });
       if (error) {
         return context.redirect("/auth/forgot-password?expired=1");
       }
+
+      // Safe here and nowhere else: the call above resolved the token by hash
+      // AND type, so it has vouched for this value.
+      invite = type === "invite" || type === "signup";
     } else {
       // No usable credential in the link.
       return context.redirect("/auth/forgot-password?expired=1");
@@ -85,6 +103,8 @@ export const GET: APIRoute = async (context) => {
   } catch {
     return context.redirect("/auth/forgot-password?expired=1");
   }
+
+  const mode = invite ? "?mode=invite" : "";
 
   // (S-14) Stamp the one-shot marker — ON SUCCESS ONLY. This is the app's single
   // choke point for minting a link session, and the only place that *knows* the

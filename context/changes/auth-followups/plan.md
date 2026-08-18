@@ -80,6 +80,10 @@ type-mismatched token; the full existing suite staying green.
   `change.md`.
 - **Not** retrofitting import headers onto the seven pre-existing auth files that lack them.
   Only the five this slice introduced. The rest is its own cleanup.
+  **Amended at impl-review (F7):** two of the seven — `src/pages/auth/reset-password.astro` and
+  `src/pages/api/auth/signin.ts` — were done after all, on the grounds that this slice had
+  already edited both files' import blocks. Both needed two headers rather than the one the
+  five introduced files needed. The remaining five pre-existing files are still deferred.
 - **Not** adding an integration-level page-render harness. Out of proportion for one branch.
 
 ## Phase 1: Role-gate parity on the set-password page (F1)
@@ -122,21 +126,45 @@ wygasł" either.
 
 **Contract**: `StatusHead tone="ink" icon="user"`, then the title/subtitle/CTA idiom the
 other four states use (`text-[28px] leading-[1.05] font-bold tracking-[-0.8px]` title,
-`text-muted-foreground mt-2 text-sm leading-[1.45]` subtitle, `AuthPrimaryLink`), plus
-`AuthBackLink`. Copy:
+`text-muted-foreground mt-2 text-sm leading-[1.45]` subtitle, `AuthPrimaryLink`). Copy:
 
 - title: `Konto jest nieaktywne`
-- subtitle: `To konto zostało dezaktywowane, więc nie można ustawić dla niego hasła. Skontaktuj się z administratorem, jeśli to pomyłka.`
-- CTA: `Wróć do logowania` → `/auth/signin`
+- subtitle: `Nie można ustawić hasła do nieaktywnego konta. Jeśli to pomyłka, skontaktuj się z administratorem.`
+- CTA: `Powrót do logowania` → `/auth/signin` (the `backToLogin` string already in
+  `design-contract.md` §9; the card first shipped `Wróć do logowania` — unified at impl-review F8)
 
 Use the typographic apostrophe/quote conventions already in this file; no ASCII
 substitutes.
 
-The copy asserts deactivation, which is exact for the reachable path. The new-hire race
-(Key Discoveries) lands on the same branch with `role = null` and would read it as false —
-but that window is two sequential awaits wide (`services/staff.ts:191-205`), narrower than
-an email round-trip, so it is accepted knowingly rather than genericising the copy for a
-case a click cannot fit inside.
+**Reconciled after implementation (impl-review F2).** Two points were decided at the Phase 1
+gate and shipped differently from this section's first draft. Both are recorded in
+`context/changes/auth-surface-hardening/design-contract.md`; the contract above now states
+what actually shipped:
+
+- **Subtitle re-authored** (`design-contract.md:373-383`) for the `hasło **do** konta`
+  collocation. The draft read `To konto zostało dezaktywowane, więc nie można ustawić dla
+niego hasła. Skontaktuj się z administratorem, jeśli to pomyłka.`
+- **No `AuthBackLink`** (`design-contract.md:385-389`, rationale also inline at
+  `reset-password.astro:110-114`): this card's CTA already targets `/auth/signin`, so a back
+  link would be a second control to the same place. Matches the R4 success card and
+  `dashboard/account/password.astro`; the states that keep a back link send their CTA to
+  `/auth/forgot-password` instead.
+
+The copy asserts deactivation, which is exact for the reachable path. But the branch fires on
+`role = null`, and `middleware.ts:36` produces that for **two** reasons — a profiles row with
+`deactivated_at` set (what the copy says), and no profiles row at all (what it does not).
+Two paths reach the second:
+
+- **The new-hire race.** `services/staff.ts:192-202` invites before inserting the profiles
+  row, so a hire has no row between those two awaits. Accepted knowingly: the window is two
+  sequential awaits wide, narrower than an email round-trip, so no click fits inside it.
+- **A failed profiles insert (impl-review F6).** If `staff.ts:200` fails, `:204` throws — and
+  the invite sent at `:192` is not rolled back. That hire keeps an `auth.users` row with no
+  profiles row **permanently**, so every click of their live invite link tells them their
+  account was deactivated. This one is not a window and the bound above does not cover it.
+  Rare (it needs the insert to fail) and rooted in `staff.ts`, not this page — the copy is
+  still right for every path this slice can reach, so it ships as-is and the missing rollback
+  is queued at `follow-ups/review-fixes.md`.
 
 #### 3. Register the new state in the design contract
 
@@ -275,7 +303,12 @@ Three independent, mechanical edits. No behaviour change except F5's error path.
 `as string` casts are false — `form.get` returns `null` for an absent field.
 
 **Contract**: Guard `await context.request.formData()` with try/catch, and replace both
-`as string` casts with `?? ""`.
+`as string` casts with a runtime narrowing.
+
+**Reconciled after implementation (impl-review F2).** This contract first said `?? ""`. What
+shipped (`signin.ts:26-29`) is `typeof emailRaw === "string" ? emailRaw : ""` — a strict
+superset, since `?? ""` substitutes only for `null` and would leave a `File` part still
+typed `string`. It also matches the narrowing already used for `redirect` at `signin.ts:35`.
 
 `back(...)` cannot be called from that catch: it is defined below the parse
 (`signin.ts:19-20`) and closes over `target`, which is itself read out of the form
@@ -400,8 +433,31 @@ Phase 2 removes a query-string read.
 
 ## Migration Notes
 
-No schema change, no data migration, no config change. Nothing in this slice affects the
-S-08 production rollout chain.
+No schema change, no data migration, no code-side config change.
+
+**One pre-deploy check, and it is not optional** (plan-review F3, accepted; restated by
+impl-review F3). Phase 2 deleted the `?flow=invite` clause, so `type` is now the only signal
+that tells `/auth/callback` an invite link is an invite. This repo can only prove the link
+carries it for the **local** stack — `supabase/config.toml` registers
+`supabase/templates/*.html` by `content_path`, a local-stack mechanism. A hosted project's
+templates are configured out-of-band (Dashboard → Authentication → Email Templates) and
+cannot be verified from here.
+
+Before deploying, open both hosted templates and confirm each link is the `token_hash` shape
+this repo's templates use:
+
+- **Invite** — must contain `token_hash` **and** `type=invite`. If it lost `type`, a new
+  hire's first-day link now renders the password-reset copy instead of "Witaj we Flocie" /
+  "Aktywuj konto". It fails silently, and e2e cannot catch it: the fixture mints links from
+  the repo's own hardcoded shape (`e2e/fixtures/staff.ts:112`), not from the hosted template.
+- **Recovery** — must contain `token_hash` **and** `type=recovery`. A template left on
+  GoTrue's default `{{ .ConfirmationURL }}` emits the PKCE `?code=` shape instead, which
+  takes the other arm of `callback.ts` — the arm whose `?type` nothing validates
+  (impl-review F1, fixed there by refusing to read `?type` on that arm at all).
+
+Both bullets are the same unknown, so one look at the two templates clears both. This is the
+same class of hosted-config step as the rest of the S-08 rollout chain, where the
+`token_hash` templates were their own distinct failure mode.
 
 ## References
 
