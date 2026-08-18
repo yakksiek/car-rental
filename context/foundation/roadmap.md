@@ -44,7 +44,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | done    |
 | S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | backlog |
 | S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
-| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | backlog |
+| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | done    |
 
 ## Streams
 
@@ -364,7 +364,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   (verified 2026-08-10 — a run on :4331 was driving a different worktree's server, which is the whole reason
   those two specs looked broken). F6 (the `?error=` whitelist) is warning-severity and rides along because it
   shares the file set.
-- **Status:** backlog
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -428,3 +428,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-09: A visitor can open three public content pages from the site nav — O nas (`/about`), FAQ (`/faq`), and Cennik (`/pricing`) — each rendered in the existing public shell over the live tokens/fonts. O nas and FAQ are static content; Cennik renders prices dynamically from the fleet data so the rates shown never drift from the catalog. SiteHeader and SiteFooter nav gain links to the three pages.** — Archived 2026-08-02 → `context/archive/2026-08-01-public-info-pages/`. Lesson: —.
 - **S-10: The public **landing** (`/`) and **fleet** (`/fleet`) pages are restyled and made fully responsive (mobile / tablet / desktop) against the Claude Design mockups, and the landing's **"Wybierz typ pojazdu"** section becomes an interactive **type explorer**. On desktop, **hovering** a vehicle-type pill previews that type's models in the **Popularne** strip below — swapping the three cards, the type badge (*Furgony → Busy osobowe → …*), and the "Wszystkie" link target; on mobile there is no hover, so **tapping** a pill selects it. From the section a visitor reaches the catalog two ways: **Cała flota** (by the section heading) opens the **full** catalog (`/fleet`), and **Wszystkie** (by the Popularne strip) opens the catalog **pre-filtered to the active type** (`/fleet?category=<type>`). On desktop, **clicking** a type pill itself also opens that pre-filtered category screen (hover previews, click navigates).** — Archived 2026-08-18 → `context/archive/2026-08-02-landing-fleet-restyle/`. Lesson: —.
 - **S-11: A logged-in employee opens their own **Profil** screen (desktop + mobile), sees their contact and work details, **changes their own password while signed in** (no email round-trip), and can log out. Read-only identity display + password change — not a full profile editor.** — Archived 2026-08-18 → `context/archive/2026-08-10-staff-account/`. Lesson: —.
+- **S-14: `/auth/reset-password` sets a password only for a session that actually came from a recovery or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from `?error=`, and Supabase's English error strings stop reaching a Polish UI.** — Archived 2026-08-18 → `context/archive/2026-08-11-auth-surface-hardening/`. Lesson: —.

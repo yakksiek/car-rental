@@ -1,18 +1,18 @@
 ---
 change_id: auth-followups
 title: S-14 review follow-ups — role-gate parity, marker provenance, auth hygiene
-status: impl_reviewed
+status: archived
 created: 2026-08-17
 updated: 2026-08-18
-archived_at: null
+archived_at: 2026-08-18T12:43:04Z
 ---
 
 ## Notes
 
 Follow-ups from the **S-14 (`auth-surface-hardening`) full-plan implementation review**,
 2026-08-17. Findings, evidence and line numbers live at
-`context/changes/auth-surface-hardening/reviews/impl-review.md`; the queued subset is
-restated at `context/changes/auth-surface-hardening/follow-ups/review-fixes.md`.
+`context/archive/2026-08-11-auth-surface-hardening/reviews/impl-review.md`; the queued subset is
+restated at `context/archive/2026-08-11-auth-surface-hardening/follow-ups/review-fixes.md`.
 
 The review returned **0 critical, 2 warnings, 8 observations**, and confirmed S-14's own
 objective behaviourally — an ordinary password session POSTing `/api/auth/reset-password`

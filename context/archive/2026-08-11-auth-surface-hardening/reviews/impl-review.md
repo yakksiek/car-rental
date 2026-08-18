@@ -2,7 +2,7 @@
 
 # Implementation Review: Auth Surface Hardening (S-14)
 
-- **Plan**: `context/changes/auth-surface-hardening/plan.md`
+- **Plan**: `context/archive/2026-08-11-auth-surface-hardening/plan.md`
 - **Scope**: All 5 phases (full plan)
 - **Date**: 2026-08-17
 - **Verdict**: NEEDS ATTENTION

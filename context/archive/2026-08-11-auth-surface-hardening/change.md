@@ -1,10 +1,10 @@
 ---
 change_id: auth-surface-hardening
 title: Gate the recovery set-password route and whitelist auth error messages
-status: impl_reviewed
+status: archived
 created: 2026-08-11
-updated: 2026-08-17
-archived_at: null
+updated: 2026-08-18
+archived_at: 2026-08-18T12:43:04Z
 ---
 
 ## Notes
