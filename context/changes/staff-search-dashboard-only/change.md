@@ -1,7 +1,7 @@
 ---
 change_id: staff-search-dashboard-only
 title: Global search becomes Pulpit-only and dropdown-only (no results page)
-status: impl_reviewed
+status: implemented
 created: 2026-08-11
 updated: 2026-08-18
 archived_at: null
@@ -72,8 +72,8 @@ from inside a screen and holds a form" (the two `VehicleForm` sub-screens don't)
 `protocols/[id]` keeps it: read-only view, nothing to lose. Phase 7's guard stays
 as belt-and-braces for reload / closed tab / external link.
 
-**51 of the 52 Progress rows for Phases 1–8 are green** as of 2026-08-17 — every
-automated gate plus the full manual walkthrough. The 52nd is row **4.6**, the
+**76 of the 77 Progress rows across Phases 1–11 are green** as of 2026-08-18 —
+every automated gate plus the full manual walkthrough. The 77th is row **4.6**, the
 vision-diff gate, which is `[~]`: closed by owner decision without being run, not
 done. Nothing is pushed; the branch is ready to
 merge on top of its two unmerged siblings (`feature/staff-account` on origin,
@@ -83,8 +83,8 @@ this narrowing before S-13 ever merged.
 **Impl review 2026-08-17 — `reviews/impl-review.md`, verdict NEEDS ATTENTION.**
 24 of 26 numbered Changes-Required items matched, all seven "What We're NOT Doing"
 guardrails held, and all five automated gates were re-run green. Nine findings
-(0 critical, 4 warnings, 5 observations) are queued as **Phases 9–11**, so the
-"ready to merge" line above is on hold until they land:
+(0 critical, 4 warnings, 5 observations) were queued as **Phases 9–11** and have
+all landed (`1559bef`, `da3779b`, `bb0480a`):
 
 - **Phase 9 (F1)** — Phase 7's disarm doesn't hold. The success branch `return`s from
   inside the `try`, so the `finally` runs on success too and re-arms `beforeunload`
@@ -102,12 +102,19 @@ guardrails held, and all five automated gates were re-run green. Nine findings
 - **Phase 11 (F5–F9)** — `className` still in `RowAnchorProps`, an inert
   `astro:page-load` re-arm, no `.max()` on the search query now that the page that
   had one is gone, three stale comments, and a cap assertion that proves "> 8"
-  rather than 25.
+  rather than 25. **Adapted on one point**: the plan's F7 contract assumed
+  `GET /api/search` already had a 400 branch to fall out of. It does not — a zod
+  failure answers `200` + empty groups so a 1-character query paints the resting
+  quick-jumps. Owner chose to add a real 400, so the two length failures now answer
+  separately: over 100 characters returns `400 {"error": "Zapytanie jest za
+długie."}` checked ahead of `safeParse`, and under `MIN_QUERY_LENGTH` keeps the
+  `200`. Both are covered by new assertions in `tests/integration/staff-search.test.ts`.
 
 ## Where things stand
 
 - Worktree: /Users/user/git/przeprogramowani/fleet-rent-staff-global-search
-  Branch feature/staff-global-search, 7 commits, NOTHING PUSHED, tip f00ffec.
+  Branch feature/staff-global-search, 27 commits ahead of main, NOTHING PUSHED,
+  tip bb0480a (7 of those commits are S-13 itself, up to f00ffec).
 - S-13 (staff-global-search) is fully implemented and committed:
   context/changes/staff-global-search/{plan.md,change.md,design-contract.md}.
   change.md is `implemented`; every Progress row is ticked with a SHA.
