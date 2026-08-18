@@ -1,9 +1,9 @@
 ---
 change_id: staff-search-dashboard-only
 title: Global search becomes Pulpit-only and dropdown-only (no results page)
-status: implemented
+status: impl_reviewed
 created: 2026-08-11
-updated: 2026-08-17
+updated: 2026-08-18
 archived_at: null
 ---
 
@@ -75,6 +75,30 @@ full manual walkthrough of Phases 1–8. Nothing is pushed; the branch is ready 
 merge on top of its two unmerged siblings (`feature/staff-account` on origin,
 `feature/manual-reservation` in a sibling worktree), which was the point of landing
 this narrowing before S-13 ever merged.
+
+**Impl review 2026-08-17 — `reviews/impl-review.md`, verdict NEEDS ATTENTION.**
+24 of 26 numbered Changes-Required items matched, all seven "What We're NOT Doing"
+guardrails held, and all five automated gates were re-run green. Nine findings
+(0 critical, 4 warnings, 5 observations) are queued as **Phases 9–11**, so the
+"ready to merge" line above is on hold until they land:
+
+- **Phase 9 (F1)** — Phase 7's disarm doesn't hold. The success branch `return`s from
+  inside the `try`, so the `finally` runs on success too and re-arms `beforeunload`
+  mid-redirect. Manual step 7.6 passed by ordering, not by construction. The
+  `finally` is pre-existing (`14db20a`), so Phase 7 built on a premise that was
+  never true; it also breaks CLAUDE.md's "keep pending through a success redirect".
+- **Phase 10 (F2, F3, F4)** — two `exact` contract lines the app doesn't meet: the
+  mobile results body lost its 24px bottom gap when Phase 2 deleted the "see all"
+  button, and the `Kbd` chip diverges on padding, colour and shadow in two
+  duplicated copies. These falsify the third leg of the row-4.6 rationale below
+  ("a diff would re-verify the transcription, not the design" — only if the app
+  matches the transcription, and here it doesn't). The decision to skip the gate
+  stands on its other two legs; the claim that doesn't hold gets removed, and row
+  4.6 stops counting as done.
+- **Phase 11 (F5–F9)** — `className` still in `RowAnchorProps`, an inert
+  `astro:page-load` re-arm, no `.max()` on the search query now that the page that
+  had one is gone, three stale comments, and a cap assertion that proves "> 8"
+  rather than 25.
 
 ## Where things stand
 
