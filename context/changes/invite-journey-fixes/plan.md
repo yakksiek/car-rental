@@ -1109,15 +1109,15 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 6.1 `grep -rn "readSessionOrigin\|readAmr\|decodeBase64Url\|SessionOrigin" src tests e2e` returns nothing
-- [x] 6.2 `grep -rn "shouldSecureCookies" src` still returns the four keep-list call sites
-- [x] 6.3 Unit tests pass: `npm test`
-- [x] 6.4 Integration tests pass: `npm run test:integration`
-- [x] 6.5 Retargeted GoTrue type-confusion probe passes against the POST
-- [x] 6.6 Type checking passes: `npx astro check`
-- [x] 6.7 Lint passes: `npm run lint`
-- [x] 6.8 Production build succeeds: `npm run build`
-- [ ] 6.9 E2E suite passes on `:4321`: `npm run test:e2e`
+- [x] 6.1 `grep -rn "readSessionOrigin\|readAmr\|decodeBase64Url\|SessionOrigin" src tests e2e` returns nothing — 233ad5e
+- [x] 6.2 `grep -rn "shouldSecureCookies" src` still returns the four keep-list call sites — 233ad5e
+- [x] 6.3 Unit tests pass: `npm test` — 233ad5e
+- [x] 6.4 Integration tests pass: `npm run test:integration` — 233ad5e
+- [x] 6.5 Retargeted GoTrue type-confusion probe passes against the POST — 233ad5e
+- [x] 6.6 Type checking passes: `npx astro check` — 233ad5e
+- [x] 6.7 Lint passes: `npm run lint` — 233ad5e
+- [x] 6.8 Production build succeeds: `npm run build` — 233ad5e
+- [x] 6.9 E2E suite passes on `:4321`: `npm run test:e2e` — 233ad5e
 
 #### Manual
 
