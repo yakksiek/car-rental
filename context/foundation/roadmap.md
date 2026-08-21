@@ -315,8 +315,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
 - **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
 - **Parallel with:** S-11, S-13.
-- **Status:** **done** — 6 phases shipped 2026-08-21 (`847ad96`, `1097951`, `571df4a`, `4b57ea7`, `daf47a6`,
-  `83721c1`, `f8ade37`), each with its vision-diff closed. Phases 1–5 delivered the picker; **Phase 6 reopened
+- **Status:** **done** — 7 phases shipped 2026-08-21 (`847ad96`, `1097951`, `571df4a`, `4b57ea7`, `daf47a6`,
+  `83721c1`, `f8ade37`, then Phase 7 `d933d17` + `ccc862f`), each with its vision-diff closed. Phases 1–5 delivered the picker; **Phase 6 reopened
   the slice the same day** after driving the result, for three surface changes already made in the design
   source: the next-free date hint is retired (it read as a claim about the range being booked once D10 dropped
   its `· kolejna rez.` anchor, and went silent on the legal same-day 10:00/14:00 changeover), the two `Termin`
@@ -351,8 +351,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
   design: it corrects a contract line recorded `exact` against a source that had already moved on, so it needs
   its own Design Alignment Audit and vision-diff gate, and the mobile sheet has to absorb a calendar without
   losing the footer (the source's collapsed date buttons handle that at rest).
-- **Status:** planned — `context/changes/manual-reservation-date-picker/plan.md` (5 phases). Absorbs S-12's
-  unimplemented Phase 9 (F11/F12).
+- **Status (superseded — see the Status line at the top of this item):** this line was written at plan time and
+  read "planned — 5 phases"; the slice shipped as 7. S-12's Phase 9 (F11/F12) was absorbed and delivered in
+  Phase 1 (`847ad96`), so S-12 carried no unimplemented work by the end.
 
 ### S-13: Staff global search
 
@@ -444,3 +445,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-08: An admin can add and remove employee accounts; employees can self-service reset their own password via email.** — Archived 2026-07-24 → `context/archive/2026-07-23-employee-account-management/`. Lesson: —.
 - **S-09: A visitor can open three public content pages from the site nav — O nas (`/about`), FAQ (`/faq`), and Cennik (`/pricing`) — each rendered in the existing public shell over the live tokens/fonts. O nas and FAQ are static content; Cennik renders prices dynamically from the fleet data so the rates shown never drift from the catalog. SiteHeader and SiteFooter nav gain links to the three pages.** — Archived 2026-08-02 → `context/archive/2026-08-01-public-info-pages/`. Lesson: —.
 - **S-12: A logged-in employee creates a **confirmed** reservation by hand for a phone-in customer — pick vehicle + dates/times, enter customer name/phone/email, with a **live availability check** — and the slot is blocked in the calendar and the customer is emailed a confirmation. The booking is tagged **"Ręczna"** (manual).** — Archived 2026-08-21 → `context/archive/2026-08-10-manual-reservation/`. Lesson: —.
+- **S-12a: In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced by the same range calendar the public booking widget already gives customers — the selected vehicle's taken days greyed, changeover days half-available — so an employee on the phone with a customer sees availability **while** picking instead of being told "Termin zajęty" after the fact.** — Archived 2026-08-21 → `context/archive/2026-08-18-manual-reservation-date-picker/`. Lesson: —.
