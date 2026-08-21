@@ -706,6 +706,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      resolve_link_token: {
+        Args: { p_token_hash: string; p_type: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       set_protocol_pdf: {
         Args: { p_id: string; p_path: string }
         Returns: {
