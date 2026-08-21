@@ -1006,13 +1006,13 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Type checking passes: `npx astro check`
-- [x] 1.3 Unit tests pass: `npm test`
-- [x] 1.4 Integration tests pass: `npm run test:integration`
-- [x] 1.5 New failure-path tests assert no orphaned `auth.users` row survives a rolled-back invite
-- [x] 1.6 Existing provisioning coverage still green (`staff.test.ts:49,:72,:82,:117,:146`)
-- [x] 1.7 Production build succeeds: `npm run build`
+- [x] 1.1 Lint passes: `npm run lint` — 4552fad
+- [x] 1.2 Type checking passes: `npx astro check` — 4552fad
+- [x] 1.3 Unit tests pass: `npm test` — 4552fad
+- [x] 1.4 Integration tests pass: `npm run test:integration` — 4552fad
+- [x] 1.5 New failure-path tests assert no orphaned `auth.users` row survives a rolled-back invite — 4552fad
+- [x] 1.6 Existing provisioning coverage still green (`staff.test.ts:49,:72,:82,:117,:146`) — 4552fad
+- [x] 1.7 Production build succeeds: `npm run build` — 4552fad
 
 #### Manual
 
@@ -1026,14 +1026,14 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly: `npx supabase migration up`
-- [ ] 2.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
-- [ ] 2.3 Type checking passes: `npx astro check`
-- [ ] 2.4 Lint passes: `npm run lint`
-- [ ] 2.5 Integration tests pass: `npm run test:integration`
-- [ ] 2.6 `rpc-execute-grants.test.ts` proves anon refused on `list_staff`, `deactivate_staff`, `mark_password_set`
-- [ ] 2.7 Backfill is behaviour-neutral — every seeded account's roster status unchanged
-- [ ] 2.8 `contract-surfaces.md` updated for the schema, RPC, and `CreateEmployeeResult` changes
+- [x] 2.1 Migration applies cleanly: `npx supabase migration up`
+- [x] 2.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
+- [x] 2.3 Type checking passes: `npx astro check`
+- [x] 2.4 Lint passes: `npm run lint`
+- [x] 2.5 Integration tests pass: `npm run test:integration`
+- [x] 2.6 `rpc-execute-grants.test.ts` proves anon refused on `list_staff`, `deactivate_staff`, `mark_password_set`
+- [x] 2.7 Backfill is behaviour-neutral — every seeded account's roster status unchanged
+- [x] 2.8 `contract-surfaces.md` updated for the schema, RPC, and `CreateEmployeeResult` changes
 
 #### Manual
 

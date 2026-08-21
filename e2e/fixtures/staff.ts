@@ -36,9 +36,15 @@ export async function createActiveEmployee(password: string): Promise<StaffFixtu
   if (error) {
     throw new Error(`fixture: createUser failed — ${error.message}`);
   }
-  const { error: pErr } = await db
-    .from("profiles")
-    .insert({ user_id: data.user.id, role: "employee", full_name: "E2E Aktywny" });
+  // `createUser({ password })` mints the password out-of-band — it never passes
+  // through api/auth/{reset,change}-password.ts, the only writers of
+  // password_set_at — so stamp it here or this ACTIVE fixture reads as INVITED.
+  const { error: pErr } = await db.from("profiles").insert({
+    user_id: data.user.id,
+    role: "employee",
+    full_name: "E2E Aktywny",
+    password_set_at: new Date().toISOString(),
+  });
   if (pErr) {
     await db.auth.admin.deleteUser(data.user.id).catch(() => undefined);
     throw new Error(`fixture: profile insert failed — ${pErr.message}`);
@@ -115,6 +121,9 @@ export async function recoveryCallbackLink(email: string): Promise<string> {
  * SINGLE USE: the token is consumed by the callback's `verifyOtp` exchange — i.e.
  * the moment it lands on the set-password form, NOT when a password is submitted.
  * A second open of the same link is correctly refused.
+ *
+ * The profiles row deliberately carries NO `password_set_at`: this fixture is the
+ * password-less invited shape phase group B's specs are read from.
  */
 export async function inviteCallbackLink(): Promise<StaffFixture & { link: string }> {
   const db = admin();

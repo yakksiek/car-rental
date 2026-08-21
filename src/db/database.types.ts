@@ -72,6 +72,7 @@ export type Database = {
           created_at: string
           deactivated_at: string | null
           full_name: string | null
+          password_set_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
@@ -80,6 +81,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          password_set_at?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          password_set_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
@@ -686,10 +689,12 @@ export type Database = {
           full_name: string
           invited_at: string
           last_sign_in_at: string
+          password_set_at: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }[]
       }
+      mark_password_set: { Args: never; Returns: undefined }
       record_email_delivery: {
         Args: {
           p_entity_id: string
