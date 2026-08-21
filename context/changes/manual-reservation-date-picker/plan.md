@@ -684,6 +684,6 @@ grant changes.
 
 #### Manual
 
-- [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — all executed except 4.10 / 4.11, blocked on the six canonical exports
+- [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — all executed except 4.10 / 4.11, blocked on the six canonical exports — daf47a6
 - [ ] 5.3 Vision-diff punch-list empty apart from recorded deviations — BLOCKED: `design-review/` is still empty (Phase 4 §5). The vision-diff cannot run without the six canonical boards.
 - [ ] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted — held until 4.10 / 4.11 / 5.3 close; marking S-12a done before the vision-diff has run would be false.
