@@ -553,6 +553,110 @@ follow-up against `BookingWidget`.
 
 ---
 
+## Phase 6: One `Termin` field, no date hint, mobile picker as its own layer
+
+### Overview
+
+Three surface changes requested after driving the shipped slice, all three already made in the design source
+(`manual-reservation.jsx`, pushed via DesignSync 2026-08-21) and verified by rendering the boards. Appended
+here rather than opened as a new change because they are small and live entirely in the code Phases 3–4 wrote
+— the same call S-12 made when its review became that plan's Phase 9.
+
+**What prompted it.** Switching vehicle with a range already picked showed **"Pojazd wolny do 1 paź"** for a
+booking five weeks out, which reads as a claim about the range being booked rather than about the _next_
+reservation. The clause that made it legible — the source's `· kolejna rez. {reference}` — is exactly what D10
+dropped for want of a reference in the PII-safe payload. Chasing that surfaced a worse one: because
+`nextBusyRangeAfter` counts only bookings starting **strictly after** the return day (matching the source's
+`b.s > ret`), a range ending on a booking's pickup day — legal, since return is 10:00 and pickup 14:00 —
+reports **"Brak innych rezerwacji w tym okresie."** while a reservation starts that afternoon. Verified against
+the running app: `22 → 24 sie` gives "Pojazd wolny do 25 sie"; `22 → 25 sie` gives the false "no other
+reservations". Rather than repair a hint nobody asked for, the hint goes.
+
+### Changes Required
+
+#### 1. Retire the next-free hint
+
+**Files**: `src/components/dashboard/ManualReservationModal.tsx`, `src/lib/availability.ts`,
+`src/lib/availability.test.ts`
+
+**Intent**: The available state becomes status only, matching the revised source. The conflict subtitle stays —
+it explains the status rather than asserting a date.
+
+**Contract**: `MrAvailability`'s available branch renders the **Termin wolny** title alone, `items-center` like
+the single-line `checking` state. `COPY.avAvailableUntil` / `avAvailableSubNone` and the `nextBusyPickup` prop
+go. `nextBusyRangeAfter` has no other caller, so it and its `describe` block are **deleted** — leaving a
+tested-but-dead export is how the next slice inherits a trap. D10 is rewritten from "the reference clause is
+dropped" to "the whole subtitle is dropped", with the same-day-changeover silence recorded as its reason.
+
+#### 2. One `Termin` field
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: The picker sets both ends of the range, so two triggers only restated what the calendar already
+carries — and invited the reading that each opened a different calendar.
+
+**Contract**: a single full-width `mrDateBtn` — same `h-10 / rounded-[10px] / border --flota-hair / bg-card /
+px-2.5 / gap-2 / text-[13px] font-semibold` — holding calendar icon 14, the range `{d MMM} – {d MMM yyyy}`
+(`"1 kwi – 2 kwi 2026"`, the first date's year elided since both share it), the day count `{n} dni` at
+`12px/600` muted, then chevron 13. Active keeps `border-[var(--foreground)]` +
+`shadow-[0_0_0_4px_rgba(15,23,42,0.06)]`. The two `mrFieldCap` captions (**Odbiór** / **Zwrot**) go with the
+second field; the **Termin** section label already names the block. Desktop's tail re-centres to
+`calc(50% - 6px)`. With no dates yet the button reads **"Wybierz termin"** and the day count is hidden —
+`deviation(undrawn-state)` **D18**, replacing D16's `"—"`, since a single field showing `"— – —"` reads as
+broken rather than empty.
+
+#### 3. Mobile: the picker is its own layer
+
+**Files**: `src/components/dashboard/ManualReservationCalendar.tsx`,
+`src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: In flow inside a scrolling body, the mobile picker moves under the thumb as the body reflows and a
+tap beside the grid can dismiss it mid-range. It becomes a sheet over the form instead.
+
+**Contract**: the calendar takes `variant: "popover" | "sheet"`. `popover` is today's card (`bg-card`,
+`border --flota-hair-2`, `rounded-[16px]`, `p-4`, `shadow-overlay`) and stays desktop-only, in flow, with the
+tail. `sheet` drops that chrome so the sheet owns the surface — no card inside a card — and the modal renders
+it on mobile as a layer **above** the form sheet: `z-[70]` over the form's `z-[60]`, scrim
+`bg-[rgba(20,18,22,0.5)]` + `backdrop-blur-sm`, `items-end`, panel `bg-card rounded-t-[26px] px-4 pt-3.5 pb-[22px]`
+with the source's `40×4` `rounded-full` grab handle above the grid. **No outside-click dismiss** — only
+**Zastosuj** closes it, so a stray tap cannot discard a half-made range. It stays inside Phase 1's busy freeze:
+not rendered while `busy`, exactly as the in-flow popover is not.
+
+#### 4. Contract + board refresh
+
+**Files**: `context/changes/manual-reservation-date-picker/design-contract.md`,
+`context/changes/manual-reservation-date-picker/design-review/*.png`,
+`context/changes/manual-reservation/design-contract.md`
+
+**Intent**: The six boards and both contracts describe the two-field surface with the hint. Leaving them is the
+exact staleness that started this slice, where S-12's contract recorded native inputs as `exact`.
+
+**Contract**: re-render the six boards from the revised source through the project's `export-shot.html`
+harness with the app's own font files (provenance already recorded); rewrite the contract's `Termin` and
+available-state sections; add **D18**, retire **D16**, restate **D10**. The S-12 contract's busy-guard line
+loses its "both `Termin` fields" plural.
+
+### Success Criteria
+
+#### Automated Verification
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+- `nextBusyRangeAfter` is gone: `grep -rn "nextBusyRangeAfter" src` returns nothing
+
+#### Manual Verification
+
+- The available panel shows **Termin wolny** alone; no date line in any vehicle/range combination
+- One `Termin` field showing `1 kwi – 2 kwi 2026` + the day count; **Wybierz termin** before anything is picked
+- Switching vehicle with a range already chosen no longer produces a date claim about another month
+- At 390px the picker opens as a sheet over the form, survives taps beside the grid, and closes only on **Zastosuj**
+- With the create held open the mobile sheet is gone — Phase 1's freeze re-run on the new layer
+- Vision-diff against the re-rendered boards clean apart from recorded deviations
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -687,3 +791,22 @@ grant changes.
 - [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — daf47a6 (4.10 / 4.11 closed in the same phase)
 - [x] 5.3 Vision-diff punch-list empty apart from recorded deviations (empty after the two fixes above; D10–D17 + D2 not re-flagged) — 83721c1
 - [x] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted — 83721c1
+
+### Phase 6: One `Termin` field, no date hint, mobile picker as its own layer
+
+#### Automated
+
+- [ ] 6.1 Type checking passes: `npx astro check`
+- [ ] 6.2 Linting passes: `npm run lint`
+- [ ] 6.3 Build passes: `npm run build`
+- [ ] 6.4 Unit tests pass: `npm test`
+- [ ] 6.5 `nextBusyRangeAfter` is gone: `grep -rn "nextBusyRangeAfter" src` returns nothing
+
+#### Manual
+
+- [ ] 6.6 The available panel shows **Termin wolny** alone; no date line in any vehicle/range combination
+- [ ] 6.7 One `Termin` field showing `1 kwi – 2 kwi 2026` + the day count; **Wybierz termin** before anything is picked
+- [ ] 6.8 Switching vehicle with a range already chosen no longer produces a date claim about another month
+- [ ] 6.9 At 390px the picker opens as a sheet over the form, survives taps beside the grid, and closes only on **Zastosuj**
+- [ ] 6.10 With the create held open the mobile sheet is gone — Phase 1's freeze re-run on the new layer
+- [ ] 6.11 Vision-diff against the re-rendered boards clean apart from recorded deviations

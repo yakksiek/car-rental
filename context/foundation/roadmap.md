@@ -315,8 +315,12 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
 - **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
 - **Parallel with:** S-11, S-13.
-- **Status:** **DONE 2026-08-21** — implemented across 5 phases (`847ad96`, `1097951`, `571df4a`, `4b57ea7`,
-  `daf47a6`), vision-diff closed.
+- **Status:** **implementing** — 5 phases shipped 2026-08-21 (`847ad96`, `1097951`, `571df4a`, `4b57ea7`,
+  `daf47a6`) with the vision-diff closed; **reopened the same day for Phase 6** after driving the result. Three
+  surface changes, already made in the design source: the next-free date hint is retired (it read as a claim
+  about the range being booked once D10 dropped its `· kolejna rez.` anchor, and went silent on the legal
+  same-day 10:00/14:00 changeover), the two `Termin` fields collapse to one now that the picker sets both ends,
+  and the mobile picker becomes a sheet over the form instead of an in-flow block.
 - **Blockers:** ~~the design source needs updating first~~ ~~the six boards must be exported~~ **none — both
   resolved.** A DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
   `MrD_Pick`/`MrM_Pick`; the `Termin` fields are `mrDateBtn` buttons, not native date inputs). The source was
