@@ -1,3 +1,6 @@
+// others
+import type { StaffStatus } from "./staff-status";
+
 // ---------------------------------------------------------------------------
 // Roster mutation-banner copy (invite-journey-fixes, phase 7).
 //
@@ -46,4 +49,32 @@ export function provisionFailureMessage(code: string | null | undefined, email: 
     return null;
   }
   return `Nie udało się utworzyć konta dla ${email}. Spróbuj ponownie.`;
+}
+
+/**
+ * The label on a password-less row's one action — a first send for someone
+ * created-but-never-invited, a resend for someone whose invite went missing.
+ *
+ * `active` is not reachable here (that row shows `Resetuj hasło` instead) but is
+ * mapped to the first-send label rather than left to throw: a wrong-but-real
+ * label degrades better than a crash or a blank button.
+ */
+export function inviteActionLabel(status: StaffStatus): string {
+  return status === "invited" ? "Wyślij ponownie zaproszenie" : "Wyślij zaproszenie";
+}
+
+/**
+ * The banner for "the account was repaired but its invitation did not go out".
+ *
+ * It lives here, beside `inviteActionLabel`, because it must NAME that button —
+ * and after a repair the target may be in either password-less state, so the two
+ * strings have to move together or the copy points at a control that row does not
+ * show. That coupling is the whole reason the design first tried to get away with
+ * one shared label (design-contract §9.2); carrying two labels is only safe while
+ * `staff-banner.test.ts` holds the two functions in agreement.
+ *
+ * Copy is `design-contract.md` §9.2, verbatim. Do not reword here.
+ */
+export function repairedMailFailedMessage(status: StaffStatus): string {
+  return `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „${inviteActionLabel(status)}” przy tej osobie.`;
 }

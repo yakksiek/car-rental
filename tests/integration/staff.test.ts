@@ -3,7 +3,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 // others
 import { anonClient, as, serviceClient } from "../helpers/clients";
-import { createEmployee, deactivateStaff, listStaff } from "../../src/lib/services/staff";
+import { settledMailCount, waitForMailCount } from "../helpers/mailpit";
+import { createEmployee, deactivateStaff, inviteEmployee, listStaff } from "../../src/lib/services/staff";
 
 // Staff account-lifecycle suite (S-08). Locks the invariants that are expensive
 // to get wrong: the create → duplicate → deactivate → reactivate lifecycle, the
@@ -58,7 +59,7 @@ const INSERT_FAILURE = {
 /**
  * Partial double over the service-role client that fails ONLY
  * `.from("profiles").insert(...)`. `auth.admin` is passed through untouched, so
- * the GoTrue invite and the compensating delete are real round-trips and the
+ * the GoTrue create and the compensating delete are real round-trips and the
  * rollback assertion below is a real assertion. Precedent for doubles at this
  * altitude: `tests/helpers/context.ts:119-139`, `src/lib/auth-session.test.ts:27-37`.
  *
@@ -69,9 +70,10 @@ const INSERT_FAILURE = {
 function failingProfileInsert(real: typeof svc, opts: { breakRollback?: boolean } = {}): typeof svc {
   const realAdmin = real.auth.admin;
   // Bound method references, not a spread — spreading a class instance drops its
-  // prototype. These five are every `auth.admin` member `createEmployee` reaches.
+  // prototype. These six are every `auth.admin` member `createEmployee` reaches.
   const adminApi = {
     listUsers: realAdmin.listUsers.bind(realAdmin),
+    createUser: realAdmin.createUser.bind(realAdmin),
     inviteUserByEmail: realAdmin.inviteUserByEmail.bind(realAdmin),
     updateUserById: realAdmin.updateUserById.bind(realAdmin),
     getUserById: realAdmin.getUserById.bind(realAdmin),
@@ -93,16 +95,27 @@ function failingProfileInsert(real: typeof svc, opts: { breakRollback?: boolean 
 }
 
 /**
- * Partial double whose ONLY difference is that `auth.resetPasswordForEmail`
- * answers an error. Everything the repair arm does — unban, profile upsert —
- * runs for real, so the assertion is "repaired AND mail failed", not "nothing
- * happened".
+ * Partial double whose ONLY difference is that the activation mail fails.
+ * Everything the repair arm does — unban, profile upsert — runs for real, so the
+ * assertion is "repaired AND mail failed", not "nothing happened".
+ *
+ * The activation mail IS the invite since phase 8, so that is the one sender to
+ * break. `createEmployee` no longer calls `resetPasswordForEmail` at all.
  */
 function mailFails(real: typeof svc): typeof svc {
+  const realAdmin = real.auth.admin;
   const double = {
     auth: {
-      admin: real.auth.admin,
-      resetPasswordForEmail: () => Promise.resolve({ data: null, error: { message: "simulated mail failure" } }),
+      admin: {
+        listUsers: realAdmin.listUsers.bind(realAdmin),
+        createUser: realAdmin.createUser.bind(realAdmin),
+        updateUserById: realAdmin.updateUserById.bind(realAdmin),
+        getUserById: realAdmin.getUserById.bind(realAdmin),
+        deleteUser: realAdmin.deleteUser.bind(realAdmin),
+        inviteUserByEmail: () =>
+          Promise.resolve({ data: { user: null }, error: { message: "simulated invite failure" } }),
+      },
+      resetPasswordForEmail: real.auth.resetPasswordForEmail.bind(real.auth),
     },
     from: real.from.bind(real),
   };
@@ -128,7 +141,7 @@ afterAll(async () => {
 });
 
 describe("staff account lifecycle (S-08)", () => {
-  it("createEmployee invites a net-new employee (created + profile + auth user)", async () => {
+  it("createEmployee creates a net-new employee SILENTLY (created + profile + auth user, no mail)", async () => {
     const email = uniqueEmail("create");
     const res = await createEmployee(svc, { email, full_name: "Jan Kowalski Żółć", origin: ORIGIN });
     expect(res.status).toBe("created");
@@ -137,8 +150,13 @@ describe("staff account lifecycle (S-08)", () => {
 
     const { data: got } = await svc.auth.admin.getUserById(res.member.id);
     expect(got.user?.email).toBe(email); // GoTrue lowercases; our tag is lowercase
-    expect(got.user?.invited_at).not.toBeNull();
-    expect(got.user?.last_sign_in_at ?? null).toBeNull(); // INVITED, not signed in yet
+    // Step 1 of two: nothing has been sent, so nothing is stamped.
+    expect(got.user?.invited_at ?? null).toBeNull();
+    expect(got.user?.last_sign_in_at ?? null).toBeNull();
+    // `email_confirm: false` is load-bearing: GoTrue refuses `inviteUserByEmail`
+    // for an address it already considers registered, so confirming here would
+    // make step 2 impossible.
+    expect(got.user?.email_confirmed_at ?? null).toBeNull();
 
     const { data: profile } = await svc
       .from("profiles")
@@ -148,7 +166,10 @@ describe("staff account lifecycle (S-08)", () => {
     expect(profile?.role).toBe("employee");
     expect(profile?.full_name).toBe("Jan Kowalski Żółć");
     expect(profile?.deactivated_at).toBeNull();
-    expect(res.member.status).toBe("invited");
+    expect(res.member.status).toBe("created");
+
+    // The claim that matters, and the one an absent error cannot make: ZERO mail.
+    expect(await settledMailCount(email)).toBe(0);
   });
 
   it("refuses a second invite for an active email (duplicate_active)", async () => {
@@ -179,11 +200,15 @@ describe("staff account lifecycle (S-08)", () => {
     const { data: bannedUser } = await svc.auth.admin.getUserById(id);
     expect(isBanned(bannedUser.user)).toBe(true);
 
-    // Re-invite the same email → reactivated: deactivated_at cleared, unbanned,
-    // name refreshed. This user never signed in, so it stays INVITED.
+    // Re-add the same email → reactivated: deactivated_at cleared, unbanned,
+    // name refreshed. This user has no password, so the repair arm invites them
+    // — a real invitation, not a recovery link — and they land INVITED.
     const react = await createEmployee(svc, { email, full_name: "Ola Reakt II", origin: ORIGIN });
     expect(react.status).toBe("reactivated");
-    if (react.status === "reactivated") expect(react.member.status).toBe("invited");
+    if (react.status === "reactivated") {
+      expect(react.member.status).toBe("invited");
+      expect(react.activationMail).toBe("sent");
+    }
 
     const { data: afterReact } = await svc
       .from("profiles")
@@ -225,19 +250,135 @@ describe("staff account lifecycle (S-08)", () => {
   });
 });
 
+describe("the two-step add — step 2 sends the invitation (invite-journey-fixes phase 8)", () => {
+  it("invites an already-created user: exactly one mail, invited_at stamped, roster moves DODANY → ZAPROSZONY", async () => {
+    const email = uniqueEmail("invite-step2");
+    const created = await createEmployee(svc, { email, full_name: "Robert Zieliński", origin: ORIGIN });
+    expect(created.status).toBe("created");
+    if (created.status !== "created") return;
+    const id = created.member.id;
+    createdIds.push(id);
+
+    // The roster's third state, read through the real admin-gated RPC.
+    const admin = await as("admin");
+    expect((await listStaff(admin)).find((m) => m.id === id)?.status).toBe("created");
+
+    // The probe this phase rests on: `inviteUserByEmail` works on a user that
+    // ALREADY EXISTS, so we never have to own the send and the real GoTrue
+    // invite template still carries it.
+    const sent = await inviteEmployee(svc, id, ORIGIN);
+    expect(sent.status).toBe("sent");
+    expect(sent.invitedAt ?? null).not.toBeNull();
+
+    expect(await waitForMailCount(email, 1)).toBe(1);
+
+    const { data: got } = await svc.auth.admin.getUserById(id);
+    expect(got.user?.invited_at ?? null).not.toBeNull();
+    expect((await listStaff(admin)).find((m) => m.id === id)?.status).toBe("invited");
+  });
+
+  it("resends to an already-invited hire — the roster's one remedy for a lost invite", async () => {
+    const email = uniqueEmail("invite-resend");
+    const created = await createEmployee(svc, { email, full_name: "Ponowne Zaproszenie", origin: ORIGIN });
+    expect(created.status).toBe("created");
+    if (created.status !== "created") return;
+    createdIds.push(created.member.id);
+
+    expect((await inviteEmployee(svc, created.member.id, ORIGIN)).status).toBe("sent");
+    expect(await waitForMailCount(email, 1)).toBe(1);
+    // A resend is a second real send. GoTrue invalidates the previous link, so
+    // there is never more than one live token per person.
+    expect((await inviteEmployee(svc, created.member.id, ORIGIN)).status).toBe("sent");
+    expect(await waitForMailCount(email, 2)).toBe(2);
+  });
+
+  it("REFUSES a target that already has a password — our own gate, not GoTrue's", async () => {
+    const email = uniqueEmail("invite-haspw");
+    const password = "Fl0ta-InviteGate-2026!";
+    const created = await svc.auth.admin.createUser({ email, password, email_confirm: true });
+    const id = created.data.user?.id;
+    if (!id) throw new Error("createUser failed");
+    createdIds.push(id);
+    await svc.from("profiles").insert({
+      user_id: id,
+      role: "employee",
+      full_name: "Ma Hasło",
+      password_set_at: new Date().toISOString(),
+    });
+
+    const res = await inviteEmployee(svc, id, ORIGIN);
+    expect(res.status).toBe("has_password");
+    // The refusal is ours and fires BEFORE GoTrue is asked, so nothing is sent.
+    expect(await settledMailCount(email)).toBe(0);
+  });
+
+  it("refuses an unknown id and an id with no profile row", async () => {
+    expect((await inviteEmployee(svc, "00000000-0000-0000-0000-000000000000", ORIGIN)).status).toBe("not_found");
+    expect((await inviteEmployee(svc, "not-a-uuid", ORIGIN)).status).toBe("not_found");
+
+    // An auth user with no profiles row — the orphan shape — is not invitable.
+    const email = uniqueEmail("invite-noprofile");
+    const created = await svc.auth.admin.createUser({ email, email_confirm: false });
+    const id = created.data.user?.id;
+    if (!id) throw new Error("createUser failed");
+    createdIds.push(id);
+    expect((await inviteEmployee(svc, id, ORIGIN)).status).toBe("not_found");
+  });
+
+  it("reports `failed` — not a silent success — when GoTrue refuses a confirmed address", async () => {
+    // GoTrue decides "already registered" on `email_confirmed_at` alone, so it
+    // refuses `inviteUserByEmail` for an account that is confirmed but still
+    // password-less (probed 2026-08-21: 422, `code: "email_exists"`). Only the
+    // OLD callback could produce that state — it ran verifyOtp on the GET —
+    // and phase group B stopped it, so this is unreachable through the app.
+    // Pinned anyway because the shape of the answer matters: the service must
+    // report the refusal honestly rather than paper over it by quietly sending
+    // a recovery link, which would reopen the reset journey phase 8 closes.
+    const email = uniqueEmail("invite-confirmed");
+    const created = await createEmployee(svc, { email, full_name: "Kliknął Nie Ustawił", origin: ORIGIN });
+    expect(created.status).toBe("created");
+    if (created.status !== "created") return;
+    const id = created.member.id;
+    createdIds.push(id);
+
+    const generated = await svc.auth.admin.generateLink({ type: "invite", email });
+    expect(generated.error).toBeNull();
+    if (generated.error) return;
+    const exchange = await anonClient().auth.verifyOtp({
+      token_hash: generated.data.properties.hashed_token,
+      type: "invite",
+    });
+    expect(exchange.error).toBeNull();
+
+    // Confirmed, still password-less — exactly the shape GoTrue now refuses.
+    const { data: confirmed } = await svc.auth.admin.getUserById(id);
+    expect(confirmed.user?.email_confirmed_at ?? null).not.toBeNull();
+    expect(await stampOf(id)).toBeNull();
+    const refused = await svc.auth.admin.inviteUserByEmail(email, { redirectTo: `${ORIGIN}/auth/callback` });
+    expect(refused.error?.code).toBe("email_exists");
+
+    const res = await inviteEmployee(svc, id, ORIGIN);
+    expect(res.status).toBe("failed");
+    expect(res.invitedAt ?? null).toBeNull();
+  });
+});
+
 describe("provisioning rollback when the profiles insert fails (invite-journey-fixes)", () => {
-  it("compensates the delivered invite — provision_rolled_back leaves no auth user behind", async () => {
+  it("provision_rolled_back leaves no auth user behind — and, since the two-step add, no mail either", async () => {
     const email = uniqueEmail("rollback");
     const res = await createEmployee(failingProfileInsert(svc), {
       email,
-      full_name: "Cofnięte Zaproszenie",
+      full_name: "Nieudane Konto",
       origin: ORIGIN,
     });
     expect(res.status).toBe("provision_rolled_back");
 
-    // The invite really was sent (real GoTrue hop) and really was rolled back:
-    // no orphaned auth.users row survives for that address.
+    // The auth user really was created (real GoTrue hop) and really was rolled
+    // back: no orphaned auth.users row survives for that address.
     expect(await findAuthUserId(email)).toBeNull();
+    // What phase 8 changes: nothing was sent, so a failed create leaves no
+    // delivered invite and no dead link for the hire to walk into.
+    expect(await settledMailCount(email)).toBe(0);
   });
 
   it("reports provision_orphaned when the rollback also fails — and `Ponów` repairs it", async () => {
@@ -264,9 +405,12 @@ describe("provisioning rollback when the profiles insert fails (invite-journey-f
     if (repair.status !== "reactivated") return;
     // The orphan never set a password, so the repair must label them INVITED and
     // actually send the activation mail — the outcome is now reported, not
-    // swallowed by a `.catch()` that never fired.
+    // swallowed by a `.catch()` that never fired. Since phase 8 that mail is a
+    // real INVITE rather than a recovery link, which is what keeps a new hire's
+    // first contact in the invite journey.
     expect(repair.member.status).toBe("invited");
     expect(repair.activationMail).toBe("sent");
+    expect(await waitForMailCount(email, 1)).toBe(1);
     expect(await stampOf(orphanId)).toBeNull();
 
     const { data: repaired } = await svc
@@ -280,7 +424,7 @@ describe("provisioning rollback when the profiles insert fails (invite-journey-f
 });
 
 describe("the link exchange is not a password (research §1.5(a), invite-journey-fixes)", () => {
-  it("a hire who opened their invite link but set no password is INVITED and IS mailed on repair", async () => {
+  it("a hire who opened their invite link but set no password is INVITED, and a repair tries to mail them", async () => {
     const email = uniqueEmail("clicked");
     // Provision exactly like `services/staff.ts` does, but through generateLink
     // so no mail is spent: an auth user + a profiles row with NO password_set_at.
@@ -308,13 +452,24 @@ describe("the link exchange is not a password (research §1.5(a), invite-journey
     const roster = await listStaff(admin);
     expect(roster.find((m) => m.id === id)?.status).toBe("invited");
 
-    // And a repair mails them, where the proxy made it send nothing at all.
+    // And a repair ATTEMPTS the activation mail. `not_needed` is the assertion
+    // that matters: that is what the old `wasActive` proxy returned here — it
+    // read last_sign_in_at as proof of a password, so the repair sent nothing at
+    // all and the roster went green on someone who could not sign in.
+    //
+    // The attempt reports `failed` rather than `sent` because the verifyOtp
+    // above confirmed the address and GoTrue refuses to invite a confirmed one.
+    // That is deliberate, not a gap: the app itself can no longer create this
+    // state (phase group B stopped exchanging the token on the GET), and the
+    // service reports the refusal instead of quietly falling back to a recovery
+    // link. `staff-status.test.ts` holds the derivation half of this regression.
     expect((await deactivateStaff(svc, admin, id)).status).toBe("ok");
     const react = await createEmployee(svc, { email, full_name: "Kliknął Nie Ustawił", origin: ORIGIN });
     expect(react.status).toBe("reactivated");
     if (react.status !== "reactivated") return;
     expect(react.member.status).toBe("invited");
-    expect(react.activationMail).toBe("sent");
+    expect(react.activationMail).not.toBe("not_needed");
+    expect(react.activationMail).toBe("failed");
   });
 
   it("reports a failed activation mail instead of swallowing it", async () => {

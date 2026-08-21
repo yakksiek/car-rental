@@ -1527,46 +1527,46 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 7.1 Unit tests pass, including new `staff-banner.test.ts`: `npm test`
-- [x] 7.2 Both provisioning codes provably render the same sentence
-- [x] 7.3 Lint passes: `npm run lint`
-- [x] 7.4 Type checking passes: `npx astro check`
-- [x] 7.5 Integration tests pass — the API still returns both codes: `npm run test:integration`
-- [x] 7.6 Production build succeeds: `npm run build`
+- [x] 7.1 Unit tests pass, including new `staff-banner.test.ts`: `npm test` — c14c745
+- [x] 7.2 Both provisioning codes provably render the same sentence — c14c745
+- [x] 7.3 Lint passes: `npm run lint` — c14c745
+- [x] 7.4 Type checking passes: `npx astro check` — c14c745
+- [x] 7.5 Integration tests pass — the API still returns both codes: `npm run test:integration` — c14c745
+- [x] 7.6 Production build succeeds: `npm run build` — c14c745
 
 #### Manual
 
-- [x] 7.7 Both failure arms show one message naming the address
-- [x] 7.8 `repairedMailFailed` names the address and still carries no `Ponów` — address clause DROPPED (owner, 2026-08-21): design-contract §9.2 makes this a phase-8 string and carries no address form of it; only the no-`Ponów` half was verifiable, and it holds
-- [x] 7.9 Copy matches `design-contract.md` §9 verbatim
-- [x] 7.10 A long address wraps without breaking the banner row at 390px
+- [x] 7.7 Both failure arms show one message naming the address — c14c745
+- [x] 7.8 `repairedMailFailed` names the address and still carries no `Ponów` — address clause DROPPED (owner, 2026-08-21): design-contract §9.2 makes this a phase-8 string and carries no address form of it; only the no-`Ponów` half was verifiable, and it holds — c14c745
+- [x] 7.9 Copy matches `design-contract.md` §9 verbatim — c14c745
+- [x] 7.10 A long address wraps without breaking the banner row at 390px — c14c745
 
 ### Phase 8: Two-step add — create, then invite
 
 #### Automated
 
-- [ ] 8.1 Unit tests pass, including the three-state derivation: `npm test`
-- [ ] 8.2 Integration proves zero mail on create and exactly one on invite
-- [ ] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user
-- [ ] 8.3a Integration proves `inviteEmployee` refuses a target that already has a password
-- [ ] 8.4 Integration tests pass: `npm run test:integration`
-- [ ] 8.5 Type checking passes: `npx astro check`
-- [ ] 8.6 Lint passes: `npm run lint`
-- [ ] 8.7 Production build succeeds: `npm run build`
-- [ ] 8.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [ ] 8.9 `contract-surfaces.md` records the invite route and the widened status union
+- [x] 8.1 Unit tests pass, including the three-state derivation: `npm test`
+- [x] 8.2 Integration proves zero mail on create and exactly one on invite
+- [x] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user
+- [x] 8.3a Integration proves `inviteEmployee` refuses a target that already has a password
+- [x] 8.4 Integration tests pass: `npm run test:integration`
+- [x] 8.5 Type checking passes: `npx astro check`
+- [x] 8.6 Lint passes: `npm run lint`
+- [x] 8.7 Production build succeeds: `npm run build`
+- [x] 8.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [x] 8.9 `contract-surfaces.md` records the invite route and the widened status union
 
 #### Manual
 
-- [ ] 8.10 Adding a person creates a roster row immediately and sends nothing
-- [ ] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
-- [ ] 8.11a A resend to an already-invited hire works, and the previous link stops working
-- [ ] 8.11b A hire who already has a password is offered no invite action
-- [ ] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show
-- [ ] 8.11d The divergence from catalog 19's invited-row actions is recorded as a deviation, not silently shipped
-- [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
-- [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
-- [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
+- [x] 8.10 Adding a person creates a roster row immediately and sends nothing
+- [x] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
+- [x] 8.11a A resend to an already-invited hire works, and the previous link stops working
+- [x] 8.11b A hire who already has a password is offered no invite action
+- [x] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show
+- [x] 8.11d The divergence from catalog 19's invited-row actions is recorded as a deviation, not silently shipped
+- [x] 8.12 The emailed link still lands on the invite form with the hire's initials
+- [x] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
+- [x] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
 
 ### Phase 9: Report the add failure where the admin is — inside the modal
 

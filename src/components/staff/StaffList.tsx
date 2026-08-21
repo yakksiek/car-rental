@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
-import { provisionFailureMessage } from "../../lib/staff-banner";
+import { inviteActionLabel, provisionFailureMessage, repairedMailFailedMessage } from "../../lib/staff-banner";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -27,6 +27,7 @@ const COPY = {
   tabAll: "Wszyscy",
   tabActive: "Aktywny",
   tabInvited: "Zaproszony",
+  tabCreated: "Dodany",
   tabAdmin: "Administrator",
   colName: "Imię i nazwisko",
   colRole: "Rola",
@@ -37,18 +38,30 @@ const COPY = {
   roleEmployee: "PRACOWNIK",
   statusActive: "AKTYWNY",
   statusInvited: "ZAPROSZONY",
+  statusCreated: "DODANY",
   reset: "Resetuj hasło",
   removeAria: "Usuń pracownika",
   resetAria: "Resetuj hasło",
   footerBold: "Nie możesz usunąć siebie.",
   footerRest: " Poproś innego administratora o usunięcie Twojego konta.",
-  // add modal
+  // add modal — step 1 of two. The subtitle and the CTA both stopped promising
+  // an email when the add stopped sending one (design-contract §9.2): the CTA
+  // now names what the button does (`Dodaj`, matching the modal's own title),
+  // and `Wyślij zaproszenie` moved to the row action that really sends.
   addTitle: "Dodaj pracownika",
-  addSubtitle: "Wyślemy link aktywacyjny e-mailem. Nowa osoba sama ustawi hasło.",
+  addSubtitle: "Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.",
   labelName: "IMIĘ I NAZWISKO",
   labelEmail: "ADRES E-MAIL",
   cancel: "Anuluj",
-  sendInvite: "Wyślij zaproszenie",
+  addConfirm: "Dodaj",
+  adding: "Dodawanie…",
+  // Row action — TWO labels, one per password-less state (owner, 2026-08-21):
+  // a first send on a DODANY row, a resend on a ZAPROSZONY one, where reusing
+  // the first-send wording read as if nothing had been sent yet. Both are
+  // authored in `lib/staff-banner.ts` rather than here, because
+  // `repairedMailFailed` has to NAME whichever button that row shows — the
+  // coupling that made a single shared label tempting in the first place.
+  sendInvite: inviteActionLabel,
   sending: "Wysyłanie…",
   dupEmail: "Ten adres e-mail jest już w zespole.",
   close: "Zamknij",
@@ -62,7 +75,7 @@ const COPY = {
   lastAdminBody: "Musi pozostać co najmniej jeden administrator. Najpierw awansuj inną osobę.",
   // states
   emptyTitle: "Brak pracowników",
-  emptyHint: "Dodaj pierwszą osobę — wyślemy jej link aktywacyjny e-mailem.",
+  emptyHint: "Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.",
   noResultsTitle: "Brak wyników",
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
@@ -75,19 +88,26 @@ const COPY = {
   // string itself is authored in `lib/staff-banner.ts` so the `unit` project can
   // gate it (design-contract.md §9.2, verbatim).
   provisionFailed: provisionFailureMessage,
-  repairedMailFailed:
-    "Konto zostało odnowione, ale nie udało się wysłać e-maila aktywacyjnego. Użyj „Resetuj hasło” przy tej osobie.",
+  // Names an INVITE button, not `„Resetuj hasło”`: this banner fires only when
+  // the target has NO password, and the roster shows exactly one action per
+  // state — so the reset button the old string named is not on that row at all
+  // (design-contract §9.2, §10 entry 2). Which invite button it names follows
+  // the row's own state, so the copy can never point at a missing control.
+  repairedMailFailed: repairedMailFailedMessage,
   retry: "Ponów",
   resetSent: "Wysłano e-mail do resetu hasła.",
+  inviteSent: "Wysłano zaproszenie.",
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
   // mobile
   eyebrowMobileWord: (n: number) => `${n} ${plForm(n, "osoba", "osoby", "osób").toUpperCase()}`,
   chipActive: "Aktywni",
   chipInvited: "Zaproszeni",
+  chipCreated: "Dodani",
   chipAdmin: "Administratorzy",
   roleAdminMobile: "ADMIN",
   statusActiveMobile: "Aktywny",
   statusInvitedMobile: "Zaproszony",
+  statusCreatedMobile: "Dodany",
   footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
 } as const;
 
@@ -96,7 +116,7 @@ const COPY = {
 // (28px is sheet-only — applied as an explicit rounded-t-[28px], not a utility.)
 const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
-type Filter = "all" | "active" | "invited" | "admin";
+type Filter = "all" | "active" | "invited" | "created" | "admin";
 
 interface Banner {
   kind: "error" | "success";
@@ -141,16 +161,35 @@ function RoleBadge({ role, mobile = false }: { role: StaffMember["role"]; mobile
   );
 }
 
+// Three tones, transcribed from the design's `EmpStatusBadge`: green
+// (success) = AKTYWNY, amber (warning) = ZAPROSZONY, neutral grey = DODANY.
+// The grey pair is `--flota-neutral` / `--flota-neutral-soft` — the palette's
+// own "inert state" colours, sampled #64748B on #EEF1F5 off the design board —
+// and has no semantic Tailwind utility here, hence the explicit var(). Additive:
+// the two shipped arms render byte-identically to before.
+const STATUS_TONE = {
+  active: { label: COPY.statusActive, mobile: COPY.statusActiveMobile, text: "text-success", dot: "bg-success" },
+  invited: { label: COPY.statusInvited, mobile: COPY.statusInvitedMobile, text: "text-warning", dot: "bg-warning" },
+  created: {
+    label: COPY.statusCreated,
+    mobile: COPY.statusCreatedMobile,
+    text: "text-[var(--flota-neutral)]",
+    dot: "bg-[var(--flota-neutral)]",
+  },
+} as const;
+
+const STATUS_SOFT: Record<StaffMember["status"], string> = {
+  active: "bg-[var(--flota-success-soft)]",
+  invited: "bg-[var(--flota-warning-soft)]",
+  created: "bg-[var(--flota-neutral-soft)]",
+};
+
 function StatusBadge({ status }: { status: StaffMember["status"] }) {
-  return status === "active" ? (
-    <Badge className="text-success gap-1.5 bg-[var(--flota-success-soft)]">
-      <span className="bg-success size-1.5 rounded-full" />
-      {COPY.statusActive}
-    </Badge>
-  ) : (
-    <Badge className="text-warning gap-1.5 bg-[var(--flota-warning-soft)]">
-      <span className="bg-warning size-1.5 rounded-full" />
-      {COPY.statusInvited}
+  const tone = STATUS_TONE[status];
+  return (
+    <Badge className={cn("gap-1.5", tone.text, STATUS_SOFT[status])}>
+      <span className={cn("size-1.5 rounded-full", tone.dot)} />
+      {tone.label}
     </Badge>
   );
 }
@@ -335,12 +374,12 @@ function AddModal({
             {busy ? (
               <>
                 <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {COPY.sending}
+                {COPY.adding}
               </>
             ) : (
               <>
-                <Send className="size-4" />
-                {COPY.sendInvite}
+                <Plus className="size-4" />
+                {COPY.addConfirm}
               </>
             )}
           </Button>
@@ -449,6 +488,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const total = staff.length;
   const activeCount = staff.filter((m) => m.status === "active").length;
   const invitedCount = staff.filter((m) => m.status === "invited").length;
+  const createdCount = staff.filter((m) => m.status === "created").length;
   const adminCount = staff.filter((m) => m.role === "admin").length;
 
   // Pin the current admin to the top of the roster (design row 1 = `· Ty`), so
@@ -460,6 +500,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const filtered = orderedStaff.filter((m) => {
     if (filter === "active" && m.status !== "active") return false;
     if (filter === "invited" && m.status !== "invited") return false;
+    if (filter === "created" && m.status !== "created") return false;
     if (filter === "admin" && m.role !== "admin") return false;
     if (q) {
       const hay = `${m.fullName ?? ""} ${m.email}`.toLowerCase();
@@ -468,10 +509,13 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
     return true;
   });
 
+  // Lifecycle order, most-progressed first (design `EsShell` pill row): the new
+  // `Dodany` pill sits between `Zaproszony` and `Administrator`.
   const tabs: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: COPY.tabAll, count: total },
     { key: "active", label: COPY.tabActive, count: activeCount },
     { key: "invited", label: COPY.tabInvited, count: invitedCount },
+    { key: "created", label: COPY.tabCreated, count: createdCount },
     { key: "admin", label: COPY.tabAdmin, count: adminCount },
   ];
 
@@ -500,10 +544,14 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         // The repair succeeded — the row belongs on the roster and the modal
         // closes — but the activation email did not go out, so the hire has no
         // way in. Error tone because the admin must act; no `retry`, because the
-        // remedy is the row's own `Resetuj hasło`, which the copy names
+        // remedy is the row's own invite action, which the copy names
         // (design-contract §8.1).
+        //
+        // The message is keyed off the member the server just returned, so it
+        // names the button THAT row renders: a repair can land on either
+        // password-less state, and `deriveStaffStatus` has already decided which.
         if (body?.activationMail === "failed") {
-          setBanner({ kind: "error", msg: COPY.repairedMailFailed });
+          setBanner({ kind: "error", msg: COPY.repairedMailFailed(member?.status ?? "created") });
         }
         return;
       }
@@ -555,6 +603,31 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       setBanner({ kind: "error", msg: COPY.mutationError });
     } catch {
       setBanner({ kind: "error", msg: COPY.mutationError });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Step 2 of the two-step add. Offered for BOTH password-less states, so this
+  // one call covers a first send and a resend; GoTrue invalidates the previous
+  // link on a resend, so there is never more than one live token per person.
+  // On success the row moves DODANY → ZAPROSZONY off the server's own
+  // `invited_at`, not a locally-guessed timestamp.
+  async function sendInvite(member: StaffMember) {
+    setBusyId(member.id);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/staff/${member.id}/invite`, { method: "POST" });
+      if (res.status === 200) {
+        const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
+        const invitedAt = body?.invitedAt ?? new Date().toISOString();
+        setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
+        setBanner({ kind: "success", msg: COPY.inviteSent });
+      } else {
+        setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void sendInvite(member) });
+      }
+    } catch {
+      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void sendInvite(member) });
     } finally {
       setBusyId(null);
     }
@@ -785,15 +858,40 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
-                              disabled={busyId === m.id}
-                              onClick={() => resetPassword(m)}
-                            >
-                              <KeyRound className="size-3.5" />
-                              {COPY.reset}
-                            </Button>
+                            {/* ONE action per state (design-contract §10 entry 2).
+                                `Resetuj hasło` sends a RECOVERY link, which is the
+                                wrong journey — and the wrong promise — for someone
+                                who has never had a password. */}
+                            {m.status === "active" ? (
+                              <Button
+                                variant="outline"
+                                className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
+                                disabled={busyId === m.id}
+                                onClick={() => resetPassword(m)}
+                              >
+                                <KeyRound className="size-3.5" />
+                                {COPY.reset}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
+                                disabled={busyId === m.id}
+                                onClick={() => sendInvite(m)}
+                              >
+                                {busyId === m.id ? (
+                                  <>
+                                    <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    {COPY.sending}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className="size-3.5" />
+                                    {COPY.sendInvite(m.status)}
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="icon"
@@ -834,11 +932,9 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                       </div>
                       <div className="text-muted-foreground mt-0.5 truncate text-sm">{m.email}</div>
                       <div className="mt-1 flex items-center gap-1.5 text-[13px]">
-                        <span
-                          className={cn("size-1.5 rounded-full", m.status === "active" ? "bg-success" : "bg-warning")}
-                        />
-                        <span className={cn("font-[540]", m.status === "active" ? "text-success" : "text-warning")}>
-                          {m.status === "active" ? COPY.statusActiveMobile : COPY.statusInvitedMobile}
+                        <span className={cn("size-1.5 rounded-full", STATUS_TONE[m.status].dot)} />
+                        <span className={cn("font-[540]", STATUS_TONE[m.status].text)}>
+                          {STATUS_TONE[m.status].mobile}
                         </span>
                         <span className="text-muted-foreground" suppressHydrationWarning>
                           · {formatLastActive(m, nowMs, { invitePrefix: false })}
@@ -846,16 +942,34 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                       </div>
                     </div>
                     <div className="ml-auto flex flex-col gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="text-foreground size-11 rounded-xl"
-                        disabled={busyId === m.id}
-                        aria-label={COPY.resetAria}
-                        onClick={() => resetPassword(m)}
-                      >
-                        <KeyRound className="size-4" />
-                      </Button>
+                      {/* Same one-action-per-state rule as the desktop table. */}
+                      {m.status === "active" ? (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-foreground size-11 rounded-xl"
+                          disabled={busyId === m.id}
+                          aria-label={COPY.resetAria}
+                          onClick={() => resetPassword(m)}
+                        >
+                          <KeyRound className="size-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-foreground size-11 rounded-xl"
+                          disabled={busyId === m.id}
+                          aria-label={COPY.sendInvite(m.status)}
+                          onClick={() => sendInvite(m)}
+                        >
+                          {busyId === m.id ? (
+                            <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <Send className="size-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="icon"
