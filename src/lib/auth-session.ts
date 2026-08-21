@@ -6,37 +6,33 @@ import { shouldSecureCookies } from "./secure-cookies";
 import type { AppRole } from "../types";
 
 // ---------------------------------------------------------------------------
-// Session origin (S-14) — the single answer to "how was this session minted?".
+// The link-token session layer.
 //
-// `/api/auth/reset-password` must accept ONLY a session that came from a
-// recovery/invite link exchange. GoTrue records that in the access token's `amr`
-// claim (RFC 8176): `password` for `signInWithPassword`, `otp` for both
-// `verifyOtp` exchanges — probe-verified against GoTrue v2.188.1, and it
-// survives a token refresh verbatim. `getUser()` does not surface `amr`, so the
-// claim is reachable only by decoding the token from `getSession()`.
+// HISTORY, because the shape of this file only makes sense with it: S-14 gated
+// `/api/auth/reset-password` on TWO signals — the session's `amr` claim
+// (unforgeable provenance, but it never cleared) AND a one-shot marker cookie
+// (freshness, but user-writable) — because `/auth/callback` exchanged the link
+// token on its GET, leaving a live session and nothing else to key on.
 //
-// ⚠ `getSession()` DOES NOT VERIFY THE SIGNATURE — it decodes the cookie as it
-// found it. This module is therefore a SUPPLEMENT to middleware's `getUser()`
-// (which does validate against the auth server), never a substitute: read it
-// only on a request where `locals.user` is already populated. Alone it would be
-// trusting an unverified token — the opposite of what `src/middleware.ts:14-16`
-// gets right today. This is also the app's first JWT-claim read (F-02 chose the
-// `profiles` lookup over claims), which is why it lives in exactly one helper.
+// invite-journey-fixes deferred that exchange to the set-password POST, and both
+// signals went with it. Provenance and freshness now come from the same place:
+// HOLDING AN UNSPENT TOKEN. GoTrue mints it and GoTrue spends it, which is
+// strictly stronger than an `amr` mark that outlived its own usefulness. The
+// `amr` reader — the app's only JWT-claim read — was deleted in the same change;
+// `git log -S "amr" -- src/lib/auth-session.ts` has it if it is ever wanted back.
 //
-// And it is not sufficient alone either: the `otp` mark NEVER clears, so an
-// `amr`-only gate would leave a recovery session holding set-password rights for
-// its whole life. The one-shot marker cookie below supplies the freshness the
-// claim structurally cannot; the route requires BOTH. An unsigned cookie is safe
-// in that AND — it can only ever deny, never grant.
+// What remains: the cookie that carries the pending token, the parse that fails
+// closed on anything malformed, the lookup that resolves a token's target
+// without spending it, and the page's branch decision.
 // ---------------------------------------------------------------------------
 
-/** How the current session was minted. `unknown` is the fail-closed default. */
-export type SessionOrigin = "link" | "password" | "unknown";
-
-/** Which kind of link minted it — also the marker cookie's value. */
+/** Which copy a link selects. Narrower than `LinkType`: GoTrue's `signup` and
+ * `invite` share one token type and one welcome screen — see `linkOriginOf`. */
 export type LinkOrigin = "recovery" | "invite";
 
-/** One-shot marker stamped by `/auth/callback`, spent by a successful set. */
+/** Carries the pending link token `/auth/callback` resolved; spent by a
+ * successful set, and cleared by sign-out. Name kept from its marker days so a
+ * stale pre-redesign value lands in `readPendingToken`, which rejects it. */
 export const LINK_ORIGIN_COOKIE = "flota-link-origin";
 
 /** One-shot success marker, swapped in for the above and consumed by the R4 render. */
@@ -46,14 +42,12 @@ export const PW_SET_DONE_COOKIE = "flota-pw-set-done";
 // form posts to /api/auth/reset-password, so an `/auth`-scoped cookie would be
 // invisible to the handler.
 //
-// `maxAge` matches the link it gates — `config.toml` sets `otp_expiry = 3600`
-// and `jwt_expiry = 3600`, and the copy tells the user "ważne 60 minut" in three
-// places. It must NOT be shorter: freshness here comes from the marker being
-// stamped by *this* navigation and spent on success, not from its lifetime, so a
-// tighter value buys nothing and strands anyone who takes longer than it to type
-// a password. They would get a false "Link wygasł" while their link session was
-// still alive, and its CTA would send them for a new link that `/auth/callback`
-// then refuses — because they are still signed in.
+// `maxAge` matches the link it carries — `config.toml` sets `otp_expiry = 3600`
+// and the copy tells the user "ważne 60 minut" in three places. It must NOT be
+// shorter: the authority on freshness is now GoTrue's own token expiry, re-checked
+// by `resolve_link_token` on every render, so a tighter cookie lifetime buys
+// nothing and strands anyone who takes longer than it to type a password — a
+// false "Link wygasł" while their link was still perfectly good.
 //
 // `secure` is NOT here because it is decided per request — under `npm run dev`
 // the app is served over plain http, where a blanket `secure: true` drops the
@@ -66,17 +60,12 @@ export const LINK_COOKIE_OPTIONS = {
 } as const;
 
 /**
- * `LINK_COOKIE_OPTIONS` plus the `secure` for *this* request. Shares the one
- * rule with the session cookies (`shouldSecureCookies`), so the marker can never
- * end up with a weaker posture than the session it gates.
+ * `LINK_COOKIE_OPTIONS` plus the `secure` for *this* request. Shares the one rule
+ * with the session cookies (`shouldSecureCookies`), so the token this carries can
+ * never end up with a weaker posture than the session it will mint.
  */
 export function linkCookieOptions(url: URL) {
   return { ...LINK_COOKIE_OPTIONS, secure: shouldSecureCookies(url) };
-}
-
-/** Narrow a raw marker-cookie value to a known link origin; anything else → null. */
-export function readLinkOrigin(value: string | undefined): LinkOrigin | null {
-  return value === "recovery" || value === "invite" ? value : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,8 +165,8 @@ export async function resolveLinkTarget(
   token: PendingLinkToken,
 ): Promise<ResolvedLinkTarget | null> {
   try {
-    // `SupabaseClient` here is the untyped default generic (same as
-    // `readSessionOrigin`), so the result arrives as `any` — name its shape once.
+    // `SupabaseClient` here is the untyped default generic, so the result
+    // arrives as `any` — name its shape once.
     const { data, error } = (await supabase.rpc("resolve_link_token", {
       p_token_hash: token.tokenHash,
       p_type: token.type,
@@ -235,89 +224,4 @@ export function selectResetPasswordBranch(input: {
     return "expired";
   }
   return "form";
-}
-
-/** base64url → decoded UTF-8 text, or null when the segment isn't decodable. */
-function decodeBase64Url(segment: string): string | null {
-  const base64 = segment.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-  try {
-    // No JWT library: workerd provides `atob`, and the payload is read for a
-    // hint only — the signature is checked by GoTrue via the paired `getUser()`.
-    const binary = atob(padded);
-    return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
-  } catch {
-    return null;
-  }
-}
-
-/** The `amr` array out of a JWT payload segment, or null if absent/malformed. */
-function readAmr(accessToken: string): unknown[] | null {
-  const payload = accessToken.split(".")[1];
-  if (!payload) {
-    return null;
-  }
-  const json = decodeBase64Url(payload);
-  if (json === null) {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return null;
-  }
-  if (typeof parsed !== "object" || parsed === null) {
-    return null;
-  }
-  const amr = (parsed as { amr?: unknown }).amr;
-  return Array.isArray(amr) ? amr : null;
-}
-
-/**
- * Classify the caller's session by its `amr` claim. Fails closed: no session, a
- * malformed token, or an `amr` we don't recognise all resolve to `"unknown"`,
- * which no gate accepts.
- *
- * MUST be paired with a validating `getUser()` (middleware already ran one) —
- * see the module comment.
- */
-export async function readSessionOrigin(supabase: SupabaseClient): Promise<SessionOrigin> {
-  let accessToken: string | undefined;
-  try {
-    const { data } = await supabase.auth.getSession();
-    accessToken = data.session?.access_token;
-  } catch {
-    return "unknown";
-  }
-  if (!accessToken) {
-    return "unknown";
-  }
-
-  const amr = readAmr(accessToken);
-  if (!amr) {
-    return "unknown";
-  }
-
-  const methods = amr.map((entry) =>
-    typeof entry === "object" && entry !== null ? (entry as { method?: unknown }).method : undefined,
-  );
-  // GoTrue collapses its distinct Recovery / Invite / MagicLink constants to the
-  // single string `otp`, so this proves "came from a link", not which link.
-  //
-  // ⚠ `amr` ACCUMULATES, and `otp` is checked first — so a session carrying BOTH
-  // `password` and `otp` classifies as `"link"`. That shape is unreachable today
-  // only because `/auth/callback` refuses to exchange a token when a session
-  // already exists (`callback.ts:30-32`), and nothing else in the app calls
-  // `verifyOtp` / `exchangeCodeForSession` / `signInWithOtp` / `setSession`. That
-  // guard is therefore not only the R3 anti-fixation fix it is documented as — it
-  // is what stops this OR from promoting an ordinary password session to
-  // link-origin. Any new link-exchange call site must preserve it.
-  if (methods.includes("otp")) {
-    return "link";
-  }
-  if (methods.includes("password")) {
-    return "password";
-  }
-  return "unknown";
 }

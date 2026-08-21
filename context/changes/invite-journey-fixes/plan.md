@@ -1088,12 +1088,12 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 5.1 Integration tests pass: `npm run test:integration`
-- [x] 5.2 Unit tests pass: `npm test`
-- [x] 5.3 Type checking passes: `npx astro check`
-- [x] 5.4 Lint passes: `npm run lint`
-- [x] 5.5 Production build succeeds: `npm run build`
-- [x] 5.6 Retryability: token survives a password mismatch and a rejected password
+- [x] 5.1 Integration tests pass: `npm run test:integration` — 048d947
+- [x] 5.2 Unit tests pass: `npm test` — 048d947
+- [x] 5.3 Type checking passes: `npx astro check` — 048d947
+- [x] 5.4 Lint passes: `npm run lint` — 048d947
+- [x] 5.5 Production build succeeds: `npm run build` — 048d947
+- [x] 5.6 Retryability: token survives a password mismatch and a rejected password — 048d947
 
 #### Manual
 
@@ -1109,14 +1109,14 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 6.1 `grep -rn "readSessionOrigin\|readAmr\|decodeBase64Url\|SessionOrigin" src tests e2e` returns nothing
-- [ ] 6.2 `grep -rn "shouldSecureCookies" src` still returns the four keep-list call sites
-- [ ] 6.3 Unit tests pass: `npm test`
-- [ ] 6.4 Integration tests pass: `npm run test:integration`
-- [ ] 6.5 Retargeted GoTrue type-confusion probe passes against the POST
-- [ ] 6.6 Type checking passes: `npx astro check`
-- [ ] 6.7 Lint passes: `npm run lint`
-- [ ] 6.8 Production build succeeds: `npm run build`
+- [x] 6.1 `grep -rn "readSessionOrigin\|readAmr\|decodeBase64Url\|SessionOrigin" src tests e2e` returns nothing
+- [x] 6.2 `grep -rn "shouldSecureCookies" src` still returns the four keep-list call sites
+- [x] 6.3 Unit tests pass: `npm test`
+- [x] 6.4 Integration tests pass: `npm run test:integration`
+- [x] 6.5 Retargeted GoTrue type-confusion probe passes against the POST
+- [x] 6.6 Type checking passes: `npx astro check`
+- [x] 6.7 Lint passes: `npm run lint`
+- [x] 6.8 Production build succeeds: `npm run build`
 - [ ] 6.9 E2E suite passes on `:4321`: `npm run test:e2e`
 
 #### Manual

@@ -29,8 +29,8 @@ import {
 //
 // The gate order changes shape with it: there is no incoming session to classify,
 // so provenance comes from HOLDING AN UNSPENT TOKEN rather than from a session's
-// `amr`. S-14's two origin signals (`readSessionOrigin` + the freshness marker)
-// collapse into that one question, and both of the things they guarded are
+// `amr`. S-14's two origin signals (the JWT `amr` classifier + the freshness
+// marker) collapse into that one question, and both of the things they guarded are
 // re-enforced: the token is unforgeable (GoTrue minted it) and single-use (GoTrue
 // spends it), which is strictly stronger than an `otp` claim that never cleared.
 //
