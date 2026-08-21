@@ -1009,10 +1009,10 @@ grant changes.
 
 #### Automated
 
-- [x] 7.1 Type checking passes: `npx astro check`
-- [x] 7.2 Linting passes: `npm run lint`
-- [x] 7.3 Build passes: `npm run build`
-- [x] 7.4 Unit tests pass: `npm test`
+- [x] 7.1 Type checking passes: `npx astro check` — d933d17
+- [x] 7.2 Linting passes: `npm run lint` — d933d17
+- [x] 7.3 Build passes: `npm run build` — d933d17
+- [x] 7.4 Unit tests pass: `npm test` — d933d17
 
 #### Manual
 
