@@ -1410,6 +1410,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [ ] 8.11a A resend to an already-invited hire works, and the previous link stops working
 - [ ] 8.11b A hire who already has a password is offered no invite action
 - [ ] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show
+- [ ] 8.11d The divergence from catalog 19's invited-row actions is recorded as a deviation, not silently shipped
 - [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
 - [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
 - [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
