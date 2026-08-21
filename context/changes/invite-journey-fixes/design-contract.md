@@ -57,6 +57,22 @@
 > artboard we had not pulled", and phase 7's banner work should diff against `emp-error.png` rather
 > than against the shipped element alone. Pull it into `design-review/` before phase 7 rewrites the copy.
 
+> **Third correction, 2026-08-21 — catalog 19 encodes the row-action defect phase 8 removes.**
+> Spotted by the owner while reviewing the rendered roster. Catalog 19's fifth row is
+> `Karolina Mazur | EMPLOYEE | ● INVITED | zaproszenie · 2 dni temu | [Reset password] [×]` — an
+> **invited, password-less** person offered `Reset password`. The shipped app reproduces it faithfully
+> (`Łukasz Piątek`, ZAPROSZONY, `Resetuj hasło`), because the app was ported from this artboard.
+>
+> That action sends `resetPasswordForEmail`, i.e. a **recovery** link and recovery copy, to someone
+> who has never had a password — the option-2b journey downgrade. Phase 8 makes the two row actions
+> mutually exclusive (`Wyślij zaproszenie` while `password_set_at` is null, `Resetuj hasło` only once
+> it is set), which therefore **diverges from a canonical design** rather than merely from current
+> behaviour.
+>
+> **Recorded as `deviation(the artboard encodes a journey defect)`** so a later fidelity pass does not
+> re-flag it and "restore" the button. If the phase-8 artboard is minted, it must show the new rule —
+> porting catalog 19 faithfully would rebuild the defect.
+
 Two gaps are pre-existing rather than introduced here:
 
 - **R14 has no artboard.** `auth-followups` shipped it as a no-artboard card and amended S-14's
