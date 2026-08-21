@@ -29,17 +29,19 @@
 
 **No repo design is superseded by this change**; every asset above is still the canonical baseline.
 
-> **Correction, recorded 2026-08-21 during the phase-1 vision-diff (row 1.11).** Catalog 19/25 are
-> marked "current" above, and for the purposes of THIS change they are — the healthy roster is
-> provably pixel-identical to before (`git diff 798f24a..HEAD -- StaffList.tsx` touches copy and the
-> `addEmployee` branch only; **zero** JSX or `className` changes). But the mockups are **stale
-> against the shipped S-08 surface**, in two ways that predate this change and belong to nobody in
-> it: catalog 19 shows three count **tiles** (ACTIVE / INVITED / ADMIN) where the app ships a filter
-> **tab bar + avatar stack** — which is S-08's own contract §3.2/§3.13, cited verbatim at
-> `StaffList.tsx:692`, so the contract superseded the artboard and the artboard was never refreshed —
-> and it carries a separate `LAST ACTIVE` column where the app nests last-active under the STATUS
-> badge. Recorded, not fixed: refreshing catalog 19/25 belongs to whoever next changes the roster's
-> design, alongside the standing to-do to promote the auth artboards into `design-system.md`.
+> **Correction, recorded 2026-08-21 during the phase-1 vision-diff (row 1.11), and REVISED the same
+> day after reading the design source.** The healthy roster is provably pixel-identical to before this
+> change (`git diff 798f24a..HEAD -- StaffList.tsx` touches copy and the `addEmployee` branch only;
+> **zero** JSX or `className` changes), so row 1.11's assertion holds either way.
+>
+> The first version of this note said catalog 19 was stale _against the shipped app_ — that the app
+> had diverged from its artboard. **That was wrong, and the direction matters.** Reading
+> `employee-states.jsx` in the design project shows `EsShell` rendering exactly what the app ships:
+> filter pills with counts in a white card, avatar stack pinned right. The **design** is current; it
+> is the repo's `19-admin-desktop-employees.png` that is a **stale export** of an older iteration
+> showing three count tiles. So the gap is a pull that never happened, not a divergence — same class
+> of miss as the un-pulled banner artboard below. Refreshing the repo's copy belongs to whoever next
+> changes the roster's design.
 
 > **Second correction, 2026-08-21 — the banner artboard EXISTS.** §1 lists "Roster provisioning-failure
 > banner" as **missing — new**, and §2 says "the roster mockups carry no banner state". Both are true
