@@ -1,3 +1,6 @@
+// others
+import type { StaffStatus } from "./staff-status";
+
 // Polish label formatters for the Employees roster (S-08). Pure + I/O-free so
 // they unit-test in isolation. Single-locale by construction (pl-PL) — the
 // relative-time helper takes an explicit `nowMs` rather than reading the clock,
@@ -21,7 +24,7 @@ export function staffCountLabel(total: number, admins: number): string {
 }
 
 export interface LastActiveInput {
-  status: "active" | "invited";
+  status: StaffStatus;
   lastSignInAt: string | null;
   invitedAt: string | null;
 }
@@ -39,12 +42,22 @@ function daysWord(n: number): string {
  * client render can agree (pass a stable value until mounted, then Date.now()).
  *   active:  przed chwilą / {n} min temu / {n} godz. temu / wczoraj / {n} dni temu
  *   invited: zaproszenie · dziś / zaproszenie · {n} dni temu
+ *   created: —
  *
  * `opts.invitePrefix: false` drops the leading "zaproszenie · " for invited rows —
  * used when the string sits next to the ZAPROSZONY status badge, where the word
  * would be redundant (→ just "2 dni temu" / "dziś").
  */
 export function formatLastActive(m: LastActiveInput, nowMs: number, opts?: { invitePrefix?: boolean }): string {
+  // Created but never invited: nothing has happened to this account yet, so an
+  // em dash rather than a fabricated timestamp. The design board's own note on
+  // the DODANY row (`employee-states.jsx` ES_LAST id 6) says exactly this, and
+  // the `active` branch below would otherwise answer "przed chwilą" off a null
+  // `lastSignInAt` — which would read as a sign-in that never happened.
+  if (m.status === "created") {
+    return "—";
+  }
+
   if (m.status === "invited") {
     const withPrefix = opts?.invitePrefix !== false;
     if (!m.invitedAt) return withPrefix ? "zaproszenie" : "—";

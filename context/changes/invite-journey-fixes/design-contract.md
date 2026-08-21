@@ -67,9 +67,9 @@
 >
 > That action sends `resetPasswordForEmail`, i.e. a **recovery** link and recovery copy, to someone
 > who has never had a password — the option-2b journey downgrade. Phase 8 makes the two row actions
-> mutually exclusive (`Wyślij zaproszenie` while `password_set_at` is null, `Resetuj hasło` only once
-> it is set), which therefore **diverges from a canonical design** rather than merely from current
-> behaviour.
+> mutually exclusive (an invite action while `password_set_at` is null, `Resetuj hasło` only once it
+> is set), which therefore **diverges from a canonical design** rather than merely from current
+> behaviour. The invite action later split into two labels — see §9.2's reversal and §12.2b.
 >
 > **Recorded as `deviation(the artboard encodes a journey defect)`** so a later fidelity pass does not
 > re-flag it and "restore" the button. If the phase-8 artboard is minted, it must show the new rule —
@@ -145,6 +145,9 @@ rather than against Tailwind's stock scale.
 | ---------------------------------------------- | --------------------------------------------------------- | ----- |
 | `19-admin-desktop-employees.png`               | `/dashboard/staff` → `src/components/staff/StaffList.tsx` | 1, 3  |
 | `25-admin-mobile-employees.jpg`                | same, below `lg`                                          | 1, 3  |
+| `design-review/boards-after/emp-roster.png`    | same — third badge + one-action-per-state rows (desktop)  | 8     |
+| `design-review/boards-after/emp-tablet.png`    | same, tablet card list                                    | 8     |
+| `design-review/boards-after/emp-add.png`       | add modal — `Dodaj` CTA + rewritten subtitle              | 8     |
 | `auth-authed-{d,m}.png`                        | `src/pages/auth/link-conflict.astro`                      | 5     |
 | `auth-inapp-{d,m}.png`                         | `src/pages/auth/reset-password.astro` (R12)               | 5     |
 | `auth-nolink-{d,m}.png`                        | `src/pages/auth/reset-password.astro` (R13)               | 5     |
@@ -228,6 +231,58 @@ therefore a **parity assertion**, and every dimension is inherited-exact from S-
   single `AuthPrimaryLink href="/auth/signin"` and deliberately **no** `AuthBackLink`
   (`reset-password.astro:113-117` records why: two controls with the same destination are noise).
 
+### 8.3 Roster third state + one-action-per-state rows — phase 8
+
+**Ported from the design source, not eyeballed.** `EmpStatusBadge` in
+`desktop-screens.jsx` gained a third tone additively, and `EsRow` / `EtRow` made the row actions
+mutually exclusive (§12.2 — the edit is applied and read back). Colours were confirmed by sampling
+the rendered board at 2× rather than by matching a name: the DODANY badge is **`#64748B` on
+`#EEF1F5`**, which are `--flota-neutral` / `--flota-neutral-soft` in both `tokens.css` and
+`src/styles/global.css`. For comparison the two shipped tones sampled `#1B9E5A` on `#E3F5EC`
+(success) and `#B6790E` on `#FBF1DA` (warning) — i.e. the same soft/solid pairing, so the third
+state introduces **no new colour concept and no new token**.
+
+| Element                       | Exact value                                                                                                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Badge (all three)             | shipped `Badge` base + `gap-1.5`; **no dimension changes**                                                                                                                   |
+| Badge — DODANY                | `text-[var(--flota-neutral)] bg-[var(--flota-neutral-soft)]`                                                                                                                 |
+| Badge dot — DODANY            | `size-1.5 rounded-full bg-[var(--flota-neutral)]`                                                                                                                            |
+| Mobile status line — DODANY   | dot `size-1.5 rounded-full bg-[var(--flota-neutral)]`; label `font-[540] text-[var(--flota-neutral)]`                                                                        |
+| Filter pill                   | a fifth entry in the existing `tabs` array — **no new element**. Order: Wszyscy · Aktywny · Zaproszony · Dodany · Administrator                                              |
+| Row action `lg+`              | inherited-exact from the shipped reset button: `variant="outline"` + `h-9 gap-1.5 px-3 text-[13px] font-[650]`, icon `size-3.5`                                              |
+| Row action `< lg`             | inherited-exact from the shipped reset icon button: `variant="outline" size="icon"` + `text-foreground size-11 rounded-xl`, icon `size-4`, `aria-label="Wyślij zaproszenie"` |
+| Row action — pending          | `size-3.5` (`lg+`) / `size-4` (`< lg`) `animate-spin rounded-full border-2 border-current border-t-transparent`, label swaps to `Wysyłanie…`                                 |
+| Add-modal CTA                 | unchanged geometry (`h-12 flex-1 gap-2`, `bg-primary`); glyph `Plus`, label `Dodaj`, pending label `Dodawanie…`                                                              |
+| `formatLastActive` for DODANY | `—` (em dash). The design's own note on the row: "no activity to report — an em dash, not a fabricated timestamp"                                                            |
+
+**Which control each state gets.** An invite action while `password_set_at` is null (covering BOTH
+password-less badges); `Resetuj hasło` only once it is set. Exactly one action per row; the ✕ is
+unchanged and unconditional. The invite action carries the state's own label — `Wyślij zaproszenie`
+on DODANY, `Wyślij ponownie zaproszenie` on ZAPROSZONY (§9.2).
+
+**The resend label widens the actions column — measured, and accepted.** Rendered at 1280×900 with
+all three states on screen, `getBoundingClientRect` on the real table:
+
+|                           | `Wyślij zaproszenie`   | `Wyślij ponownie zaproszenie`                              |
+| ------------------------- | ---------------------- | ---------------------------------------------------------- |
+| Button width              | 165px                  | **230px**                                                  |
+| Actions column            | 299px                  | **328px** (+29)                                            |
+| Name column               | absorbs the difference | no truncation (`0` cells with `scrollWidth > clientWidth`) |
+| Document / table overflow | none                   | **none**                                                   |
+
+The name column had the slack, so nothing clips and no row wraps: the table is `w-full` inside the
+shared `max-w-[1024px]` content column and simply reapportions. The shorter `Wyślij ponownie` (150px,
+_narrower_ than today's label) was the cheaper option and was **not** taken — the full noun was judged
+clearer than a bare "again", and the layout cost is a column reapportionment with no visible casualty.
+Below `lg` the action is icon-only, so the label lives in `aria-label` and costs no width at all.
+
+**Glyph — `deviation(inherits the app's shipped mapping)`.** The design draws this action with its
+own `Icon.message` (a speech bubble). The app renders it with lucide `Send`, because that is the
+glyph the shipped `Wyślij zaproszenie` control already used — the add-modal CTA paired
+`<Send className="size-4" />` with the same label against the same `Icon.message` in the design.
+Phase 8 moves the label from the modal to the row and carries its glyph with it, rather than
+introducing a second glyph for one label. Recorded so a later fidelity pass does not re-flag it.
+
 ## 9. Verbatim Polish copy
 
 All strings live in `StaffList.tsx`'s `COPY` block beside `mutationError` (`:68`).
@@ -251,18 +306,19 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
 
 ### 9.2 Phase 7 and 8 — approved 2026-08-21
 
-| Key                   | String                                                                                                     | Phase |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- | ----- |
-| `provisionFailed`     | `Nie udało się utworzyć konta dla {email}. Spróbuj ponownie.`                                              | 7     |
-| `repairedMailFailed`  | `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.` | 8     |
-| `statusCreated`       | `DODANY`                                                                                                   | 8     |
-| `statusCreatedMobile` | `Dodany`                                                                                                   | 8     |
-| `tabCreated`          | `Dodany`                                                                                                   | 8     |
-| `chipCreated`         | `Dodani`                                                                                                   | 8     |
-| `sendInvite` (row)    | `Wyślij zaproszenie`                                                                                       | 8     |
-| add-modal CTA         | `Dodaj`                                                                                                    | 8     |
-| `emptyHint`           | `Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.`                                             | 8     |
-| `addSub` (add modal)  | `Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.`                                           | 8     |
+| Key                              | String                                                                                                     | Phase |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----- |
+| `provisionFailed`                | `Nie udało się utworzyć konta dla {email}. Spróbuj ponownie.`                                              | 7     |
+| `repairedMailFailed`             | `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.` | 8     |
+| `statusCreated`                  | `DODANY`                                                                                                   | 8     |
+| `statusCreatedMobile`            | `Dodany`                                                                                                   | 8     |
+| `tabCreated`                     | `Dodany`                                                                                                   | 8     |
+| `chipCreated`                    | `Dodani`                                                                                                   | 8     |
+| `sendInvite` (row, DODANY)       | `Wyślij zaproszenie`                                                                                       | 8     |
+| `resendInvite` (row, ZAPROSZONY) | `Wyślij ponownie zaproszenie`                                                                              | 8     |
+| add-modal CTA                    | `Dodaj`                                                                                                    | 8     |
+| `emptyHint`                      | `Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.`                                             | 8     |
+| `addSub` (add modal)             | `Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.`                                           | 8     |
 
 **Why this Polish:**
 
@@ -277,10 +333,26 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
   becomes `DODANY`. "Utworzony" is a system word for a system event. Desktop badge and tab take the
   singular (`Aktywny` / `Zaproszony` precedent); the mobile chip takes the plural (`Aktywni` /
   `Zaproszeni` precedent) — the block already splits those two forms and the third state follows.
-- **One row-action label for both password-less states.** An earlier draft used `Wyślij zaproszenie`
+- ~~**One row-action label for both password-less states.** An earlier draft used `Wyślij zaproszenie`
   for a first send and `Wyślij ponownie` for a resend. Rejected: `repairedMailFailed` must **name**
   the button, and after a repair the target may be in either state, so two labels make that string
-  unnameable. The badge already distinguishes the two cases.
+  unnameable. The badge already distinguishes the two cases.~~ **REVERSED at the phase-8 manual gate
+  (owner, 2026-08-21)**, on the rendered screen rather than on paper: once the invitation has gone
+  out and the badge reads ZAPROSZONY, an action still labelled `Wyślij zaproszenie` reads as though
+  nothing had been sent. The row now carries **two** labels — `Wyślij zaproszenie` on DODANY,
+  `Wyślij ponownie zaproszenie` on ZAPROSZONY.
+
+  The objection above was real, not wrong, and it is answered rather than ignored: `repairedMailFailed`
+  no longer hard-codes a label but **interpolates the one that row renders**, keyed off the member
+  the server returns. Both strings are authored together in `src/lib/staff-banner.ts`
+  (`inviteActionLabel`, `repairedMailFailedMessage`) so the `unit` project can hold them in agreement
+  — `staff-banner.test.ts` asserts, for every status, that the banner names exactly the button
+  `inviteActionLabel` produces. Two labels are only safe with that test; do not inline either string
+  back into the island.
+
+  The longer wording was chosen over the shorter `Wyślij ponownie` deliberately, with the cost
+  measured rather than assumed — see §8.3.
+
 - **`addSub` was caught by the render, not the review.** The add modal's subtitle read
   `Wyślemy link aktywacyjny. Nowa osoba ustawi własne hasło.` — false under two-step, and it sits
   directly above the CTA, so shipping the button change alone would have put a contradiction on
@@ -298,6 +370,24 @@ shipped wording until phase 8 rewrites the control it names. Consequence for the
 manual check **7.8**'s address clause does not apply — only its "still carries no `Ponów`" half does.
 The address is a real gap for this string, but it is not the gap phase 8 has to close, and `{email}`
 can be added to the phase-8 row here if it is wanted.
+
+### 9.3 Authored during phase-8 implementation — three strings §9.2 does not carry
+
+The approved table above names every string a **reader of the roster** sees. Building the surface
+surfaced three the approved set had no row for, each attached to an interaction rather than a state.
+They are recorded here rather than invented silently, and they follow §9's own conventions
+(impersonal `nie udało się` / `Wysłano`, no participle that has to agree with the hire's gender, the
+same shape as the sibling string already shipped beside them).
+
+| Key                    | String                                   | Why it exists                                                                                                                                                                                                      |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `inviteSent` (banner)  | `Wysłano zaproszenie.`                   | Sibling of the shipped `resetSent` (`Wysłano e-mail do resetu hasła.`). Needed because a **resend** changes nothing on screen — the badge is already ZAPROSZONY — so without it the admin gets no feedback at all. |
+| `adding` (add-modal)   | `Dodawanie…`                             | The modal's pending label. It read `Wysyłanie…`, which is false once step 1 sends nothing. Same `…`-suffixed gerund shape.                                                                                         |
+| `sending` (row action) | `Wysyłanie…` — **unchanged, re-pointed** | Not a new string: the existing pending label follows the invite action from the modal to the row. One pending label serves both invite labels — the button is mid-send either way.                                 |
+
+A failed send deliberately gets **no new string**: the row action reuses the shipped
+`mutationError` + `Ponów` machinery, exactly as `Resetuj hasło` already does for the same class of
+failure. Adding a fourth banner for it would be a new mechanism where a shipped one already fits.
 
 **Accepted, recorded rather than fixed:** `DODANY` is a masculine adjective and would need `Dodana`
 for a woman. §9's gender-neutrality rule has in practice governed **sentences** — where `osobę` and
@@ -379,6 +469,49 @@ and diff against catalog 19 / 25 **excluding the banner region** — the asserti
 banner disturbs nothing else on the screen. The banner region itself is diffed against the shipped
 `mutationError` banner, where the only permitted delta is the string.
 
+### Entry 2 — Roster third state + one-action-per-state rows — `deviation(the artboard encodes a journey defect)`
+
+**The defect.** Catalog 19's fifth row shows an **invited, password-less** person offered
+`Reset password`, and the shipped app reproduces it faithfully (`Łukasz Piątek`, ZAPROSZONY,
+`Resetuj hasło`) because it was ported from that artboard. That control calls
+`resetPasswordForEmail` — a **recovery** link with recovery copy — for someone who has never had a
+password. It is the option-2b journey downgrade, arriving through the roster instead of through the
+service. Evidence: §1's third correction; `research.md` §1.4; plan phase 8.
+
+**Why it is a deviation, and of an unusual kind.** This is not "no artboard". There IS one, it is
+current, and phase 8 **deliberately diverges from it**: `Wyślij zaproszenie` while
+`password_set_at` is null, `Resetuj hasło` only once it is set. Porting catalog 19 faithfully would
+rebuild the defect. Recorded so a later fidelity pass does not "restore" the button.
+
+The third badge state is the ordinary half of the same entry: DODANY exists because create no longer
+sends, so "account exists, nothing sent" became a real state the roster had no word for.
+
+**The design source has been brought in line** (§12.2, applied 2026-08-21 and read back):
+`EmpStatusBadge` gained a third tone **additively** — `active` and `invited` render byte-identically —
+and `EsRow` / `EtRow` carry the mutual exclusion with the reasoning in a comment. So the divergence
+is against the repo's stale `19-…png` export, not against the live design. §12.2a — re-exporting the
+canonical `emp-*` PNGs — is still open, which is why §11's phase-8 rows diff against
+`design-review/boards-after/`.
+
+**Every dimension is inherited-exact, not invented**, and §8.3 transcribes them: the badge is the
+shipped `Badge` element with a third tone whose two colours are the palette's existing
+`--flota-neutral` / `--flota-neutral-soft` (sampled `#64748B` on `#EEF1F5` off the rendered board,
+not matched by name); both row actions reuse the shipped reset button's exact geometry at both
+breakpoints; the filter pill is a fifth entry in an existing array. **No new component, no new
+token, no new spacing decision.** One glyph deviation is recorded in §8.3 (lucide `Send` for the
+design's `Icon.message`, inheriting the mapping the shipped control already used).
+
+**The account-box question does not arise** — this is the roster, not an auth card. Stated
+explicitly for the same reason entry 1 states it.
+
+**Polish copy** is §9.2 verbatim, plus the three interaction strings §9.3 records with their
+justification.
+
+**Vision-diff gate.** §11's three phase-8 rows: the roster at both breakpoints against
+`boards-after/emp-roster.png` and `boards-after/emp-tablet.png`, and the add modal against
+`boards-after/emp-add.png`. The assertion for the two shipped badge tones and every unchanged row is
+**zero delta** — the third state is additive.
+
 ### Inherited — entry 14 of the S-14 contract may go stale
 
 `…/2026-08-11-auth-surface-hardening/design-contract.md` §10 entry 14 names Bug 1's population as one
@@ -393,13 +526,16 @@ artboards into `design-system.md` should carry the correction forward.
 
 ## 11. Vision-diff gate (for `/10x-implement` and `/10x-impl-review`)
 
-| Surface                           | Baseline                                                                                    | Assertion                                                 |
-| --------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `/dashboard/staff`, banner forced | `19-admin-desktop-employees.png` (desktop)                                                  | Only the banner region differs; §8.1 values match exactly |
-| `/dashboard/staff`, banner forced | `25-admin-mobile-employees.jpg` (mobile)                                                    | Same, reflowed at the shared breakpoint                   |
-| `/dashboard/staff`, healthy       | catalog 19 / 25                                                                             | **Zero** delta — the badge fix changes inputs, not pixels |
-| `/auth/link-conflict`             | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                              |
-| `/auth/reset-password` × 6 states | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                              |
+| Surface                                                | Baseline                                                                                    | Assertion                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `/dashboard/staff`, banner forced                      | `19-admin-desktop-employees.png` (desktop)                                                  | Only the banner region differs; §8.1 values match exactly                           |
+| `/dashboard/staff`, banner forced                      | `25-admin-mobile-employees.jpg` (mobile)                                                    | Same, reflowed at the shared breakpoint                                             |
+| `/dashboard/staff`, healthy                            | catalog 19 / 25                                                                             | **Zero** delta — the badge fix changes inputs, not pixels                           |
+| `/dashboard/staff`, DODANY row present (desktop)       | `design-review/boards-after/emp-roster.png`                                                 | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta |
+| `/dashboard/staff`, DODANY row present (tablet/mobile) | `design-review/boards-after/emp-tablet.png`                                                 | Same rule reflowed; the ✕ and every other element unchanged                         |
+| `/dashboard/staff`, add modal                          | `design-review/boards-after/emp-add.png`                                                    | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                               |
+| `/auth/link-conflict`                                  | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                        |
+| `/auth/reset-password` × 6 states                      | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                        |
 
 The zero-delta rows are the load-bearing ones: phase group B's whole claim is that it re-sources six
 auth surfaces without changing any of them. A non-zero diff on any of them is a phase-5 defect, not a
@@ -443,6 +579,21 @@ exports — they are evidence, not replacements. Re-export `emp-add`, `emp-add-d
 `emp-lastadmin`, `emp-self`, `emp-empty`, `emp-nores`, `emp-loading`, `emp-error` and `am-team` from
 `Flota Rental.html` (note: `export-shot.html`'s `SCREENS` map has **no** `emp-*` entries, so either
 add them or drive `Flota Rental.html` directly).
+
+### 12.2b Carry the resend label into `employee-states.jsx` — **OPEN**
+
+§12.2's applied edit renders **one** invite label for both password-less states (`EsRow` and `EtRow`
+both emit `t.sendInvite`). The phase-8 manual gate reversed that in the app (§9.2), so the design
+source is now one step behind on this single point — everything else in §12.2 still matches.
+
+The hunk, when someone picks this up: `shared.jsx` gains `resendInvite` (EN `Resend invite`, PL
+`Wyślij ponownie zaproszenie`) beside `sendInvite`; `EsRow` and `EtRow` become three-way —
+`active` → `t.resetPassword`, `invited` → `t.resendInvite`, otherwise `t.sendInvite`. Deliberately
+NOT applied mid-gate: the design source should follow a confirmed decision, not race it, and
+§12.2a's re-export is still outstanding, so both should land in one pass.
+
+Until then the app is the more current of the two on this line, and §8.3 carries the measured
+layout consequence.
 
 ### 12.3 A lesson worth promoting
 
