@@ -217,6 +217,34 @@ The done-panel shots (`*-05-created.png`) in the S-12 folder stay valid and are 
 - **D2 `deviation(no-data)`** _(inherited from S-12, unchanged)_ — conflict is a plain "Termin zajęty"
   message; no clashing-booking card.
 
+- **D19 `deviation(undrawn-state)` — the calendar says when it has no answer to draw.** The source's grid is
+  always backed by its own `MR_BOOKINGS` literal, so it never has a loading or a failed read to draw and the
+  boards show none. Ours does: `busyRanges: []` reads identically as "no bookings", "still loading" and "the
+  read failed", and the grid drew the first of those for all three — an all-free month over a failed read,
+  which an employee reads availability off to a customer on the phone. Both undrawn states are therefore
+  ours to define:
+  - **loading** — the grid is `inert` at `opacity 0.5`. No message: the availability panel above it already
+    reads **Sprawdzanie dostępności…**, and the state is transient.
+  - **error** — the grid is `inert` at `opacity 0.5` **and** the picker carries a notice above it, in the
+    panel's own warning treatment (`rounded-[13px]`, `bg-[var(--flota-warning-soft)]`, `AlertTriangle`
+    `size 18`, `font-size:12.5 / weight:600`, `text-warning`, `margin-bottom:12`) reading
+    **"Nie udało się sprawdzić dostępności."** — the panel's `avError` string verbatim, not a second wording.
+    It is repeated inside the picker because on mobile the picker is its own `absolute inset-0 z-[70]` layer
+    and **covers the panel outright**, so the grid would otherwise be the only thing on screen.
+  - The **trigger stays enabled** in both states. Gating it (`disabled={busy || rangesState !== "ready"}`) was
+    considered and rejected: it makes the common path pay for the rare failure, and a dead button with no
+    explanation is worse than a picker that opens and says why it is empty.
+  - A **"Spróbuj ponownie"** action (`font-size:12.5 / weight:700`, `text-warning`, underlined,
+    `margin-top:4`) — also undrawn — appears in **both** error surfaces: the picker's notice and the
+    availability panel's error branch. A failed read otherwise strands the vehicle, because the read is keyed
+    on `vehicleId`, so re-selecting the same one is a no-op and the only way out is switching vehicle and
+    back. **Both placements are required, not belt-and-braces**: the panel's error branch only renders once a
+    complete range is picked (`resolveAvailability` returns `idle` while either date is empty), and after a
+    failed read the grid is inert — so no range can be picked, and a panel-only retry is unreachable in
+    exactly the state that needs it. Driven 2026-08-21: with the route forced to 500 the picker showed the
+    message with the grid inert and **zero** retry affordances before this was added. The action is absent
+    from the panel's `invalid` state, which no re-read can fix.
+
 ---
 
 ## Surface — `Termin` block
@@ -281,7 +309,9 @@ Card — `bg-card`, `border 1px var(--flota-hair-2)`, `border-radius:16`, `paddi
 letter-spacing:-0.2`, ink. **Not uppercased** (unlike `BookingWidget`, which upper-cases its caption).
   `exact`.
 - Nav buttons `26×26`, `border-radius:8`, `border 1px var(--flota-hair)`, flex-centered; chevron `size 13`
-  `--flota-ink-2`; the next button is the back glyph mirrored (`scaleX(-1)`). `exact` styling,
+  `--flota-ink-2`; the next button is the back glyph mirrored (`scaleX(-1)`). The pair sits in a flex row with
+  **`gap: 6`** (`gap-1.5`), transcribed from the source's own
+  `<div style={{ display: 'flex', gap: 6 }}>` around the two buttons. `exact` styling,
   `deviation(static-source)` on behaviour (D12).
 
 **Grid** — `grid-template-columns: repeat(7, 1fr)`, `gap:4`. Monday-first (the `pl` date-fns locale already
@@ -308,7 +338,9 @@ weight:600`, muted, `padding-bottom:4`. `exact` — these exact two-letter forms
   `stroke-width 1.2`, `vector-effect: non-scaling-stroke`, spanning the cell. `exact`.
 - **Fully busy** (interior day, or a day that is both a return and a pickup) — solid `--flota-busy`
   background, label `text-muted-foreground` at `opacity 0.75`, `cursor: not-allowed`, not selectable.
-  `exact`.
+  `exact`. **The opacity is the LABEL's, not the cell's** — the source puts it on the day `<span>`
+  (`opacity: full ? 0.75 : 1`) while the container keeps `background: '#D7DCE3'` at full strength. Ship it as
+  `text-muted-foreground/75`; an `opacity-75` on the button fades the fill with it and renders ≈`#E1E5EA`.
 - **Past days** — `disabled`. `deviation(undrawn-state)` (D13).
 - Per-day aria: the two half states append the start-only / end-only suffix via `labelDayButton`, as
   `BookingWidget.tsx:265-277` does. `deviation(a11y-added)` — the static source has no aria.
