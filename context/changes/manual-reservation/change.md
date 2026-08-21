@@ -35,3 +35,8 @@ Design mockup: `manual-reservation.jsx` (live in Claude Design
 - Quick-action menu extras (**Nowy klient / Dodaj pojazd / Szybkie wydanie**) are
   **out of scope** ("Nowy klient" implies a customer DB v1 lacks).
 - The mockup's calendar-cell-click entry point is a possible follow-up, not this slice.
+- **Blind date fields are a known gap, split out as S-12a** (`manual-reservation-date-picker`): the modal
+  ships the source's two native `<input type="date">`, so availability only lands after both dates are
+  picked. The public booking widget already greys a vehicle's taken days; staff get the weaker tool. The
+  source's own "next free" hint — dropped as **D2** because the boolean check can't populate it — is the
+  cheaper half of the same gap.

@@ -573,6 +573,78 @@ punch-list to empty apart from the deviations recorded in Phase 7. Finally set `
 
 ---
 
+## Phase 9: Review fixes — in-flight form freeze + stale conflict banner
+
+### Overview
+
+A post-Phase-8 review pass (`reviews/impl-review-2.md`) found two residual instances of the problems
+Phase 5 set out to fix. **F11**: the `busy` guard stops at the submit button, the scrim and the X, so the
+vehicle picker and the five customer/date inputs stay live for the whole POST while the done panel and
+`markConflict()` read **current** state rather than what was submitted. **F12**: `banner` outlives the range
+it describes, so F1's green-panel-over-red-banner pairing is still reachable — with no race at all, just by
+following what the banner tells the employee to do. Both reproduced against the running app on 2026-08-18.
+
+### Changes Required:
+
+#### 1. Freeze the form while `busy` (F11)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: Two symptoms, one root. **(a)** `DonePanel` is handed `pickup`/`returnDate`/`customerName` from
+live state (`:263-266`), so editing **Zwrot** during the POST makes the confirmation print a range that was
+never booked — the row and the customer's e-mail keep the submitted one, and nothing on screen contradicts
+the wrong dates. **(b)** editing a date mid-flight clears `resolved` (`useManualReservation.ts:67-70`) and
+schedules a debounced GET; the 409 then pins `markConflict()` (`:247`) onto a range nobody checked, and
+~420ms later that GET overwrites it with `available` (`useManualReservation.ts:89`) — a green panel under the
+red "Termin został właśnie zajęty" banner, the exact pairing F1 removed. The window is not microscopic: the
+endpoint awaits the confirmation e-mail (`api/reservations/manual.ts:102`) before answering.
+
+**Contract**: add `disabled={busy}` to the vehicle `<select>` (`:334`) and to the five inputs — pickup
+(`:364`), return (`:382`), name (`:406`), phone (`:416`), e-mail (`:426`). **No other mechanism**: with the
+inputs frozen, the state at `setCreated` is by construction the state that was POSTed, so (a) and (b) close
+together and no payload snapshot is needed. **No styling change** — unlike the X (`:302`), the fields keep
+their normal look; the pending state is already carried by the submit button's spinner, and the design source
+draws no disabled-field state. Extend the existing `deviation(busy-guard)` line in
+`design-contract.md` (Surface 1) to cover the fields rather than adding a new deviation.
+
+#### 2. The conflict banner dies with the range it describes (F12)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: `banner` is set at `:248` / `:253` / `:256` and cleared in exactly one place — `:237`, the top of
+the _next_ `submit()`. Nothing clears it when the inputs change, so it outlives the range it is talking
+about. The path needs no race and no mid-flight editing: a lost create shows "Termin został właśnie zajęty.
+**Wybierz inny termin.**", the employee does exactly that, the panel resolves **Termin wolny** and submit
+re-arms — and the red banner is still on screen telling them to pick another date. That is F1's original
+complaint verbatim, with the staleness moved from the panel to the banner. Phase 5 fixed the panel; this
+fixes the other half.
+
+**Contract**: clear `banner` on the same trigger that already drops the availability answer — a change to
+(vehicle, pickup, return). Mirror the hook's documented render-phase reset (`useManualReservation.ts:62-70`)
+inside `ManualReservationModal`: track the same `${vehicleId}|${pickup}|${returnDate}` key in state and
+`setBanner(null)` when it differs, so the banner disappears in the same render the input changed rather than
+a paint later. It must **not** clear on a customer-field edit (name/phone/e-mail are not part of the key) and
+must not disturb the banner `submit()` just set — the key is unchanged at that point, so it does not.
+Considered and rejected: storing the banner as `{key, text}` and rendering it only while `key` matches. It
+needs no reset logic at all, but duplicates the key derivation that today lives inside the hook.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- With the manual-create response held open (console `fetch` wrapper, `reviews/impl-review-2.md` F11), the vehicle picker and all five fields refuse input while the button reads "Tworzenie…", and the done panel's dates/name match the row written to `reservations`.
+- Editing a date is impossible mid-flight, so the panel can no longer end up green beneath the conflict banner.
+- After a lost create, changing to a free range clears the conflict banner as the panel turns green; editing only the customer fields leaves it up.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -719,10 +791,26 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [x] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration`
+- [x] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration` — 864c60f
 
 #### Manual
 
 - [ ] 8.2 Progress items 1.5, 2.5, 3.4–3.7, 4.4, 4.5 executed and checked with evidence
 - [ ] 8.3 3.8 vision-diff run against the 10 canonical mockups; punch-list empty apart from Phase 7 deviations
 - [ ] 8.4 `change.md` status moved past `implementing`
+
+### Phase 9: Review fixes — in-flight form freeze + stale conflict banner
+
+#### Automated
+
+- [ ] 9.1 Type checking passes: `npx astro check`
+- [ ] 9.2 Linting passes: `npm run lint`
+- [ ] 9.3 Build passes: `npm run build`
+- [ ] 9.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 9.5 F11(a) — with the create held open, the picker and all five fields refuse input; the done panel's dates + name match the `reservations` row
+- [ ] 9.6 F11(b) — a date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner
+- [ ] 9.7 `design-contract.md` Surface 1 `deviation(busy-guard)` extended to the form fields
+- [ ] 9.8 F12 — a lost create's banner clears when the range changes (panel green ⇒ no stale banner) and survives a customer-field edit
