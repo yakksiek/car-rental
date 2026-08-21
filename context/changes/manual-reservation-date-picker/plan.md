@@ -758,6 +758,18 @@ effect's `.then` and its `.catch` open with `if (currentId.current !== vehicleId
 redundant. The comment at :63-68, which currently explains why the ref is assigned in the effect, is rewritten
 to say why it is assigned during render.
 
+> **Addendum (implemented 2026-08-21, `d933d17`) — shipped by a different mechanism.** The contract above is
+> **not implementable in this project**: a render-phase ref write is an ESLint _error_ under
+> `react-hooks/refs` ("Cannot access refs during render"), and `npm run lint` is success criterion 7.2. The
+> ref and the render-phase reset are both **gone**. In their place the fetched answer carries the vehicle it
+> belongs to — `{ vehicleId, ranges, state }` — and the guard is a render-time derivation
+> (`data.vehicleId === vehicleId ? data.ranges : []`). A superseded response can only write data stamped with
+> the old id, which the render for the new vehicle ignores, so there is no window to hit rather than a
+> narrower one. `refetch` keeps a functional guard for the reverse ordering. Verified by forcing the
+> **un-aborted** path (a held-open `refetch`, since the effect's fetch is killed by its `AbortController` and
+> never reaches the guard at all). One behaviour change came with the reset's removal: A→B→A now re-shows the
+> cached answer with no loading beat — see the hook comment.
+
 #### 5. Keep the pre-flight uncacheable (F6)
 
 **Files**: `src/components/hooks/useVehicleBusyRanges.ts`, `src/pages/api/vehicles/[id]/busy-ranges.ts`
@@ -783,6 +795,19 @@ and back.
 does not also discard a good earlier answer (the `error` state already disarms submit, which is what keeps
 this safe). `MrAvailability`'s error branch (:117-126) gains a **Spróbuj ponownie** action calling `refetch`.
 The label is undrawn in the source — record it as `deviation(undrawn-state)` alongside D19.
+
+> **Addendum (implemented 2026-08-21, `d933d17` + review fix) — the retry needs BOTH surfaces.** A
+> panel-only retry is **unreachable in the state that needs it**: `MrAvailability`'s error branch only renders
+> once a complete range is picked (`resolveAvailability` returns `idle` while either date is empty), and §3
+> makes the grid `inert` on a failed read — so no range can be picked to reveal it. Driven with the route
+> forced to 500: the picker showed the failure with **zero** retry affordances. The action therefore ships in
+> the picker's notice _and_ the panel. Both strings are shared from `AVAILABILITY_COPY`
+> (`src/lib/manual-availability.ts`) so the two surfaces cannot drift.
+>
+> **Review fix (F1).** §3's freeze and this carry-over initially cancelled out — the preserved ranges were
+> drawn but `inert` (driven: `busyCells=3`, `pointer=blocked`). `gridUsable` now splits the two failures:
+> a failed FIRST read (no ranges) stays inert; a failed RE-read keeps its carried answer operable. Submit
+> stays disarmed in both via `canCreateReservation`.
 
 #### 7. Two design-contract divergences (F8)
 
@@ -1020,7 +1045,7 @@ grant changes.
 - [ ] 7.6 The first click leaves the panel `idle` and the trigger on **Wybierz termin** — no return-before-pickup error between the two clicks (F2)
 - [ ] 7.7 With the route forced to 500 the grid is non-interactive and shows "Nie udało się sprawdzić dostępności." on desktop and inside the mobile sheet (F3)
 - [ ] 7.8 **Spróbuj ponownie** recovers the surface once the route is restored, and a failed re-read no longer discards good ranges (F7)
-- [ ] 7.9 Rapid vehicle switching never paints the previous vehicle's greying under the new vehicle's name (F4)
+- [x] 7.9 Rapid vehicle switching never paints the previous vehicle's greying under the new vehicle's name (F4) (verified via the only path that reaches the guard: a HELD-OPEN response. Racing the effect is unfalsifiable — the AbortController kills the superseded request, `net::ERR_ABORTED`, so it passes with or without the guard. Driven instead with the old vehicle's re-read delayed past the new vehicle's answer: `[delivered] 44444444 200` landed after `[delivered] 11111111 200`, carrying blocked days, and the selected vehicle's grid held at busyCells=0, foreignPaintSeen=false)
 - [ ] 7.10 The pre-flight request carries `no-store` and is not served from cache on a repeated create attempt (F6)
 - [ ] 7.11 A fully-blocked day's fill measures `#D7DCE3` with only its label at 75% opacity; the nav gap is contract-backed (F8)
 - [ ] 7.12 Vision-diff against the six boards clean apart from recorded deviations, now including D19 (F3, F7)

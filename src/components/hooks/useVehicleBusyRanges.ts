@@ -11,9 +11,15 @@ import type { VehicleBusyRange } from "../../types";
 // these ranges, so this hook's `state` IS the panel's `checking` / `error`.
 //
 // FAILS CLOSED. A non-OK response — including the route's own fail-closed 500 —
-// resolves to `error` and never to empty ranges: an empty list is
+// resolves to `error` and never to a `ready` empty list: empty is
 // indistinguishable from a genuinely free vehicle, and `resolveAvailability`
 // would answer `available` over it and arm the submit button.
+//
+// The two failures differ in what they leave on screen. A failed FIRST read has
+// nothing to show, so it commits empty ranges. A failed RE-read (`refetch`)
+// keeps the ranges it already had and only moves `state` to `error` — throwing
+// away a good answer would blank the grid the employee is reading from, and the
+// `error` state disarms submit either way.
 //
 // No debounce: this fires on a discrete vehicle selection, not on typing.
 
@@ -84,6 +90,14 @@ export function useVehicleBusyRanges(vehicleId: string): VehicleBusyRangesHandle
   // aborted nor filtered). A render-phase ref write is what `react-hooks/refs`
   // forbids, and rightly. Deriving needs no write at all and closes the same
   // window by construction.
+  //
+  // One deliberate behaviour change came with dropping the reset: the reset used
+  // to blank on EVERY vehicle change, so returning to a vehicle re-showed
+  // `loading`. Now A→B→A matches on re-entry and re-shows A's last answer
+  // immediately, with no loading beat, while the fresh read runs. That is the
+  // right vehicle's data and never another's — and the panel's verdict is only
+  // ever advisory anyway: `submit()` re-reads through `refetch` before it POSTs,
+  // and the EXCLUDE constraint is the authority on the write.
   const matches = data.vehicleId === vehicleId;
   const ranges = matches ? data.ranges : [];
   const state: BusyRangesState = matches ? data.state : vehicleId ? "loading" : "ready";

@@ -26,6 +26,20 @@ export type AvailabilityState =
 export type BusyRangesFetchState = "loading" | "ready" | "error";
 
 /**
+ * The two strings the availability panel and the date picker must say
+ * IDENTICALLY. D19 requires it — the picker repeats the failure because on
+ * mobile it covers the panel outright, and two wordings for one failure would
+ * read as two different problems. Shared from here rather than copied into each
+ * component's local COPY map, because a copy is exactly what drifts. Polish
+ * copy is canonical (see `design-system.md`); `src/lib` already carries some,
+ * e.g. `formatDuration`.
+ */
+export const AVAILABILITY_COPY = {
+  readFailed: "Nie udało się sprawdzić dostępności.",
+  retry: "Spróbuj ponownie",
+} as const;
+
+/**
  * The panel's whole state, as a total function of the form plus the ranges
  * fetch. Order matters and is the contract:
  *

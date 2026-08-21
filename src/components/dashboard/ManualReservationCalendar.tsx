@@ -12,7 +12,7 @@ import { Calendar } from "../ui/calendar";
 import { checkRangeBookable, dayAvailabilityMap, type RangeConflict } from "../../lib/availability";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { formatDuration, rentalDays } from "../../lib/format";
-import type { BusyRangesFetchState } from "../../lib/manual-availability";
+import { AVAILABILITY_COPY, type BusyRangesFetchState } from "../../lib/manual-availability";
 import { cn } from "../../lib/utils";
 import type { VehicleBusyRange } from "../../types";
 
@@ -59,13 +59,11 @@ const COPY = {
   returnOnlyLabel: "dostępny tylko jako dzień zwrotu",
   prevMonth: "Poprzedni miesiąc",
   nextMonth: "Następny miesiąc",
-  // D19 — deliberately the availability panel's own `avError`, not a second
-  // wording for the same failure. Duplicated as a literal the way
-  // `formatDayShort` is duplicated across these two files: the modal owns the
-  // panel, this file owns the grid, and neither imports the other's COPY.
-  readFailed: "Nie udało się sprawdzić dostępności.",
-  // Same action the panel offers, for the same reason — see `onRetry`.
-  retry: "Spróbuj ponownie",
+  // D19 — deliberately the availability panel's own strings, not a second
+  // wording for the same failure. Shared via `AVAILABILITY_COPY` so the two
+  // surfaces cannot drift apart.
+  readFailed: AVAILABILITY_COPY.readFailed,
+  retry: AVAILABILITY_COPY.retry,
 } as const;
 
 const HINT: Record<RangeConflict, string> = {
@@ -188,7 +186,17 @@ export function ManualReservationCalendar({
   // "not rendered / not reachable" shape the busy freeze uses. The trigger
   // deliberately stays enabled (rejected: `disabled={busy || rangesState !==
   // "ready"}`), so the picker still opens and can say why it is empty.
-  const gridUsable = rangesState === "ready";
+  //
+  // `error` splits in two, because the two failures leave very different things
+  // on screen. A failed INITIAL read has no ranges at all, so the grid would
+  // draw an all-free month it cannot vouch for — that is the case this guard
+  // exists for. A failed RE-read still holds the previous good answer, which
+  // `refetch` deliberately carries over rather than discarding; freezing that
+  // would blank the grid the employee is reading from and undo the carry-over.
+  // Operating on it is safe either way: `resolveAvailability` maps `error` to
+  // `error`, and `canCreateReservation` only ever passes `available`, so submit
+  // stays disarmed and the retry sits directly above.
+  const gridUsable = rangesState === "ready" || (rangesState === "error" && busyRanges.length > 0);
 
   const selected = React.useMemo<DateRange | undefined>(() => {
     const from = fromIsoDate(pickup);

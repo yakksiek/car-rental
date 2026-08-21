@@ -19,7 +19,12 @@ import {
   rentalDays,
 } from "../../lib/format";
 import { checkRangeBookable } from "../../lib/availability";
-import { canCreateReservation, resolveAvailability, type AvailabilityState } from "../../lib/manual-availability";
+import {
+  AVAILABILITY_COPY,
+  canCreateReservation,
+  resolveAvailability,
+  type AvailabilityState,
+} from "../../lib/manual-availability";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -60,7 +65,7 @@ const COPY = {
   avAvailable: "Termin wolny",
   avConflict: "Termin zajęty",
   avConflictSub: "Ten pojazd ma już rezerwację w wybranych dniach.",
-  avError: "Nie udało się sprawdzić dostępności.",
+  avError: AVAILABILITY_COPY.readFailed,
   submit: "Utwórz rezerwację",
   submitting: "Tworzenie…",
   doneTitle: "Rezerwacja utworzona",
@@ -69,8 +74,9 @@ const COPY = {
   done: "Gotowe",
   // D19 — undrawn in the source. A failed read strands the vehicle in `error`
   // (the effect is keyed on `vehicleId`, so re-selecting the same one is a
-  // no-op); this is the way out that is not "switch vehicle and back".
-  avRetry: "Spróbuj ponownie",
+  // no-op); this is the way out that is not "switch vehicle and back". Shared
+  // with the picker, which offers the same action — see `AVAILABILITY_COPY`.
+  avRetry: AVAILABILITY_COPY.retry,
   errorCreate: "Nie udało się utworzyć rezerwacji. Spróbuj ponownie.",
   errorConflict: "Termin został właśnie zajęty. Wybierz inny termin.",
   errorUnavailable: "Ten pojazd nie jest już dostępny.",
