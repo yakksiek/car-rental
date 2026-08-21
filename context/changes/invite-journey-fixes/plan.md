@@ -1018,7 +1018,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 - [ ] 1.8 Forced insert failure surfaces the new banner, not the network banner
 - [ ] 1.9 `Ponów` completes the account and the person appears on the roster
-- [ ] 1.10 Banner copy matches `design-contract.md` §9 verbatim
+- [x] 1.10 Banner copy matches `design-contract.md` §9 verbatim — 4552fad
 - [ ] 1.11 Roster renders unchanged against `19-admin-desktop-employees.png` / `25-admin-mobile-employees.jpg`
 - [ ] 1.12 A genuine network failure still shows the original network banner
 
@@ -1038,7 +1038,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 #### Manual
 
 - [ ] 2.9 Roster renders identically to before the migration
-- [ ] 2.10 `mark_password_set()` from a non-admin employee stamps only their own row
+- [x] 2.10 `mark_password_set()` from a non-admin employee stamps only their own row — cff25da
 
 ### Phase 3: Wire the signal
 
@@ -1055,12 +1055,12 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Manual
 
-- [ ] 3.9 Setting a password via `/auth/reset-password` stamps the signal; roster flips to AKTYWNY
+- [x] 3.9 Setting a password via `/auth/reset-password` stamps the signal; roster flips to AKTYWNY — fe7edec
 - [ ] 3.10 Changing a password via `/dashboard/account/password` stamps it, caller stays signed in
-- [ ] 3.11 A hire who clicks but sets no password stays ZAPROSZONY
-- [ ] 3.12 Re-adding that hire sends an activation mail
+- [x] 3.11 A hire who clicks but sets no password stays ZAPROSZONY — fe7edec
+- [x] 3.12 Re-adding that hire sends an activation mail — fe7edec
 - [ ] 3.13 Failed-mail repair shows `repairedMailFailed` (error tone, no retry); row still lands, modal still closes
-- [ ] 3.14 That banner's copy matches `design-contract.md` §9 verbatim
+- [x] 3.14 That banner's copy matches `design-contract.md` §9 verbatim — fe7edec
 
 ### Phase 4: Deferred exchange — the callback
 
@@ -1078,11 +1078,11 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Manual
 
-- [ ] 4.10 Opening an invite link creates no session — `/dashboard` still redirects to sign-in
-- [ ] 4.11 Opening the same link twice renders the form both times
-- [ ] 4.12 A deactivated staffer's link still gets "Konto jest nieaktywne" before the form
-- [ ] 4.13 An invalid/expired token lands on the expired screen, never a 500
-- [ ] 4.14 A recovery link with `&type=invite` renders recovery copy, never `Witaj we Flocie`
+- [x] 4.10 Opening an invite link creates no session — `/dashboard` still redirects to sign-in — b3afb07
+- [x] 4.11 Opening the same link twice renders the form both times — b3afb07
+- [x] 4.12 A deactivated staffer's link still gets "Konto jest nieaktywne" before the form — b3afb07
+- [x] 4.13 An invalid/expired token lands on the expired screen, never a 500 — b3afb07
+- [x] 4.14 A recovery link with `&type=invite` renders recovery copy, never `Witaj we Flocie` — b3afb07
 
 ### Phase 5: Submit-time exchange
 
@@ -1097,13 +1097,13 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Manual
 
-- [ ] 5.7 Bug 2's sequence — open link, close tab, reopen → form renders
-- [ ] 5.8 Setting a password shows R4 and signs the user out globally
-- [ ] 5.9 Reopening the link after a successful set lands on "Link wygasł"
+- [x] 5.7 Bug 2's sequence — open link, close tab, reopen → form renders — 048d947
+- [x] 5.8 Setting a password shows R4 and signs the user out globally — 048d947
+- [x] 5.9 Reopening the link after a successful set lands on "Link wygasł" — 048d947
 - [ ] 5.10 Shared-workstation colleague still gets R11; sign out then reopen works
-- [ ] 5.11 Invite copy renders for invite links, recovery copy for recovery links
-- [ ] 5.12 The account box names the address whose password is changing, with the hire's initials
-- [ ] 5.13 R13/R12 partition holds — signed-out typing the URL → R13, signed-in → R12
+- [x] 5.11 Invite copy renders for invite links, recovery copy for recovery links — 048d947
+- [x] 5.12 The account box names the address whose password is changing, with the hire's initials — 048d947
+- [x] 5.13 R13/R12 partition holds — signed-out typing the URL → R13, signed-in → R12 — 048d947
 
 ### Phase 6: Deletion sweep
 
@@ -1121,7 +1121,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Manual
 
-- [ ] 6.10 Full invited-hire journey works end to end
-- [ ] 6.11 Recovery journey works end to end
-- [ ] 6.12 Signing out clears the pending-token cookie
+- [x] 6.10 Full invited-hire journey works end to end — 233ad5e
+- [x] 6.11 Recovery journey works end to end — 233ad5e
+- [x] 6.12 Signing out clears the pending-token cookie — 233ad5e
 - [ ] 6.13 No auth screen renders differently from before phase group B
