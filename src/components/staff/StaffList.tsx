@@ -66,6 +66,11 @@ const COPY = {
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
   mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
+  // Provisioning half-succeeded: the invite mail is already in the hire's inbox,
+  // so the network banner above would be a lie. design-contract.md §9, verbatim.
+  provisionRolledBack:
+    "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Cofnięto zaproszenie — dodaj osobę ponownie.",
+  provisionOrphaned: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Użyj „Ponów”, aby je naprawić.",
   retry: "Ponów",
   resetSent: "Wysłano e-mail do resetu hasła.",
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
@@ -487,6 +492,21 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       }
       if (res.status === 409) {
         return { dupEmail: true };
+      }
+      // Provisioning half-succeeded (the invite mail is already out). The route
+      // marks it with a machine-readable `code`; an unhandled 500 has none and
+      // falls through to the network banner below, unchanged.
+      const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+      if (failure?.code === "provision_rolled_back" || failure?.code === "provision_orphaned") {
+        // Close the modal: the banner's `Ponów` is the single retry surface, and
+        // leaving the form open behind it would offer a competing second one.
+        setAddOpen(false);
+        setBanner({
+          kind: "error",
+          msg: failure.code === "provision_rolled_back" ? COPY.provisionRolledBack : COPY.provisionOrphaned,
+          retry: () => void addEmployee(values),
+        });
+        return;
       }
       setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
     } catch {

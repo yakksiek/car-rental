@@ -21,6 +21,11 @@ const MSG = {
   forbidden: "Brak uprawnień.",
   duplicateEmail: "Pracownik z tym adresem e-mail już istnieje.",
   unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
+  // The invite mail went out but the profiles row did not land. The roster island
+  // renders its own §9 copy off `code`, so this string is for non-browser callers
+  // and logs; the two outcomes share it because the remedy differs only in the
+  // island's wording.
+  provisionFailed: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -71,6 +76,14 @@ export const POST: APIRoute = async (context) => {
       return json(200, { member: result.member });
     case "duplicate_active":
       return json(409, { errors: { email: MSG.duplicateEmail } });
+    // Provisioning half-succeeded: 500 is the honest class (our write failed),
+    // and `code` is what makes it distinguishable from an unhandled 500 — those
+    // carry Astro's HTML body with no `code`, so the island falls back to the
+    // network banner exactly as before.
+    case "provision_rolled_back":
+      return json(500, { error: MSG.provisionFailed, code: "provision_rolled_back" });
+    case "provision_orphaned":
+      return json(500, { error: MSG.provisionFailed, code: "provision_orphaned" });
     case "unauthorized":
       // A null admin client here means the service-role key is unconfigured.
       return json(403, { error: MSG.unconfigured });

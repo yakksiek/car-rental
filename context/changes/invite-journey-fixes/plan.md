@@ -1006,13 +1006,13 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 1.1 Lint passes: `npm run lint`
-- [ ] 1.2 Type checking passes: `npx astro check`
-- [ ] 1.3 Unit tests pass: `npm test`
-- [ ] 1.4 Integration tests pass: `npm run test:integration`
-- [ ] 1.5 New failure-path tests assert no orphaned `auth.users` row survives a rolled-back invite
-- [ ] 1.6 Existing provisioning coverage still green (`staff.test.ts:49,:72,:82,:117,:146`)
-- [ ] 1.7 Production build succeeds: `npm run build`
+- [x] 1.1 Lint passes: `npm run lint`
+- [x] 1.2 Type checking passes: `npx astro check`
+- [x] 1.3 Unit tests pass: `npm test`
+- [x] 1.4 Integration tests pass: `npm run test:integration`
+- [x] 1.5 New failure-path tests assert no orphaned `auth.users` row survives a rolled-back invite
+- [x] 1.6 Existing provisioning coverage still green (`staff.test.ts:49,:72,:82,:117,:146`)
+- [x] 1.7 Production build succeeds: `npm run build`
 
 #### Manual
 
