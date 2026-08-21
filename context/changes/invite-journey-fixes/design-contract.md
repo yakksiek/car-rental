@@ -184,13 +184,36 @@ to this element and changes no dimension.
 | Retry button      | `variant="outline"` + `bg-card h-9 shrink-0 px-4 text-[13px] font-[650]`                               |
 | Placement         | Inside `mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6`, above the filter card                        |
 
-**Tone assignment for the new states:** all three use `kind: "error"` (`AlertTriangle`, destructive).
+**Tone assignment for the new states:** both use `kind: "error"` (`AlertTriangle`, destructive).
 The "repaired but mail not sent" case is a partial success, but it needs the admin to act, and the
 success tone ships a `ShieldCheck` with no retry affordance — so error is the honest tone.
+(Phase 1 shipped three states here; phase 7 collapsed the two provisioning arms into one — §9.2.)
 
-**Retry affordance:** the two provisioning-failure strings keep `retry` wired to
-`addEmployee(values)`. The mail-failure string carries **no** retry — its remedy is the row's own
-`Resetuj hasło` action, which the copy names.
+**Retry affordance:** the provisioning-failure string keeps `retry` wired to `addEmployee(values)`
+on **both** API codes — the codes stay distinct for logs, the banner does not. The mail-failure
+string carries **no** retry — its remedy is the row's own action, which the copy names.
+
+**Wrapping at 390px — accepted. Measured, not estimated** (rendered `/dashboard/staff`, 390×844,
+banner forced, `getComputedStyle` + `getBoundingClientRect`, 2026-08-21):
+
+| String                                                  | Chars | Lines at 390px |
+| ------------------------------------------------------- | ----- | -------------- |
+| `mutationError` (shipped network banner)                | 68    | 3              |
+| `provisionFailed` — typical address (`anna.kowalska@…`) | 80    | 4              |
+| `provisionFailed` — 70-char address                     | 125   | 5              |
+| `provisionRolledBack` (phase-1 string it replaces)      | 108   | 5              |
+
+At 390px the banner is 358px wide and the message column is **227px** — `px-5` padding plus the
+`Ponów` button's `shrink-0` 77px and the `gap-3` take the rest — so this element wraps to 4 lines at
+that width regardless of the address, and did so before phase 7. Line height 20px; the wrapper grows
+in height and its `items-center` keeps the button vertically centred against the taller message.
+Verified at both address lengths: no horizontal overflow on the banner or the document, and the
+button keeps its full 77px.
+
+Accepted rather than fixed, and the contract's claim is now the measured one: against the string it
+replaces, `provisionFailed` is **one line shorter** for a realistic address and **ties at worst** for
+a pathological one. No `truncate` — the address is the payload, and a failed provisioning drives no
+roster row, so a clipped address would leave it nowhere in the product.
 
 ### 8.2 Auth surfaces — parity spec
 
@@ -245,8 +268,11 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
 
 - **`provisionFailed` interpolates the address** because a failed provisioning is invisible
   everywhere else — the orphan drives no roster row (`list_staff` INNER-joins), so the banner is the
-  only place in the product where that address exists. It is also one sentence rather than two, which
-  is what lets it survive a 390px row.
+  only place in the product where that address exists. It is also **shorter** than the two strings it
+  replaces, which is what lets it survive a 390px row — measured in §8.1 rather than asserted. (An
+  earlier draft of this bullet said "one sentence rather than two"; the approved string is in fact
+  two sentences, and follows the state-of-the-world-then-imperative convention below. What carries
+  the 390px claim is its length, not its sentence count.)
 - **`DODANY` closes a loop with the admin's own verb.** They click `Dodaj pracownika`; the person
   becomes `DODANY`. "Utworzony" is a system word for a system event. Desktop badge and tab take the
   singular (`Aktywny` / `Zaproszony` precedent); the mobile chip takes the plural (`Aktywni` /
@@ -263,6 +289,15 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
 - **The add-modal CTA drops to `Dodaj`** because the modal is already titled `Dodaj pracownika`, and
   because `Wyślij zaproszenie` now describes step **2** — leaving it on step 1 would promise an email
   that no longer goes out. `emptyHint` loses the same promise for the same reason.
+
+**`repairedMailFailed` is a phase-8 row, and phase 7 leaves it alone** (owner, 2026-08-21). The plan's
+phase 7 §2 says the string "becomes a function of the address in this phase"; this table does not
+carry a phase-7 form of it, and the phase-8 string above interpolates nothing. Rather than author an
+address form outside the approved set, phase 7 ships `provisionFailed` only and the string keeps its
+shipped wording until phase 8 rewrites the control it names. Consequence for the plan's Progress:
+manual check **7.8**'s address clause does not apply — only its "still carries no `Ponów`" half does.
+The address is a real gap for this string, but it is not the gap phase 8 has to close, and `{email}`
+can be added to the phase-8 row here if it is wanted.
 
 **Accepted, recorded rather than fixed:** `DODANY` is a masculine adjective and would need `Dodana`
 for a woman. §9's gender-neutrality rule has in practice governed **sentences** — where `osobę` and
@@ -282,9 +317,11 @@ beside it.
   the same device `lastAdminBody`'s `inną osobę` already uses.
 - **Impersonal `nie udało się`** states a system fact without assigning blame, and is the register
   already shipped in `mutationError` and `dupEmail`.
-- **`Zaproszenie zostało wysłane` leads**, because that is the fact the admin cannot see anywhere
-  else and the one that changes what they do next. The old banner's failure was implying nothing had
-  happened while mail was already in the hire's inbox.
+- ~~**`Zaproszenie zostało wysłane` leads**, because that is the fact the admin cannot see anywhere
+  else and the one that changes what they do next.~~ **Superseded by §9.2 (phase 7).** It was the
+  right lead while the mail really had gone out; it framed the failure the way the _transaction_
+  experienced it rather than the way the **admin** did. Phase 8 removes the premise entirely — no
+  mail is sent for an account that failed to create.
 - **`„…”` low-open quotes** for a named UI control, matching `reset-password.astro:130`
   (`Otwórz Konto → „Zmień hasło” — …`). `„Ponów”` and `„Resetuj hasło”` are quoted verbatim from
   `COPY.retry` (`:69`) and `COPY.reset` (`:38`), so the copy names controls the admin can actually
@@ -292,16 +329,20 @@ beside it.
 - **`—` em dash, not a hyphen**, matching `removeBodyTail` and `footerRest`.
 - **`…` not `...`** — no ellipsis occurs in these three, but the rule binds any variant added later.
 
-**Knowingly accepted imprecision**, recorded rather than fixed:
+**Knowingly accepted imprecision**, recorded rather than fixed — **one, not two, after phase 7**:
 
-- `provisionRolledBack` does not tell the admin that a hire who already opened the delivered mail
-  will find a dead link. It is true but it is a third clause, and the banner is a single flex row
-  beside a button. The admin's action is unchanged either way — re-add the person. If support calls
-  reveal this matters, it belongs in the add-modal's subtitle, not the banner.
-- `provisionOrphaned` says `naprawić` ("repair") of an account the admin never saw created, because
-  the orphan does not appear on the roster (`list_staff` INNER-joins). The word is accurate about
-  what the button does; the invisibility is the surviving consequence the plan deliberately does not
-  fix (see plan → "What We're NOT Doing").
+- `provisionFailed` does not tell the admin that a hire who already opened the delivered mail will
+  find a dead link. This is a **deliberate omission**, not an oversight: it is a third clause on a
+  banner that is a single flex row beside a button, and the admin's action is unchanged either way —
+  add the person again. **Phase 8 removes it at the root** rather than in the copy: create no longer
+  sends mail, so a failed create leaves no delivered invite and no dead link to warn about. Until
+  phase 8 lands, this is the surviving imprecision of the phase-7 string.
+- ~~`provisionOrphaned` says `naprawić` ("repair") of an account the admin never saw created.~~
+  **Gone.** The word `naprawić` is not in the shipped copy any more — phase 7 collapsed both arms to
+  `Spróbuj ponownie.`, which describes what the admin does rather than what the button repairs, so
+  the imprecision has nothing left to attach to. The underlying invisibility (an orphan drives no
+  roster row, `list_staff` INNER-joins) is unchanged and still out of scope — see plan → "What We're
+  NOT Doing"; phase 8 lowers its stakes, because no mail is sent for an account that failed.
 
 ## 10. Deviations register
 
@@ -319,15 +360,19 @@ against for this state, exactly as there was none for the R14 card that `auth-fo
 
 **Every dimension is inherited-exact, not invented.** The banner element itself already ships and is
 already governed by contract §3.12: wrapper, tone classes, icon set, message type ramp, retry button
-and placement are all transcribed verbatim in §8.1 above. **This deviation adds three strings and
-zero dimensions.** No new component, no new token, no new glyph, no new spacing decision.
+and placement are all transcribed verbatim in §8.1 above. **This deviation adds two strings and
+zero dimensions** (three until phase 7 collapsed the provisioning pair — §9.2). No new component, no
+new token, no new glyph, no new spacing decision. Phase 7 adds no dimension either: the only new
+layout fact is that an interpolated address may wrap the message to a second line at 390px, and §8.1
+records that as accepted.
 
 **The account-box question does not arise** — this is a banner in the roster's content column, not
 an auth card, so the S-14 account-box decision (entry 14's F8 amendment) has no bearing here. Stated
 explicitly because entry 14's lesson was precisely that leaving it unstated caused a re-review.
 
-**Polish copy** is specified verbatim in §9 with its justification, and its two accepted imprecisions
-are named there rather than left to the implementer.
+**Polish copy** is specified verbatim in §9 with its justification, and its one remaining accepted
+imprecision — the undisclosed dead link, which phase 8 removes at the root — is named there rather
+than left to the implementer.
 
 **Vision-diff gate.** Render `/dashboard/staff` with each banner state forced, at both breakpoints,
 and diff against catalog 19 / 25 **excluding the banner region** — the assertion is that adding the

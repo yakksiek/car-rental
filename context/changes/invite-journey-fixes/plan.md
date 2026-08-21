@@ -1182,6 +1182,137 @@ to end. `staff-auth.spec.ts`'s invite-accept journey must keep passing.
 - A failed create shows phase 7's banner and leaves no mail in Mailpit
 - The new badge and row action match `design-contract.md` verbatim at both breakpoints
 
+---
+
+## Phase 9: Report the add failure where the admin is — inside the modal
+
+### Overview
+
+Every failure of `POST /api/staff` is reported in the wrong place, and one of them is reported
+nowhere at all. Raised by the owner at phase 7's manual gate, then measured against the running app
+(1280×900, `/dashboard/staff`, `elementFromPoint` hit-test at the banner's centre, 2026-08-21):
+
+| Arm                                      | Modal      | Is the error actually visible?                                     |
+| ---------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| 409 duplicate                            | stays open | **Yes** — inline under the email field (`:324`), the shipped idiom |
+| `provision_rolled_back` / `_orphaned`    | **closes** | Yes, as a banner — but the admin is moved off the form they filled |
+| Unhandled 500 / network (`fetch` throws) | stays open | **NO** — see below                                                 |
+
+The last row is the defect. `addEmployee`'s network arm sets the banner and leaves the modal open, so
+the banner paints **behind** `ModalShell`'s overlay (`StaffList.tsx:212`,
+`fixed inset-0 z-[60] … bg-[rgba(20,18,22,0.55)] backdrop-blur-sm`). Hit-testing the banner's centre
+returns the overlay, not the banner: the admin submits, the button returns to idle, and their only
+feedback is a blurred red smear behind a dimmed backdrop. **The most common failure — a dropped
+connection, the one case where the typed values are still perfectly good — is the one that reports
+nothing.**
+
+The partition is also backwards. The 409 already proves this design's own answer to "the server
+refused your add": say so in the form. Phase 7's own copy ends `Spróbuj ponownie.` — an instruction
+to retry, issued after the form the admin would retry in has been taken away.
+
+**This reopens a phase-1 decision deliberately, and must not silently overwrite it.**
+`StaffList.tsx:521-522` records the reasoning: _"Close the modal: the banner's `Ponów` is the single
+retry surface, and leaving the form open behind it would offer a competing second one."_ That
+reasoning was sound while the invite mail had already gone out — closing the modal was the signal
+that something irreversible **had** happened, against a shipped bug where the modal stayed open and
+implied nothing had. Two things changed it: phase 7 collapsed the copy to `Spróbuj ponownie.`, and
+phase 8 stops sending any mail on create, so a failed create becomes fully retryable in place with
+nothing delivered. The "competing retry surface" problem does not disappear — it inverts. Resolve it,
+do not inherit it.
+
+**Ordered after phase 8 on purpose.** Phase 8 already rewrites this modal (CTA → `Dodaj`, `addSub`),
+so running this first would touch identical lines twice and force two design passes over one surface.
+
+### Changes Required:
+
+#### 1. Where each failure is reported — the decision, as a testable pure function
+
+**File**: `src/lib/staff-banner.ts`, `src/lib/staff-banner.test.ts`
+
+**Intent**: The routing decision ("this outcome is reported in the modal / in the banner / in both")
+must not be an `if` buried in an island, for the same reason phase 7 moved the copy out: an `.astro`
+or `.tsx`-only edit runs no test, and this phase exists because the routing was wrong.
+
+**Contract**: Extend the phase-7 module with a function mapping an add outcome — HTTP status plus
+`code`, including the `fetch`-threw case — onto a **target** (`modal` / `banner` / `both`) and the
+string. Every arm gets a case, including the ones that keep today's behaviour, so the table is
+readable in one place. Unit tests cover each arm's target, and specifically that no arm resolves to
+`banner` while leaving the modal open — the exact state that produced the invisible error.
+
+#### 2. A form-level error slot in the add modal
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Intent**: The modal's two error slots are field-level (`:294-299`, `:317-325`) and can only attach
+to a field. A provisioning or network failure belongs to the submission, not to a field.
+
+**Contract**: One form-level slot in `AddModal`, reusing the shipped inline-error idiom verbatim —
+`text-destructive mt-1.5 flex items-center gap-1.5 text-[13px]` with `AlertTriangle className="size-3.5"`
+— placed per the design entry in §4. It clears on edit, exactly as `dupEmail` does at `:315`. The
+modal stays open on both provisioning arms and on the network arm; its submit button becomes the
+retry, and `busy` already gives it the pending state `CLAUDE.md` requires.
+
+#### 3. The retry surfaces, resolved rather than duplicated
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Contract**: With the modal staying open, decide and record ONE of: (a) the banner is not set for
+these arms at all — the modal owns the failure; or (b) the banner is still set for the record but
+drops `Ponów`, leaving one retry control on screen. Do **not** ship the modal's submit and the
+banner's `Ponów` as two live retries for one failure — that is the state `:521-522` was written to
+prevent, and it is the reason this phase is not a two-line edit. Replace that comment with the new
+reasoning; leaving a comment that describes the opposite decision is worse than no comment.
+
+`repairedMailFailed` is **out of scope and must not move**: it rides a 200, the row really did land,
+and its modal really should close. It stays a banner.
+
+#### 4. Design contract
+
+**File**: `context/changes/invite-journey-fixes/design-contract.md`
+
+**Contract**: A form-level error on the add modal is a **new user-facing state with no artboard** —
+catalog 19/25 carry the healthy roster only, and §10 entry 1 already records that there is no banner
+artboard either. It needs its own `deviation(no artboard)` entry with exact values (they should be
+inherited-exact from the field-level idiom above — verify, do not invent) and **verbatim Polish
+copy**, plus a §8 layout row. §11 gains a vision-diff row for the modal's error state at both
+breakpoints. Entry 1's "Retry affordance" paragraph in §8.1 is restated to match §3's decision.
+
+**Copy is an open decision for the design pass, not the implementer**: whether the modal reuses
+phase 7's `provisionFailed` string verbatim, or a shorter form-level variant (the modal is ~400px
+wide and the string interpolates an address the admin can already see in the field two rows above —
+which is the argument the banner version could not make). Same question for `mutationError`.
+
+#### 5. Tests
+
+**Files**: `src/lib/staff-banner.test.ts`, `e2e/staff-admin.spec.ts`
+
+**Contract**: Unit tests per §1. Extraction alone is not sufficient (`e2e/seed.spec.ts:27-28`), so
+add an e2e assertion that the surface actually calls it: with `POST /api/staff` stubbed to fail, the
+modal is still open **and** the error is the topmost element at its own centre — assert visibility
+the way the defect was measured, not with a bare `toBeVisible()`, which passes today on an error
+buried under the overlay.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Unit tests pass, including the outcome→target table: `npm test`
+- No arm resolves to a banner-only report while the modal stays open
+- Lint passes: `npm run lint`
+- Type checking passes: `npx astro check`
+- Integration tests pass: `npm run test:integration`
+- Production build succeeds: `npm run build`
+- E2E suite passes on `:4321`: `npm run test:e2e`
+
+#### Manual Verification:
+
+- A forced provisioning failure reports inside the modal, with the typed values intact
+- A dropped connection reports inside the modal — the phase-9 defect, closed
+- Exactly one retry control is on screen for one failure
+- A 409 duplicate still reports inline under the email field, unchanged
+- `repairedMailFailed` still closes the modal and reports as a banner
+- The error state matches `design-contract.md` verbatim at 1280px and 390px
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -1396,19 +1527,19 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 7.1 Unit tests pass, including new `staff-banner.test.ts`: `npm test`
-- [ ] 7.2 Both provisioning codes provably render the same sentence
-- [ ] 7.3 Lint passes: `npm run lint`
-- [ ] 7.4 Type checking passes: `npx astro check`
-- [ ] 7.5 Integration tests pass — the API still returns both codes: `npm run test:integration`
-- [ ] 7.6 Production build succeeds: `npm run build`
+- [x] 7.1 Unit tests pass, including new `staff-banner.test.ts`: `npm test`
+- [x] 7.2 Both provisioning codes provably render the same sentence
+- [x] 7.3 Lint passes: `npm run lint`
+- [x] 7.4 Type checking passes: `npx astro check`
+- [x] 7.5 Integration tests pass — the API still returns both codes: `npm run test:integration`
+- [x] 7.6 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 7.7 Both failure arms show one message naming the address
-- [ ] 7.8 `repairedMailFailed` names the address and still carries no `Ponów`
-- [ ] 7.9 Copy matches `design-contract.md` §9 verbatim
-- [ ] 7.10 A long address wraps without breaking the banner row at 390px
+- [x] 7.7 Both failure arms show one message naming the address
+- [x] 7.8 `repairedMailFailed` names the address and still carries no `Ponów` — address clause DROPPED (owner, 2026-08-21): design-contract §9.2 makes this a phase-8 string and carries no address form of it; only the no-`Ponów` half was verifiable, and it holds
+- [x] 7.9 Copy matches `design-contract.md` §9 verbatim
+- [x] 7.10 A long address wraps without breaking the banner row at 390px
 
 ### Phase 8: Two-step add — create, then invite
 
@@ -1436,3 +1567,26 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
 - [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
 - [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
+
+### Phase 9: Report the add failure where the admin is — inside the modal
+
+#### Automated
+
+- [ ] 9.1 Unit tests pass, including the outcome→target table: `npm test`
+- [ ] 9.2 No arm resolves to a banner-only report while the modal stays open
+- [ ] 9.3 Lint passes: `npm run lint`
+- [ ] 9.4 Type checking passes: `npx astro check`
+- [ ] 9.5 Integration tests pass: `npm run test:integration`
+- [ ] 9.6 Production build succeeds: `npm run build`
+- [ ] 9.7 E2E asserts the error is topmost at its own centre, not merely present in the DOM
+- [ ] 9.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [ ] 9.9 `design-contract.md` carries the form-level error entry, its copy, and a §11 diff row
+
+#### Manual
+
+- [ ] 9.10 A forced provisioning failure reports inside the modal, values intact
+- [ ] 9.11 A dropped connection reports inside the modal — the phase-9 defect, closed
+- [ ] 9.12 Exactly one retry control is on screen for one failure
+- [ ] 9.13 A 409 duplicate still reports inline under the email field, unchanged
+- [ ] 9.14 `repairedMailFailed` still closes the modal and reports as a banner
+- [ ] 9.15 The error state matches `design-contract.md` verbatim at 1280px and 390px
