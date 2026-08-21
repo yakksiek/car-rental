@@ -381,10 +381,14 @@ prompt. Read 2026-08-21; four changes, in one file except where noted:
 | Filter pills      | A fifth pill + count, in **both** `EsShell` (desktop) and `ScreenEmpTablet`                                                                                                       |
 | `EmpStatusBadge`  | A third variant — **lives in `shared.jsx`**, a global other screens import. This is the only edit with blast radius.                                                              |
 
-The PNGs are **exports**: `design-review/index.md` records them as generated from `Flota Rental.html`
-at 2× DPI, with filenames matching each artboard's `data-dc-slot` id. So the loop is edit the JSX →
-re-export from the Claude Design app → pull the fresh PNGs into `design-review/`. Copy for the new
-state is approved in §9.2.
+The PNGs are **exports**, but re-exporting is **not** a hand-off — the design project ships its own
+capture harness. `export-shot.html` holds a `SCREENS` map keyed by board id with per-board `{w, h}`
+and a component thunk, and exposes `window.__renderScreen(id, lang)` plus `__render2x` /
+`__renderFit`. So the loop is entirely ours: edit the JSX → `get_file` `export-shot.html` + the
+slice's `.jsx` + `shared.jsx` → serve the directory → drive `__renderScreen` with Playwright at
+`deviceScaleFactor: 2` → screenshot `.exp`. Stub anything outside `shared.jsx` (`Sidebar` does) and
+make the stub visibly flat so it cannot be mistaken for canonical chrome. Fonts must be the app's own
+self-hosted **variable** Inter, not the CDN's static instances. Copy for the new state is approved in §9.2.
 
 ### 12.3 A lesson worth promoting
 
