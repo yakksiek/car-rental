@@ -174,7 +174,15 @@ describe("staff account lifecycle (S-08)", () => {
     const id = created.data.user?.id;
     if (!id) throw new Error("createUser failed");
     createdIds.push(id);
-    await svc.from("profiles").insert({ user_id: id, role: "employee", full_name: "Aktywny Wraca" });
+    // `createUser({ password })` mints the password out-of-band, bypassing the two
+    // routes that write password_set_at — stamp it so this fixture really is the
+    // "has a working password" shape the assertion below reads.
+    await svc.from("profiles").insert({
+      user_id: id,
+      role: "employee",
+      full_name: "Aktywny Wraca",
+      password_set_at: new Date().toISOString(),
+    });
     expect((await anonClient().auth.signInWithPassword({ email, password })).error).toBeNull();
 
     const admin = await as("admin");
@@ -230,6 +238,45 @@ describe("provisioning rollback when the profiles insert fails (invite-journey-f
       .single();
     expect(repaired?.role).toBe("employee");
     expect(repaired?.deactivated_at).toBeNull();
+  });
+});
+
+describe("mark_password_set() stamps only the caller (invite-journey-fixes)", () => {
+  const EMPLOYEE_ID = "e0000000-0000-0000-0000-0000000000e0";
+
+  // `serviceClient()` is constructed without the Database generic, so its rows
+  // arrive as `any`. Narrow through an `unknown` parameter, the same shape
+  // `bannedUntil` above already uses.
+  function stampFrom(row: unknown): string | null {
+    return (row as { password_set_at?: string | null } | null)?.password_set_at ?? null;
+  }
+
+  async function stampOf(userId: string): Promise<string | null> {
+    const { data } = await svc.from("profiles").select("password_set_at").eq("user_id", userId).single();
+    return stampFrom(data);
+  }
+
+  it("stamps the caller's own row and leaves every other row alone", async () => {
+    const employeeBefore = await stampOf(EMPLOYEE_ID);
+    const adminBefore = await stampOf(SEED_ADMIN);
+
+    try {
+      const employee = await as("employee");
+      const { error } = await employee.rpc("mark_password_set");
+      expect(error).toBeNull();
+
+      // The caller's own row is stamped...
+      const employeeAfter = await stampOf(EMPLOYEE_ID);
+      expect(employeeAfter).not.toBeNull();
+      expect(employeeAfter).not.toBe(employeeBefore);
+
+      // ...and nobody else's is. The RPC takes no target parameter precisely so
+      // an authenticated caller cannot reach another person's row, and it runs
+      // SECURITY DEFINER over an admin-only-UPDATE table.
+      expect(await stampOf(SEED_ADMIN)).toBe(adminBefore);
+    } finally {
+      await svc.from("profiles").update({ password_set_at: employeeBefore }).eq("user_id", EMPLOYEE_ID);
+    }
   });
 });
 
