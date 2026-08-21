@@ -95,9 +95,17 @@ harness (whose `SCREENS` map already registers `mr-d-pick` / `mr-m-pick` / `mr-d
 `mr-d-conflict` / `mr-m-conflict`), and captured through `window.__renderScreen(id)` at `deviceScaleFactor: 2`
 with React 18 + Babel standalone, exactly as the harness does. Page errors: none.
 
-Two things this does **not** reproduce: `Sidebar` lives outside `shared.jsx`, so the desktop boards' dimmed
-backdrop is a flat grey stub (the modal — the only thing under diff — is untouched); and the Inter/JetBrains
-Mono webfonts load from Google Fonts at capture time, as they do in the harness.
+**Fonts are the app's own files, not the CDN's.** The harness's `<link>` to Google Fonts was replaced with
+`@font-face` rules over the very `.woff2` files Astro's `experimental.fonts` downloads for the app
+(`.astro/fonts/font-inter-400-700-normal-*.woff2`), with the same per-subset `unicode-range` split, so the two
+sides of the diff are byte-identical on typography. This is **not** cosmetic: the app ships Inter as a
+**variable** face over `400 700`, while `css2?family=Inter:wght@400;500;600;700` serves **static** instances —
+against which the source's `fontWeight: 540 / 650 / 750` snap up to 600 / 700 / 700. Rendering the boards the
+CDN way skewed 1–3.4% of the pixels on every board, across the whole modal. Capture asserts
+`document.fonts.check("650 13px Inter")`.
+
+One thing this does **not** reproduce: `Sidebar` lives outside `shared.jsx`, so the desktop boards' dimmed
+backdrop is a flat grey stub. The modal — the only thing under diff — is untouched.
 
 Files in `context/changes/manual-reservation-date-picker/design-review/`:
 
