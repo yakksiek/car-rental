@@ -18,10 +18,11 @@ import {
   formatPlnAmount,
   rentalDays,
 } from "../../lib/format";
-import { checkRangeBookable, nextBusyRangeAfter } from "../../lib/availability";
+import { checkRangeBookable } from "../../lib/availability";
 import { canCreateReservation, resolveAvailability, type AvailabilityState } from "../../lib/manual-availability";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useVehicleBusyRanges } from "../hooks/useVehicleBusyRanges";
 import type { Vehicle } from "../../types";
 
@@ -44,12 +45,12 @@ const COPY = {
   close: "Zamknij",
   vehicle: "Pojazd",
   term: "Termin",
-  pickup: "Odbiór",
-  return: "Zwrot",
   hours: "Odbiór od 14:00 · zwrot do 10:00",
-  // The source's boards always carry both dates, so no empty state is drawn.
-  // Reuses the public widget's em-dash placeholder rather than inventing copy.
-  noDate: "—",
+  // D18: every source board carries a range, so the empty field is undrawn. A
+  // single field reading "— – —" looks broken rather than empty, so it prompts
+  // instead — which is also what the one control now has to say for itself,
+  // the two Odbiór / Zwrot captions having gone with the second field.
+  pickRange: "Wybierz termin",
   customer: "Klient",
   namePlaceholder: "Imię i nazwisko / firma",
   phonePlaceholder: "Telefon",
@@ -57,12 +58,6 @@ const COPY = {
   avIdle: "Wybierz pojazd i termin, aby sprawdzić dostępność.",
   avChecking: "Sprawdzanie dostępności…",
   avAvailable: "Termin wolny",
-  // D10: the source's hint is "Pojazd wolny do {date} · kolejna rez. {ref}" —
-  // the reference clause is dropped, the PII-safe RPC returns date bounds only.
-  // The no-later-booking fallback is the source's own, verbatim; it retires
-  // S-12's invented "Można utworzyć rezerwację."
-  avAvailableUntil: "Pojazd wolny do",
-  avAvailableSubNone: "Brak innych rezerwacji w tym okresie.",
   avConflict: "Termin zajęty",
   avConflictSub: "Ten pojazd ma już rezerwację w wybranych dniach.",
   avError: "Nie udało się sprawdzić dostępności.",
@@ -96,14 +91,7 @@ function formatDayFull(iso: string): string {
 
 // ── availability panel ───────────────────────────────────────────────────────
 
-function MrAvailability({
-  availability,
-  nextBusyPickup,
-}: {
-  availability: AvailabilityState;
-  /** ISO date the vehicle is free until — the first range starting after the return. */
-  nextBusyPickup: string | null;
-}) {
+function MrAvailability({ availability }: { availability: AvailabilityState }) {
   const box = "flex items-start gap-[11px] rounded-[13px] px-[13px] py-3 md:px-[15px] md:py-[13px]";
 
   if (availability.state === "idle") {
@@ -149,15 +137,16 @@ function MrAvailability({
     );
   }
 
+  // Status only (D10). The subtitle used to name the NEXT booking's start
+  // date; without the source's `· kolejna rez. {reference}` clause — which the
+  // PII-safe RPC cannot supply — it read as a claim about the range being
+  // booked, and it went silent exactly when a warning would matter: a booking
+  // starting ON the return day is a legal 10:00/14:00 changeover, so it never
+  // counted as "next". Single-line, so the box centers like `checking`.
   return (
-    <div className={cn(box, "bg-[var(--flota-success-soft)]")}>
+    <div className={cn(box, "items-center bg-[var(--flota-success-soft)]")}>
       <Check className="text-success size-[18px] shrink-0" />
-      <div className="pt-px">
-        <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{COPY.avAvailable}</div>
-        <div className="text-success mt-0.5 text-[12px] opacity-85">
-          {nextBusyPickup ? `${COPY.avAvailableUntil} ${formatDayShort(nextBusyPickup)}` : COPY.avAvailableSubNone}
-        </div>
-      </div>
+      <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{COPY.avAvailable}</div>
     </div>
   );
 }
@@ -237,10 +226,30 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   const [email, setEmail] = React.useState("");
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
-  const [openField, setOpenField] = React.useState<"pickup" | "return" | null>(null);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  // The picker is in flow under the trigger on desktop and its own layer over
+  // the form sheet on mobile — two different places in the tree, so the
+  // breakpoint has to be read in JS. Safe here because the modal only ever
+  // mounts on a click, never during SSR or hydration. `md` = Tailwind's 48rem.
+  const isMobile = !useMediaQuery("(min-width: 48rem)");
 
   const { ranges, state: rangesState, refetch } = useVehicleBusyRanges(vehicleId);
   const { busy: creating, create } = useManualReservation();
+
+  // Lock the page behind the scrim, the same way `MobileNav.tsx:65` does. The
+  // modal is only mounted while it is open, so mount/unmount IS the open/closed
+  // edge. Without this the document keeps its own scrollbar: a wheel over the
+  // scrim moves the dashboard behind, and once the modal's own body reaches its
+  // end the scroll chains straight through to the page — measured at 114px on
+  // desktop. That was true from S-12; the in-flow calendar only made the modal
+  // tall enough to hit the chain point on the first gesture.
+  React.useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   // The create's pre-flight re-read runs BEFORE `creating` flips, so without its
   // own flag the form would be live for the length of that request — F11 again,
@@ -281,7 +290,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   if (lastBusy !== busy) {
     setLastBusy(busy);
     if (busy) {
-      setOpenField(null);
+      setPickerOpen(false);
     }
   }
 
@@ -310,6 +319,17 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
 
   const days = pickup && returnDate ? Math.max(rentalDays(pickup, returnDate), 0) : 0;
   const total = estimatedTotal(vehicle.daily_rate, days);
+
+  // "1 kwi – 2 kwi 2026" — the first date's year is elided, as the source does,
+  // since the pair is read as one span. Two states the source never draws (D18):
+  // nothing picked at all, which prompts rather than showing "— – —"; and the
+  // half-made range a veto leaves behind, which shows the one date it has.
+  const rangeLabel =
+    pickup && returnDate
+      ? `${formatDayShort(pickup)} – ${formatDayFull(returnDate)}`
+      : pickup
+        ? formatDayFull(pickup)
+        : COPY.pickRange;
 
   async function submit() {
     setBanner(null);
@@ -368,7 +388,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
         "fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:p-8",
         // The in-flow calendar makes the modal taller than a centered box can
         // carry, so desktop rides the top of the viewport while a field is open.
-        openField && !busy ? "md:items-start md:pt-14" : "md:items-center",
+        pickerOpen && !busy ? "md:items-start md:pt-14" : "md:items-center",
       )}
       // Inert while a create is in flight: unmounting mid-POST would still commit
       // the booking and email the customer, but the employee would never see the
@@ -449,80 +469,75 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
 
             {/* Termin */}
             <div>
-              <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
+              <div
+                id="mr-term-label"
+                className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase"
+              >
                 {COPY.term}
               </div>
-              <div className="relative grid grid-cols-2 gap-2.5">
-                {(
-                  [
-                    { field: "pickup", caption: COPY.pickup, value: pickup },
-                    { field: "return", caption: COPY.return, value: returnDate },
-                  ] as const
-                ).map((item) => {
-                  const active = openField === item.field;
-                  return (
-                    <div key={item.field}>
-                      <span
-                        id={`mr-${item.field}-cap`}
-                        className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
-                      >
-                        {item.caption}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        aria-expanded={active}
-                        // Caption + current value, so the control announces
-                        // "Odbiór 1 kwi 2026" rather than just its caption or
-                        // just its date.
-                        aria-labelledby={`mr-${item.field}-cap mr-${item.field}-val`}
-                        onClick={() => {
-                          setOpenField(active ? null : item.field);
-                        }}
-                        className={cn(
-                          "text-foreground bg-card flex h-10 w-full items-center gap-2 rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] font-semibold disabled:opacity-40",
-                          active && "border-[var(--foreground)] shadow-[0_0_0_4px_rgba(15,23,42,0.06)]",
-                        )}
-                      >
-                        <CalendarDays
-                          className={cn("size-3.5 shrink-0", active ? "text-foreground" : "text-muted-foreground")}
-                        />
-                        <span id={`mr-${item.field}-val`} className="flex-1 text-left">
-                          {item.value ? formatDayFull(item.value) : COPY.noDate}
-                        </span>
-                        <ChevronDown className="text-muted-foreground size-[13px] shrink-0" />
-                      </button>
-                    </div>
-                  );
-                })}
+
+              {/* ONE field. The picker sets both ends of the range, so a second
+                  trigger only restated what the calendar already carries — and
+                  invited the reading that each opened a different calendar. The
+                  Odbiór / Zwrot captions went with it; the section label above
+                  already names the block. */}
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={busy}
+                  aria-expanded={pickerOpen}
+                  // Section label + current range, so the control announces
+                  // "Termin 1 kwi – 2 kwi 2026" rather than bare dates.
+                  aria-labelledby="mr-term-label mr-term-val"
+                  onClick={() => {
+                    setPickerOpen((open) => !open);
+                  }}
+                  className={cn(
+                    "text-foreground bg-card flex h-10 w-full items-center gap-2 rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] font-semibold disabled:opacity-40",
+                    pickerOpen && "border-[var(--foreground)] shadow-[0_0_0_4px_rgba(15,23,42,0.06)]",
+                  )}
+                >
+                  <CalendarDays
+                    className={cn("size-3.5 shrink-0", pickerOpen ? "text-foreground" : "text-muted-foreground")}
+                  />
+                  <span id="mr-term-val" className="flex-1 text-left">
+                    {rangeLabel}
+                  </span>
+                  {/* The count summarizes the range, so it waits for one: it is
+                      absent from the prompt state and from the half-made range
+                      a veto leaves behind (D18). */}
+                  {days > 0 && (
+                    <span className="text-muted-foreground text-[12px] font-semibold">{formatDuration(days)}</span>
+                  )}
+                  <ChevronDown className="text-muted-foreground size-[13px] shrink-0" />
+                </button>
+
+                {/* Desktop: in flow, not absolutely positioned, so the body
+                    grows and the footer stays pinned. Mobile gets its own layer
+                    over the form sheet instead (rendered beside the modal card,
+                    below). Unmounted while a create is in flight — that is the
+                    whole F11 fix on this surface, so day cells, month nav and
+                    Zastosuj need no guards of their own. */}
+                {pickerOpen && !busy && !isMobile && (
+                  <ManualReservationCalendar
+                    variant="popover"
+                    busyRanges={ranges}
+                    pickup={pickup}
+                    returnDate={returnDate}
+                    onChange={(nextPickup, nextReturn) => {
+                      setPickup(nextPickup);
+                      setReturnDate(nextReturn);
+                    }}
+                    onApply={() => {
+                      setPickerOpen(false);
+                    }}
+                  />
+                )}
               </div>
 
-              {/* In flow, not absolutely positioned: the body grows and the
-                  footer stays pinned on both breakpoints. Unmounted while a
-                  create is in flight — that is the whole F11 fix on this
-                  surface, so day cells, month nav and Zastosuj need no guards
-                  of their own. */}
-              {openField && !busy && (
-                <ManualReservationCalendar
-                  busyRanges={ranges}
-                  pickup={pickup}
-                  returnDate={returnDate}
-                  openField={openField}
-                  onChange={(nextPickup, nextReturn) => {
-                    setPickup(nextPickup);
-                    setReturnDate(nextReturn);
-                  }}
-                  onApply={() => {
-                    setOpenField(null);
-                  }}
-                />
-              )}
               <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
               <div className="mt-2.5">
-                <MrAvailability
-                  availability={availability}
-                  nextBusyPickup={returnDate ? (nextBusyRangeAfter(ranges, returnDate)?.pickup_date ?? null) : null}
-                />
+                <MrAvailability availability={availability} />
               </div>
             </div>
 
@@ -616,6 +631,39 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
           </button>
         </div>
       </div>
+
+      {/* Mobile: the picker is its OWN layer over the form sheet, not an inline
+          block inside a scrolling body — in flow it moved under the thumb as the
+          body reflowed, and a tap beside the grid could dismiss it mid-range. It
+          stops the scrim's click, so the only way out is Zastosuj: no
+          outside-click dismiss, so a stray tap cannot discard a half-made range.
+          Inside Phase 1's freeze on the same terms as the desktop popover — not
+          rendered at all while a create is in flight. */}
+      {pickerOpen && !busy && isMobile && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          className="absolute inset-0 z-[70] flex items-end bg-[rgba(20,18,22,0.5)] backdrop-blur-sm"
+        >
+          <div className="bg-card w-full rounded-t-[26px] px-4 pt-3.5 pb-[22px] shadow-[0_-10px_40px_rgba(0,0,0,0.22)]">
+            <span aria-hidden="true" className="mx-auto mb-3.5 block h-1 w-10 rounded-full bg-[var(--flota-hair)]" />
+            <ManualReservationCalendar
+              variant="sheet"
+              busyRanges={ranges}
+              pickup={pickup}
+              returnDate={returnDate}
+              onChange={(nextPickup, nextReturn) => {
+                setPickup(nextPickup);
+                setReturnDate(nextReturn);
+              }}
+              onApply={() => {
+                setPickerOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

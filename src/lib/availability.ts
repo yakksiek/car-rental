@@ -177,24 +177,3 @@ export function checkRangeBookable(busy: VehicleBusyRange[], pickup: string, ret
 export function isRangeBookable(busy: VehicleBusyRange[], pickup: string, returnDate: string): boolean {
   return checkRangeBookable(busy, pickup, returnDate).ok;
 }
-
-/**
- * The vehicle's first blocking range that STARTS after `returnDate` — what the
- * manual-reservation panel's "Pojazd wolny do {date}" clause names (S-12a).
- * `null` when nothing follows, which is the panel's "Brak innych rezerwacji w
- * tym okresie." case. Ranges arrive in no guaranteed order, so the earliest is
- * picked rather than the first seen; ISO `YYYY-MM-DD` strings compare
- * lexicographically as calendar order, as everything else in this file does.
- */
-export function nextBusyRangeAfter(busy: VehicleBusyRange[], returnDate: string): VehicleBusyRange | null {
-  let earliest: VehicleBusyRange | null = null;
-  for (const range of busy) {
-    if (range.pickup_date <= returnDate) {
-      continue;
-    }
-    if (!earliest || range.pickup_date < earliest.pickup_date) {
-      earliest = range;
-    }
-  }
-  return earliest;
-}

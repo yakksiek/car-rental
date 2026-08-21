@@ -9,7 +9,6 @@ import {
   dayAvailabilityMap,
   hasConflict,
   isRangeBookable,
-  nextBusyRangeAfter,
   windowsOverlap,
 } from "./availability";
 
@@ -211,37 +210,5 @@ describe("checkRangeBookable (conflict reason)", () => {
 
   it("returns ok for a valid turnover range", () => {
     expect(checkRangeBookable(single, "2026-08-20", "2026-08-24")).toEqual({ ok: true });
-  });
-});
-
-describe("nextBusyRangeAfter", () => {
-  // The "Pojazd wolny do {date}" clause in the manual-reservation panel (S-12a):
-  // the vehicle is free until the next booking STARTS, so only `pickup_date`
-  // strictly after the chosen return counts.
-  const range = (pickup: string, ret: string): VehicleBusyRange => ({ pickup_date: pickup, return_date: ret });
-
-  it("is null when nothing follows the chosen return date", () => {
-    expect(nextBusyRangeAfter([], "2032-04-05")).toBeNull();
-    expect(nextBusyRangeAfter([range("2032-03-01", "2032-03-04")], "2032-04-05")).toBeNull();
-  });
-
-  it("ignores a range that starts ON the return date — that day is the changeover, not a gap", () => {
-    expect(nextBusyRangeAfter([range("2032-04-05", "2032-04-09")], "2032-04-05")).toBeNull();
-  });
-
-  it("finds the single following range", () => {
-    expect(nextBusyRangeAfter([range("2032-04-20", "2032-04-25")], "2032-04-05")).toEqual(
-      range("2032-04-20", "2032-04-25"),
-    );
-  });
-
-  it("picks the EARLIEST following range out of several supplied unsorted", () => {
-    const busy = [
-      range("2032-06-01", "2032-06-05"),
-      range("2032-04-12", "2032-04-14"),
-      range("2032-03-01", "2032-03-03"),
-      range("2032-05-02", "2032-05-08"),
-    ];
-    expect(nextBusyRangeAfter(busy, "2032-04-05")).toEqual(range("2032-04-12", "2032-04-14"));
   });
 });
