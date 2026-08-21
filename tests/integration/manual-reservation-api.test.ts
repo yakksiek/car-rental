@@ -2,7 +2,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // others
-import { GET as availabilityGET } from "../../src/pages/api/availability";
 import { GET as busyRangesGET } from "../../src/pages/api/vehicles/[id]/busy-ranges";
 import { PATCH as decisionPATCH } from "../../src/pages/api/reservations/[id]";
 import { POST as manualPOST } from "../../src/pages/api/reservations/manual";
@@ -210,58 +209,6 @@ describe("POST /api/reservations/manual (S-12)", () => {
 
     const payload = (await res.json()) as { errors: Record<string, string> };
     expect(Object.keys(payload.errors).sort()).toEqual(["customer_email", "customer_phone"]);
-  });
-});
-
-describe("GET /api/availability (S-12)", () => {
-  it("staff get {available: true} on a free range and {available: false} once it is taken", async () => {
-    const free = await availabilityGET(
-      await asContext("employee", {
-        method: "GET",
-        path: `/api/availability?vehicle_id=${VEHICLE_ID}&pickup=2032-08-01&return=2032-08-05`,
-      }),
-    );
-    expect(free.status).toBe(200);
-    expect(await free.json()).toEqual({ available: true });
-
-    const created = await manualPOST(
-      await asContext("employee", {
-        method: "POST",
-        path: "/api/reservations/manual",
-        body: body("2032-08-01", "2032-08-05"),
-      }),
-    );
-    expect(created.status).toBe(201);
-
-    const taken = await availabilityGET(
-      await asContext("employee", {
-        method: "GET",
-        path: `/api/availability?vehicle_id=${VEHICLE_ID}&pickup=2032-08-02&return=2032-08-04`,
-      }),
-    );
-    expect(await taken.json()).toEqual({ available: false });
-  });
-
-  it("an unauthenticated caller is 401 and a non-staff caller 403", async () => {
-    const query = `vehicle_id=${VEHICLE_ID}&pickup=2032-09-01&return=2032-09-05`;
-
-    const anon = await availabilityGET(anonContext({ method: "GET", path: `/api/availability?${query}` }));
-    expect(anon.status).toBe(401);
-
-    const norole = await availabilityGET(
-      await asContext("norole", { method: "GET", path: `/api/availability?${query}` }),
-    );
-    expect(norole.status).toBe(403);
-  });
-
-  it("a malformed vehicle id is 400, not a 500", async () => {
-    const res = await availabilityGET(
-      await asContext("employee", {
-        method: "GET",
-        path: "/api/availability?vehicle_id=not-a-uuid&pickup=2032-09-01&return=2032-09-05",
-      }),
-    );
-    expect(res.status).toBe(400);
   });
 });
 

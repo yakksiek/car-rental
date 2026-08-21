@@ -79,7 +79,7 @@ export const POST: APIRoute = async (context) => {
   // `createConfirmedReservation` THROWS on an RPC error (e.g. the migration's
   // deliberate `raise` after 3 reference-clash retries). Unhandled, that renders
   // Astro's 500 HTML page where the island expects JSON — so catch it and answer
-  // in shape, matching the sibling `api/availability.ts`.
+  // in shape, matching the sibling `api/vehicles/[id]/busy-ranges.ts`.
   let result: Awaited<ReturnType<typeof createConfirmedReservation>>;
   try {
     result = await createConfirmedReservation(context.locals.supabase, parsed.data);

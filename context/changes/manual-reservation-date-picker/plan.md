@@ -628,10 +628,10 @@ grant changes.
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro check`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 Integration tests pass: `npm run test:integration`
+- [x] 2.1 Type checking passes: `npx astro check` — 1097951
+- [x] 2.2 Linting passes: `npm run lint` — 1097951
+- [x] 2.3 Build passes: `npm run build` — 1097951
+- [x] 2.4 Integration tests pass: `npm run test:integration` — 1097951
 
 #### Manual
 
@@ -641,12 +641,12 @@ grant changes.
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Unit tests pass: `npm test`
-- [ ] 3.5 Integration tests pass after the endpoint removal: `npm run test:integration`
-- [ ] 3.6 No reference to `/api/availability` remains: `grep -rn "api/availability" src tests` returns nothing
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build passes: `npm run build`
+- [x] 3.4 Unit tests pass: `npm test`
+- [x] 3.5 Integration tests pass after the endpoint removal: `npm run test:integration`
+- [x] 3.6 No reference to `/api/availability` remains: `grep -rn "api/availability" src tests` returns nothing
 
 #### Manual
 

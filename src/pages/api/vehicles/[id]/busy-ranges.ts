@@ -19,8 +19,7 @@ import { getVehicleBusyRanges } from "../../../../lib/services/reservations";
 // at submit time so the gating verdict is as fresh as the write.
 //
 // Self-gate: auth then role (the /api tree is outside middleware's gate). No
-// Origin check — a GET read is not a CSRF sink, matching `api/availability.ts`
-// and `reservations/calendar.ts`.
+// Origin check — a GET read is not a CSRF sink, matching `reservations/calendar.ts`.
 
 // Loose hex-UUID shape, same as the services' guard — `z.uuid()` is strict
 // RFC-4122 and would reject the fixed seed ids.
@@ -53,8 +52,8 @@ export const GET: APIRoute = async (context) => {
   // Fail closed: the read reports its own failures (`ok: false`), and an empty
   // list is indistinguishable from a genuinely free vehicle. Answering 200 with
   // `[]` here would paint an empty calendar under a green "Termin wolny" and arm
-  // the submit button — the same shape and message `api/availability.ts` 500s
-  // with today, so the island's error state needs no new branch.
+  // the submit button. Same shape and message as the retired availability GET's
+  // own 500, so the island's error state needs no new branch.
   const { ok, ranges } = await getVehicleBusyRanges(context.locals.supabase, id);
   if (!ok) {
     return json(500, { error: MSG.failed });
