@@ -102,9 +102,9 @@ the code got wrong were fixed instead — the `12`/`8` radii, see the note under
 
 ## Surface 1 — Modal shell
 
-- **Desktop**: centered; panel `width: 560px` (`md:w-[560px]`), `max-height: 90%`, `bg-card`, `rounded-[20px]` (`md:rounded-[20px]`), `shadow-overlay`, flex column, `overflow-hidden`. Scrim reused from the overlay idiom (D6). `exact` — both 560 and 20 verified against the source.
+- **Desktop**: centered; panel `width: 560px` (`md:w-[560px]`), `max-height: 94%`, `bg-card`, `rounded-[20px]` (`md:rounded-[20px]`), `shadow-overlay`, flex column, `overflow-hidden`. Scrim reused from the overlay idiom (D6). `exact` — 560 and 20 verified against the source; the height was recorded as `90%` in error and corrected to the source's `94%` in S-12a Phase 4, so both breakpoints now share one `max-h-[94%]` and the `md:max-h-[90%]` override is gone. **While a `Termin` field's picker is open the scrim top-aligns** (`align-items: flex-start`, `padding-top: 56`) so the grown modal does not overflow — see the S-12a contract.
 - **Mobile**: bottom sheet; `border-top-radius 26px` → `rounded-t-[26px]` **`exact`**, `max-height 94%`, `shadow-overlay`. **No drag-handle bar** (D6).
-- **The whole form while a create is in flight**: `disabled`. `deviation(busy-guard)` — the source draws no disabled state for any of these. It covers the **close button** (`disabled` + `opacity 0.4`; 0.4 is the source's own disabled opacity, see `mrBtnPrimary` below), reused so the modal cannot be dismissed mid-POST and orphan a committed booking — **and, widened in S-12a Phase 1 (F11), the vehicle `<select>`, both `Termin` fields and the three `Klient` inputs**, which keep their normal look (`disabled` only, no opacity change): the pending signal is already carried by the submit button's spinner. Freezing them is what makes the state read at `setCreated` identical to the state POSTed, so the done panel cannot print dates that were never booked. From S-12a Phase 4 the same freeze also unmounts the calendar popover — a `disabled` trigger does not close an already-open one.
+- **The whole form while a create is in flight**: `disabled`. `deviation(busy-guard)` — the source draws no disabled state for any of these. It covers the **close button** (`disabled` + `opacity 0.4`; 0.4 is the source's own disabled opacity, see `mrBtnPrimary` below), reused so the modal cannot be dismissed mid-POST and orphan a committed booking — **and, widened in S-12a Phase 1 (F11), the vehicle `<select>`, both `Termin` fields and the three `Klient` inputs**. The `<select>` and the three `Klient` inputs keep their normal look (`disabled` only, no opacity change) — the pending signal is already carried by the submit button's spinner; the two `Termin` fields, which S-12a Phase 4 turns into `mrDateBtn` buttons, take `disabled` + `opacity 0.4` like the other buttons on the surface (per the S-12a contract). Freezing them is what makes the state read at `setCreated` identical to the state POSTed, so the done panel cannot print dates that were never booked. From S-12a Phase 4 the same freeze also unmounts the calendar popover — a `disabled` trigger does not close an already-open one.
 
 **Header** — padding desktop `22px 24px 16px` / mobile `18px 18px 14px`, `border-bottom: 1px var(--flota-hair-2)`. `exact`.
 
@@ -126,11 +126,17 @@ no equivalent for, and every other vehicle affordance in the console already use
 the source's own **transparent native `<select>` over the whole card** (`deviation(native-select)`, D8).
 Options = **active fleet only** (D3). `exact` values.
 
-**Termin** — grid `2 cols gap:10`; per field: caption (`mrFieldCap`: `font-size:10.5 / weight:600 /
-letter-spacing:0.3 / uppercase / muted / margin-bottom:5` — the `0.3` is `exact`, → `tracking-[0.3px]`)
-**Odbiór** / **Zwrot** + `<input type="date">` (`height:40 / rounded-[10px] /
-border 1px var(--flota-hair) / bg-card / px-2.5 / font-size:13`), `min` = today. Note **Odbiór od 14:00 · zwrot
-do 10:00** `font-size:11.5` muted `margin-top:8`. Availability panel `margin-top:10`. `exact`.
+**Termin** — **SUPERSEDED by `context/changes/manual-reservation-date-picker/design-contract.md`
+(S-12a).** The grid (`2 cols gap:10`), the `mrFieldCap` captions **Odbiór** / **Zwrot**, the note **Odbiór od
+14:00 · zwrot do 10:00** (`font-size:11.5` muted `margin-top:8`) and the availability panel's `margin-top:10`
+all carry over unchanged and stay `exact`.
+
+What is **withdrawn** is the `<input type="date">` line, which recorded a native date input as `exact`. It was
+wrong against the source — a DesignSync pull on 2026-08-20 found `manual-reservation.jsx` draws `mrDateBtn`
+**buttons** (calendar icon + `d MMM yyyy` label + chevron) expanding an availability-aware `MrCalendarPopover`,
+and had done since after the S-12 screenshots were exported. Same class of error as the three lines Phase 7
+corrected. The S-12a contract carries the buttons-plus-popover spec, and the 10 S-12 `design-review/*.png` are
+stale for this block only.
 
 **MrAvailability** — box `rounded-[13px]`, padding `13px 15px` (desktop) / `12px 13px` (mobile), flex `gap:11`
 items-start. States:
@@ -140,7 +146,7 @@ items-start. States:
 - **invalid** — `bg-[var(--flota-warning-soft)]`, warning icon warning, `font-size:12.5 / weight:600` warning: **"Data zwrotu musi być późniejsza niż data odbioru."** `deviation(same-day-rejected)` (D9) — the source's "Data zwrotu jest wcześniejsza niż odbiór." is false for `ret == pick`, which our stack rejects. Styling `exact`.
 - **error** — the check itself failed. Shares the `invalid` warning treatment (same box, icon and type): "Nie udało się sprawdzić dostępności." `deviation(undrawn-state)` — the source has no failed-check state; the app can fail the GET, so it needs one, and reusing the warning look keeps "we cannot confirm this yet" as one visual idea.
 - **conflict** — `bg-[var(--flota-danger-soft)]`, warning icon destructive, title **Termin zajęty** `font-size:13 / weight:700` destructive + "Ten pojazd ma już rezerwację w wybranych dniach." `font-size:12` destructive `opacity:0.85`. `deviation(D2)`: clashing-booking card omitted.
-- **available** — `bg-[var(--flota-success-soft)]`, check icon success, title **Termin wolny** `font-size:13 / weight:700` success + subtext `font-size:12` success `opacity:0.85`. `deviation(D2)`: "next free" hint replaced with a generic line (e.g. "Można utworzyć rezerwację.").
+- **available** — `bg-[var(--flota-success-soft)]`, check icon success, title **Termin wolny** `font-size:13 / weight:700` success + subtext `font-size:12` success `opacity:0.85`. The subtext is **superseded by the S-12a contract (D10)**: the invented "Można utworzyć rezerwację." is retired for the source's own **"Pojazd wolny do {d MMM}"** / **"Brak innych rezerwacji w tym okresie."**, now that per-vehicle busy ranges are on hand. Only the `· kolejna rez. {reference}` clause stays dropped — the PII-safe RPC returns date bounds only.
 
 **Klient** — name input (`mrInputFull`: `width:100% / height:42 / rounded-[11px] / border 1px var(--flota-hair) /
 px-3.25 / font-size:13.5`), placeholder **Imię i nazwisko / firma**; grid `2 cols gap:8`: **Telefon** + **E-mail**
@@ -156,6 +162,10 @@ overflowed the mobile sheet's footer — caught by the Phase 8 vision-diff.
 Button **Utwórz rezerwację** (`mrBtnPrimary`: `height:46 / rounded-[12px] / bg-primary / text-white / font-size:14
 / weight:650`, check icon; `disabled → opacity:0.4`, enabled shadow `0_8px_22px_rgba(180,54,56,0.24)`). Math via
 `format.ts` (`rentalDays`, `estimatedTotal`, `formatPln`, `formatDailyRate`). `exact`.
+**While the panel reads `conflict`** the source also swaps the background to `tokens.muted`
+(`--muted-foreground`, `#94A3B8`) **on top of** the `opacity 0.4`, so a blocked range greys the action out
+rather than dimming a crimson one. `exact` — recorded in error as `bg-primary`-throughout and corrected in
+S-12a Phase 4.
 
 > **Radius `12` is `rounded-md`, not `rounded-xl`.** This project overrides the Tailwind radius scale
 > (`global.css:71` → `:162`): `rounded-xl` renders **20px**, `rounded-md` **12px**, `rounded-sm` **8px**.

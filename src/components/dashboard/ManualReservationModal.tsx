@@ -4,9 +4,12 @@ import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { AlertTriangle, CalendarDays, Check, ChevronDown, Truck, X } from "lucide-react";
 
+// components
+import { ManualReservationCalendar } from "./ManualReservationCalendar";
+
 // others
 import { cn } from "../../lib/utils";
-import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
+import { fromIsoDate } from "../../lib/date-iso";
 import {
   estimatedTotal,
   formatDailyRate,
@@ -44,6 +47,9 @@ const COPY = {
   pickup: "Odbiór",
   return: "Zwrot",
   hours: "Odbiór od 14:00 · zwrot do 10:00",
+  // The source's boards always carry both dates, so no empty state is drawn.
+  // Reuses the public widget's em-dash placeholder rather than inventing copy.
+  noDate: "—",
   customer: "Klient",
   namePlaceholder: "Imię i nazwisko / firma",
   phonePlaceholder: "Telefon",
@@ -76,10 +82,16 @@ function vehicleTitle(vehicle: Vehicle): string {
   return [vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.name;
 }
 
-/** `"1 kwi"` — the mockup's short day label. */
+/** `"1 kwi"` — the mockup's short day label (`mrFmt`). */
 function formatDayShort(iso: string): string {
   const date = fromIsoDate(iso);
   return date ? format(date, "d MMM", { locale: pl }) : iso;
+}
+
+/** `"1 kwi 2026"` — the date-button label (`mrFmtFull`). */
+function formatDayFull(iso: string): string {
+  const date = fromIsoDate(iso);
+  return date ? format(date, "d MMM yyyy", { locale: pl }) : iso;
 }
 
 // ── availability panel ───────────────────────────────────────────────────────
@@ -217,8 +229,6 @@ function DonePanel({
 // ── the modal ────────────────────────────────────────────────────────────────
 
 export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () => void }) {
-  const today = React.useMemo(() => toIsoDate(new Date()), []);
-
   const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id ?? "");
   const [pickup, setPickup] = React.useState("");
   const [returnDate, setReturnDate] = React.useState("");
@@ -227,6 +237,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   const [email, setEmail] = React.useState("");
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
+  const [openField, setOpenField] = React.useState<"pickup" | "return" | null>(null);
 
   const { ranges, state: rangesState, refetch } = useVehicleBusyRanges(vehicleId);
   const { busy: creating, create } = useManualReservation();
@@ -260,6 +271,20 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   // hook's render-phase reset (useManualReservation.ts:62-70) so the banner goes
   // in the same render the input changed rather than one paint later. Keyed on
   // (vehicle, pickup, return) only: a customer-field edit must NOT clear it.
+  // `disabled` on a trigger does NOT close an already-open popover, and the
+  // footer submit sits outside the scrollable body — so with the calendar left
+  // live an employee could press Utwórz rezerwację and then click a day, moving
+  // the range mid-POST and landing F11 again through the new surface. The
+  // popover is simply not rendered while `busy` (below); this drops the trigger
+  // out of its active treatment to match, in the same render `busy` flipped.
+  const [lastBusy, setLastBusy] = React.useState(busy);
+  if (lastBusy !== busy) {
+    setLastBusy(busy);
+    if (busy) {
+      setOpenField(null);
+    }
+  }
+
   const rangeKey = `${vehicleId}|${pickup}|${returnDate}`;
   const [lastRangeKey, setLastRangeKey] = React.useState(rangeKey);
   if (lastRangeKey !== rangeKey) {
@@ -339,7 +364,12 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center md:p-8"
+      className={cn(
+        "fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:p-8",
+        // The in-flow calendar makes the modal taller than a centered box can
+        // carry, so desktop rides the top of the viewport while a field is open.
+        openField && !busy ? "md:items-start md:pt-14" : "md:items-center",
+      )}
       // Inert while a create is in flight: unmounting mid-POST would still commit
       // the booking and email the customer, but the employee would never see the
       // reference — and might re-enter it straight into a 409.
@@ -349,7 +379,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className="bg-card shadow-overlay flex max-h-[94%] w-full flex-col overflow-hidden rounded-t-[26px] md:max-h-[90%] md:w-[560px] md:rounded-[20px]"
+        className="bg-card shadow-overlay flex max-h-[94%] w-full flex-col overflow-hidden rounded-t-[26px] md:w-[560px] md:rounded-[20px]"
       >
         {/* header */}
         <div className="flex items-start justify-between border-b border-[var(--flota-hair-2)] px-[18px] pt-[18px] pb-[14px] md:px-6 md:pt-[22px] md:pb-4">
@@ -422,46 +452,71 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
               <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
                 {COPY.term}
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label
-                    htmlFor="mr-pickup"
-                    className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
-                  >
-                    {COPY.pickup}
-                  </label>
-                  <input
-                    id="mr-pickup"
-                    type="date"
-                    min={today}
-                    value={pickup}
-                    disabled={busy}
-                    onChange={(e) => {
-                      setPickup(e.target.value);
-                    }}
-                    className="text-foreground bg-card h-10 w-full rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="mr-return"
-                    className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
-                  >
-                    {COPY.return}
-                  </label>
-                  <input
-                    id="mr-return"
-                    type="date"
-                    min={pickup || today}
-                    value={returnDate}
-                    disabled={busy}
-                    onChange={(e) => {
-                      setReturnDate(e.target.value);
-                    }}
-                    className="text-foreground bg-card h-10 w-full rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] outline-none"
-                  />
-                </div>
+              <div className="relative grid grid-cols-2 gap-2.5">
+                {(
+                  [
+                    { field: "pickup", caption: COPY.pickup, value: pickup },
+                    { field: "return", caption: COPY.return, value: returnDate },
+                  ] as const
+                ).map((item) => {
+                  const active = openField === item.field;
+                  return (
+                    <div key={item.field}>
+                      <span
+                        id={`mr-${item.field}-cap`}
+                        className="text-muted-foreground mb-[5px] block text-[10.5px] font-semibold tracking-[0.3px] uppercase"
+                      >
+                        {item.caption}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-expanded={active}
+                        // Caption + current value, so the control announces
+                        // "Odbiór 1 kwi 2026" rather than just its caption or
+                        // just its date.
+                        aria-labelledby={`mr-${item.field}-cap mr-${item.field}-val`}
+                        onClick={() => {
+                          setOpenField(active ? null : item.field);
+                        }}
+                        className={cn(
+                          "text-foreground bg-card flex h-10 w-full items-center gap-2 rounded-[10px] border border-[var(--flota-hair)] px-2.5 text-[13px] font-semibold disabled:opacity-40",
+                          active && "border-[var(--foreground)] shadow-[0_0_0_4px_rgba(15,23,42,0.06)]",
+                        )}
+                      >
+                        <CalendarDays
+                          className={cn("size-3.5 shrink-0", active ? "text-foreground" : "text-muted-foreground")}
+                        />
+                        <span id={`mr-${item.field}-val`} className="flex-1 text-left">
+                          {item.value ? formatDayFull(item.value) : COPY.noDate}
+                        </span>
+                        <ChevronDown className="text-muted-foreground size-[13px] shrink-0" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* In flow, not absolutely positioned: the body grows and the
+                  footer stays pinned on both breakpoints. Unmounted while a
+                  create is in flight — that is the whole F11 fix on this
+                  surface, so day cells, month nav and Zastosuj need no guards
+                  of their own. */}
+              {openField && !busy && (
+                <ManualReservationCalendar
+                  busyRanges={ranges}
+                  pickup={pickup}
+                  returnDate={returnDate}
+                  openField={openField}
+                  onChange={(nextPickup, nextReturn) => {
+                    setPickup(nextPickup);
+                    setReturnDate(nextReturn);
+                  }}
+                  onApply={() => {
+                    setOpenField(null);
+                  }}
+                />
+              )}
               <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
               <div className="mt-2.5">
                 <MrAvailability
@@ -540,7 +595,10 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
             disabled={!canCreate || busy}
             onClick={() => void submit()}
             className={cn(
-              "bg-primary inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-md px-5 text-sm font-[650] text-white",
+              "inline-flex h-[46px] shrink-0 items-center justify-center gap-2 rounded-md px-5 text-sm font-[650] text-white",
+              // The source greys the button out entirely while the panel reads
+              // conflict — `tokens.muted`, on top of the disabled opacity.
+              availability.state === "conflict" ? "bg-[var(--muted-foreground)]" : "bg-primary",
               canCreate && !busy ? "shadow-[0_8px_22px_rgba(180,54,56,0.24)]" : "opacity-40",
             )}
           >
