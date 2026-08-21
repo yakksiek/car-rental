@@ -1,7 +1,7 @@
 ---
 change_id: manual-reservation-date-picker
 title: Availability-aware date picker in the manual-reservation modal
-status: implementing
+status: implemented
 created: 2026-08-18
 updated: 2026-08-21
 archived_at: null

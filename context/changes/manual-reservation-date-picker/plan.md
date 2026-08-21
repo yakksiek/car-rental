@@ -796,18 +796,18 @@ grant changes.
 
 #### Automated
 
-- [x] 6.1 Type checking passes: `npx astro check`
-- [x] 6.2 Linting passes: `npm run lint`
-- [x] 6.3 Build passes: `npm run build`
-- [x] 6.4 Unit tests pass: `npm test`
-- [x] 6.5 `nextBusyRangeAfter` is gone: `grep -rn "nextBusyRangeAfter" src` returns nothing
+- [x] 6.1 Type checking passes: `npx astro check` — f8ade37
+- [x] 6.2 Linting passes: `npm run lint` — f8ade37
+- [x] 6.3 Build passes: `npm run build` — f8ade37
+- [x] 6.4 Unit tests pass: `npm test` — f8ade37
+- [x] 6.5 `nextBusyRangeAfter` is gone: `grep -rn "nextBusyRangeAfter" src` returns nothing — f8ade37
 
 #### Manual
 
-- [x] 6.6 The available panel shows **Termin wolny** alone; no date line in any vehicle/range combination (driven: panel text exactly "Termin wolny", box `align-items: center`; 0 matches for "Pojazd wolny do" / "Brak innych rezerwacji" across every range and vehicle tried)
-- [x] 6.7 One `Termin` field showing `1 kwi – 2 kwi 2026` + the day count; **Wybierz termin** before anything is picked (driven: 1 trigger, h40/r10/13px/600, width 512 = full body width; "3 wrz – 5 wrz 2026" + "2 dni" at 12px/600 muted; "Wybierz termin" with no count when empty; 0 Odbiór/Zwrot captions; active border rgb(15,23,42) + 0 0 0 4px rgba(15,23,42,.06); tail centre x 660.0 = card centre x 660.0)
-- [x] 6.8 Switching vehicle with a range already chosen no longer produces a date claim about another month (driven: 3–5 wrz picked, then vehicle switched → 0 date claims, panel simply re-resolves)
-- [x] 6.9 At 390px the picker opens as a sheet over the form, survives taps beside the grid, and closes only on **Zastosuj** (driven at 390×844: `absolute inset-0 z-[70]`, rgba(20,18,22,0.5), items-end, rect exactly 390×844; panel rounded-t-[26px] / px-4 pt-3.5 pb-[22px] over a 40×4 handle, no card chrome inside; a tap beside the grid left sheet AND modal open; Zastosuj closed it. Desktop renders 0 sheet layers, mobile 0 in-flow cards)
-- [x] 6.10 With the create held open the mobile sheet is gone — Phase 1's freeze re-run on the new layer (driven: 0 sheet layers, 0 day cells, trigger disabled, and a FORCED click on the frozen trigger still produced 0 layers. Also recorded: the sheet covers the footer, so on mobile a create cannot even be started while the picker is open)
-- [x] 6.11 Vision-diff against the re-rendered boards clean apart from recorded deviations (punch-list empty; the only differences from the six boards are fixture data and the vehicle-thumbnail glyph already recorded in the S-12 contract)
-- [x] 6.12 The page behind the modal no longer scrolls (added to this phase after manual verification surfaced it — pre-existing since S-12, not a Phase 6 regression: `document.body` was never locked, so a wheel over the scrim moved the dashboard 114px and the modal body's end chained through to the page. Fixed with the `MobileNav.tsx:65` idiom. Driven: overflow `hidden` while open incl. the done panel, `visible` again after X / scrim / Gotowe / a ClientRouter nav to /dashboard/calendar; modal body still scrolls internally 268/861)
+- [x] 6.6 The available panel shows **Termin wolny** alone; no date line in any vehicle/range combination (driven: panel text exactly "Termin wolny", box `align-items: center`; 0 matches for "Pojazd wolny do" / "Brak innych rezerwacji" across every range and vehicle tried) — f8ade37
+- [x] 6.7 One `Termin` field showing `1 kwi – 2 kwi 2026` + the day count; **Wybierz termin** before anything is picked (driven: 1 trigger, h40/r10/13px/600, width 512 = full body width; "3 wrz – 5 wrz 2026" + "2 dni" at 12px/600 muted; "Wybierz termin" with no count when empty; 0 Odbiór/Zwrot captions; active border rgb(15,23,42) + 0 0 0 4px rgba(15,23,42,.06); tail centre x 660.0 = card centre x 660.0) — f8ade37
+- [x] 6.8 Switching vehicle with a range already chosen no longer produces a date claim about another month (driven: 3–5 wrz picked, then vehicle switched → 0 date claims, panel simply re-resolves) — f8ade37
+- [x] 6.9 At 390px the picker opens as a sheet over the form, survives taps beside the grid, and closes only on **Zastosuj** (driven at 390×844: `absolute inset-0 z-[70]`, rgba(20,18,22,0.5), items-end, rect exactly 390×844; panel rounded-t-[26px] / px-4 pt-3.5 pb-[22px] over a 40×4 handle, no card chrome inside; a tap beside the grid left sheet AND modal open; Zastosuj closed it. Desktop renders 0 sheet layers, mobile 0 in-flow cards) — f8ade37
+- [x] 6.10 With the create held open the mobile sheet is gone — Phase 1's freeze re-run on the new layer (driven: 0 sheet layers, 0 day cells, trigger disabled, and a FORCED click on the frozen trigger still produced 0 layers. Also recorded: the sheet covers the footer, so on mobile a create cannot even be started while the picker is open) — f8ade37
+- [x] 6.11 Vision-diff against the re-rendered boards clean apart from recorded deviations (punch-list empty; the only differences from the six boards are fixture data and the vehicle-thumbnail glyph already recorded in the S-12 contract) — f8ade37
+- [x] 6.12 The page behind the modal no longer scrolls (added to this phase after manual verification surfaced it — pre-existing since S-12, not a Phase 6 regression: `document.body` was never locked, so a wheel over the scrim moved the dashboard 114px and the modal body's end chained through to the page. Fixed with the `MobileNav.tsx:65` idiom. Driven: overflow `hidden` while open incl. the done panel, `visible` again after X / scrim / Gotowe / a ClientRouter nav to /dashboard/calendar; modal body still scrolls internally 268/861) — f8ade37
