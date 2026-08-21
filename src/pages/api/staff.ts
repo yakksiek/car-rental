@@ -73,7 +73,11 @@ export const POST: APIRoute = async (context) => {
     case "created":
       return json(201, { member: result.member });
     case "reactivated":
-      return json(200, { member: result.member });
+      // Still 200: the account really was repaired and really does belong on the
+      // roster. The activation-mail outcome rides in the BODY, not the status —
+      // the two-systems house pattern (`services/email-delivery.ts:57-77`,
+      // `api/return-protocols/[id]/pdf.ts:18-21`).
+      return json(200, { member: result.member, activationMail: result.activationMail });
     case "duplicate_active":
       return json(409, { errors: { email: MSG.duplicateEmail } });
     // Provisioning half-succeeded: 500 is the honest class (our write failed),

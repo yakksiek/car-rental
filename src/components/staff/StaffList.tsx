@@ -71,6 +71,8 @@ const COPY = {
   provisionRolledBack:
     "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Cofnięto zaproszenie — dodaj osobę ponownie.",
   provisionOrphaned: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Użyj „Ponów”, aby je naprawić.",
+  repairedMailFailed:
+    "Konto zostało odnowione, ale nie udało się wysłać e-maila aktywacyjnego. Użyj „Resetuj hasło” przy tej osobie.",
   retry: "Ponów",
   resetSent: "Wysłano e-mail do resetu hasła.",
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
@@ -484,10 +486,21 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         body: JSON.stringify(values),
       });
       if (res.status === 201 || res.status === 200) {
-        const body = (await res.json().catch(() => null)) as { member?: StaffMember } | null;
+        const body = (await res.json().catch(() => null)) as {
+          member?: StaffMember;
+          activationMail?: "sent" | "failed" | "not_needed";
+        } | null;
         const member = body?.member;
         if (member) setStaff((rows) => [...rows.filter((r) => r.id !== member.id), member]);
         setAddOpen(false);
+        // The repair succeeded — the row belongs on the roster and the modal
+        // closes — but the activation email did not go out, so the hire has no
+        // way in. Error tone because the admin must act; no `retry`, because the
+        // remedy is the row's own `Resetuj hasło`, which the copy names
+        // (design-contract §8.1).
+        if (body?.activationMail === "failed") {
+          setBanner({ kind: "error", msg: COPY.repairedMailFailed });
+        }
         return;
       }
       if (res.status === 409) {

@@ -34,6 +34,19 @@ async function findAuthUserId(email: string): Promise<string | null> {
   return match?.id ?? null;
 }
 
+// `serviceClient()` is constructed without the Database generic, so its rows
+// arrive as `any`. Narrow through an `unknown` parameter, the same shape
+// `bannedUntil` below already uses.
+function stampFrom(row: unknown): string | null {
+  return (row as { password_set_at?: string | null } | null)?.password_set_at ?? null;
+}
+
+/** `profiles.password_set_at` for a user — the owned "has a password" signal. */
+async function stampOf(userId: string): Promise<string | null> {
+  const { data } = await svc.from("profiles").select("password_set_at").eq("user_id", userId).maybeSingle();
+  return stampFrom(data);
+}
+
 const INSERT_FAILURE = {
   data: null,
   error: { message: "simulated profiles insert failure", code: "XXTST", details: "", hint: "" },
@@ -75,6 +88,23 @@ function failingProfileInsert(real: typeof svc, opts: { breakRollback?: boolean 
     // builder method on `profiles`.
     from: (table: string) =>
       table === "profiles" ? { insert: () => Promise.resolve(INSERT_FAILURE) } : real.from(table as never),
+  };
+  return double as unknown as typeof svc;
+}
+
+/**
+ * Partial double whose ONLY difference is that `auth.resetPasswordForEmail`
+ * answers an error. Everything the repair arm does — unban, profile upsert —
+ * runs for real, so the assertion is "repaired AND mail failed", not "nothing
+ * happened".
+ */
+function mailFails(real: typeof svc): typeof svc {
+  const double = {
+    auth: {
+      admin: real.auth.admin,
+      resetPasswordForEmail: () => Promise.resolve({ data: null, error: { message: "simulated mail failure" } }),
+    },
+    from: real.from.bind(real),
   };
   return double as unknown as typeof svc;
 }
@@ -231,6 +261,14 @@ describe("provisioning rollback when the profiles insert fails (invite-journey-f
     // `existing` repair arm and completes the account.
     const repair = await createEmployee(svc, { email, full_name: "Osierocone Konto", origin: ORIGIN });
     expect(repair.status).toBe("reactivated");
+    if (repair.status !== "reactivated") return;
+    // The orphan never set a password, so the repair must label them INVITED and
+    // actually send the activation mail — the outcome is now reported, not
+    // swallowed by a `.catch()` that never fired.
+    expect(repair.member.status).toBe("invited");
+    expect(repair.activationMail).toBe("sent");
+    expect(await stampOf(orphanId)).toBeNull();
+
     const { data: repaired } = await svc
       .from("profiles")
       .select("role, deactivated_at")
@@ -241,20 +279,70 @@ describe("provisioning rollback when the profiles insert fails (invite-journey-f
   });
 });
 
+describe("the link exchange is not a password (research §1.5(a), invite-journey-fixes)", () => {
+  it("a hire who opened their invite link but set no password is INVITED and IS mailed on repair", async () => {
+    const email = uniqueEmail("clicked");
+    // Provision exactly like `services/staff.ts` does, but through generateLink
+    // so no mail is spent: an auth user + a profiles row with NO password_set_at.
+    const generated = await svc.auth.admin.generateLink({ type: "invite", email });
+    expect(generated.error).toBeNull();
+    if (generated.error) return;
+    const tokenHash = generated.data.properties.hashed_token;
+    const id = generated.data.user.id;
+    createdIds.push(id);
+    await svc.from("profiles").insert({ user_id: id, role: "employee", full_name: "Kliknął Nie Ustawił" });
+
+    // SPEND the link the way opening it does today. This is the event that
+    // stamps last_sign_in_at while no password has ever been chosen.
+    const exchange = await anonClient().auth.verifyOtp({ token_hash: tokenHash, type: "invite" });
+    expect(exchange.error).toBeNull();
+
+    // The corrupted proxy is now set...
+    const { data: authUser } = await svc.auth.admin.getUserById(id);
+    expect(authUser.user?.last_sign_in_at ?? null).not.toBeNull();
+    // ...and the owned signal is correctly still empty.
+    expect(await stampOf(id)).toBeNull();
+
+    // The roster reads the owned signal: ZAPROSZONY, where it used to say AKTYWNY.
+    const admin = await as("admin");
+    const roster = await listStaff(admin);
+    expect(roster.find((m) => m.id === id)?.status).toBe("invited");
+
+    // And a repair mails them, where the proxy made it send nothing at all.
+    expect((await deactivateStaff(svc, admin, id)).status).toBe("ok");
+    const react = await createEmployee(svc, { email, full_name: "Kliknął Nie Ustawił", origin: ORIGIN });
+    expect(react.status).toBe("reactivated");
+    if (react.status !== "reactivated") return;
+    expect(react.member.status).toBe("invited");
+    expect(react.activationMail).toBe("sent");
+  });
+
+  it("reports a failed activation mail instead of swallowing it", async () => {
+    const email = uniqueEmail("mailfail");
+    const created = await createEmployee(svc, { email, full_name: "Poczta Padła", origin: ORIGIN });
+    expect(created.status).toBe("created");
+    if (created.status !== "created") return;
+    const id = created.member.id;
+    createdIds.push(id);
+
+    const admin = await as("admin");
+    expect((await deactivateStaff(svc, admin, id)).status).toBe("ok");
+
+    // Fail ONLY the activation mail; the repair itself must still succeed.
+    const mailBroken = mailFails(svc);
+    const react = await createEmployee(mailBroken, { email, full_name: "Poczta Padła", origin: ORIGIN });
+    expect(react.status).toBe("reactivated");
+    if (react.status !== "reactivated") return;
+    expect(react.activationMail).toBe("failed");
+
+    // The account really was repaired — that is why the route still answers 200.
+    const { data: repaired } = await svc.from("profiles").select("deactivated_at").eq("user_id", id).single();
+    expect(repaired?.deactivated_at).toBeNull();
+  });
+});
+
 describe("mark_password_set() stamps only the caller (invite-journey-fixes)", () => {
   const EMPLOYEE_ID = "e0000000-0000-0000-0000-0000000000e0";
-
-  // `serviceClient()` is constructed without the Database generic, so its rows
-  // arrive as `any`. Narrow through an `unknown` parameter, the same shape
-  // `bannedUntil` above already uses.
-  function stampFrom(row: unknown): string | null {
-    return (row as { password_set_at?: string | null } | null)?.password_set_at ?? null;
-  }
-
-  async function stampOf(userId: string): Promise<string | null> {
-    const { data } = await svc.from("profiles").select("password_set_at").eq("user_id", userId).single();
-    return stampFrom(data);
-  }
 
   it("stamps the caller's own row and leaves every other row alone", async () => {
     const employeeBefore = await stampOf(EMPLOYEE_ID);

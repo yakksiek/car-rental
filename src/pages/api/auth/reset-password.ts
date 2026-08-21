@@ -121,6 +121,15 @@ export const POST: APIRoute = async (context) => {
     return fail(context, mode, gotrueErrorCode(error));
   }
 
+  // Stamp the owned password-set signal. This MUST precede the global sign-out
+  // below, which invalidates the caller's session and would leave the RPC
+  // unauthenticated (`auth.uid()` null → zero rows updated, silently).
+  //
+  // A failed stamp does NOT fail the request: the password has already changed,
+  // and erroring here would tell the user their reset didn't work when it did.
+  // The cost of a miss is a stale ZAPROSZONY badge, not a broken account.
+  await supabase.rpc("mark_password_set");
+
   // (g) Success. Spend the marker, hand the page a one-shot success token (the
   // old `?done=1` check was forgeable by anyone typing the URL), then revoke
   // EVERY session for this user (R1) — including the caller's.
