@@ -305,6 +305,44 @@ Foundations below assume these are present and do NOT re-scaffold them.
   Termin wolny/zajęty, kaucja).
 - **Status:** backlog
 
+### S-12a: Availability-aware date picker in the manual reservation modal (refinement)
+
+- **Outcome:** In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced
+  by the same range calendar the public booking widget already gives customers — the selected vehicle's taken
+  days greyed, changeover days half-available — so an employee on the phone with a customer sees availability
+  **while** picking instead of being told "Termin zajęty" after the fact.
+- **Change ID:** manual-reservation-date-picker
+- **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
+- **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
+- **Parallel with:** S-11, S-13.
+- **Blockers:** ~~the design source needs updating first~~ **none — resolved 2026-08-20 at plan time.** A
+  DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
+  `MrD_Pick`/`MrM_Pick`; the `Termin` fields are `mrDateBtn` buttons, not native date inputs). The source was
+  updated after S-12's screenshots were exported, so the stale artifact is the **S-12 contract**, which records
+  the native inputs `exact`. Corrected in `context/changes/manual-reservation-date-picker/design-contract.md`.
+  **One blocker does remain, and it is a hand-off, not a design:** the six boards
+  (`MrD_Pick` / `MrM_Pick` + the four re-exported form boards) must be exported into the change's
+  `design-review/`, which is still empty. The vision-diff gate (plan 4.10 / 4.11 / 5.3) cannot close without
+  them; nothing else in the slice is blocked.
+- **Unknowns:**
+  - **No client-reachable busy-ranges endpoint.** The public path fetches server-side per vehicle page
+    (`fleet/[id]/[...slug].astro`) because the vehicle is fixed by the URL; the modal switches vehicle
+    client-side, so it needs `GET /api/vehicles/[id]/busy-ranges`, staff-gated, mirroring `api/availability.ts`.
+    `get_vehicle_busy_ranges(uuid)` is already granted to `anon, authenticated` → no migration. Block: no.
+  - Whether the debounced `/api/availability` boolean survives alongside the calendar or `checkRangeBookable`
+    becomes the pre-submit gate. The `EXCLUDE` constraint is the authority either way. Block: no.
+  - The source's own **D2** affordances — the "Pojazd wolny do … · kolejna rez. …" hint and the
+    clashing-booking card — become computable from busy ranges once the endpoint exists. In or out? Block: no.
+- **Risk:** Mostly assembly. `dayAvailabilityMap` / `checkRangeBookable` (`src/lib/availability.ts:116,157`)
+  are pure and unit-tested, `ui/calendar` + react-day-picker v10 are already dependencies, and
+  `BookingWidget.tsx:217-260` is a working reference including the half-day turnaround modifiers (return
+  10:00 / pickup 14:00). Net-new is one staff-gated GET route plus the modal surface swap. The real cost is
+  design: it corrects a contract line recorded `exact` against a source that had already moved on, so it needs
+  its own Design Alignment Audit and vision-diff gate, and the mobile sheet has to absorb a calendar without
+  losing the footer (the source's collapsed date buttons handle that at rest).
+- **Status:** planned — `context/changes/manual-reservation-date-picker/plan.md` (5 phases). Absorbs S-12's
+  unimplemented Phase 9 (F11/F12).
+
 ### S-13: Staff global search
 
 - **Outcome:** A logged-in employee searches across **reservations, returns, vehicles, and customers** from a
