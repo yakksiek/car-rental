@@ -15,9 +15,11 @@ import {
   formatPlnAmount,
   rentalDays,
 } from "../../lib/format";
-import { canCreateReservation, type AvailabilityState } from "../../lib/manual-availability";
+import { checkRangeBookable, nextBusyRangeAfter } from "../../lib/availability";
+import { canCreateReservation, resolveAvailability, type AvailabilityState } from "../../lib/manual-availability";
 import { manualReservationSchema } from "../../lib/reservation-schema";
-import { useAvailability, useManualReservation } from "../hooks/useManualReservation";
+import { useManualReservation } from "../hooks/useManualReservation";
+import { useVehicleBusyRanges } from "../hooks/useVehicleBusyRanges";
 import type { Vehicle } from "../../types";
 
 // The manual-reservation modal (S-12): desktop-centered / mobile bottom sheet,
@@ -49,7 +51,12 @@ const COPY = {
   avIdle: "Wybierz pojazd i termin, aby sprawdzić dostępność.",
   avChecking: "Sprawdzanie dostępności…",
   avAvailable: "Termin wolny",
-  avAvailableSub: "Można utworzyć rezerwację.",
+  // D10: the source's hint is "Pojazd wolny do {date} · kolejna rez. {ref}" —
+  // the reference clause is dropped, the PII-safe RPC returns date bounds only.
+  // The no-later-booking fallback is the source's own, verbatim; it retires
+  // S-12's invented "Można utworzyć rezerwację."
+  avAvailableUntil: "Pojazd wolny do",
+  avAvailableSubNone: "Brak innych rezerwacji w tym okresie.",
   avConflict: "Termin zajęty",
   avConflictSub: "Ten pojazd ma już rezerwację w wybranych dniach.",
   avError: "Nie udało się sprawdzić dostępności.",
@@ -77,7 +84,14 @@ function formatDayShort(iso: string): string {
 
 // ── availability panel ───────────────────────────────────────────────────────
 
-function MrAvailability({ availability }: { availability: AvailabilityState }) {
+function MrAvailability({
+  availability,
+  nextBusyPickup,
+}: {
+  availability: AvailabilityState;
+  /** ISO date the vehicle is free until — the first range starting after the return. */
+  nextBusyPickup: string | null;
+}) {
   const box = "flex items-start gap-[11px] rounded-[13px] px-[13px] py-3 md:px-[15px] md:py-[13px]";
 
   if (availability.state === "idle") {
@@ -128,7 +142,9 @@ function MrAvailability({ availability }: { availability: AvailabilityState }) {
       <Check className="text-success size-[18px] shrink-0" />
       <div className="pt-px">
         <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{COPY.avAvailable}</div>
-        <div className="text-success mt-0.5 text-[12px] opacity-85">{COPY.avAvailableSub}</div>
+        <div className="text-success mt-0.5 text-[12px] opacity-85">
+          {nextBusyPickup ? `${COPY.avAvailableUntil} ${formatDayShort(nextBusyPickup)}` : COPY.avAvailableSubNone}
+        </div>
       </div>
     </div>
   );
@@ -212,8 +228,30 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
 
-  const { availability, markConflict } = useAvailability(vehicleId, pickup, returnDate);
-  const { busy, create } = useManualReservation();
+  const { ranges, state: rangesState, refetch } = useVehicleBusyRanges(vehicleId);
+  const { busy: creating, create } = useManualReservation();
+
+  // The create's pre-flight re-read runs BEFORE `creating` flips, so without its
+  // own flag the form would be live for the length of that request — F11 again,
+  // through the new window. One `busy` covers the whole submit.
+  const [preflighting, setPreflighting] = React.useState(false);
+  const busy = preflighting || creating;
+
+  // The panel's answer, resolved locally against the vehicle's busy ranges — the
+  // same half-day rules the calendar cells draw and the EXCLUDE constraint
+  // enforces, so the panel can never contradict the days shown under it.
+  const resolved = resolveAvailability(vehicleId, pickup, returnDate, ranges, rangesState);
+
+  // The create (or the pre-flight) is the newer, authoritative answer about this
+  // range, so it overrides the resolver — otherwise the employee would see a
+  // green "Termin wolny" over a red banner, with the submit button still armed
+  // for an identical retry. Layered rather than written into the ranges so the
+  // next (vehicle, pickup, return) change drops it with the rest.
+  const [conflictOverride, setConflictOverride] = React.useState(false);
+  const availability: AvailabilityState = conflictOverride ? { state: "conflict" } : resolved;
+  const markConflict = () => {
+    setConflictOverride(true);
+  };
 
   // The banner reports the outcome of a create against ONE range, so it must die
   // with that range: after a lost create the employee follows "Wybierz inny
@@ -227,6 +265,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   if (lastRangeKey !== rangeKey) {
     setLastRangeKey(rangeKey);
     setBanner(null);
+    setConflictOverride(false);
   }
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
@@ -249,6 +288,21 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
 
   async function submit() {
     setBanner(null);
+
+    // Pre-flight: ranges are read once per vehicle SELECTION, so by submit time
+    // the snapshot the panel judged against can be as old as the phone call —
+    // with the calendar painting "free" days from it. Re-read here so the verdict
+    // that gates the write is as fresh as the write. A failed read (`null`) falls
+    // through to the POST, which is the authority anyway.
+    setPreflighting(true);
+    const fresh = await refetch();
+    setPreflighting(false);
+    if (fresh && !checkRangeBookable(fresh, pickup, returnDate).ok) {
+      markConflict();
+      setBanner(COPY.errorConflict);
+      return;
+    }
+
     const outcome = await create(payload);
     if (outcome.status === "created") {
       setCreated(outcome.reference);
@@ -410,7 +464,10 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
               </div>
               <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
               <div className="mt-2.5">
-                <MrAvailability availability={availability} />
+                <MrAvailability
+                  availability={availability}
+                  nextBusyPickup={returnDate ? (nextBusyRangeAfter(ranges, returnDate)?.pickup_date ?? null) : null}
+                />
               </div>
             </div>
 

@@ -6,9 +6,9 @@ import type { VehicleBusyRange } from "../../types";
 
 // The manual-reservation modal's availability data path (S-12a). One read per
 // vehicle selection — date bounds only, floored to current+future ranges by the
-// RPC — replacing the debounced per-keystroke `GET /api/availability` the panel
-// used to lean on. From Phase 3 the panel resolves locally over these ranges, so
-// this hook's `state` IS the panel's `checking` / `error`.
+// RPC — replacing the debounced per-keystroke availability GET the panel used to
+// lean on (a route S-12a deletes). From Phase 3 the panel resolves locally over
+// these ranges, so this hook's `state` IS the panel's `checking` / `error`.
 //
 // FAILS CLOSED. A non-OK response — including the route's own fail-closed 500 —
 // resolves to `error` and never to empty ranges: an empty list is
