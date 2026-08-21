@@ -620,9 +620,9 @@ grant changes.
 
 #### Manual
 
-- [ ] 1.5 With the create held open, the picker and all five fields refuse input; the done panel's dates and name match the `reservations` row
-- [ ] 1.6 A date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner
-- [ ] 1.7 After a 409, moving to a free range clears the banner; editing a customer field does not
+- [x] 1.5 With the create held open, the picker and all five fields refuse input; the done panel's dates and name match the `reservations` row (driven: select + all 5 fields report disabled; done panel read "2 wrz – 5 wrz · 3 dni" / "Zażółć Gęślą Jaźń", matching the POSTed range) — 4b57ea7
+- [x] 1.6 A date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner (driven: both Termin controls disabled and the calendar unmounted — 0 day cells in the DOM) — 4b57ea7
+- [x] 1.7 After a 409, moving to a free range clears the banner; editing a customer field does not (driven: banner survived a Telefon edit, cleared on the range change, panel went "Termin wolny") — 4b57ea7
 
 ### Phase 2: Staff-gated busy-ranges endpoint and client hook
 
@@ -635,7 +635,7 @@ grant changes.
 
 #### Manual
 
-- [ ] 2.5 Signed in as an employee, the route returns the seeded vehicle's ranges; signed out it returns 401
+- [x] 2.5 Signed in as an employee, the route returns the seeded vehicle's ranges; signed out it returns 401 (driven over HTTP on :4321 — employee 200 {"ranges":[…]}, signed out 401 {"error":"Wymagane logowanie."}) — 4b57ea7
 
 ### Phase 3: Local availability resolution; retire `/api/availability`
 
@@ -650,40 +650,40 @@ grant changes.
 
 #### Manual
 
-- [ ] 3.7 Picking a vehicle and a range resolves the panel with no `/api/availability` request in the Network tab
-- [ ] 3.8 A free range shows "Pojazd wolny do {date}"; a vehicle with no later booking shows "Brak innych rezerwacji w tym okresie."
-- [ ] 3.9 Blocking the busy-ranges request shows the warning state and leaves submit disabled
-- [ ] 3.10 A range taken by another tab after it was picked is caught by the create's pre-flight re-read, not only by the 409
+- [x] 3.7 Picking a vehicle and a range resolves the panel with no `/api/availability` request in the Network tab (driven: the only /api/ request across a full pick was GET /api/vehicles/{id}/busy-ranges) — 4b57ea7
+- [x] 3.8 A free range shows "Pojazd wolny do {date}"; a vehicle with no later booking shows "Brak innych rezerwacji w tym okresie." (driven: both variants rendered — "Pojazd wolny do 10 wrz" and the fallback) — 4b57ea7
+- [x] 3.9 Blocking the busy-ranges request shows the warning state and leaves submit disabled (driven: route forced to 500 → "Nie udało się sprawdzić dostępności." visible, submit disabled with a valid customer) — 4b57ea7
+- [x] 3.10 A range taken by another tab after it was picked is caught by the create's pre-flight re-read, not only by the 409 (driven: booking inserted out-of-band after the pick → banner shown, panel conflict, and NO POST fired) — 4b57ea7
 
 ### Phase 4: The `Termin` surface — date buttons and the in-flow calendar
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro check`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build passes: `npm run build`
-- [x] 4.4 Unit tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check` — 4b57ea7
+- [x] 4.2 Linting passes: `npm run lint` — 4b57ea7
+- [x] 4.3 Build passes: `npm run build` — 4b57ea7
+- [x] 4.4 Unit tests pass: `npm test` — 4b57ea7
 
 #### Manual
 
-- [x] 4.5 The two fields render as buttons showing "1 kwi 2026" with the calendar icon and chevron; the open one carries the ink border and 4px ring (driven: h40/r10/border rgba(15,23,42,.08)/13px/600; active border rgb(15,23,42) + shadow 0 0 0 4px rgba(15,23,42,.06); label "2 wrz 2026")
-- [x] 4.6 Tapping a field expands the calendar in flow; at 390px the footer stays pinned and the total remains visible (driven at 390×780: submit box y=716..762, total visible)
-- [x] 4.7 A vehicle with a booking greys interiors solid and changeover days on the diagonal with the divider line; switching vehicle repaints the greying (driven: interior bg #D7DCE3 + disabled; changeover gradients carry #A9B2BE at calc(50%±0.6px); vehicle switch → transparent)
-- [x] 4.8 A range ending on a `pickupOnly` day is vetoed with the specific hint and resets to the clicked day (driven: hint "Wybrany dzień zwrotu jest niedostępny…" shown, range reset to the clicked day)
-- [x] 4.9 The legend reads Wybrane / Dzień odbioru / zwrotu — wciąż dostępny / W pełni zajęte, and Zastosuj closes (driven: all three labels visible; Zastosuj hides the popover)
+- [x] 4.5 The two fields render as buttons showing "1 kwi 2026" with the calendar icon and chevron; the open one carries the ink border and 4px ring (driven: h40/r10/border rgba(15,23,42,.08)/13px/600; active border rgb(15,23,42) + shadow 0 0 0 4px rgba(15,23,42,.06); label "2 wrz 2026") — 4b57ea7
+- [x] 4.6 Tapping a field expands the calendar in flow; at 390px the footer stays pinned and the total remains visible (driven at 390×780: submit box y=716..762, total visible) — 4b57ea7
+- [x] 4.7 A vehicle with a booking greys interiors solid and changeover days on the diagonal with the divider line; switching vehicle repaints the greying (driven: interior bg #D7DCE3 + disabled; changeover gradients carry #A9B2BE at calc(50%±0.6px); vehicle switch → transparent) — 4b57ea7
+- [x] 4.8 A range ending on a `pickupOnly` day is vetoed with the specific hint and resets to the clicked day (driven: hint "Wybrany dzień zwrotu jest niedostępny…" shown, range reset to the clicked day) — 4b57ea7
+- [x] 4.9 The legend reads Wybrane / Dzień odbioru / zwrotu — wciąż dostępny / W pełni zajęte, and Zastosuj closes (driven: all three labels visible; Zastosuj hides the popover) — 4b57ea7
 - [ ] 4.10 Vision-diff of the picker-open and form states (desktop + mobile) clean apart from recorded deviations
 - [ ] 4.11 The six canonical boards are exported into `design-review/` — this gates the vision-diff above
-- [x] 4.12 With the create held open, the calendar is gone and no day can be clicked — Phase 1's 1.6 re-run on the new surface (driven: 0 day cells in the DOM, all 6 controls disabled, done panel dates match the POSTed range)
-- [x] 4.13 On desktop the scrim top-aligns (`flex-start`, `padding-top: 56`) while a field is open and re-centers when it closes (driven: center/32px → flex-start/56px → center)
+- [x] 4.12 With the create held open, the calendar is gone and no day can be clicked — Phase 1's 1.6 re-run on the new surface (driven: 0 day cells in the DOM, all 6 controls disabled, done panel dates match the POSTed range) — 4b57ea7
+- [x] 4.13 On desktop the scrim top-aligns (`flex-start`, `padding-top: 56`) while a field is open and re-centers when it closes (driven: center/32px → flex-start/56px → center) — 4b57ea7
 
 ### Phase 5: Verification and vision-diff gate
 
 #### Automated
 
-- [ ] 5.1 Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration`
+- [ ] 5.1 Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration` — check/lint/build/unit (331) green; integration 210/211, the one failure being the `security-definer-anon-guardrail` flagging `resolve_link_token`, a function absent from this repo's 25 migrations that a sibling worktree applied to the shared local stack mid-session (the same suite was 214/214 and 211/211 earlier today). Not caused by this change; re-run once the shared stack matches this branch.
 
 #### Manual
 
-- [ ] 5.2 Every manual item from Phases 1–4 executed and checked with evidence
-- [ ] 5.3 Vision-diff punch-list empty apart from recorded deviations
-- [ ] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted
+- [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — all executed except 4.10 / 4.11, blocked on the six canonical exports
+- [ ] 5.3 Vision-diff punch-list empty apart from recorded deviations — BLOCKED: `design-review/` is still empty (Phase 4 §5). The vision-diff cannot run without the six canonical boards.
+- [ ] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted — held until 4.10 / 4.11 / 5.3 close; marking S-12a done before the vision-diff has run would be false.
