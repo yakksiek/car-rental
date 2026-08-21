@@ -1043,15 +1043,37 @@ for the health signal, per phase 7 §3. A new `inviteEmployee(admin, userId, ori
 address through `getStaffEmail` (never trust a client-sent one, `staff.ts:286`) and calls
 `inviteUserByEmail`, returning a `sent` / `failed` tag.
 
-**Two decisions to make explicitly rather than discover:**
+**Both open decisions are now settled (owner, 2026-08-21), and probe-verified the same day:**
 
-- **Re-invite.** Whether `inviteEmployee` refuses a target who already has `password_set_at`. Refusing
-  is the safer default (they don't need an invite, and a fresh token would be a live credential for a
-  working account); if it refuses, the roster must not offer the action for them.
-- **The repair arm.** It currently sends `resetPasswordForEmail` for a never-activated hire. Under
-  two-step, a person who was created but never invited should be **invited**, not sent a reset — those
-  are different journeys, and choosing the reset is exactly the downgrade `research.md` rejected as
-  option 2b. State which call each shape takes.
+- **Who may be invited.** The roster offers the action **iff `password_set_at` is null** — which
+  covers both password-less states: a first send for someone created-but-never-invited, and a
+  **resend** for someone invited who lost the mail. Today the only remedy for a lost invite is
+  `Resetuj hasło`, which answers with a _recovery_ link and so downgrades a new hire's first contact
+  to the reset journey — precisely the defect that got option 2b rejected. The resend closes it.
+- **The repair arm invites; it does not reset.** A never-activated hire reached through the
+  `existing` arm gets `inviteUserByEmail`, not `resetPasswordForEmail`. That removes
+  `resetPasswordForEmail` from `createEmployee` entirely, and `ActivationMailOutcome` becomes the
+  invite's outcome. `repairedMailFailed`'s copy still reads true — an invite _is_ the activation mail.
+
+**Probe findings that bind the implementation (2026-08-21, GoTrue v2.188.1):**
+
+- `inviteUserByEmail` is **refused** for an address that is already confirmed-registered
+  (`"A user with this email address has already been registered"`), and **accepted** for a user
+  created with `email_confirm: false`. Step 1 must therefore create with `email_confirm: false`, or
+  step 2 cannot run at all. In our flow "confirmed" and "has a password" coincide, because the only
+  way to get a password is the link exchange, which confirms the address.
+- **Do not lean on that refusal as the control.** Carry an explicit `password_set_at is null` check in
+  `inviteEmployee` and treat GoTrue's error as defence in depth — lessons.md, "prefer an explicit
+  in-app check you can test over a provider flag you cannot see".
+- The invite succeeds **after the repair arm's unban**, with the `profiles` row intact — so the
+  ordering unban → upsert → invite is buildable as written.
+- A **resend invalidates the previous link**. There is never more than one live invite token per
+  person, so a resend is safe and the older email's link dies rather than lingering.
+
+**One consequence still open.** With the invite/resend action on every password-less row,
+`Resetuj hasło` sits beside it on those same rows and sends the _wrong journey_ for that population.
+Recommendation: make the two actions mutually exclusive — `Wyślij zaproszenie` when
+`password_set_at` is null, `Resetuj hasło` only once it is set. Decide before building §4.
 
 #### 2. The third status
 
@@ -1358,6 +1380,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [ ] 8.1 Unit tests pass, including the three-state derivation: `npm test`
 - [ ] 8.2 Integration proves zero mail on create and exactly one on invite
 - [ ] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user
+- [ ] 8.3a Integration proves `inviteEmployee` refuses a target that already has a password
 - [ ] 8.4 Integration tests pass: `npm run test:integration`
 - [ ] 8.5 Type checking passes: `npx astro check`
 - [ ] 8.6 Lint passes: `npm run lint`
@@ -1369,6 +1392,8 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 - [ ] 8.10 Adding a person creates a roster row immediately and sends nothing
 - [ ] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
+- [ ] 8.11a A resend to an already-invited hire works, and the previous link stops working
+- [ ] 8.11b A hire who already has a password is offered no invite action
 - [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
 - [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
 - [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
