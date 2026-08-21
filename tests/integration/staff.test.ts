@@ -27,6 +27,58 @@ function uniqueEmail(tag: string): string {
   return `staff-${tag}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}@fleetrent.test`;
 }
 
+/** The auth user id GoTrue holds for `email`, or null. Proves a rollback landed. */
+async function findAuthUserId(email: string): Promise<string | null> {
+  const { data } = await svc.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const match = data.users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
+  return match?.id ?? null;
+}
+
+const INSERT_FAILURE = {
+  data: null,
+  error: { message: "simulated profiles insert failure", code: "XXTST", details: "", hint: "" },
+  count: null,
+  status: 500,
+  statusText: "Internal Server Error",
+};
+
+/**
+ * Partial double over the service-role client that fails ONLY
+ * `.from("profiles").insert(...)`. `auth.admin` is passed through untouched, so
+ * the GoTrue invite and the compensating delete are real round-trips and the
+ * rollback assertion below is a real assertion. Precedent for doubles at this
+ * altitude: `tests/helpers/context.ts:119-139`, `src/lib/auth-session.test.ts:27-37`.
+ *
+ * `breakRollback` additionally makes `deleteUser` answer an error, which is the
+ * only way to reach the `provision_orphaned` arm without leaving a live DB
+ * constraint on a Supabase stack four worktrees share.
+ */
+function failingProfileInsert(real: typeof svc, opts: { breakRollback?: boolean } = {}): typeof svc {
+  const realAdmin = real.auth.admin;
+  // Bound method references, not a spread — spreading a class instance drops its
+  // prototype. These five are every `auth.admin` member `createEmployee` reaches.
+  const adminApi = {
+    listUsers: realAdmin.listUsers.bind(realAdmin),
+    inviteUserByEmail: realAdmin.inviteUserByEmail.bind(realAdmin),
+    updateUserById: realAdmin.updateUserById.bind(realAdmin),
+    getUserById: realAdmin.getUserById.bind(realAdmin),
+    deleteUser: opts.breakRollback
+      ? () => Promise.resolve({ data: { user: null }, error: { message: "simulated rollback failure" } })
+      : realAdmin.deleteUser.bind(realAdmin),
+  };
+  const double = {
+    auth: {
+      admin: adminApi,
+      resetPasswordForEmail: real.auth.resetPasswordForEmail.bind(real.auth),
+    },
+    // Only the net-new arm runs under this double, and it touches exactly one
+    // builder method on `profiles`.
+    from: (table: string) =>
+      table === "profiles" ? { insert: () => Promise.resolve(INSERT_FAILURE) } : real.from(table as never),
+  };
+  return double as unknown as typeof svc;
+}
+
 function bannedUntil(user: unknown): string | null {
   return (user as { banned_until?: string | null } | null)?.banned_until ?? null;
 }
@@ -132,6 +184,52 @@ describe("staff account lifecycle (S-08)", () => {
     expect(react.status).toBe("reactivated");
     // The fix: not hardcoded "invited" — a returning active user is ACTIVE again.
     if (react.status === "reactivated") expect(react.member.status).toBe("active");
+  });
+});
+
+describe("provisioning rollback when the profiles insert fails (invite-journey-fixes)", () => {
+  it("compensates the delivered invite — provision_rolled_back leaves no auth user behind", async () => {
+    const email = uniqueEmail("rollback");
+    const res = await createEmployee(failingProfileInsert(svc), {
+      email,
+      full_name: "Cofnięte Zaproszenie",
+      origin: ORIGIN,
+    });
+    expect(res.status).toBe("provision_rolled_back");
+
+    // The invite really was sent (real GoTrue hop) and really was rolled back:
+    // no orphaned auth.users row survives for that address.
+    expect(await findAuthUserId(email)).toBeNull();
+  });
+
+  it("reports provision_orphaned when the rollback also fails — and `Ponów` repairs it", async () => {
+    const email = uniqueEmail("orphan");
+    const res = await createEmployee(failingProfileInsert(svc, { breakRollback: true }), {
+      email,
+      full_name: "Osierocone Konto",
+      origin: ORIGIN,
+    });
+    expect(res.status).toBe("provision_orphaned");
+
+    // The exact orphan shape: an auth user with no profiles row.
+    const orphanId = await findAuthUserId(email);
+    expect(orphanId).not.toBeNull();
+    if (!orphanId) return;
+    createdIds.push(orphanId);
+    const { data: noProfile } = await svc.from("profiles").select("user_id").eq("user_id", orphanId).maybeSingle();
+    expect(noProfile).toBeNull();
+
+    // What the banner's `Ponów` does: re-POST the same payload. It takes the
+    // `existing` repair arm and completes the account.
+    const repair = await createEmployee(svc, { email, full_name: "Osierocone Konto", origin: ORIGIN });
+    expect(repair.status).toBe("reactivated");
+    const { data: repaired } = await svc
+      .from("profiles")
+      .select("role, deactivated_at")
+      .eq("user_id", orphanId)
+      .single();
+    expect(repaired?.role).toBe("employee");
+    expect(repaired?.deactivated_at).toBeNull();
   });
 });
 

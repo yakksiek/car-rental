@@ -54,6 +54,14 @@ export type CreateEmployeeResult =
   | { status: "created"; member: StaffMember }
   | { status: "reactivated"; member: StaffMember }
   | { status: "duplicate_active" }
+  // The net-new arm's invite mail is already delivered when the profiles insert
+  // fails, so the failure cannot be a bare throw. Whether the compensating
+  // deleteUser landed changes what the admin must do next, so the two outcomes
+  // are distinct tags: `provision_rolled_back` → the auth user is gone, re-adding
+  // starts clean; `provision_orphaned` → the auth user survives with no profile,
+  // and re-adding takes the `existing` repair arm.
+  | { status: "provision_rolled_back" }
+  | { status: "provision_orphaned" }
   | { status: "unauthorized" };
 
 export interface DeactivateResult {
@@ -131,6 +139,10 @@ async function findAuthUserByEmail(
  *                                             lift the ban, keep the auth user
  * - no account                             → GoTrue invite + profiles insert
  *
+ * When that final insert fails the invite mail is already out, so the failure is
+ * compensated (delete the fresh auth user) and reported as
+ * `provision_rolled_back` / `provision_orphaned` rather than thrown.
+ *
  * The admin (service-role) client is required; `null` → `unauthorized`.
  */
 export async function createEmployee(
@@ -201,9 +213,29 @@ export async function createEmployee(
     .from("profiles")
     .insert({ user_id: userId, role: "employee", full_name: fullName });
   if (insertErr) {
-    throw insertErr;
+    // The invite mail has already been delivered, so throwing here leaves an
+    // auth user with no profile row — role-less forever, invisible to the roster
+    // (list_staff INNER-joins profiles), and the admin sees only a bare 500.
+    // Compensate: delete the auth user GoTrue just created, and report which of
+    // the two outcomes happened so the roster can say so.
+    const rolledBack = await deleteAuthUserQuietly(admin, userId);
+    return { status: rolledBack ? "provision_rolled_back" : "provision_orphaned" };
   }
   return { status: "created", member: buildMember(userId, email, fullName) };
+}
+
+/**
+ * Compensating delete for a half-provisioned invite. Never throws and never
+ * rejects — a failed rollback is data for `provision_orphaned`, not an error.
+ * Returns true only when the auth user is provably gone.
+ */
+async function deleteAuthUserQuietly(admin: Client, userId: string): Promise<boolean> {
+  try {
+    const { error } = await admin.auth.admin.deleteUser(userId);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 // The service-role admin client can't read the admin-gated list_staff, so
