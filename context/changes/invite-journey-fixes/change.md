@@ -1,7 +1,7 @@
 ---
 change_id: invite-journey-fixes
 title: Invite journey fixes — provisioning rollback and deferred link exchange
-status: implementing
+status: implemented
 created: 2026-08-18
 updated: 2026-08-21
 archived_at: null

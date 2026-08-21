@@ -28,6 +28,19 @@
 | — none —                                                                  | Roster provisioning-failure banner     | **missing** — new, see §2          |
 
 **No repo design is superseded by this change**; every asset above is still the canonical baseline.
+
+> **Correction, recorded 2026-08-21 during the phase-1 vision-diff (row 1.11).** Catalog 19/25 are
+> marked "current" above, and for the purposes of THIS change they are — the healthy roster is
+> provably pixel-identical to before (`git diff 798f24a..HEAD -- StaffList.tsx` touches copy and the
+> `addEmployee` branch only; **zero** JSX or `className` changes). But the mockups are **stale
+> against the shipped S-08 surface**, in two ways that predate this change and belong to nobody in
+> it: catalog 19 shows three count **tiles** (ACTIVE / INVITED / ADMIN) where the app ships a filter
+> **tab bar + avatar stack** — which is S-08's own contract §3.2/§3.13, cited verbatim at
+> `StaffList.tsx:692`, so the contract superseded the artboard and the artboard was never refreshed —
+> and it carries a separate `LAST ACTIVE` column where the app nests last-active under the STATUS
+> badge. Recorded, not fixed: refreshing catalog 19/25 belongs to whoever next changes the roster's
+> design, alongside the standing to-do to promote the auth artboards into `design-system.md`.
+
 Two gaps are pre-existing rather than introduced here:
 
 - **R14 has no artboard.** `auth-followups` shipped it as a no-artboard card and amended S-14's
