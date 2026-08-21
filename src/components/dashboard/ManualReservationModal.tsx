@@ -215,6 +215,20 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
   const { availability, markConflict } = useAvailability(vehicleId, pickup, returnDate);
   const { busy, create } = useManualReservation();
 
+  // The banner reports the outcome of a create against ONE range, so it must die
+  // with that range: after a lost create the employee follows "Wybierz inny
+  // termin.", the panel resolves green — and a banner cleared only at the top of
+  // the next submit() would still be on screen contradicting it. Mirrors the
+  // hook's render-phase reset (useManualReservation.ts:62-70) so the banner goes
+  // in the same render the input changed rather than one paint later. Keyed on
+  // (vehicle, pickup, return) only: a customer-field edit must NOT clear it.
+  const rangeKey = `${vehicleId}|${pickup}|${returnDate}`;
+  const [lastRangeKey, setLastRangeKey] = React.useState(rangeKey);
+  if (lastRangeKey !== rangeKey) {
+    setLastRangeKey(rangeKey);
+    setBanner(null);
+  }
+
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
 
   const payload = {
@@ -334,6 +348,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                 <select
                   aria-label={COPY.vehicle}
                   value={vehicleId}
+                  disabled={busy}
                   onChange={(e) => {
                     setVehicleId(e.target.value);
                   }}
@@ -366,6 +381,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     type="date"
                     min={today}
                     value={pickup}
+                    disabled={busy}
                     onChange={(e) => {
                       setPickup(e.target.value);
                     }}
@@ -384,6 +400,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     type="date"
                     min={pickup || today}
                     value={returnDate}
+                    disabled={busy}
                     onChange={(e) => {
                       setReturnDate(e.target.value);
                     }}
@@ -407,6 +424,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                   aria-label={COPY.namePlaceholder}
                   placeholder={COPY.namePlaceholder}
                   value={name}
+                  disabled={busy}
                   onChange={(e) => {
                     setName(e.target.value);
                   }}
@@ -418,6 +436,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     placeholder={COPY.phonePlaceholder}
                     inputMode="tel"
                     value={phone}
+                    disabled={busy}
                     onChange={(e) => {
                       setPhone(e.target.value);
                     }}
@@ -428,6 +447,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     placeholder={COPY.emailPlaceholder}
                     inputMode="email"
                     value={email}
+                    disabled={busy}
                     onChange={(e) => {
                       setEmail(e.target.value);
                     }}
