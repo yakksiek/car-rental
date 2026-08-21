@@ -960,8 +960,15 @@ yields null so the caller falls through to the network banner.
 the same "which person?" gap for a different remedy.
 
 **Contract**: `COPY.provisionRolledBack` and `COPY.provisionOrphaned` are **replaced by one entry**
-sourced from §1's function; `repairedMailFailed` becomes a function of the address, following the
-`eyebrowMobileWord` precedent (`:80`) for a function-valued `COPY` member. `addEmployee`'s branch
+sourced from §1's function, following the `eyebrowMobileWord` precedent (`:80`) for a function-valued
+`COPY` member. The approved string (design-contract §9.2, verbatim):
+
+```
+provisionFailed: (email) => `Nie udało się utworzyć konta dla ${email}. Spróbuj ponownie.`
+```
+
+`repairedMailFailed` also becomes a function of the address in this phase; **phase 8 rewrites the
+control it names**, so change only the interpolation here and leave the wording alone. `addEmployee`'s branch
 still matches **both** codes — the API keeps distinguishing them — and still closes the modal and
 keeps `retry` wired on both. The `repairedMailFailed` arm still carries **no** retry.
 
@@ -1112,12 +1119,27 @@ gate and must self-gate in that order.
 **File**: `src/components/staff/StaffList.tsx`
 
 **Contract**: A third badge state (desktop + mobile labels + a filter tab/chip with its count), and a
-row action `Wyślij zaproszenie` offered only for that state. The action needs a pending state per
+row action offered for **both** password-less states. Approved copy, design-contract §9.2, verbatim:
+
+| Key                   | String                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `statusCreated`       | `DODANY`                                                                                                   |
+| `statusCreatedMobile` | `Dodany`                                                                                                   |
+| `tabCreated`          | `Dodany` (singular — matches `tabActive`)                                                                  |
+| `chipCreated`         | `Dodani` (plural — matches `chipActive`)                                                                   |
+| row action            | `Wyślij zaproszenie` (one label for BOTH password-less states)                                             |
+| add-modal CTA         | `Dodaj` (was `Wyślij zaproszenie`)                                                                         |
+| `emptyHint`           | `Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.`                                             |
+| `repairedMailFailed`  | `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.` |
+
+**One label, not two.** A resend does not get its own wording: `repairedMailFailed` has to NAME the
+button, and after a repair the target may be in either password-less state, so two labels would make
+that string unnameable. The badge carries the first-send-vs-resend distinction instead. The action needs a pending state per
 `CLAUDE.md` ("Async buttons") — `disabled` plus a spinner, reusing `SubmitButton`'s `animate-spin` ring.
 
-**Two strings become false and must change with it**: the add modal's CTA is `Wyślij zaproszenie`
-(`e2e/staff-admin.spec.ts:38` clicks it by that name), which now describes step **2**, not step 1;
-and `emptyHint` promises `wyślemy jej link aktywacyjny e-mailem`, which step 1 no longer does.
+**Both replaced strings are load-bearing elsewhere**: `e2e/staff-admin.spec.ts:38` clicks the
+add-modal CTA **by name**, so renaming it to `Dodaj` reds that spec until updated; and `emptyHint`
+promises `wyślemy jej link aktywacyjny e-mailem`, which step 1 no longer does.
 
 #### 5. Design contract + registry
 
