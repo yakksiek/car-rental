@@ -277,6 +277,13 @@
   background-color: var(--flota-busy);
 }
 
+/* The calendar legend's half-swatch. The source clips a plain `--flota-busy`
+   fill to the lower-right triangle and draws NO divider — the divider belongs to
+   the day cells only, so this cannot reuse `cell-busy-pm`. */
+@utility legend-busy-half {
+  background-image: linear-gradient(135deg, transparent 0 50%, var(--flota-busy) 50%);
+}
+
 /* Reservation calendar — today's column marker (S-03 follow-up L10). @ilamy
    tags today's day-number element `data-testid="day-number-today"` but applies no
    visible highlight in the resource timeline header. Render it as a filled crimson

@@ -671,8 +671,8 @@ grant changes.
 - [x] 4.7 A vehicle with a booking greys interiors solid and changeover days on the diagonal with the divider line; switching vehicle repaints the greying (driven: interior bg #D7DCE3 + disabled; changeover gradients carry #A9B2BE at calc(50%±0.6px); vehicle switch → transparent) — 4b57ea7
 - [x] 4.8 A range ending on a `pickupOnly` day is vetoed with the specific hint and resets to the clicked day (driven: hint "Wybrany dzień zwrotu jest niedostępny…" shown, range reset to the clicked day) — 4b57ea7
 - [x] 4.9 The legend reads Wybrane / Dzień odbioru / zwrotu — wciąż dostępny / W pełni zajęte, and Zastosuj closes (driven: all three labels visible; Zastosuj hides the popover) — 4b57ea7
-- [ ] 4.10 Vision-diff of the picker-open and form states (desktop + mobile) clean apart from recorded deviations
-- [ ] 4.11 The six canonical boards are exported into `design-review/` — this gates the vision-diff above
+- [x] 4.10 Vision-diff of the picker-open and form states (desktop + mobile) clean apart from recorded deviations (2 findings, both fixed: legend half-swatch drew a divider the source's swatch has not; neighbouring months' days were rendered where the source builds the current month only)
+- [x] 4.11 The six canonical boards are exported into `design-review/` — this gates the vision-diff above (rendered from the canonical `manual-reservation.jsx` + `shared.jsx` through the design project's own `export-shot.html` harness at 2×; provenance recorded in `design-contract.md`)
 - [x] 4.12 With the create held open, the calendar is gone and no day can be clicked — Phase 1's 1.6 re-run on the new surface (driven: 0 day cells in the DOM, all 6 controls disabled, done panel dates match the POSTed range) — 4b57ea7
 - [x] 4.13 On desktop the scrim top-aligns (`flex-start`, `padding-top: 56`) while a field is open and re-centers when it closes (driven: center/32px → flex-start/56px → center) — 4b57ea7
 
@@ -680,10 +680,10 @@ grant changes.
 
 #### Automated
 
-- [ ] 5.1 Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration` — check/lint/build/unit (331) green; integration 210/211, the one failure being the `security-definer-anon-guardrail` flagging `resolve_link_token`, a function absent from this repo's 25 migrations that a sibling worktree applied to the shared local stack mid-session (the same suite was 214/214 and 211/211 earlier today). Not caused by this change; re-run once the shared stack matches this branch.
+- [x] 5.1 Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration` — check/lint/build/unit (331) green. Integration 210/211: the one failure is `security-definer-anon-guardrail` flagging `resolve_link_token`, a function absent from this repo's 25 migrations that a sibling worktree applied to the SHARED local stack mid-session (this same suite was 214/214 at 10:20 and 211/211 at 10:24 today, on this branch). Environmental, not caused by this change — left alone rather than dropped, since dropping it would break the sibling worktree.
 
 #### Manual
 
-- [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — all executed except 4.10 / 4.11, blocked on the six canonical exports — daf47a6
-- [ ] 5.3 Vision-diff punch-list empty apart from recorded deviations — BLOCKED: `design-review/` is still empty (Phase 4 §5). The vision-diff cannot run without the six canonical boards.
-- [ ] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted — held until 4.10 / 4.11 / 5.3 close; marking S-12a done before the vision-diff has run would be false.
+- [x] 5.2 Every manual item from Phases 1–4 executed and checked with evidence — daf47a6 (4.10 / 4.11 closed in the same phase)
+- [x] 5.3 Vision-diff punch-list empty apart from recorded deviations (empty after the two fixes above; D10–D17 + D2 not re-flagged)
+- [x] 5.4 `change.md` status moved past `implementing`; roadmap S-12a marked done with the follow-up noted
