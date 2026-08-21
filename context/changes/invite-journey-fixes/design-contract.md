@@ -207,13 +207,64 @@ therefore a **parity assertion**, and every dimension is inherited-exact from S-
 
 ## 9. Verbatim Polish copy
 
-Three new strings, all in `StaffList.tsx`'s `COPY` block beside `mutationError` (`:68`).
+All strings live in `StaffList.tsx`'s `COPY` block beside `mutationError` (`:68`).
 
-| Key                   | String                                                                                                           | Phase |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- | ----- |
-| `provisionRolledBack` | `Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Cofnięto zaproszenie — dodaj osobę ponownie.`   | 1     |
-| `provisionOrphaned`   | `Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Użyj „Ponów”, aby je naprawić.`                 | 1     |
-| `repairedMailFailed`  | `Konto zostało odnowione, ale nie udało się wysłać e-maila aktywacyjnego. Użyj „Resetuj hasło” przy tej osobie.` | 3     |
+### 9.1 Shipped in phases 1 and 3 — superseded, kept as the record
+
+These are what phases 1 and 3 actually shipped and what the phase-1 vision-diff was run against. They
+are **superseded by §9.2** and retained so a later reader can tell what changed and why.
+
+| Key                   | String                                                                                                           | Superseded by |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------- |
+| `provisionRolledBack` | `Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Cofnięto zaproszenie — dodaj osobę ponownie.`   | phase 7       |
+| `provisionOrphaned`   | `Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Użyj „Ponów”, aby je naprawić.`                 | phase 7       |
+| `repairedMailFailed`  | `Konto zostało odnowione, ale nie udało się wysłać e-maila aktywacyjnego. Użyj „Resetuj hasło” przy tej osobie.` | phase 8       |
+
+**Why they are superseded** (owner, 2026-08-21): the two provisioning strings describe the failure the
+way the _transaction_ experienced it — invite sent, account unfinished — rather than the way the
+**admin** did, which is that adding this person failed. Both arms have the identical remedy, so the
+distinction bought the reader nothing. `repairedMailFailed` names `„Resetuj hasło”`, which phase 8
+removes from that row (§10 entry 2), so it would name a control the admin cannot see.
+
+### 9.2 Phase 7 and 8 — approved 2026-08-21
+
+| Key                   | String                                                                                                     | Phase |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- | ----- |
+| `provisionFailed`     | `Nie udało się utworzyć konta dla {email}. Spróbuj ponownie.`                                              | 7     |
+| `repairedMailFailed`  | `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.` | 8     |
+| `statusCreated`       | `DODANY`                                                                                                   | 8     |
+| `statusCreatedMobile` | `Dodany`                                                                                                   | 8     |
+| `tabCreated`          | `Dodany`                                                                                                   | 8     |
+| `chipCreated`         | `Dodani`                                                                                                   | 8     |
+| `sendInvite` (row)    | `Wyślij zaproszenie`                                                                                       | 8     |
+| add-modal CTA         | `Dodaj`                                                                                                    | 8     |
+| `emptyHint`           | `Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.`                                             | 8     |
+
+**Why this Polish:**
+
+- **`provisionFailed` interpolates the address** because a failed provisioning is invisible
+  everywhere else — the orphan drives no roster row (`list_staff` INNER-joins), so the banner is the
+  only place in the product where that address exists. It is also one sentence rather than two, which
+  is what lets it survive a 390px row.
+- **`DODANY` closes a loop with the admin's own verb.** They click `Dodaj pracownika`; the person
+  becomes `DODANY`. "Utworzony" is a system word for a system event. Desktop badge and tab take the
+  singular (`Aktywny` / `Zaproszony` precedent); the mobile chip takes the plural (`Aktywni` /
+  `Zaproszeni` precedent) — the block already splits those two forms and the third state follows.
+- **One row-action label for both password-less states.** An earlier draft used `Wyślij zaproszenie`
+  for a first send and `Wyślij ponownie` for a resend. Rejected: `repairedMailFailed` must **name**
+  the button, and after a repair the target may be in either state, so two labels make that string
+  unnameable. The badge already distinguishes the two cases.
+- **The add-modal CTA drops to `Dodaj`** because the modal is already titled `Dodaj pracownika`, and
+  because `Wyślij zaproszenie` now describes step **2** — leaving it on step 1 would promise an email
+  that no longer goes out. `emptyHint` loses the same promise for the same reason.
+
+**Accepted, recorded rather than fixed:** `DODANY` is a masculine adjective and would need `Dodana`
+for a woman. §9's gender-neutrality rule has in practice governed **sentences** — where `osobę` and
+`tej osobie` carry the referent — while the shipped badges (`AKTYWNY`, `ZAPROSZONY`) are already
+masculine-default. The neutral alternative `BEZ ZAPROSZENIA` was considered and set aside for
+badge-shape consistency. The gender question belongs to the badge set as a whole, not to this one
+addition, and is logged here rather than solved by making the third badge inconsistent with the two
+beside it.
 
 **Why this Polish, against the conventions verified across 15 surfaces (`research.md` Part 3):**
 
