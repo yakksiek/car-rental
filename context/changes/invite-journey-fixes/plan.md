@@ -1313,6 +1313,176 @@ buried under the overlay.
 - `repairedMailFailed` still closes the modal and reports as a banner
 - The error state matches `design-contract.md` verbatim at 1280px and 390px
 
+## Phase 10: The roster banner is unreachable from the row that triggers it
+
+### Overview
+
+The roster's feedback banner is inserted at the **top of the document flow**, above the filter card,
+while three of the four controls that set it are **per-row** and reachable at any scroll depth. So the
+message routinely lands outside the viewport, and `toBeVisible()` passes on every one of them.
+
+Found at phase 9's manual gate as "the remove modal has phase 9's defect too", then measured against
+the running app and found to be larger than that (1280×900, `/dashboard/staff`, real fixture,
+`getBoundingClientRect` + `elementFromPoint`, 2026-08-21):
+
+| Trigger                                      | scrollY | Banner top | In viewport? | `toBeVisible()` |
+| -------------------------------------------- | ------- | ---------- | ------------ | --------------- |
+| `removeEmployee` failure (abort **and** 500) | 329     | **-151**   | **no**       | **passes**      |
+| `resetPassword` failure, row scrolled to     | 259     | **-159**   | **no**       | **passes**      |
+
+Two distinct failures compound in the remove case, and the first is the one phase 9's framing missed:
+
+1. **The banner is off-screen entirely.** `RemoveModal` is `fixed inset-0`, pinned to the viewport;
+   the banner is in document flow at the top of a page the admin has scrolled. `elementFromPoint` at
+   its centre returns `null` — the point is not covered, it is outside the viewport. `body` keeps
+   `overflow: visible` while the modal is open, so the page really is scrolled behind it.
+2. **Scroll up to it and it is still unreadable** — that is where `ModalShell`'s overlay
+   (`fixed inset-0 z-[60] ... bg-[rgba(20,18,22,0.55)] backdrop-blur-sm`) takes over, the phase-9
+   state. Stack at that point: overlay, then the table beneath it.
+
+**Why phase 9 did not cover this.** Phase 9's scope was "every failure of `POST /api/staff`", and the
+add modal escaped the scroll half by accident: `Dodaj pracownika` sits in a **non-sticky** header, so
+the admin is necessarily at the top of the page when they open it. Its banner was covered, never
+off-screen. The ✕, `Wyślij zaproszenie` and `Resetuj hasło` are per-row and carry no such guarantee.
+Phase 9's fix is immune by construction — the message now lives inside a `fixed` modal, where scroll
+position cannot move it — and `repairedMailFailed`, the one add outcome still on the banner, is safe
+for the same reason the add modal was.
+
+**The row actions are the harder half, and they include the SUCCESS banners.** `removeEmployee` has a
+modal to move its message into; `sendInvite` and `resetPassword` do not. Their failures use
+`mutationError` + `Ponów`, and their successes use `inviteSent` / `resetSent` — and `inviteSent` is
+load-bearing: design-contract §9.3 authored it precisely because "a **resend** changes nothing on
+screen — the badge is already ZAPROSZONY — so without it the admin gets no feedback at all." A
+success banner the admin never sees fails that job exactly as completely as a failure banner does.
+
+**Ordered after phase 9 on purpose.** Phase 9 built `resolveAddReport` and the modal's form-level
+slot; this phase generalises both rather than inventing a second copy of each. Running it first would
+have produced two routing tables.
+
+### Changes Required:
+
+#### 1. The routing table, generalised past the add flow
+
+**File**: `src/lib/staff-banner.ts`, `src/lib/staff-banner.test.ts`
+
+**Intent**: Phase 9 proved the routing decision must be a tested pure function rather than an `if`
+inside an island. That argument does not stop at `POST /api/staff` — the three arms this phase
+covers are the same decision for a different mutation.
+
+**Contract**: Extend the module so remove and the row actions resolve through it too, keeping phase
+9's invariant sweep and adding the new one this phase discovers: **no arm may report to a surface the
+admin cannot reach from the control that triggered it.** Every arm gets a case, successes included.
+
+**Two open decisions, neither for the implementer to take silently:**
+
+- **Shape.** A sibling `resolveRemoveReport` / `resolveRowActionReport`, or one
+  `resolveMutationReport` over a widened `Outcome` union. The union is tempting and may over-couple
+  three mutations whose surfaces genuinely differ; decide it on the arms as written out, not in the
+  abstract.
+- **Module name.** `staff-banner.ts` already outgrew its name in phase 9 (it owns modal copy and
+  routing, not banners). If this phase adds two more non-banner surfaces, rename it — and if it is
+  renamed, that is a mechanical move plus import updates, recorded here so it is not smuggled in as
+  part of a behaviour change.
+
+#### 2. A form-level error slot in the remove modal
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Intent**: `RemoveModal` has no error slot at all today — unlike `AddModal`, which had two
+field-level ones to generalise from — so this is slightly more than phase 9's edit.
+
+**Contract**: One form-level slot, reusing phase 9's §8.4 element **verbatim** (`text-destructive mt-5
+flex items-start gap-1.5 text-[13px]`, glyph `mt-0.5 size-3.5 shrink-0`, `role="alert"`); it is the
+same state on a sibling surface, so nothing here is a new dimension. The modal stays open on both
+failure arms, its `Usuń` button becomes the retry, and the typed-confirm value survives the retry
+exactly as the add modal's field values do.
+
+**Must not move**: the 200 arm (row removed, modal closes) and the 409 last-admin arm, which swaps to
+`LastAdminModal`. Both already clear `removeFor`; neither is part of this defect.
+
+#### 3. The row actions — the half with no modal to move into
+
+**File**: `src/components/staff/StaffList.tsx`, and whatever surface §4 chooses
+
+**Intent**: This is the part that is **not** a copy problem and not solvable by phase 9's move. Four
+messages — `mutationError` + `Ponów` for a failed invite or reset, plus `inviteSent` and `resetSent`
+-- are set from controls reachable at any scroll depth, and land above the fold.
+
+**Contract**: Decide and record ONE approach, with the reasoning, the way §1 of phase 9 was recorded:
+
+- (a) the banner becomes **sticky** within the content column, so it is reachable wherever the admin
+  is;
+- (b) the banner is **scrolled into view** when set;
+- (c) feedback moves **next to the row** that produced it.
+
+A toast is deliberately **not** on this list: `StaffList.tsx`'s own header comment records the shipped
+decision as "an inline banner + optimistic list mutation (**no toast**)", and reversing that is a
+design decision for the whole app, not a bug fix for one screen. If the phase concludes a toast is
+nonetheless right, it stops and re-plans rather than shipping it here.
+
+Note (b)'s trap before choosing it: a scroll-into-view fires while a modal may be open, and scrolling
+the page behind an open modal is the behaviour §5 is about.
+
+#### 4. Design contract
+
+**File**: `context/changes/invite-journey-fixes/design-contract.md`
+
+**Contract**: The remove modal's error state is the **same** state phase 9 specified in §8.4 on a
+sibling surface, so it should be an **inherited-exact** entry, not a second specification — verify
+that claim against the rendered modal rather than assuming it (the remove modal has no field group
+above the slot, so the `mt-5` block rhythm needs re-measuring, not re-asserting). §3's chosen surface
+IS a new dimension and needs its own `deviation(no artboard)` entry with exact values, plus §11
+vision-diff rows at both breakpoints.
+
+**Copy is an open decision, as it was in phase 9 §4**: whether the remove modal's form-level string is
+a remove-specific sentence (`Nie udało się usunąć pracownika. …`, mirroring §9.4's construction) or
+reuses `mutationError`. §9.4's own argument applies — the modal names the person two rows above --
+and so does its counter-argument, that a new string needs approval. Do not author it outside §9.
+
+#### 5. Body scroll under an open modal — named, and explicitly scoped
+
+**Contract**: `getComputedStyle(document.body).overflow` is `visible` while `ModalShell` is open, so
+the page scrolls behind every modal on this screen. It is a **contributing cause** of §1's
+measurement and a real defect in its own right. Decide **in this phase** whether locking it is in
+scope or a follow-up, and record which — do not leave it implied. Locking it does **not** fix this
+phase's defect on its own (the banner is already off-screen when the modal opens), so it is not a
+substitute for §2 or §3.
+
+#### 6. Tests
+
+**Files**: `src/lib/staff-banner.test.ts`, `e2e/staff-admin.spec.ts`
+
+**Contract**: Unit tests per §1, including the widened invariant sweep. E2E must assert reachability
+**the way this defect was measured** — `toBeVisible()` passed on every arm in the table above, so it
+proves nothing here. Reuse phase 9's `isTopmostAtItsOwnCentre` and add an in-viewport assertion, then
+prove both bite by deliberately reintroducing the defect and watching them go red, per
+`e2e/e2e-rules.md`. Cover a **success** banner too (`inviteSent` after a resend from a scrolled row),
+not only failures.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Unit tests pass, including the widened outcome-to-surface table: `npm test`
+- No arm resolves to a surface unreachable from the control that triggered it
+- Lint passes: `npm run lint`
+- Type checking passes: `npx astro check`
+- Integration tests pass: `npm run test:integration`
+- Production build succeeds: `npm run build`
+- E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success
+- E2E suite passes on `:4321`: `npm run test:e2e`
+- `design-contract.md` carries the remove-modal entry, §3's chosen surface, its copy, and §11 rows
+
+#### Manual Verification:
+
+- A failed remove reports inside the remove modal, with the typed confirmation intact
+- The remove modal's 200 and 409 (last-admin) arms are unchanged
+- A failed invite or reset, triggered from a row scrolled to the bottom of the roster, is readable
+  without scrolling
+- `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
+- Exactly one retry control is on screen for one failure
+- The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -1545,48 +1715,73 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 8.1 Unit tests pass, including the three-state derivation: `npm test`
-- [x] 8.2 Integration proves zero mail on create and exactly one on invite
-- [x] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user
-- [x] 8.3a Integration proves `inviteEmployee` refuses a target that already has a password
-- [x] 8.4 Integration tests pass: `npm run test:integration`
-- [x] 8.5 Type checking passes: `npx astro check`
-- [x] 8.6 Lint passes: `npm run lint`
-- [x] 8.7 Production build succeeds: `npm run build`
-- [x] 8.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [x] 8.9 `contract-surfaces.md` records the invite route and the widened status union
+- [x] 8.1 Unit tests pass, including the three-state derivation: `npm test` — 6954cfa
+- [x] 8.2 Integration proves zero mail on create and exactly one on invite — 6954cfa
+- [x] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user — 6954cfa
+- [x] 8.3a Integration proves `inviteEmployee` refuses a target that already has a password — 6954cfa
+- [x] 8.4 Integration tests pass: `npm run test:integration` — 6954cfa
+- [x] 8.5 Type checking passes: `npx astro check` — 6954cfa
+- [x] 8.6 Lint passes: `npm run lint` — 6954cfa
+- [x] 8.7 Production build succeeds: `npm run build` — 6954cfa
+- [x] 8.8 E2E suite passes on `:4321`: `npm run test:e2e` — 6954cfa
+- [x] 8.9 `contract-surfaces.md` records the invite route and the widened status union — 6954cfa
 
 #### Manual
 
-- [x] 8.10 Adding a person creates a roster row immediately and sends nothing
-- [x] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
-- [x] 8.11a A resend to an already-invited hire works, and the previous link stops working
-- [x] 8.11b A hire who already has a password is offered no invite action
-- [x] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show
-- [x] 8.11d The divergence from catalog 19's invited-row actions is recorded as a deviation, not silently shipped
-- [x] 8.12 The emailed link still lands on the invite form with the hire's initials
-- [x] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
-- [x] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
+- [x] 8.10 Adding a person creates a roster row immediately and sends nothing — 6954cfa
+- [x] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY — 6954cfa
+- [x] 8.11a A resend to an already-invited hire works, and the previous link stops working — 6954cfa
+- [x] 8.11b A hire who already has a password is offered no invite action — 6954cfa
+- [x] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show — 6954cfa
+- [x] 8.11d The divergence from catalog 19's invited-row actions is recorded as a deviation, not silently shipped — 6954cfa
+- [x] 8.12 The emailed link still lands on the invite form with the hire's initials — 6954cfa
+- [x] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit — 6954cfa
+- [x] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints — 6954cfa
 
 ### Phase 9: Report the add failure where the admin is — inside the modal
 
 #### Automated
 
-- [ ] 9.1 Unit tests pass, including the outcome→target table: `npm test`
-- [ ] 9.2 No arm resolves to a banner-only report while the modal stays open
-- [ ] 9.3 Lint passes: `npm run lint`
-- [ ] 9.4 Type checking passes: `npx astro check`
-- [ ] 9.5 Integration tests pass: `npm run test:integration`
-- [ ] 9.6 Production build succeeds: `npm run build`
-- [ ] 9.7 E2E asserts the error is topmost at its own centre, not merely present in the DOM
-- [ ] 9.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [ ] 9.9 `design-contract.md` carries the form-level error entry, its copy, and a §11 diff row
+- [x] 9.1 Unit tests pass, including the outcome→target table: `npm test`
+- [x] 9.2 No arm resolves to a banner-only report while the modal stays open
+- [x] 9.3 Lint passes: `npm run lint`
+- [x] 9.4 Type checking passes: `npx astro check`
+- [x] 9.5 Integration tests pass: `npm run test:integration`
+- [x] 9.6 Production build succeeds: `npm run build`
+- [x] 9.7 E2E asserts the error is topmost at its own centre, not merely present in the DOM
+- [x] 9.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [x] 9.9 `design-contract.md` carries the form-level error entry, its copy, and a §11 diff row
 
 #### Manual
 
-- [ ] 9.10 A forced provisioning failure reports inside the modal, values intact
-- [ ] 9.11 A dropped connection reports inside the modal — the phase-9 defect, closed
-- [ ] 9.12 Exactly one retry control is on screen for one failure
-- [ ] 9.13 A 409 duplicate still reports inline under the email field, unchanged
-- [ ] 9.14 `repairedMailFailed` still closes the modal and reports as a banner
-- [ ] 9.15 The error state matches `design-contract.md` verbatim at 1280px and 390px
+- [x] 9.10 A forced provisioning failure reports inside the modal, values intact
+- [x] 9.11 A dropped connection reports inside the modal — the phase-9 defect, closed
+- [x] 9.12 Exactly one retry control is on screen for one failure
+- [x] 9.13 A 409 duplicate still reports inline under the email field, unchanged
+- [x] 9.14 `repairedMailFailed` still closes the modal and reports as a banner
+- [x] 9.15 The error state matches `design-contract.md` verbatim at 1280px and 390px
+
+### Phase 10: The roster banner is unreachable from the row that triggers it
+
+#### Automated
+
+- [ ] 10.1 Unit tests pass, including the widened outcome-to-surface table: `npm test`
+- [ ] 10.2 No arm resolves to a surface unreachable from the control that triggered it
+- [ ] 10.3 Lint passes: `npm run lint`
+- [ ] 10.4 Type checking passes: `npx astro check`
+- [ ] 10.5 Integration tests pass: `npm run test:integration`
+- [ ] 10.6 Production build succeeds: `npm run build`
+- [ ] 10.7 E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success
+- [ ] 10.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [ ] 10.9 `design-contract.md` carries the remove-modal entry, the chosen row-action surface, its copy, and §11 rows
+- [ ] 10.10 The §1 shape and module-name decisions are recorded, not taken silently
+- [ ] 10.11 The §5 body-scroll-lock decision is recorded as in-scope or follow-up
+
+#### Manual
+
+- [ ] 10.12 A failed remove reports inside the remove modal, with the typed confirmation intact
+- [ ] 10.13 The remove modal's 200 and 409 (last-admin) arms are unchanged
+- [ ] 10.14 A failed invite or reset from a scrolled row is readable without scrolling
+- [ ] 10.15 `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
+- [ ] 10.16 Exactly one retry control is on screen for one failure
+- [ ] 10.17 The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px

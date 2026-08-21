@@ -1,5 +1,5 @@
 // core
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 
 // others
 import { fillHydrated, waitForIslands } from "./support/hydration";
@@ -13,6 +13,9 @@ import { createActiveEmployee, deleteStaffByEmail, deleteStaffUser } from "./fix
 //   3. remove via typed-email confirmation → the row disappears
 //   4. the admin's own remove ✕ is disabled (can't remove yourself)
 //   5. a last-admin refusal surfaces the refusal modal
+//   6. a dropped connection reports INSIDE the modal, on top of the overlay
+//   7. a provisioning failure does too, keeping the form the admin would retry in
+//   8. a duplicate still reports inline under the e-mail field, unchanged
 //
 // Why a browser: these are pure UI behaviours over the real /api/staff* routes
 // (add/deactivate) + middleware admin gate — the SSR roster, the hydrated
@@ -189,5 +192,135 @@ test("a last-admin refusal surfaces the refusal modal", async ({ page }) => {
   } finally {
     await page.unroute("**/api/staff/*/deactivate");
     await deleteStaffUser(id);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// WHERE the add failure is reported (invite-journey-fixes, phase 9).
+//
+// The risk these two protect is not "is the error in the DOM" — it was, and a
+// bare `toBeVisible()` passed while the admin saw nothing. `addEmployee`'s
+// failure arms set a BANNER and left the modal open, so the message painted
+// behind `ModalShell`'s overlay (`fixed inset-0 z-[60] … backdrop-blur-sm`).
+// Hit-testing the banner's centre returned the overlay, not the banner.
+//
+// So the assertion is the one the defect was measured with: the error must be
+// the topmost element at its own centre. `isTopmostAtItsOwnCentre` goes red if a
+// future edit routes either arm back to a surface the overlay covers.
+// ---------------------------------------------------------------------------
+
+/**
+ * Does this element actually receive the pixel at the middle of itself?
+ *
+ * `elementFromPoint` answers with whatever the compositor puts on top, so an
+ * element buried under a fixed overlay fails here while passing `toBeVisible()`.
+ * Children count — the error paragraph wraps an icon and a text node.
+ */
+async function isTopmostAtItsOwnCentre(locator: Locator): Promise<boolean> {
+  return locator.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return hit !== null && (hit === el || el.contains(hit));
+  });
+}
+
+test("a dropped connection reports inside the add modal, on top of the overlay — not behind it", async ({ page }) => {
+  // THE PHASE-9 DEFECT. `fetch` throws, the typed values are still perfectly
+  // good, and this arm used to give the admin a blurred red smear behind a
+  // dimmed backdrop — the most common failure reporting nothing readable.
+  const email = `e2e-neterr-${Date.now()}-${Math.floor(Math.random() * 1e6)}@fleetrent.test`;
+  await page.route("**/api/staff", (route) => route.abort());
+  try {
+    await page.goto("/dashboard/staff");
+    await waitForIslands(page);
+
+    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
+    await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
+    await page.getByRole("button", { name: "Dodaj", exact: true }).click();
+
+    // Located by its copy, not by `role="alert"` — the layout's missing-config
+    // banner is an alert too, so the role alone is ambiguous on this page.
+    const error = page.getByText("Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.");
+    await expect(error).toBeVisible();
+    // Present is not the same as readable — this is the assertion that matters.
+    expect(await isTopmostAtItsOwnCentre(error)).toBe(true);
+
+    // The modal stayed open with the typed values intact, and its own submit is
+    // the retry — so there is exactly one retry control on screen, not two.
+    await expect(page.getByLabel("IMIĘ I NAZWISKO")).toHaveValue("Nowy Pracownik");
+    await expect(page.getByLabel("ADRES E-MAIL")).toHaveValue(email);
+    await expect(page.getByRole("button", { name: "Dodaj", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Ponów" })).toHaveCount(0);
+  } finally {
+    await page.unroute("**/api/staff");
+  }
+});
+
+test("a provisioning failure reports inside the add modal, keeping the form the admin would retry in", async ({
+  page,
+}) => {
+  // Phase 1 closed the modal here and made the banner's `Ponów` the retry. Phase
+  // 8 stopped sending mail on create, so a failed create is fully retryable in
+  // place with nothing delivered — and phase 7's `Spróbuj ponownie.` was an
+  // instruction issued after the form had been taken away.
+  const email = `e2e-provfail-${Date.now()}-${Math.floor(Math.random() * 1e6)}@fleetrent.test`;
+  await page.route("**/api/staff", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "provisioning failed", code: "provision_rolled_back" }),
+    }),
+  );
+  try {
+    await page.goto("/dashboard/staff");
+    await waitForIslands(page);
+
+    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
+    await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
+    await page.getByRole("button", { name: "Dodaj", exact: true }).click();
+
+    const error = page.getByText("Nie udało się utworzyć konta. Spróbuj ponownie.");
+    await expect(error).toBeVisible();
+    expect(await isTopmostAtItsOwnCentre(error)).toBe(true);
+
+    await expect(page.getByLabel("ADRES E-MAIL")).toHaveValue(email);
+    await expect(page.getByRole("button", { name: "Ponów" })).toHaveCount(0);
+  } finally {
+    await page.unroute("**/api/staff");
+  }
+});
+
+test("a duplicate still reports inline under the e-mail field, unchanged", async ({ page }) => {
+  // The 409 is the idiom phase 9 generalised FROM — it must not move. It stays
+  // attached to the field it belongs to, and it still locks the submit, because
+  // retrying that address cannot succeed until the admin edits it.
+  const email = `e2e-dup-${Date.now()}-${Math.floor(Math.random() * 1e6)}@fleetrent.test`;
+  await page.route("**/api/staff", (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({ errors: { email: "Pracownik z tym adresem e-mail już istnieje." } }),
+    }),
+  );
+  try {
+    await page.goto("/dashboard/staff");
+    await waitForIslands(page);
+
+    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
+    await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
+    await page.getByRole("button", { name: "Dodaj", exact: true }).click();
+
+    const dupError = page.getByText("Ten adres e-mail jest już w zespole.");
+    await expect(dupError).toBeVisible();
+    expect(await isTopmostAtItsOwnCentre(dupError)).toBe(true);
+    // Field-level, not form-level: the form slot must stay empty. Both §9.4
+    // strings share this lead clause, so one assertion covers the pair.
+    await expect(page.getByText(/^Nie udało się utworzyć konta\./)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Dodaj", exact: true })).toBeDisabled();
+  } finally {
+    await page.unroute("**/api/staff");
   }
 });

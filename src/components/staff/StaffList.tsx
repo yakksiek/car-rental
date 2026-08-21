@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
-import { inviteActionLabel, provisionFailureMessage, repairedMailFailedMessage } from "../../lib/staff-banner";
+import { type AddOutcome, type AddReport, inviteActionLabel, resolveAddReport } from "../../lib/staff-banner";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -63,7 +63,6 @@ const COPY = {
   // coupling that made a single shared label tempting in the first place.
   sendInvite: inviteActionLabel,
   sending: "Wysyłanie…",
-  dupEmail: "Ten adres e-mail jest już w zespole.",
   close: "Zamknij",
   // remove modal
   removeTitle: "Usunąć tego pracownika?",
@@ -79,21 +78,17 @@ const COPY = {
   noResultsTitle: "Brak wyników",
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
+  //
+  // `mutationError` is the ROW actions' failure banner (invite, reset, remove) —
+  // those have no form to report into, so the banner is where the admin is. The
+  // ADD flow no longer routes here at all: every one of its outcomes, including
+  // a thrown `fetch`, is placed by `resolveAddReport` in `lib/staff-banner.ts`.
   mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
-  // Provisioning failed, so the network banner above would be a lie. ONE sentence
-  // for both API codes — the distinction they carry is system health, not the
-  // admin's situation — and it names the address, because a failed provisioning
-  // drives no roster row and this is the only place that address appears.
-  // Function-valued COPY member, as `eyebrowMobileWord` below already is; the
-  // string itself is authored in `lib/staff-banner.ts` so the `unit` project can
-  // gate it (design-contract.md §9.2, verbatim).
-  provisionFailed: provisionFailureMessage,
-  // Names an INVITE button, not `„Resetuj hasło”`: this banner fires only when
-  // the target has NO password, and the roster shows exactly one action per
-  // state — so the reset button the old string named is not on that row at all
-  // (design-contract §9.2, §10 entry 2). Which invite button it names follows
-  // the row's own state, so the copy can never point at a missing control.
-  repairedMailFailed: repairedMailFailedMessage,
+  // `repairedMailFailed` used to sit here. It is still a banner — the one add
+  // outcome that is — but its string is now produced by `resolveAddReport`
+  // alongside every other arm, so the island no longer authors it. See
+  // `lib/staff-banner.ts` for why it names an INVITE button rather than
+  // `„Resetuj hasło”` (design-contract §9.2, §10 entry 2).
   retry: "Ponów",
   resetSent: "Wysłano e-mail do resetu hasła.",
   inviteSent: "Wysłano zaproszenie.",
@@ -283,13 +278,19 @@ function AddModal({
 }: {
   busy: boolean;
   onClose: () => void;
-  onSubmit: (values: { full_name: string; email: string }) => Promise<{ dupEmail?: boolean } | undefined>;
+  onSubmit: (values: { full_name: string; email: string }) => Promise<AddReport>;
 }) {
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [errors, setErrors] = React.useState<{ full_name?: string; email?: string }>({});
-  const [dup, setDup] = React.useState(false);
-  const emailInvalid = Boolean(errors.email) || dup;
+  // Two server-side error slots, one per shape of failure. `dup` belongs to the
+  // e-mail the admin typed (the shipped idiom); `formError` belongs to the
+  // SUBMISSION — a provisioning failure or a dropped connection attaches to no
+  // field, and before phase 9 it had nowhere to go but a banner the modal's own
+  // overlay painted over. `resolveAddReport` decides which one a response fills.
+  const [dup, setDup] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const emailInvalid = Boolean(errors.email) || dup !== null;
 
   async function submit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -304,9 +305,11 @@ function AddModal({
       return;
     }
     setErrors({});
-    setDup(false);
-    const result = await onSubmit(parsed.data);
-    if (result?.dupEmail) setDup(true);
+    setDup(null);
+    setFormError(null);
+    const report = await onSubmit(parsed.data);
+    if (report.slot === "email") setDup(report.message);
+    else if (report.slot === "form") setFormError(report.message);
   }
 
   const inputBase = "border-border bg-background text-foreground h-11 w-full rounded-xl border px-3.5 text-sm";
@@ -329,6 +332,7 @@ function AddModal({
               value={fullName}
               onChange={(e) => {
                 setFullName(e.target.value);
+                setFormError(null);
                 if (errors.full_name) setErrors((p) => ({ ...p, full_name: undefined }));
               }}
               className={cn(inputBase, errors.full_name && "border-destructive")}
@@ -351,7 +355,8 @@ function AddModal({
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                setDup(false);
+                setDup(null);
+                setFormError(null);
                 if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
               }}
               className={cn(inputBase, emailInvalid && "border-destructive bg-[var(--flota-danger-soft)]")}
@@ -360,17 +365,42 @@ function AddModal({
             {emailInvalid && (
               <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-[13px]">
                 <AlertTriangle className="size-3.5" />
-                {dup ? COPY.dupEmail : errors.email}
+                {dup ?? errors.email}
               </p>
             )}
           </div>
         </div>
 
+        {/* Form-level error (§8.4) — the submission failed, and it belongs to no
+            field. Type ramp, colour, glyph and gap are the field-level idiom
+            above, verbatim. Three properties differ, and all three are because
+            this string WRAPS where a field error never does — measured at 2 lines
+            at both breakpoints (400px desktop, 342px mobile), not assumed:
+            `items-start` + `mt-0.5` put the glyph on the first line instead of
+            floating it on the line boundary (the app's own idiom for a glyph
+            leading wrapping text — `ReservationForm.tsx:531,540`,
+            `pricing.astro:258`), and `shrink-0` stops the 14px glyph being
+            squeezed. `mt-5` is the modal's block rhythm, matching above and below. */}
+        {formError && (
+          <p role="alert" className="text-destructive mt-5 flex items-start gap-1.5 text-[13px]">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            {formError}
+          </p>
+        )}
+
         <div className="mt-5 flex gap-2.5">
           <Button type="button" variant="outline" className="h-12 flex-1" disabled={busy} onClick={onClose}>
             {COPY.cancel}
           </Button>
-          <Button type="submit" className="bg-primary text-primary-foreground h-12 flex-1 gap-2" disabled={busy || dup}>
+          {/* Stays enabled through a form-level error — it IS the retry now, and
+              the typed values are still in the fields behind it. Only a duplicate
+              disables it, because retrying that address cannot succeed until the
+              admin edits it. */}
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground h-12 flex-1 gap-2"
+            disabled={busy || dup !== null}
+          >
             {busy ? (
               <>
                 <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -521,10 +551,39 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
   // ── mutations ──────────────────────────────────────────────────────────────
 
-  async function addEmployee(values: {
-    full_name: string;
-    email: string;
-  }): Promise<{ dupEmail?: boolean } | undefined> {
+  // Applies a routing decision to the two surfaces it can name. The modal reads
+  // `slot` off the returned report and places the message itself; here we only
+  // open/close it and fill the banner on the single arm that still uses one
+  // (`repairedMailFailed` — it rides a 200, the row really did land, and its
+  // remedy is the row's own action rather than a retry, so it carries no `Ponów`).
+  function applyAddReport(report: AddReport): AddReport {
+    if (!report.keepsModalOpen) setAddOpen(false);
+    if (report.target === "banner" && report.message) {
+      setBanner({ kind: "error", msg: report.message });
+    }
+    return report;
+  }
+
+  // WHERE an add failure is reported is decided by `resolveAddReport`, not here
+  // — this function only reads the wire and applies the answer.
+  //
+  // Phase 1 closed the modal on a provisioning failure and made the banner's
+  // `Ponów` the single retry, so that leaving the form open would not offer a
+  // competing second one. That reasoning was sound while the invite mail had
+  // already gone out: closing the modal was the signal that something
+  // irreversible HAD happened. Two things retired it. Phase 7 collapsed the copy
+  // to `Spróbuj ponownie.`, an instruction to retry issued after the form the
+  // admin would retry in had been taken away; and phase 8 stopped sending any
+  // mail on create, so a failed create is now fully retryable in place with
+  // nothing delivered. The duplication did not disappear — it inverted, and
+  // phase 9 resolves it the other way: the MODAL owns every add failure, its
+  // submit button is the single retry, and the typed values stay on screen.
+  //
+  // Which also fixed the arm that reported nowhere at all. A thrown `fetch` used
+  // to set a banner and leave the modal open, so the message painted behind
+  // `ModalShell`'s overlay — the most common failure, and the one case where the
+  // typed values are still perfectly good, was invisible.
+  async function addEmployee(values: { full_name: string; email: string }): Promise<AddReport> {
     setAddBusy(true);
     setBanner(null);
     try {
@@ -533,6 +592,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
+      let outcome: AddOutcome;
       if (res.status === 201 || res.status === 200) {
         const body = (await res.json().catch(() => null)) as {
           member?: StaffMember;
@@ -540,41 +600,22 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         } | null;
         const member = body?.member;
         if (member) setStaff((rows) => [...rows.filter((r) => r.id !== member.id), member]);
-        setAddOpen(false);
-        // The repair succeeded — the row belongs on the roster and the modal
-        // closes — but the activation email did not go out, so the hire has no
-        // way in. Error tone because the admin must act; no `retry`, because the
-        // remedy is the row's own invite action, which the copy names
-        // (design-contract §8.1).
-        //
-        // The message is keyed off the member the server just returned, so it
-        // names the button THAT row renders: a repair can land on either
-        // password-less state, and `deriveStaffStatus` has already decided which.
-        if (body?.activationMail === "failed") {
-          setBanner({ kind: "error", msg: COPY.repairedMailFailed(member?.status ?? "created") });
-        }
-        return;
+        // The activation-mail outcome is keyed off the member the server just
+        // returned, so its banner names the button THAT row renders: a repair can
+        // land on either password-less state, and `deriveStaffStatus` has already
+        // decided which.
+        outcome = { kind: "ok", activationMail: body?.activationMail ?? null, status: member?.status ?? "created" };
+      } else if (res.status === 409) {
+        outcome = { kind: "http", httpStatus: 409 };
+      } else {
+        // The route marks a provisioning failure with a machine-readable `code`;
+        // an unhandled 500 carries Astro's HTML body and has none.
+        const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+        outcome = { kind: "http", httpStatus: res.status, code: failure?.code ?? null };
       }
-      if (res.status === 409) {
-        return { dupEmail: true };
-      }
-      // Provisioning failed. The route marks it with a machine-readable `code`;
-      // an unhandled 500 has none, so the resolver answers null and we fall
-      // through to the network banner below, unchanged. Both provisioning codes
-      // resolve to the same sentence — the API keeps them apart for logs and
-      // monitoring (`api/staff.ts`), the admin sees one message.
-      const failure = (await res.json().catch(() => null)) as { code?: string } | null;
-      const provisionFailed = COPY.provisionFailed(failure?.code, values.email);
-      if (provisionFailed) {
-        // Close the modal: the banner's `Ponów` is the single retry surface, and
-        // leaving the form open behind it would offer a competing second one.
-        setAddOpen(false);
-        setBanner({ kind: "error", msg: provisionFailed, retry: () => void addEmployee(values) });
-        return;
-      }
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
+      return applyAddReport(resolveAddReport(outcome));
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
+      return applyAddReport(resolveAddReport({ kind: "network" }));
     } finally {
       setAddBusy(false);
     }
