@@ -30,7 +30,10 @@ if (!vehicle) {
 // grey out (Phase 6). The browser can't reach Supabase (server-only creds), so
 // they're SSR'd here and handed to the BookingWidget island. PII-free — date
 // bounds only.
-const busyRanges = vehicle ? await getVehicleBusyRanges(supabase, vehicle.id) : [];
+// `.ok` is deliberately ignored here: on this page the greying is advisory UX
+// sugar, so a failed read greys nothing rather than 500-ing an otherwise
+// working detail page. The staff modal's route fails closed on it instead.
+const busyRanges = vehicle ? (await getVehicleBusyRanges(supabase, vehicle.id)).ranges : [];
 
 // Forward the selected range (set by catalog cards / filters) into the CTA.
 const pickup = Astro.url.searchParams.get("pickup");

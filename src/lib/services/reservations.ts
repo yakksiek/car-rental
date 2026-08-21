@@ -279,26 +279,35 @@ export async function listReservationsForCalendar(
  * Fetch the date bounds of a vehicle's blocking reservations (pending +
  * confirmed) via the PII-safe `get_vehicle_busy_ranges` definer RPC. The
  * booking calendar SSRs these in and greys the taken dates so a visitor never
- * picks an unavailable range (S-02 Phase 6). Returns `[]` for a `null`/
- * misconfigured client, a malformed id, OR an RPC error — the greying is
- * advisory UX sugar, so its failure must never 500 the (otherwise working)
- * detail page; the calendar simply greys nothing and the EXCLUDE constraint
- * remains the atomic backstop. (Unlike the write/status reads, which ARE the
- * point of their page and so propagate errors.)
+ * picks an unavailable range (S-02 Phase 6).
+ *
+ * REPORTS ITS FAILURES (S-12a Phase 2). It answers `{ ok, ranges }`, with
+ * `ok: false` and `ranges: []` for a `null`/misconfigured client, a malformed id
+ * or an RPC error. It used to swallow all three into a bare `[]`, which was
+ * right while the greying was advisory sugar on a page whose real check lived
+ * elsewhere — but an empty list is indistinguishable from a genuinely free
+ * vehicle, and from S-12a Phase 3 this read IS the manual-reservation modal's
+ * availability authority: a failed read would otherwise paint an empty calendar
+ * under a green "Termin wolny" and arm the submit button.
+ *
+ * Callers choose their own default. The public detail page keeps the deliberate
+ * "grey nothing and carry on" behaviour by reading `.ranges` and ignoring `.ok`
+ * — its failure must never 500 an otherwise working page, and the EXCLUDE
+ * constraint remains the atomic backstop. The staff route fails closed on `.ok`.
  */
 export async function getVehicleBusyRanges(
   client: ReservationClient | null,
   vehicleId: string,
-): Promise<VehicleBusyRange[]> {
+): Promise<{ ok: boolean; ranges: VehicleBusyRange[] }> {
   if (!client || !UUID_RE.test(vehicleId)) {
-    return [];
+    return { ok: false, ranges: [] };
   }
 
   const { data, error } = await client.rpc("get_vehicle_busy_ranges", { p_vehicle_id: vehicleId });
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[getVehicleBusyRanges] RPC failed; calendar greys nothing this load:", error);
-    return [];
+    return { ok: false, ranges: [] };
   }
-  return data;
+  return { ok: true, ranges: data };
 }

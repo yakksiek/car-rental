@@ -613,10 +613,10 @@ grant changes.
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npx astro check`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Build passes: `npm run build`
-- [x] 1.4 Unit tests pass: `npm test`
+- [x] 1.1 Type checking passes: `npx astro check` — 847ad96
+- [x] 1.2 Linting passes: `npm run lint` — 847ad96
+- [x] 1.3 Build passes: `npm run build` — 847ad96
+- [x] 1.4 Unit tests pass: `npm test` — 847ad96
 
 #### Manual
 
@@ -628,10 +628,10 @@ grant changes.
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Integration tests pass: `npm run test:integration`
+- [x] 2.1 Type checking passes: `npx astro check`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 Integration tests pass: `npm run test:integration`
 
 #### Manual
 
