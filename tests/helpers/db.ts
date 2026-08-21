@@ -9,6 +9,15 @@ import postgres from "postgres";
 // right tool for a GRANT-introspection assertion — it inspects privileges, it
 // does not exercise them.
 //
+// ONE NAMED EXCEPTION (invite-journey-fixes): ageing a DISPOSABLE user's own
+// `auth.users.*_sent_at` in `resolve-link-token.test.ts`, to reach the RPC's
+// expiry clause. PostgREST does not expose the `auth` schema and no admin API
+// sets that column, so there is no client-side route to that state at all. It is
+// row-scoped to a user the test created and deletes, and leaves NO schema state
+// behind if the test crashes — unlike a DDL write, which on a Supabase stack
+// four worktrees share would strand the siblings. Do not widen this exception to
+// `public` tables: those all have a supabase-js route.
+//
 // Defaults to the Supabase CLI's fixed local dev URL; CI overrides via
 // SUPABASE_DB_URL. The postgres/postgres credentials are the documented local
 // defaults (`supabase status` prints them), not secrets — which is why this can

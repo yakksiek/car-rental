@@ -1044,14 +1044,14 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 3.1 Unit tests pass, including new `staff-status.test.ts`: `npm test`
-- [x] 3.2 Integration tests pass: `npm run test:integration`
-- [x] 3.3 §1.5(a) regression test asserts INVITED + mail sent for a clicked-but-never-set hire
-- [x] 3.4 Orphan-shape repair test (`profile === null`) passes
-- [x] 3.5 A repair with a failed activation mail returns 200 carrying the mail outcome
-- [x] 3.6 Type checking passes: `npx astro check`
-- [x] 3.7 Lint passes: `npm run lint`
-- [x] 3.8 Production build succeeds: `npm run build`
+- [x] 3.1 Unit tests pass, including new `staff-status.test.ts`: `npm test` — fe7edec
+- [x] 3.2 Integration tests pass: `npm run test:integration` — fe7edec
+- [x] 3.3 §1.5(a) regression test asserts INVITED + mail sent for a clicked-but-never-set hire — fe7edec
+- [x] 3.4 Orphan-shape repair test (`profile === null`) passes — fe7edec
+- [x] 3.5 A repair with a failed activation mail returns 200 carrying the mail outcome — fe7edec
+- [x] 3.6 Type checking passes: `npx astro check` — fe7edec
+- [x] 3.7 Lint passes: `npm run lint` — fe7edec
+- [x] 3.8 Production build succeeds: `npm run build` — fe7edec
 
 #### Manual
 
@@ -1066,15 +1066,15 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 4.1 Migration applies cleanly: `npx supabase migration up`
-- [ ] 4.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
-- [ ] 4.3 New unit tests for cookie payload and branch selection pass: `npm test`
-- [ ] 4.4 `rpc-execute-grants.test.ts` covers the token-lookup RPC in its public block (anon CAN call it)
-- [ ] 4.5 RPC fails closed on §1's three clauses — wrong `type` → no row, expired → no row, deactivated → null role
-- [ ] 4.6 Type checking passes: `npx astro check`
-- [ ] 4.7 Lint passes: `npm run lint`
-- [ ] 4.8 Integration tests pass: `npm run test:integration`
-- [ ] 4.9 `contract-surfaces.md` + `known-issues.md` updated (PKCE row, token-lookup RPC, GoTrue coupling)
+- [x] 4.1 Migration applies cleanly: `npx supabase migration up`
+- [x] 4.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
+- [x] 4.3 New unit tests for cookie payload and branch selection pass: `npm test`
+- [x] 4.4 `rpc-execute-grants.test.ts` covers the token-lookup RPC in its public block (anon CAN call it)
+- [x] 4.5 RPC fails closed on §1's three clauses — wrong `type` → no row, expired → no row, deactivated → null role
+- [x] 4.6 Type checking passes: `npx astro check`
+- [x] 4.7 Lint passes: `npm run lint`
+- [x] 4.8 Integration tests pass: `npm run test:integration`
+- [x] 4.9 `contract-surfaces.md` + `known-issues.md` updated (PKCE row, token-lookup RPC, GoTrue coupling)
 
 #### Manual
 

@@ -97,7 +97,22 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
   // The read-only three should return cleanly; create_reservation_request must
   // not be a permission error (it returns a business outcome for a missing vehicle).
   // -------------------------------------------------------------------------
-  describe("anon still executes the four public RPCs", () => {
+  describe("anon still executes the public RPCs", () => {
+    // invite-journey-fixes: intentionally public (lessons.md carve-out (a)).
+    // `/auth/callback` runs with no session, so a revoked grant here would take
+    // the whole invite + recovery journey down. Asserted as ADMITTED, not refused.
+    it("resolve_link_token -> executes (no permission error)", async () => {
+      const res = await anonClient().rpc("resolve_link_token", {
+        p_token_hash: "no-such-token-hash-value",
+        p_type: "recovery",
+      });
+      expect(isPermissionDenied(res.error)).toBe(false);
+      expect(res.error).toBeNull();
+      // A hash nobody holds resolves to nothing — the grant is intact, the lookup
+      // still fails closed.
+      expect(res.data).toEqual([]);
+    });
+
     it("available_vehicles -> no permission error", async () => {
       const res = await anonClient().rpc("available_vehicles", { p_pickup: "2026-07-01", p_return: "2026-07-05" });
       expect(res.error).toBeNull();
