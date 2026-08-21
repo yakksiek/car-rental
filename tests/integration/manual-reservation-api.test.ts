@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 // others
 import { GET as availabilityGET } from "../../src/pages/api/availability";
+import { GET as busyRangesGET } from "../../src/pages/api/vehicles/[id]/busy-ranges";
 import { PATCH as decisionPATCH } from "../../src/pages/api/reservations/[id]";
 import { POST as manualPOST } from "../../src/pages/api/reservations/manual";
 import { serviceClient } from "../helpers/clients";
@@ -260,6 +261,55 @@ describe("GET /api/availability (S-12)", () => {
         path: "/api/availability?vehicle_id=not-a-uuid&pickup=2032-09-01&return=2032-09-05",
       }),
     );
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/vehicles/[id]/busy-ranges (S-12a)", () => {
+  function ctx(role: "employee" | "norole", id: string = VEHICLE_ID) {
+    return asContext(role, { method: "GET", path: `/api/vehicles/${id}/busy-ranges`, params: { id } });
+  }
+
+  it("staff get the vehicle's blocking ranges — date bounds only, no PII", async () => {
+    const empty = await busyRangesGET(await ctx("employee"));
+    expect(empty.status).toBe(200);
+    expect(await empty.json()).toEqual({ ranges: [] });
+
+    const created = await manualPOST(
+      await asContext("employee", {
+        method: "POST",
+        path: "/api/reservations/manual",
+        body: body("2032-11-01", "2032-11-06"),
+      }),
+    );
+    expect(created.status).toBe(201);
+
+    const res = await busyRangesGET(await ctx("employee"));
+    expect(res.status).toBe(200);
+
+    const payload = (await res.json()) as { ranges: { pickup_date: string; return_date: string }[] };
+    expect(payload.ranges).toEqual([{ pickup_date: "2032-11-01", return_date: "2032-11-06" }]);
+    // The RPC is PII-safe by construction; asserted on the key set so a widened
+    // return type fails here rather than leaking the customer quietly.
+    expect(Object.keys(payload.ranges[0] ?? {}).sort()).toEqual(["pickup_date", "return_date"]);
+  });
+
+  it("an unauthenticated caller is 401 and a non-staff caller 403", async () => {
+    const anon = await busyRangesGET(
+      anonContext({
+        method: "GET",
+        path: `/api/vehicles/${VEHICLE_ID}/busy-ranges`,
+        params: { id: VEHICLE_ID },
+      }),
+    );
+    expect(anon.status).toBe(401);
+
+    const norole = await busyRangesGET(await ctx("norole"));
+    expect(norole.status).toBe(403);
+  });
+
+  it("a malformed vehicle id is 400, not a 500", async () => {
+    const res = await busyRangesGET(await ctx("employee", "not-a-uuid"));
     expect(res.status).toBe(400);
   });
 });
