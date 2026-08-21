@@ -239,6 +239,7 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
 | `sendInvite` (row)    | `Wyślij zaproszenie`                                                                                       | 8     |
 | add-modal CTA         | `Dodaj`                                                                                                    | 8     |
 | `emptyHint`           | `Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.`                                             | 8     |
+| `addSub` (add modal)  | `Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.`                                           | 8     |
 
 **Why this Polish:**
 
@@ -254,6 +255,11 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
   for a first send and `Wyślij ponownie` for a resend. Rejected: `repairedMailFailed` must **name**
   the button, and after a repair the target may be in either state, so two labels make that string
   unnameable. The badge already distinguishes the two cases.
+- **`addSub` was caught by the render, not the review.** The add modal's subtitle read
+  `Wyślemy link aktywacyjny. Nowa osoba ustawi własne hasło.` — false under two-step, and it sits
+  directly above the CTA, so shipping the button change alone would have put a contradiction on
+  screen. It surfaced only when the board was rendered and looked at; the code diff did not touch
+  that line and nothing flagged it. Same class as `emptyHint`.
 - **The add-modal CTA drops to `Dodaj`** because the modal is already titled `Dodaj pracownika`, and
   because `Wyślij zaproszenie` now describes step **2** — leaving it on step 1 would promise an email
   that no longer goes out. `emptyHint` loses the same promise for the same reason.
