@@ -105,10 +105,14 @@ on the form again rather than on `/auth/link-conflict`.
 
 ## What We're NOT Doing
 
-- **Option 2a** (reorder to `generateLink` → insert → send our own mail). Deferred: it moves the
+- ~~**Option 2a** (reorder to `generateLink` → insert → send our own mail). Deferred: it moves the
   invite mail onto the Resend seam with a new app template, the prod-only hosted-attachment send
-  gate, and the `EMAIL_FROM` format trap. Option 1's compensating delete covers the failure without
-  that surface.
+  gate, and the `EMAIL_FROM` format trap.~~ **Superseded by phase 8 (owner decision 2026-08-21.)**
+  The deferral rested on having to own the send — and that premise was probe-disproved:
+  `inviteUserByEmail` works on an **already-created** user, so create-then-invite keeps the real
+  GoTrue invite and its existing template. None of the Resend costs above apply. Phase 8 does the
+  reorder as two _explicit_ steps rather than an internal one, which also makes the created-but-not-
+  yet-invited state visible on the roster.
 - **Option 2b** (`createUser` + `resetPasswordForEmail`) — rejected on evidence: it silently
   downgrades every new hire's first contact from the invite journey to a password-reset journey.
 - **Option 3** (transactional RPC / trigger) — closed on evidence. The RPC form is not constructible
@@ -116,7 +120,9 @@ on the form again rather than on `/auth/link-conflict`.
   the trigger form reverses the fail-closed invariant at `20260604153139:22-24`.
 - **Widening `list_staff` to a LEFT JOIN** so orphans surface as a roster row. With the compensating
   delete in place an orphan only survives when the delete _also_ fails; the new roster state would
-  need its own design decision and Polish copy.
+  need its own design decision and Polish copy. Still out of scope after phase 8 — but the stakes
+  drop there, because no mail is sent for an account that failed to create, so a surviving orphan
+  costs nobody a dead link and a retry heals it.
 - **The continue card** for `/auth/link-conflict` — dropped by owner decision 2026-08-20; option C
   makes the state it explains unreachable. `research.md` Part 2 retains its full contract as the
   fallback if phase group B is abandoned.
@@ -916,6 +922,207 @@ is `npm run dev` so the suite runs there in practice anyway.
 
 ---
 
+---
+
+## Phase 7: One-step framing for the provisioning failure
+
+### Overview
+
+The two provisioning-failure strings describe the failure the way the **transaction** experienced it
+("the invite went out, but the account didn't finish") rather than the way the **admin** did ("adding
+this person failed"). That decomposition is ours, not theirs. Collapse both arms to one message, and
+name the address — because a failed provisioning is invisible on the roster, so the banner is the
+only place in the product where that address exists.
+
+No behaviour changes. This is copy plus the branch that selects it.
+
+### Changes Required:
+
+#### 1. The message, as a testable pure function
+
+**File**: `src/lib/staff-banner.ts` (new) + `src/lib/staff-banner.test.ts` (new)
+
+**Intent**: The `COPY` block is a module-private object inside a `.tsx` island, so nothing can gate
+its wording — and this change exists _because_ the wording was wrong. Follow the same move `staff-status.ts`
+made in phase 3: put the decision in `src/lib`, where the `unit` project holds it.
+
+**Contract**: A pure function mapping the API's failure `code` plus the submitted address to the
+string to render. It must map **both** provisioning codes to the **same** sentence — that identity is
+the whole point, and a test asserting it is what stops a future edit from re-splitting them. Unit
+tests cover: both codes yield byte-identical output; the address is interpolated; an unknown code
+yields null so the caller falls through to the network banner.
+
+#### 2. The island
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Intent**: Render the collapsed string; extend the same treatment to `repairedMailFailed`, which has
+the same "which person?" gap for a different remedy.
+
+**Contract**: `COPY.provisionRolledBack` and `COPY.provisionOrphaned` are **replaced by one entry**
+sourced from §1's function; `repairedMailFailed` becomes a function of the address, following the
+`eyebrowMobileWord` precedent (`:80`) for a function-valued `COPY` member. `addEmployee`'s branch
+still matches **both** codes — the API keeps distinguishing them — and still closes the modal and
+keeps `retry` wired on both. The `repairedMailFailed` arm still carries **no** retry.
+
+#### 3. The route keeps both codes — say why
+
+**File**: `src/pages/api/staff.ts`
+
+**Intent**: Stop a later reader "simplifying" the API to match the UI.
+
+**Contract**: Comment only. `provision_rolled_back` vs `provision_orphaned` is a system-health signal
+— an orphan means the compensating delete failed — and belongs in logs and monitoring. The collapse
+is a **UI** decision; the seam is the island, not the service.
+
+#### 4. Design contract
+
+**File**: `context/changes/invite-journey-fixes/design-contract.md`
+
+**Contract**: §9 drops from three strings to two. §10 entry 1 loses the `naprawić` accepted
+imprecision entirely — the word goes away — and restates the delivered-mail imprecision as a
+deliberate omission that **phase 8 removes at the root**. §8.1 gains a note that the message may wrap
+to a second line at 390px with a long address, which is accepted (it is shorter than the two-sentence
+string it replaces).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Unit tests pass, including the new `staff-banner.test.ts`: `npm test`
+- Both provisioning codes provably render the same sentence
+- Lint passes: `npm run lint`
+- Type checking passes: `npx astro check`
+- Integration tests pass (the API still returns both codes): `npm run test:integration`
+- Production build succeeds: `npm run build`
+
+#### Manual Verification:
+
+- Both failure arms show one message naming the address
+- `repairedMailFailed` names the address and still carries no `Ponów`
+- Copy matches `design-contract.md` §9 verbatim
+- A long address wraps without breaking the banner row at 390px
+
+---
+
+## Phase 8: Two-step add — create, then invite
+
+### Overview
+
+Adding an employee becomes two explicit acts: **create** the account (silent), then **send the
+invitation**. This applies the change's own root-cause framing properly — the irreversible act now
+happens _last_, after the thing it commits to exists.
+
+It settles what phases 1 and 7 could only describe: **no mail is ever sent for an account that does
+not exist**, so the dead link disappears, and with it the hire's silent dead end (research showed a
+rolled-back hire lands on "Link wygasł", asks for a new link, and `resetPasswordForEmail` on a
+non-existent address succeeds silently and mints nothing — they cannot self-rescue).
+
+**Probe-verified 2026-08-21, and the reason this is cheap:**
+
+- `createUser({ email, email_confirm: false })` sends **zero** mail and leaves `invited_at` null.
+- `inviteUserByEmail` **works on a user that already exists** — it sends the real GoTrue invite
+  through `supabase/templates/invite.html`, leaves the `profiles` row intact, stamps `invited_at`,
+  and the link exchanges cleanly. So we never own the send, and option 2a's deferred cost (the Resend
+  seam, a new app template, the prod-only hosted-attachment gate, the `EMAIL_FROM` format trap) does
+  **not** apply.
+- `invited_at` is already an OUT column of `list_staff`, so the third roster state needs **no migration**.
+
+### Changes Required:
+
+#### 1. The service splits
+
+**File**: `src/lib/services/staff.ts`
+
+**Intent**: `createEmployee` stops sending mail. Sending becomes its own operation.
+
+**Contract**: The net-new arm becomes `admin.auth.admin.createUser({ email, email_confirm: false,
+user_metadata: { full_name } })` followed by the `profiles` insert — no `inviteUserByEmail`. The
+compensating delete stays and is now unconditionally safe (nothing was sent); **keep both result tags**
+for the health signal, per phase 7 §3. A new `inviteEmployee(admin, userId, origin)` resolves the
+address through `getStaffEmail` (never trust a client-sent one, `staff.ts:286`) and calls
+`inviteUserByEmail`, returning a `sent` / `failed` tag.
+
+**Two decisions to make explicitly rather than discover:**
+
+- **Re-invite.** Whether `inviteEmployee` refuses a target who already has `password_set_at`. Refusing
+  is the safer default (they don't need an invite, and a fresh token would be a live credential for a
+  working account); if it refuses, the roster must not offer the action for them.
+- **The repair arm.** It currently sends `resetPasswordForEmail` for a never-activated hire. Under
+  two-step, a person who was created but never invited should be **invited**, not sent a reset — those
+  are different journeys, and choosing the reset is exactly the downgrade `research.md` rejected as
+  option 2b. State which call each shape takes.
+
+#### 2. The third status
+
+**Files**: `src/lib/staff-status.ts`, `src/lib/staff-status.test.ts`
+
+**Contract**: `deriveStaffStatus` takes `invitedAt` alongside `passwordSetAt`: a password → `active`;
+invited but no password → `invited`; neither → the new third state. `StaffMember["status"]` widens.
+`ListStaffRow` already carries `invited_at`, and `listStaff`'s mapping already reads it. The phase-3
+regression case must still hold — a link exchange stamping `last_sign_in_at` is still not an input.
+
+#### 3. The invite route
+
+**File**: `src/pages/api/staff/[id]/invite.ts` (new)
+
+**Contract**: Admin-gated, mirroring `src/pages/api/staff/[id]/reset-password.ts` exactly — CSRF →
+auth → `requireRole(admin)` → act → `json(...)`. Per lessons.md, `/api` sits outside middleware's
+gate and must self-gate in that order.
+
+#### 4. The island
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Contract**: A third badge state (desktop + mobile labels + a filter tab/chip with its count), and a
+row action `Wyślij zaproszenie` offered only for that state. The action needs a pending state per
+`CLAUDE.md` ("Async buttons") — `disabled` plus a spinner, reusing `SubmitButton`'s `animate-spin` ring.
+
+**Two strings become false and must change with it**: the add modal's CTA is `Wyślij zaproszenie`
+(`e2e/staff-admin.spec.ts:38` clicks it by that name), which now describes step **2**, not step 1;
+and `emptyHint` promises `wyślemy jej link aktywacyjny e-mailem`, which step 1 no longer does.
+
+#### 5. Design contract + registry
+
+**Files**: `context/changes/invite-journey-fixes/design-contract.md`,
+`docs/reference/contract-surfaces.md`
+
+**Contract**: A new badge state and a new row action are a **new user-facing surface with no
+artboard** — it needs its own Design Alignment Audit pass and a `deviation(no artboard)` entry with
+exact values and **verbatim Polish copy**, the same shape entry 1 took. `contract-surfaces.md` gains
+the new route and records the widened `StaffMember["status"]` union and `CreateEmployeeResult`.
+
+#### 6. Tests
+
+**Files**: `tests/integration/staff.test.ts`, `e2e/staff-admin.spec.ts`, `e2e/staff-auth.spec.ts`
+
+**Contract**: Integration — creating sends **no** mail (assert against Mailpit's message count, not
+just the absence of an error), inviting sends exactly one, inviting an already-created user succeeds,
+and the roster reports the third state. E2E — `staff-admin.spec.ts`'s add flow follows the renamed
+CTA and asserts the new badge, then a create → invite → accept path proves the link still works end
+to end. `staff-auth.spec.ts`'s invite-accept journey must keep passing.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Unit tests pass, including the three-state derivation: `npm test`
+- Integration proves **zero** mail on create and exactly one on invite
+- Integration proves `inviteUserByEmail` succeeds for an already-created user
+- Integration tests pass: `npm run test:integration`
+- Type checking passes: `npx astro check`
+- Lint passes: `npm run lint`
+- Production build succeeds: `npm run build`
+- E2E suite passes on `:4321`: `npm run test:e2e`
+
+#### Manual Verification:
+
+- Adding a person creates a roster row immediately and sends nothing
+- `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
+- The emailed link still lands on the invite form with the hire's initials
+- A failed create shows phase 7's banner and leaves no mail in Mailpit
+- The new badge and row action match `design-contract.md` verbatim at both breakpoints
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -1125,3 +1332,43 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [x] 6.11 Recovery journey works end to end — 233ad5e
 - [x] 6.12 Signing out clears the pending-token cookie — 233ad5e
 - [x] 6.13 No auth screen renders differently from before phase group B — 233ad5e
+
+### Phase 7: One-step framing for the provisioning failure
+
+#### Automated
+
+- [ ] 7.1 Unit tests pass, including new `staff-banner.test.ts`: `npm test`
+- [ ] 7.2 Both provisioning codes provably render the same sentence
+- [ ] 7.3 Lint passes: `npm run lint`
+- [ ] 7.4 Type checking passes: `npx astro check`
+- [ ] 7.5 Integration tests pass — the API still returns both codes: `npm run test:integration`
+- [ ] 7.6 Production build succeeds: `npm run build`
+
+#### Manual
+
+- [ ] 7.7 Both failure arms show one message naming the address
+- [ ] 7.8 `repairedMailFailed` names the address and still carries no `Ponów`
+- [ ] 7.9 Copy matches `design-contract.md` §9 verbatim
+- [ ] 7.10 A long address wraps without breaking the banner row at 390px
+
+### Phase 8: Two-step add — create, then invite
+
+#### Automated
+
+- [ ] 8.1 Unit tests pass, including the three-state derivation: `npm test`
+- [ ] 8.2 Integration proves zero mail on create and exactly one on invite
+- [ ] 8.3 Integration proves `inviteUserByEmail` succeeds for an already-created user
+- [ ] 8.4 Integration tests pass: `npm run test:integration`
+- [ ] 8.5 Type checking passes: `npx astro check`
+- [ ] 8.6 Lint passes: `npm run lint`
+- [ ] 8.7 Production build succeeds: `npm run build`
+- [ ] 8.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [ ] 8.9 `contract-surfaces.md` records the invite route and the widened status union
+
+#### Manual
+
+- [ ] 8.10 Adding a person creates a roster row immediately and sends nothing
+- [ ] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
+- [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
+- [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
+- [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
