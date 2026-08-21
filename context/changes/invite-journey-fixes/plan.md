@@ -1019,7 +1019,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [x] 1.8 Forced insert failure surfaces the new banner, not the network banner — 4552fad
 - [x] 1.9 `Ponów` completes the account and the person appears on the roster — 4552fad
 - [x] 1.10 Banner copy matches `design-contract.md` §9 verbatim — 4552fad
-- [ ] 1.11 Roster renders unchanged against `19-admin-desktop-employees.png` / `25-admin-mobile-employees.jpg`
+- [x] 1.11 Roster renders unchanged against `19-admin-desktop-employees.png` / `25-admin-mobile-employees.jpg` — 4552fad
 - [x] 1.12 A genuine network failure still shows the original network banner — 4552fad
 
 ### Phase 2: Password-set signal — data layer
