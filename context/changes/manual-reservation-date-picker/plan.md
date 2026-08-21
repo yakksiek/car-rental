@@ -641,12 +641,12 @@ grant changes.
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build passes: `npm run build`
-- [x] 3.4 Unit tests pass: `npm test`
-- [x] 3.5 Integration tests pass after the endpoint removal: `npm run test:integration`
-- [x] 3.6 No reference to `/api/availability` remains: `grep -rn "api/availability" src tests` returns nothing
+- [x] 3.1 Type checking passes: `npx astro check` — 571df4a
+- [x] 3.2 Linting passes: `npm run lint` — 571df4a
+- [x] 3.3 Build passes: `npm run build` — 571df4a
+- [x] 3.4 Unit tests pass: `npm test` — 571df4a
+- [x] 3.5 Integration tests pass after the endpoint removal: `npm run test:integration` — 571df4a
+- [x] 3.6 No reference to `/api/availability` remains: `grep -rn "api/availability" src tests` returns nothing — 571df4a
 
 #### Manual
 
@@ -659,22 +659,22 @@ grant changes.
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
-- [ ] 4.4 Unit tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro check`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build passes: `npm run build`
+- [x] 4.4 Unit tests pass: `npm test`
 
 #### Manual
 
-- [ ] 4.5 The two fields render as buttons showing "1 kwi 2026" with the calendar icon and chevron; the open one carries the ink border and 4px ring
-- [ ] 4.6 Tapping a field expands the calendar in flow; at 390px the footer stays pinned and the total remains visible
-- [ ] 4.7 A vehicle with a booking greys interiors solid and changeover days on the diagonal with the divider line; switching vehicle repaints the greying
-- [ ] 4.8 A range ending on a `pickupOnly` day is vetoed with the specific hint and resets to the clicked day
-- [ ] 4.9 The legend reads Wybrane / Dzień odbioru / zwrotu — wciąż dostępny / W pełni zajęte, and Zastosuj closes
+- [x] 4.5 The two fields render as buttons showing "1 kwi 2026" with the calendar icon and chevron; the open one carries the ink border and 4px ring (driven: h40/r10/border rgba(15,23,42,.08)/13px/600; active border rgb(15,23,42) + shadow 0 0 0 4px rgba(15,23,42,.06); label "2 wrz 2026")
+- [x] 4.6 Tapping a field expands the calendar in flow; at 390px the footer stays pinned and the total remains visible (driven at 390×780: submit box y=716..762, total visible)
+- [x] 4.7 A vehicle with a booking greys interiors solid and changeover days on the diagonal with the divider line; switching vehicle repaints the greying (driven: interior bg #D7DCE3 + disabled; changeover gradients carry #A9B2BE at calc(50%±0.6px); vehicle switch → transparent)
+- [x] 4.8 A range ending on a `pickupOnly` day is vetoed with the specific hint and resets to the clicked day (driven: hint "Wybrany dzień zwrotu jest niedostępny…" shown, range reset to the clicked day)
+- [x] 4.9 The legend reads Wybrane / Dzień odbioru / zwrotu — wciąż dostępny / W pełni zajęte, and Zastosuj closes (driven: all three labels visible; Zastosuj hides the popover)
 - [ ] 4.10 Vision-diff of the picker-open and form states (desktop + mobile) clean apart from recorded deviations
 - [ ] 4.11 The six canonical boards are exported into `design-review/` — this gates the vision-diff above
-- [ ] 4.12 With the create held open, the calendar is gone and no day can be clicked — Phase 1's 1.6 re-run on the new surface
-- [ ] 4.13 On desktop the scrim top-aligns (`flex-start`, `padding-top: 56`) while a field is open and re-centers when it closes
+- [x] 4.12 With the create held open, the calendar is gone and no day can be clicked — Phase 1's 1.6 re-run on the new surface (driven: 0 day cells in the DOM, all 6 controls disabled, done panel dates match the POSTed range)
+- [x] 4.13 On desktop the scrim top-aligns (`flex-start`, `padding-top: 56`) while a field is open and re-centers when it closes (driven: center/32px → flex-start/56px → center)
 
 ### Phase 5: Verification and vision-diff gate
 
