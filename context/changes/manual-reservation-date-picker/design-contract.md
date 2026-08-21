@@ -229,8 +229,12 @@ The done-panel shots (`*-05-created.png`) in the S-12 folder stay valid and are 
     panel's own warning treatment (`rounded-[13px]`, `bg-[var(--flota-warning-soft)]`, `AlertTriangle`
     `size 18`, `font-size:12.5 / weight:600`, `text-warning`, `margin-bottom:12`) reading
     **"Nie udało się sprawdzić dostępności."** — the panel's `avError` string verbatim, not a second wording.
-    It is repeated inside the picker because on mobile the picker is its own `absolute inset-0 z-[70]` layer
-    and **covers the panel outright**, so the grid would otherwise be the only thing on screen.
+    It is stated inside the picker because **the panel frequently cannot state it at all**. Driven 2026-08-21:
+    `resolveAvailability` returns `idle` until vehicle + BOTH dates are set, so on a freshly-opened modal the
+    panel shows the idle prompt and the failure appears nowhere — on **either** breakpoint (message
+    occurrences = 1, inside the picker, at 1440px and at 390px). Mobile then adds a second reason: the picker
+    is its own `absolute inset-0 z-[70]` layer and covers the panel outright, so even once a range exists the
+    panel is behind it. The picker is therefore the primary surface for this message, not a duplicate of it.
   - The **trigger stays enabled** in both states. Gating it (`disabled={busy || rangesState !== "ready"}`) was
     considered and rejected: it makes the common path pay for the rare failure, and a dead button with no
     explanation is worse than a picker that opens and says why it is empty.
