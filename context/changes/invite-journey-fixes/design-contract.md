@@ -192,12 +192,24 @@ The "repaired but mail not sent" case is a partial success, but it needs the adm
 success tone ships a `ShieldCheck` with no retry affordance — so error is the honest tone.
 (Phase 1 shipped three states here; phase 7 collapsed the two provisioning arms into one — §9.2.)
 
-**Retry affordance:** the provisioning-failure string keeps `retry` wired to `addEmployee(values)`
-on **both** API codes — the codes stay distinct for logs, the banner does not. The mail-failure
-string carries **no** retry — its remedy is the row's own action, which the copy names.
+**Retry affordance — restated for phase 9. This paragraph previously said the opposite; the
+reasoning changed, so the record changes with it rather than accumulating both.** The banner no
+longer carries a retry for the add flow at all, because it no longer carries the add flow's failures:
+phase 9 moved every one of them into the modal (§8.4, §10 entry 3), whose submit button is the single
+retry with the typed values still in the fields. What remains here is exactly one add-flow banner —
+the mail-failure string — and it carries **no** retry, unchanged and for its original reason: its
+remedy is the row's own action, which the copy names. The row actions (invite, reset, remove) keep
+`mutationError` + `Ponów`; they have no form to report into.
+
+~~the provisioning-failure string keeps `retry` wired to `addEmployee(values)` on **both** API codes
+— the codes stay distinct for logs, the banner does not.~~ **Superseded.** Both codes still resolve
+to one sentence — that half stands and moved to §9.4 — but the sentence is rendered in the modal.
 
 **Wrapping at 390px — accepted. Measured, not estimated** (rendered `/dashboard/staff`, 390×844,
-banner forced, `getComputedStyle` + `getBoundingClientRect`, 2026-08-21):
+banner forced, `getComputedStyle` + `getBoundingClientRect`, 2026-08-21). **The two `provisionFailed`
+rows are now historical**: phase 9 retired the address-interpolating banner form (§9.4), so the only
+rows that still describe a shipped element are `mutationError` and the mail-failure string. They are
+kept because they are what the phase-7 decision was taken against:
 
 | String                                                  | Chars | Lines at 390px |
 | ------------------------------------------------------- | ----- | -------------- |
@@ -213,10 +225,15 @@ in height and its `items-center` keeps the button vertically centred against the
 Verified at both address lengths: no horizontal overflow on the banner or the document, and the
 button keeps its full 77px.
 
-Accepted rather than fixed, and the contract's claim is now the measured one: against the string it
-replaces, `provisionFailed` is **one line shorter** for a realistic address and **ties at worst** for
-a pathological one. No `truncate` — the address is the payload, and a failed provisioning drives no
-roster row, so a clipped address would leave it nowhere in the product.
+Accepted rather than fixed, and the contract's claim was the measured one: against the string it
+replaced, `provisionFailed` was **one line shorter** for a realistic address and **tied at worst** for
+a pathological one. No `truncate` — the address was the payload, and a failed provisioning drives no
+roster row, so a clipped address would have left it nowhere in the product.
+
+**Phase 9 closed that argument by moving the message rather than shortening it.** Inside the modal the
+address is on screen in the field the admin just typed it into, so the banner is no longer "the only
+place in the product where that address exists" — and the clause that bought disclosure at four lines
+buys nothing at 400px. See §9.4.
 
 ### 8.2 Auth surfaces — parity spec
 
@@ -283,6 +300,49 @@ glyph the shipped `Wyślij zaproszenie` control already used — the add-modal C
 Phase 8 moves the label from the modal to the row and carries its glyph with it, rather than
 introducing a second glyph for one label. Recorded so a later fidelity pass does not re-flag it.
 
+### 8.4 Add-modal form-level error — phase 9
+
+**The submission failed, and it belongs to no field.** The modal's two shipped error slots are
+field-level (`StaffList.tsx:340`, `:363`) and can only attach to an input; a provisioning failure or
+a dropped connection attaches to neither. Before phase 9 those arms had nowhere to go but the roster
+banner — which the modal's own overlay paints over (§10 entry 3).
+
+**Type ramp, colour, glyph and gap are the field-level idiom verbatim.** Three properties differ, and
+all three are consequences of one measured fact: this string **wraps**, where a field error never
+does. Rendered `/dashboard/staff` with the modal open and `POST /api/staff` stubbed, `getComputedStyle`
+
+- `getBoundingClientRect` + `Range.getClientRects`, 2026-08-21:
+
+| Element                | Exact value                                                        |
+| ---------------------- | ------------------------------------------------------------------ |
+| Wrapper                | `text-destructive mt-5 flex items-start gap-1.5 text-[13px]`       |
+| Glyph                  | `AlertTriangle`, `mt-0.5 size-3.5 shrink-0`                        |
+| `role`                 | `alert`                                                            |
+| Placement              | Between the field group and the action row, inside `<form>`        |
+| Clears on              | edit of **either** field (a field error clears only its own field) |
+| Submit button while up | stays **enabled** — it is the retry                                |
+
+- **`items-start` + `mt-0.5`, not the idiom's `items-center`.** Measured: the connection string is
+  **2 lines at both breakpoints** — 400px content width on desktop, 342px at 390px — so `items-center`
+  put the 14px glyph at the line boundary, `iconMid` 19.5px against a first-line centre of 9px. With
+  `items-start` + `mt-0.5` both read **9px**: the glyph leads the sentence instead of floating beside
+  it. Values are not invented — this is the app's own idiom for a glyph leading wrapping text
+  (`ReservationForm.tsx:531` + `:540` `mt-0.5`; `pricing.astro:258` + `:259` `mt-px`). The one-line
+  provisioning string measures `iconMid` 9px too, so the same values serve both arms.
+- **`shrink-0`** stops the 14px glyph being squeezed by a wrapping message — inherited from the
+  banner's own multi-line arm (§8.1), which already carries it for the same reason.
+- **`mt-5`** is the modal's own block rhythm, not a new spacing decision: subtitle→fields and
+  fields→actions are both `mt-5`, and the measured gaps above and below the slot are **20px / 20px**.
+- **`role="alert"`** is the one addition with no field-level precedent, and it is an accessibility
+  affordance rather than a dimension. It is warranted here and not there: this message announces a
+  **server** outcome after an async submit that moves nothing on screen — the button simply returns to
+  idle — so without a live region a screen-reader user gets no notification at all. Deliberately not
+  back-fitted onto the two field-level slots; that is a separate a11y pass, not phase 9's scope.
+
+Measured, no overflow at either breakpoint: box 400×39 (desktop) / 342×39 (mobile) for the two-line
+connection string, 400×19.5 / 342×19.5 for the one-line provisioning string;
+`document.scrollWidth === clientWidth` in all four.
+
 ## 9. Verbatim Polish copy
 
 All strings live in `StaffList.tsx`'s `COPY` block beside `mutationError` (`:68`).
@@ -308,7 +368,7 @@ removes from that row (§10 entry 2), so it would name a control the admin canno
 
 | Key                              | String                                                                                                     | Phase |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----- |
-| `provisionFailed`                | `Nie udało się utworzyć konta dla {email}. Spróbuj ponownie.`                                              | 7     |
+| `provisionFailed`                | `Nie udało się utworzyć konta dla {email}. Spróbuj ponownie.` — **superseded by §9.4 (phase 9)**           | 7     |
 | `repairedMailFailed`             | `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.` | 8     |
 | `statusCreated`                  | `DODANY`                                                                                                   | 8     |
 | `statusCreatedMobile`            | `Dodany`                                                                                                   | 8     |
@@ -434,6 +494,43 @@ beside it.
   roster row, `list_staff` INNER-joins) is unchanged and still out of scope — see plan → "What We're
   NOT Doing"; phase 8 lowers its stakes, because no mail is sent for an account that failed.
 
+### 9.4 Phase 9 — approved 2026-08-21
+
+| Key               | String                                                                 | Where               |
+| ----------------- | ---------------------------------------------------------------------- | ------------------- |
+| `provisionFailed` | `Nie udało się utworzyć konta. Spróbuj ponownie.`                      | modal, form-level   |
+| `requestFailed`   | `Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.` | modal, form-level   |
+| `duplicateEmail`  | `Ten adres e-mail jest już w zespole.` — **unchanged, moved**          | modal, e-mail field |
+
+**Why this Polish:**
+
+- **Both lead with the identical state-of-the-world clause and differ only in the remedy**, which is
+  §9's two-sentence convention (`mutationError`, `lastAdminBody`) applied to a pair. A dropped
+  connection keeps its `Sprawdź połączenie` because that is the one failure the admin can act on
+  directly; a provisioning failure has no such hint to give, so it goes straight to the imperative.
+  `staff-banner.test.ts` pins the shared lead, so an edit to one that does not touch the other goes
+  red rather than quietly splitting the family.
+- **Neither names the address, and this is a reversal of §9.2's reasoning that the move earns.**
+  §9.2 interpolated `{email}` into the banner because "a failed provisioning is invisible everywhere
+  else — the orphan drives no roster row, so the banner is the only place in the product where that
+  address exists." That was true of a banner shown after the modal had closed. It is false inside the
+  modal: the address is on screen, in the e-mail field two rows above, in the admin's own typing.
+  Repeating it there is redundancy, not disclosure — and the modal is ~400px wide, where the clause
+  costs a third line. **`provisionFailed`'s address-interpolating banner form retires with the
+  banner it was written for** (owner, 2026-08-21).
+- **`Nie udało się utworzyć konta` over `zapisać zmiany`.** The shipped `mutationError` is the ROW
+  actions' banner and has to cover invite, reset and remove, so it says "change". In a modal titled
+  `Dodaj pracownika` the specific verb is available and truer. `mutationError` itself is unchanged
+  and still serves the row actions — phase 9 does not touch it.
+- **`duplicateEmail` is not new copy.** The string is `COPY.dupEmail` verbatim, moved from the island
+  into `staff-banner.ts` so the routing table owns every arm's string rather than owning three of
+  four. Same words, same slot, same behaviour.
+- **Impersonal `nie udało się`**, two sentences, `—`/`…` conventions, gender-neutral: all as §9.3.
+
+**No new string for a failed row-action send.** Unchanged from §9.3: the row's invite and reset
+actions keep `mutationError` + `Ponów`, because they have no form to report into — the banner is
+where the admin is for those.
+
 ## 10. Deviations register
 
 ### Entry 1 — Roster provisioning-failure banner — `deviation(no artboard — copy-only variant of a shipped element)`
@@ -451,8 +548,9 @@ against for this state, exactly as there was none for the R14 card that `auth-fo
 **Every dimension is inherited-exact, not invented.** The banner element itself already ships and is
 already governed by contract §3.12: wrapper, tone classes, icon set, message type ramp, retry button
 and placement are all transcribed verbatim in §8.1 above. **This deviation adds two strings and
-zero dimensions** (three until phase 7 collapsed the provisioning pair — §9.2). No new component, no
-new token, no new glyph, no new spacing decision. Phase 7 adds no dimension either: the only new
+zero dimensions** (three until phase 7 collapsed the provisioning pair — §9.2; **one** after phase 9
+moved the provisioning arm off the banner entirely — entry 3 — leaving only the mail-failure string).
+No new component, no new token, no new glyph, no new spacing decision. Phase 7 adds no dimension either: the only new
 layout fact is that an interpolated address may wrap the message to a second line at 390px, and §8.1
 records that as accepted.
 
@@ -512,6 +610,76 @@ justification.
 `boards-after/emp-add.png`. The assertion for the two shipped badge tones and every unchanged row is
 **zero delta** — the third state is additive.
 
+### Entry 3 — Add-modal form-level error — `deviation(no artboard — new state on a shipped surface)`
+
+**The defect.** Every failure of `POST /api/staff` was reported in the wrong place, and one of them
+was reported nowhere at all. Measured against the running app (1280×900, `/dashboard/staff`,
+`elementFromPoint` hit-test at the banner's centre, 2026-08-21):
+
+| Arm                                     | Modal      | Was the error actually visible?                                     |
+| --------------------------------------- | ---------- | ------------------------------------------------------------------- |
+| 409 duplicate                           | stays open | **Yes** — inline under the e-mail field, the shipped idiom          |
+| `provision_rolled_back` / `_orphaned`   | closed     | Yes, as a banner — but the admin was moved off the form they filled |
+| Unhandled 500 / network (`fetch` threw) | stays open | **NO**                                                              |
+
+The last row is the defect. `addEmployee`'s network arm set the banner and left the modal open, so
+the banner painted **behind** `ModalShell`'s overlay (`fixed inset-0 z-[60] … bg-[rgba(20,18,22,0.55)]
+backdrop-blur-sm`). Hit-testing the banner's centre returned the overlay, not the banner: the admin
+submitted, the button returned to idle, and their only feedback was a blurred red smear behind a
+dimmed backdrop. **The most common failure — a dropped connection, the one case where the typed
+values are still perfectly good — was the one that reported nothing.**
+
+**Why it is a deviation.** A form-level error on the add modal is a new user-facing state with no
+artboard: catalog 19/25 carry the healthy roster only, `boards-after/emp-add.png` carries the healthy
+modal, and §10 entry 1 already records that there is no banner artboard either. There is nothing to
+diff against, exactly as there was none for the R14 card `auth-followups` shipped.
+
+**Every dimension is inherited-exact, and §8.4 transcribes them with their measurements.** Type ramp,
+colour, glyph and gap come from the modal's own field-level idiom; `shrink-0` from the banner's
+multi-line arm; `mt-5` from the modal's block rhythm. The three properties that differ from the
+field-level idiom — `items-start`, the glyph's `mt-0.5`, and `shrink-0` — are consequences of one
+**measured** fact (this string wraps to two lines at both breakpoints, where a field error never
+does), and each takes its value from an existing app idiom rather than from an eye
+(`ReservationForm.tsx:531`+`:540`, `pricing.astro:258`+`:259`). **No new component, no new token, no
+new glyph, no new spacing decision.** One non-dimensional addition, `role="alert"`, is justified in
+§8.4.
+
+**This reopens a phase-1 decision deliberately.** `StaffList.tsx` recorded the reasoning: _"Close the
+modal: the banner's `Ponów` is the single retry surface, and leaving the form open behind it would
+offer a competing second one."_ That was sound while the invite mail had already gone out — closing
+the modal was the signal that something irreversible **had** happened, against a shipped bug where
+the modal stayed open and implied nothing had. Two things changed it: phase 7 collapsed the copy to
+`Spróbuj ponownie.`, an instruction to retry issued after the form the admin would retry in had been
+taken away; and phase 8 stopped sending any mail on create, so a failed create became fully retryable
+in place with nothing delivered. The "competing retry surface" problem did not disappear — it
+**inverted**. The old comment is replaced, not left standing beside its opposite.
+
+**Which surface owns which failure — the decision, recorded** (owner, 2026-08-21). Option (a) of the
+plan's §3: the two failure arms set **no banner at all**. The modal is the only report and its submit
+is the only retry, so exactly one retry control is on screen for one failure. Option (b) — a banner
+kept "for the record" without `Ponów` — was rejected: it puts two messages on screen for one failure,
+one of them invisible until the admin cancels, and the record it preserves is not a record (the next
+mutation clears it). The consequence is accepted openly: if the admin cancels the modal, the failure
+leaves no trace. That is the same trace a cancelled form leaves anywhere, and the orphan it might
+have named is repairable by re-adding the address — the `existing` branch is the repair path.
+
+**`repairedMailFailed` is out of scope and does not move.** It rides a 200, the row really did land,
+its modal really should close, and its remedy is the row's own action rather than a retry. It is the
+one add outcome that is still a banner — and nothing about it hides behind an overlay.
+
+**The routing is a tested pure function, not an `if` in an island.** `resolveAddReport` in
+`src/lib/staff-banner.ts` maps every arm — HTTP status plus `code`, including the `fetch`-threw case
+— onto a target, a slot and a string, and `staff-banner.test.ts` sweeps the whole table for the
+invariant that produced this bug: **no arm may report to the banner while the modal stays open.** The
+`inModal` / `inBanner` / `silent` constructors make that state unrepresentable as well as tested.
+There is deliberately no `both` target: one failure, one message.
+
+**Polish copy** is §9.4 verbatim, with the address reversal argued there.
+
+**Vision-diff gate.** §11's two phase-9 rows: the modal's error state at 1280px and 390px, both arms.
+The assertion is that the error slot matches §8.4 exactly and **every other element of the modal is
+zero-delta** against `boards-after/emp-add.png` — the slot is additive.
+
 ### Inherited — entry 14 of the S-14 contract may go stale
 
 `…/2026-08-11-auth-surface-hardening/design-contract.md` §10 entry 14 names Bug 1's population as one
@@ -534,6 +702,8 @@ artboards into `design-system.md` should carry the correction forward.
 | `/dashboard/staff`, DODANY row present (desktop)       | `design-review/boards-after/emp-roster.png`                                                 | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta |
 | `/dashboard/staff`, DODANY row present (tablet/mobile) | `design-review/boards-after/emp-tablet.png`                                                 | Same rule reflowed; the ✕ and every other element unchanged                         |
 | `/dashboard/staff`, add modal                          | `design-review/boards-after/emp-add.png`                                                    | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                               |
+| `/dashboard/staff`, add modal + form error (desktop)   | `design-review/rendered/modal-form-error-{d,provision-d}.png`                               | Error slot matches §8.4 exactly; every other element zero-delta vs `emp-add.png`    |
+| `/dashboard/staff`, add modal + form error (mobile)    | `design-review/rendered/modal-form-error-{m,provision-m}.png`                               | Same reflowed at 390px; glyph on the first line, no overflow                        |
 | `/auth/link-conflict`                                  | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                        |
 | `/auth/reset-password` × 6 states                      | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                        |
 
