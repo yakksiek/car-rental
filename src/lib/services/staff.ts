@@ -5,6 +5,7 @@ import { z } from "zod";
 // others
 import type { Database } from "../../db/database.types";
 import type { AppRole } from "../../types";
+import { deriveStaffStatus, type StaffStatus } from "../staff-status";
 
 // Staff service (S-08). Encapsulates the roster read + the three account
 // provisioning mutations, mirroring the tagged-union result convention of
@@ -43,16 +44,25 @@ export interface StaffMember {
   email: string;
   fullName: string | null;
   role: AppRole;
-  status: "active" | "invited";
+  status: StaffStatus;
   deactivatedAt: string | null;
   invitedAt: string | null;
   lastSignInAt: string | null;
   createdAt: string;
 }
 
+/**
+ * What became of the activation email on a repair. `not_needed` means the person
+ * already has a working password, so none was attempted. Carried in the result
+ * rather than thrown or swallowed, the same two-systems shape
+ * `services/email-delivery.ts` uses: the account really was repaired, so the
+ * route still answers 200 and the mail outcome rides in the body.
+ */
+export type ActivationMailOutcome = "sent" | "failed" | "not_needed";
+
 export type CreateEmployeeResult =
   | { status: "created"; member: StaffMember }
-  | { status: "reactivated"; member: StaffMember }
+  | { status: "reactivated"; member: StaffMember; activationMail: ActivationMailOutcome }
   | { status: "duplicate_active" }
   // The net-new arm's invite mail is already delivered when the profiles insert
   // fails, so the failure cannot be a bare throw. Whether the compensating
@@ -72,12 +82,6 @@ export interface DeactivateResult {
 const BAN_DURATION = "876000h";
 const UNBAN_DURATION = "none";
 
-// Status derivation (plan.md): ACTIVE once the user has ever signed in; INVITED
-// while the invite is outstanding (no last_sign_in_at yet).
-function deriveStatus(lastSignInAt: string | null): StaffMember["status"] {
-  return lastSignInAt ? "active" : "invited";
-}
-
 interface ListStaffRow {
   user_id: string;
   full_name: string | null;
@@ -86,6 +90,7 @@ interface ListStaffRow {
   deactivated_at: string | null;
   invited_at: string | null;
   last_sign_in_at: string | null;
+  password_set_at: string | null;
   created_at: string;
 }
 
@@ -107,7 +112,7 @@ export async function listStaff(client: Client | null): Promise<StaffMember[]> {
     email: row.email,
     fullName: row.full_name,
     role: row.role,
-    status: deriveStatus(row.last_sign_in_at),
+    status: deriveStaffStatus(row.password_set_at),
     deactivatedAt: row.deactivated_at,
     invitedAt: row.invited_at,
     lastSignInAt: row.last_sign_in_at,
@@ -161,7 +166,7 @@ export async function createEmployee(
   if (existing) {
     const { data: profile, error: profileErr } = await admin
       .from("profiles")
-      .select("deactivated_at")
+      .select("deactivated_at, password_set_at")
       .eq("user_id", existing.id)
       .maybeSingle();
     if (profileErr) {
@@ -184,18 +189,31 @@ export async function createEmployee(
       throw upsertErr;
     }
     // Reflect the person's REAL state, not a hardcoded "invited":
-    //   • signed in before → ACTIVE again immediately; their existing password
-    //     still works, so no email is sent (an "invited" label with no mail was
-    //     the confusing bug).
-    //   • never accepted the original invite (no password) → stay INVITED and
-    //     send a fresh activation (recovery) email so the label is honest.
-    const wasActive = existing.lastSignInAt != null;
-    if (!wasActive) {
-      await admin.auth.resetPasswordForEmail(email, { redirectTo }).catch(() => undefined);
+    //   • has a password → ACTIVE again immediately; it still works, so no email
+    //     is sent (an "invited" label with no mail was the confusing bug).
+    //   • never set one → stay INVITED and send a fresh activation (recovery)
+    //     email so the label is honest.
+    //
+    // Read from the profile row already fetched above, NOT from
+    // `existing.lastSignInAt`: GoTrue stamps last_sign_in_at on the invite link
+    // exchange, so that proxy reads a hire who merely clicked their link as
+    // already having a password — and then sends them nothing. A profile-less
+    // orphan (`profile == null`) correctly falls to the INVITED arm.
+    const hasPassword = profile?.password_set_at != null;
+    let activationMail: ActivationMailOutcome = "not_needed";
+    if (!hasPassword) {
+      // Destructured, not `.catch()`-ed: supabase-js RESOLVES with `{ error }`
+      // rather than rejecting, so the old `.catch(() => undefined)` was dead code
+      // and the error was discarded either way. On hosted Supabase the 2-emails/
+      // hour cap makes that failure real — a repair after the orphaning invite
+      // already burned the quota returned a green roster row with no mail sent.
+      const { error: mailErr } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+      activationMail = mailErr ? "failed" : "sent";
     }
     return {
       status: "reactivated",
-      member: buildMember(existing.id, email, fullName, wasActive ? "active" : "invited", existing.lastSignInAt),
+      member: buildMember(existing.id, email, fullName, hasPassword ? "active" : "invited", existing.lastSignInAt),
+      activationMail,
     };
   }
 
@@ -246,7 +264,7 @@ function buildMember(
   id: string,
   email: string,
   fullName: string,
-  status: StaffMember["status"] = "invited",
+  status: StaffStatus = "invited",
   lastSignInAt: string | null = null,
 ): StaffMember {
   return {

@@ -101,6 +101,13 @@ export const POST: APIRoute = async (context) => {
     return fail(context, gotrueErrorCode(error));
   }
 
+  // Stamp the owned password-set signal, in the same relative position as
+  // `reset-password.ts` — before the sign-out. Ordering is free here (scope is
+  // "others", so the caller survives), but keeping the two symmetrical is what
+  // stops a later edit from reintroducing the ordering bug over there. A failed
+  // stamp does not fail the request; the password has already changed.
+  await supabase.rpc("mark_password_set");
+
   // (g) Revoke every OTHER session for this user. `updateUser` revokes nothing on
   // its own, so without this a stolen cookie outlives the password change — the one
   // remedy a compromised staffer has would not actually remedy anything. It also

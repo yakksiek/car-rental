@@ -1026,14 +1026,14 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly: `npx supabase migration up`
-- [x] 2.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
-- [x] 2.3 Type checking passes: `npx astro check`
-- [x] 2.4 Lint passes: `npm run lint`
-- [x] 2.5 Integration tests pass: `npm run test:integration`
-- [x] 2.6 `rpc-execute-grants.test.ts` proves anon refused on `list_staff`, `deactivate_staff`, `mark_password_set`
-- [x] 2.7 Backfill is behaviour-neutral — every seeded account's roster status unchanged
-- [x] 2.8 `contract-surfaces.md` updated for the schema, RPC, and `CreateEmployeeResult` changes
+- [x] 2.1 Migration applies cleanly: `npx supabase migration up` — cff25da
+- [x] 2.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff — cff25da
+- [x] 2.3 Type checking passes: `npx astro check` — cff25da
+- [x] 2.4 Lint passes: `npm run lint` — cff25da
+- [x] 2.5 Integration tests pass: `npm run test:integration` — cff25da
+- [x] 2.6 `rpc-execute-grants.test.ts` proves anon refused on `list_staff`, `deactivate_staff`, `mark_password_set` — cff25da
+- [x] 2.7 Backfill is behaviour-neutral — every seeded account's roster status unchanged — cff25da
+- [x] 2.8 `contract-surfaces.md` updated for the schema, RPC, and `CreateEmployeeResult` changes — cff25da
 
 #### Manual
 
@@ -1044,14 +1044,14 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass, including new `staff-status.test.ts`: `npm test`
-- [ ] 3.2 Integration tests pass: `npm run test:integration`
-- [ ] 3.3 §1.5(a) regression test asserts INVITED + mail sent for a clicked-but-never-set hire
-- [ ] 3.4 Orphan-shape repair test (`profile === null`) passes
-- [ ] 3.5 A repair with a failed activation mail returns 200 carrying the mail outcome
-- [ ] 3.6 Type checking passes: `npx astro check`
-- [ ] 3.7 Lint passes: `npm run lint`
-- [ ] 3.8 Production build succeeds: `npm run build`
+- [x] 3.1 Unit tests pass, including new `staff-status.test.ts`: `npm test`
+- [x] 3.2 Integration tests pass: `npm run test:integration`
+- [x] 3.3 §1.5(a) regression test asserts INVITED + mail sent for a clicked-but-never-set hire
+- [x] 3.4 Orphan-shape repair test (`profile === null`) passes
+- [x] 3.5 A repair with a failed activation mail returns 200 carrying the mail outcome
+- [x] 3.6 Type checking passes: `npx astro check`
+- [x] 3.7 Lint passes: `npm run lint`
+- [x] 3.8 Production build succeeds: `npm run build`
 
 #### Manual
 
