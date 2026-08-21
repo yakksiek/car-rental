@@ -84,6 +84,14 @@ export const POST: APIRoute = async (context) => {
     // and `code` is what makes it distinguishable from an unhandled 500 — those
     // carry Astro's HTML body with no `code`, so the island falls back to the
     // network banner exactly as before.
+    //
+    // KEEP BOTH CODES. As of phase 7 the roster island renders one identical
+    // sentence for the two (`lib/staff-banner.ts`), so this looks like a
+    // distinction with no consumer — it is not. `provision_orphaned` means the
+    // compensating `deleteUser` ALSO failed and a role-less auth user survives;
+    // that is a system-health signal for logs and monitoring, and it is the only
+    // place it is emitted. The collapse is a UI decision about what helps an
+    // admin act; the seam for it is the island, not this route or the service.
     case "provision_rolled_back":
       return json(500, { error: MSG.provisionFailed, code: "provision_rolled_back" });
     case "provision_orphaned":

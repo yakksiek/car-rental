@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
+import { provisionFailureMessage } from "../../lib/staff-banner";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -66,11 +67,14 @@ const COPY = {
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
   mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
-  // Provisioning half-succeeded: the invite mail is already in the hire's inbox,
-  // so the network banner above would be a lie. design-contract.md §9, verbatim.
-  provisionRolledBack:
-    "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Cofnięto zaproszenie — dodaj osobę ponownie.",
-  provisionOrphaned: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć. Użyj „Ponów”, aby je naprawić.",
+  // Provisioning failed, so the network banner above would be a lie. ONE sentence
+  // for both API codes — the distinction they carry is system health, not the
+  // admin's situation — and it names the address, because a failed provisioning
+  // drives no roster row and this is the only place that address appears.
+  // Function-valued COPY member, as `eyebrowMobileWord` below already is; the
+  // string itself is authored in `lib/staff-banner.ts` so the `unit` project can
+  // gate it (design-contract.md §9.2, verbatim).
+  provisionFailed: provisionFailureMessage,
   repairedMailFailed:
     "Konto zostało odnowione, ale nie udało się wysłać e-maila aktywacyjnego. Użyj „Resetuj hasło” przy tej osobie.",
   retry: "Ponów",
@@ -506,19 +510,18 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       if (res.status === 409) {
         return { dupEmail: true };
       }
-      // Provisioning half-succeeded (the invite mail is already out). The route
-      // marks it with a machine-readable `code`; an unhandled 500 has none and
-      // falls through to the network banner below, unchanged.
+      // Provisioning failed. The route marks it with a machine-readable `code`;
+      // an unhandled 500 has none, so the resolver answers null and we fall
+      // through to the network banner below, unchanged. Both provisioning codes
+      // resolve to the same sentence — the API keeps them apart for logs and
+      // monitoring (`api/staff.ts`), the admin sees one message.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
-      if (failure?.code === "provision_rolled_back" || failure?.code === "provision_orphaned") {
+      const provisionFailed = COPY.provisionFailed(failure?.code, values.email);
+      if (provisionFailed) {
         // Close the modal: the banner's `Ponów` is the single retry surface, and
         // leaving the form open behind it would offer a competing second one.
         setAddOpen(false);
-        setBanner({
-          kind: "error",
-          msg: failure.code === "provision_rolled_back" ? COPY.provisionRolledBack : COPY.provisionOrphaned,
-          retry: () => void addEmployee(values),
-        });
+        setBanner({ kind: "error", msg: provisionFailed, retry: () => void addEmployee(values) });
         return;
       }
       setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
