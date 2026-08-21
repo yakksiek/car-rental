@@ -1070,10 +1070,25 @@ address through `getStaffEmail` (never trust a client-sent one, `staff.ts:286`) 
 - A **resend invalidates the previous link**. There is never more than one live invite token per
   person, so a resend is safe and the older email's link dies rather than lingering.
 
-**One consequence still open.** With the invite/resend action on every password-less row,
-`Resetuj hasło` sits beside it on those same rows and sends the _wrong journey_ for that population.
-Recommendation: make the two actions mutually exclusive — `Wyślij zaproszenie` when
-`password_set_at` is null, `Resetuj hasło` only once it is set. Decide before building §4.
+**The two row actions become mutually exclusive** (owner, 2026-08-21). `Wyślij zaproszenie` while
+`password_set_at` is null; `Resetuj hasło` only once it is set. The reason is correctness, not
+clutter: for a password-less person `Resetuj hasło` sends `resetPasswordForEmail`, i.e. a _recovery_
+link and recovery copy — the option-2b downgrade — so it is the wrong door rather than a redundant
+one, and its label presupposes a password that does not exist. Nothing is lost, because the invite
+and its resend cover that population with the right journey.
+
+**This forces a copy change, and the two must land together.** `repairedMailFailed` fires **only**
+when the target has no password (`activationMail` is `failed` only under `!hasPassword`), and its
+string names `„Resetuj hasło"` — the one control that row would no longer show. Since this phase's
+repair arm **invites** rather than resets, the failed mail is a failed _invite_ and the remedy is
+`Wyślij zaproszenie`, which that row does carry. Rewrite the string to name it. (Phase 7 adds the
+address to this string and that survives; only the control it names changes here — do not re-do the
+address.) Leaving the two apart would break design-contract §9's stated rule that the copy names
+controls the admin can actually see on screen.
+
+Nothing in `e2e/` or `tests/` asserts `Resetuj hasło` on a row, so hiding it breaks no gate — which
+is itself worth noting: the action column becoming state-dependent is a **design** change with no
+test to catch a mistake in it, so it needs the §5 contract entry and the rendered check in 8.14.
 
 #### 2. The third status
 
@@ -1394,6 +1409,7 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 - [ ] 8.11 `Wyślij zaproszenie` sends the invite; the badge moves to ZAPROSZONY
 - [ ] 8.11a A resend to an already-invited hire works, and the previous link stops working
 - [ ] 8.11b A hire who already has a password is offered no invite action
+- [ ] 8.11c A password-less row offers no `Resetuj hasło`; `repairedMailFailed` names the action it does show
 - [ ] 8.12 The emailed link still lands on the invite form with the hire's initials
 - [ ] 8.13 A failed create shows phase 7's banner and leaves no mail in Mailpit
 - [ ] 8.14 The new badge and row action match `design-contract.md` verbatim at both breakpoints
