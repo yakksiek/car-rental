@@ -362,7 +362,7 @@ design decision to be renegotiated at review time.
 
 ---
 
-## 12. Design follow-ups (not yet done)
+## 12. Design follow-ups
 
 Captured 2026-08-21 so they survive outside a conversation. None of these blocks phase 7.
 
@@ -375,26 +375,29 @@ employee-state artboards under `design-review/` that were never pulled into the 
 Phase 7 rewrites the banner copy and should diff against `emp-error.png`; phase 8 renames the
 add-modal CTA and should diff against `emp-add.png`. Costs nothing and needs no decisions.
 
-### 12.2 The `employee-states.jsx` edit for phase 8
+### 12.2 The `employee-states.jsx` edit for phase 8 — **DONE 2026-08-21**
 
-The design project is code-backed and writable (`canEdit: true`), so the fix is a source edit, not a
-prompt. Read 2026-08-21; four changes, in one file except where noted:
+Applied to the design project and read back to confirm. Three files written:
+`shared.jsx` (`createdS`, `addConfirm`, `addSub`, `emptyRosterSub` — EN + PL), `desktop-screens.jsx`
+(`EmpStatusBadge` gains a third neutral-grey state; **additive**, so `active`/`invited` render
+byte-identically and no other board moves), and `employee-states.jsx` (a `created` member, a fifth
+filter pill in both layouts, mutually-exclusive row actions in `EsRow` **and** `EtRow`, the `Dodaj`
+CTA, plus an avatar-overflow count that was hardcoded `+1`).
 
-| Edit              | What                                                                                                                                                                              |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EsRow` + `EtRow` | Gate the actions on status. Both currently render `{t.resetPassword}` unconditionally — including `ES_TEAM[4]`, `status: 'invited'`, which is the defect §10's new entry records. |
-| `ES_TEAM`         | Add a member in the created-but-not-invited state                                                                                                                                 |
-| Filter pills      | A fifth pill + count, in **both** `EsShell` (desktop) and `ScreenEmpTablet`                                                                                                       |
-| `EmpStatusBadge`  | A third variant — **lives in `shared.jsx`**, a global other screens import. This is the only edit with blast radius.                                                              |
+Verified before overwriting a shared file: every hunk applied exact-match-or-abort, all three files
+parse as JSX, and — the step that actually mattered — the **unpatched** baseline was rendered first
+and matched the canonical design, proving the local reconstruction was faithful. Boards at 2× are in
+`design-review/boards-{before,after}/`.
 
-The PNGs are **exports**, but re-exporting is **not** a hand-off — the design project ships its own
-capture harness. `export-shot.html` holds a `SCREENS` map keyed by board id with per-board `{w, h}`
-and a component thunk, and exposes `window.__renderScreen(id, lang)` plus `__render2x` /
-`__renderFit`. So the loop is entirely ours: edit the JSX → `get_file` `export-shot.html` + the
-slice's `.jsx` + `shared.jsx` → serve the directory → drive `__renderScreen` with Playwright at
-`deviceScaleFactor: 2` → screenshot `.exp`. Stub anything outside `shared.jsx` (`Sidebar` does) and
-make the stub visibly flat so it cannot be mistaken for canonical chrome. Fonts must be the app's own
-self-hosted **variable** Inter, not the CDN's static instances. Copy for the new state is approved in §9.2.
+### 12.2a Re-export the canonical `emp-*` PNGs — **STILL OPEN**
+
+The JSX changed, so the project's own `design-review/emp-*.png` exports now show the OLD design.
+This is the same stale-cache problem §1's corrections describe, freshly created. The boards under
+`boards-after/` are **preview renders at my own dimensions**, not the canonical `data-dc-slot`
+exports — they are evidence, not replacements. Re-export `emp-add`, `emp-add-dup`, `emp-remove`,
+`emp-lastadmin`, `emp-self`, `emp-empty`, `emp-nores`, `emp-loading`, `emp-error` and `am-team` from
+`Flota Rental.html` (note: `export-shot.html`'s `SCREENS` map has **no** `emp-*` entries, so either
+add them or drive `Flota Rental.html` directly).
 
 ### 12.3 A lesson worth promoting
 
@@ -402,5 +405,12 @@ Three of the four design findings in this change were **un-pulled or stale repo 
 divergences: catalog 19's tiles (a stale export of a design that had already moved to the tab bar),
 the "missing" banner artboard (it exists), and the reset-on-invited-row defect (live in the design
 source, invisible from the repo). The Design Alignment Audit is a _paper_ exercise against the repo's
-screenshots, and nothing keeps that cache in sync with the project it came from. Candidate for
-`/10x-lesson`: **freshness-audit against the live design project, not the repo's copy of it.**
+screenshots, and nothing keeps that cache in sync with the project it came from.
+
+A fourth finding sharpens it. `addSub` — the add modal's subtitle, `Wyślemy link aktywacyjny…` —
+is false under two-step and sits directly above the new `Dodaj` button. It was invisible to code
+review: the diff never touched that line, and nothing flagged it. It surfaced only when the board was
+**rendered and looked at**. Same for `emptyHint`. Candidate for `/10x-lesson`, now two-part:
+**freshness-audit against the live design project rather than the repo's copy, and render the board
+before believing a copy change is complete — a stale promise one line above your edit is invisible in
+a diff.**
