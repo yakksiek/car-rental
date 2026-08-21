@@ -17,6 +17,19 @@ import SignOutButton from "../../components/auth/SignOutButton";
 //
 // The token was NOT consumed on the way here, so the link still works after the
 // sign-out — which is exactly what the copy promises.
+//
+// That promise used to be only half true, and it is the reason this change
+// exists. The callback refused to exchange over an existing session, so arriving
+// HERE spent nothing — but merely OPENING the link in a clean browser did, on the
+// GET, as the form rendered. So the hire whose own half-finished link session was
+// in the way signed out, reopened, and got "Link wygasł" (Bug 2). With the
+// exchange deferred to the set-password POST (invite-journey-fixes), a token is
+// spent only when a password is actually set, so "wyloguj się, a potem otwórz
+// link ponownie" now holds for every path that reaches this card. `/api/auth/signout`
+// also clears the pending-token cookie, so the sign-out leaves a clean slate.
+//
+// This file renders exactly as it did before — design-contract §8.2 asserts zero
+// delta against `auth-authed-{d,m}.png`. Only this comment changed.
 const user = Astro.locals.user;
 if (!user) {
   // Nobody is signed in, so there is no conflict to explain — someone typed the

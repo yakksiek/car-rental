@@ -1066,15 +1066,15 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 4.1 Migration applies cleanly: `npx supabase migration up`
-- [x] 4.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff
-- [x] 4.3 New unit tests for cookie payload and branch selection pass: `npm test`
-- [x] 4.4 `rpc-execute-grants.test.ts` covers the token-lookup RPC in its public block (anon CAN call it)
-- [x] 4.5 RPC fails closed on §1's three clauses — wrong `type` → no row, expired → no row, deactivated → null role
-- [x] 4.6 Type checking passes: `npx astro check`
-- [x] 4.7 Lint passes: `npm run lint`
-- [x] 4.8 Integration tests pass: `npm run test:integration`
-- [x] 4.9 `contract-surfaces.md` + `known-issues.md` updated (PKCE row, token-lookup RPC, GoTrue coupling)
+- [x] 4.1 Migration applies cleanly: `npx supabase migration up` — b3afb07
+- [x] 4.2 Generated types in sync: `npx supabase gen types typescript --local` leaves no diff — b3afb07
+- [x] 4.3 New unit tests for cookie payload and branch selection pass: `npm test` — b3afb07
+- [x] 4.4 `rpc-execute-grants.test.ts` covers the token-lookup RPC in its public block (anon CAN call it) — b3afb07
+- [x] 4.5 RPC fails closed on §1's three clauses — wrong `type` → no row, expired → no row, deactivated → null role — b3afb07
+- [x] 4.6 Type checking passes: `npx astro check` — b3afb07
+- [x] 4.7 Lint passes: `npm run lint` — b3afb07
+- [x] 4.8 Integration tests pass: `npm run test:integration` — b3afb07
+- [x] 4.9 `contract-surfaces.md` + `known-issues.md` updated (PKCE row, token-lookup RPC, GoTrue coupling) — b3afb07
 
 #### Manual
 
@@ -1088,12 +1088,12 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 5.1 Integration tests pass: `npm run test:integration`
-- [ ] 5.2 Unit tests pass: `npm test`
-- [ ] 5.3 Type checking passes: `npx astro check`
-- [ ] 5.4 Lint passes: `npm run lint`
-- [ ] 5.5 Production build succeeds: `npm run build`
-- [ ] 5.6 Retryability: token survives a password mismatch and a rejected password
+- [x] 5.1 Integration tests pass: `npm run test:integration`
+- [x] 5.2 Unit tests pass: `npm test`
+- [x] 5.3 Type checking passes: `npx astro check`
+- [x] 5.4 Lint passes: `npm run lint`
+- [x] 5.5 Production build succeeds: `npm run build`
+- [x] 5.6 Retryability: token survives a password mismatch and a rejected password
 
 #### Manual
 
