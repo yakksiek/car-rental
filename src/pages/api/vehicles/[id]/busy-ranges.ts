@@ -33,7 +33,18 @@ const MSG = {
 } as const;
 
 function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      // Availability answers must never be replayed from a cache. The modal's
+      // pre-flight already passes `cache: "no-store"` on its own fetch, but that
+      // only binds THAT caller — this binds the response itself, so a future
+      // caller or any intermediary is covered too. Cheap: the read is per-vehicle
+      // and already indexed.
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 export const GET: APIRoute = async (context) => {
