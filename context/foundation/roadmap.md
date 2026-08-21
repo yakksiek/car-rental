@@ -315,15 +315,20 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
 - **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
 - **Parallel with:** S-11, S-13.
-- **Blockers:** ~~the design source needs updating first~~ **none — resolved 2026-08-20 at plan time.** A
-  DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
+- **Status:** **DONE 2026-08-21** — implemented across 5 phases (`847ad96`, `1097951`, `571df4a`, `4b57ea7`,
+  `daf47a6`), vision-diff closed.
+- **Blockers:** ~~the design source needs updating first~~ ~~the six boards must be exported~~ **none — both
+  resolved.** A DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
   `MrD_Pick`/`MrM_Pick`; the `Termin` fields are `mrDateBtn` buttons, not native date inputs). The source was
-  updated after S-12's screenshots were exported, so the stale artifact is the **S-12 contract**, which records
+  updated after S-12's screenshots were exported, so the stale artifact was the **S-12 contract**, which recorded
   the native inputs `exact`. Corrected in `context/changes/manual-reservation-date-picker/design-contract.md`.
-  **One blocker does remain, and it is a hand-off, not a design:** the six boards
-  (`MrD_Pick` / `MrM_Pick` + the four re-exported form boards) must be exported into the change's
-  `design-review/`, which is still empty. The vision-diff gate (plan 4.10 / 4.11 / 5.3) cannot close without
-  them; nothing else in the slice is blocked.
+  The six boards then landed in the change's `design-review/` by rendering the canonical source through the
+  design project's own `export-shot.html` harness (provenance in that contract), and the gate ran to an empty
+  punch-list after two real fixes.
+- **Follow-up (not this slice):** the public `BookingWidget` still fills busy half-days with the lighter
+  `--muted` (`#EEF1F5`) and draws no divider, while the staff picker uses the design source's `--flota-busy`
+  (`#D7DCE3`) + `--flota-busy-divider` (`#A9B2BE`). Recorded as **D14**; reconciling the two treatments is a
+  separate change.
 - **Unknowns:**
   - **No client-reachable busy-ranges endpoint.** The public path fetches server-side per vehicle page
     (`fleet/[id]/[...slug].astro`) because the vehicle is fixed by the URL; the modal switches vehicle

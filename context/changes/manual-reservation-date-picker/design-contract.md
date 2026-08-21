@@ -63,16 +63,43 @@ to this repo's contract, not to the design.
 
 ### Verdict
 
-**BLOCKED — awaiting 6 canonical screenshots.** Freshness and quality audits are complete, every canonical
-surface maps to a plan phase, and 7 deviations (D10–D15 plus the inherited D2) are recorded. The gate closes
-once the exports listed under "Screenshots required" land in `design-review/`.
+**PASS — closed 2026-08-21.** Freshness and quality audits are complete, every canonical surface maps to a
+plan phase, and 9 deviations (D10–D17 plus the inherited D2) are recorded. The six boards landed in
+`design-review/` (see provenance below) and the rendered vision-diff ran to an empty punch-list.
+
+**Vision-diff punch-list (S-12a Phase 5, app vs the six boards) — 2 findings, both fixed:**
+
+1. **Legend half-swatch drew a divider line.** `DayCell` draws the 1.2px `#A9B2BE` divider on `half` cells
+   **only**; the legend swatch is a plain `#D7DCE3` fill clipped to `polygon(100% 0, 100% 100%, 0 100%)` with
+   no divider. The port had reused the day-cell utility for the swatch. Fixed with a separate
+   `legend-busy-half` utility.
+2. **Neighbouring months' days were rendered.** The source builds its grid from the current month only —
+   `cells.push(null)` for the lead-in and no trailing days — while shadcn's `Calendar` defaults to
+   `showOutsideDays`, so August 31 and October 1–4 appeared as greyed numbers. Fixed with
+   `showOutsideDays={false}`.
+
+Everything else matches, including the values this document records `exact`: `mrDateBtn` (40 / 10 / 13 / 600,
+active ink border + `0 0 0 4px rgba(15,23,42,0.06)`), the tail (12×12, `top:-6`, 24% / 74%), the card
+(radius 16, padding 16), grid gap 4, cell height 34 with radius 9 on endpoints and 0 between, the
+`#D7DCE3` / `#A9B2BE` half-cell treatment and its orientation, the three legend items, the footer summary and
+**Zastosuj**, and the desktop scrim's `flex-start` + `padding-top: 56` over `padding: 32`.
 
 ---
 
-## Screenshots required (hand-off)
+## Screenshots — landed 2026-08-21
 
-Export from the Claude Design project into
-`context/changes/manual-reservation-date-picker/design-review/`:
+**Provenance (read this before trusting them).** These are **not** exports from the Design app's own export
+pipeline. They were produced by rendering the canonical source itself: `manual-reservation.jsx` and
+`shared.jsx` were pulled with DesignSync `get_file`, served alongside the project's own `export-shot.html`
+harness (whose `SCREENS` map already registers `mr-d-pick` / `mr-m-pick` / `mr-d-ok` / `mr-m-ok` /
+`mr-d-conflict` / `mr-m-conflict`), and captured through `window.__renderScreen(id)` at `deviceScaleFactor: 2`
+with React 18 + Babel standalone, exactly as the harness does. Page errors: none.
+
+Two things this does **not** reproduce: `Sidebar` lives outside `shared.jsx`, so the desktop boards' dimmed
+backdrop is a flat grey stub (the modal — the only thing under diff — is untouched); and the Inter/JetBrains
+Mono webfonts load from Google Fonts at capture time, as they do in the harness.
+
+Files in `context/changes/manual-reservation-date-picker/design-review/`:
 
 | Board              | Filename                        | Why                                |
 | ------------------ | ------------------------------- | ---------------------------------- |
@@ -139,6 +166,15 @@ The done-panel shots (`*-05-created.png`) in the S-12 folder stay valid and are 
 - **D15 `deviation(source-verbatim)`** — the legend ships the source's three items, so one half-swatch stands
   for both the AM-busy (upper-left) and PM-busy (lower-right) cell treatments. Chosen over `BookingWidget`'s
   two-swatch legend to keep the canonical Polish copy.
+- **D16 `deviation(undrawn-state)`** — a `Termin` button with no date yet shows **"—"**. Every source board
+  carries both dates, so the empty state is not drawn; the em-dash reuses the public `BookingWidget`'s own
+  empty-field placeholder rather than inventing copy.
+- **D17 `deviation(reuse)`** — the `onSelect` veto's three hints
+  (`Wybrany dzień odbioru…` / `Wybrany dzień zwrotu…` / `Wybrany termin…`) render in the calendar footer's
+  left slot, replacing the range summary while a hint is up. The static source has no veto state and so draws
+  no placement for one; the summary is meaningless at that moment because the range has just been reset to the
+  clicked day.
+
 - **D2 `deviation(no-data)`** _(inherited from S-12, unchanged)_ — conflict is a plain "Termin zajęty"
   message; no clashing-booking card.
 

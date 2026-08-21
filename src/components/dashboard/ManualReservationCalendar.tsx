@@ -186,6 +186,11 @@ export function ManualReservationCalendar({ busyRanges, pickup, returnDate, open
         <Calendar
           mode="range"
           selected={selected}
+          // The source builds its grid from the current month only — blank
+          // lead-in cells (`cells.push(null)`) and no trailing days — where
+          // shadcn's Calendar defaults to showing neighbouring months' days as
+          // greyed numbers.
+          showOutsideDays={false}
           onSelect={(next, triggerDate) => {
             // `excludeDisabled` only rejects ranges that SPAN a fully-blocked
             // day. A range ending on a `pickupOnly` day, starting on a
@@ -268,7 +273,10 @@ export function ManualReservationCalendar({ busyRanges, pickup, returnDate, open
         <div className="mt-3.5 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--flota-hair-2)] pt-3">
           {[
             { label: COPY.legendSelected, swatch: "bg-primary" },
-            { label: COPY.legendHalf, swatch: "bg-card cell-busy-pm border border-[var(--flota-hair)]" },
+            // The source's swatch is a clean lower-right clip with NO divider —
+            // unlike the day cells, which carry one. Reusing `cell-busy-pm` here
+            // would draw a divider the mockup does not have.
+            { label: COPY.legendHalf, swatch: "bg-card legend-busy-half border border-[var(--flota-hair)]" },
             { label: COPY.legendFull, swatch: "bg-[var(--flota-busy)]" },
           ].map((item) => (
             <span key={item.label} className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px]">
