@@ -41,6 +41,22 @@
 > badge. Recorded, not fixed: refreshing catalog 19/25 belongs to whoever next changes the roster's
 > design, alongside the standing to-do to promote the auth artboards into `design-system.md`.
 
+> **Second correction, 2026-08-21 — the banner artboard EXISTS.** §1 lists "Roster provisioning-failure
+> banner" as **missing — new**, and §2 says "the roster mockups carry no banner state". Both are true
+> of the two files in `context/foundation/design/screenshots/`, and both are **false of the design
+> project**: `DesignSync list_files` on `Rental car company` returns
+> `design-review/emp-error.png`, which `design-review/index.md` labels **"Mutation error banner"**,
+> alongside nine other S-08 employee-state artboards (`emp-add`, `emp-add-dup`, `emp-remove`,
+> `emp-lastadmin`, `emp-self`, `emp-empty`, `emp-nores`, `emp-loading`, `am-team`). The freshness
+> audit looked only at the repo, not at the source of truth `design-system.md` names — so it recorded
+> a gap that is really an **un-pulled asset**.
+>
+> **Consequences.** §10 entry 1's `deviation(no artboard — copy-only)` rests on a false premise: there
+> IS an artboard for this element. The deviation is still copy-only — we add strings to a designed
+> element and change no dimension — but the correct framing is "copy variant against an existing
+> artboard we had not pulled", and phase 7's banner work should diff against `emp-error.png` rather
+> than against the shipped element alone. Pull it into `design-review/` before phase 7 rewrites the copy.
+
 Two gaps are pre-existing rather than introduced here:
 
 - **R14 has no artboard.** `auth-followups` shipped it as a no-artboard card and amended S-14's
