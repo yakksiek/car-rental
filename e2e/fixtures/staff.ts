@@ -118,12 +118,13 @@ export async function recoveryCallbackLink(email: string): Promise<string> {
  * `services/staff.ts`, which writes one immediately after inviting — that is what
  * gives a new hire a role before they ever accept.
  *
- * SINGLE USE: the token is consumed by the callback's `verifyOtp` exchange — i.e.
- * the moment it lands on the set-password form, NOT when a password is submitted.
- * A second open of the same link is correctly refused.
+ * IDEMPOTENT since invite-journey-fixes: `/auth/callback` resolves the token but
+ * does NOT exchange it, so the link renders the set-password form every time it
+ * is opened. It is spent only by a successful POST to /api/auth/reset-password.
+ * (It used to be single-use from the first render — that was Bug 2.)
  *
  * The profiles row deliberately carries NO `password_set_at`: this fixture is the
- * password-less invited shape phase group B's specs are read from.
+ * password-less invited shape the phase-group-B specs are read from.
  */
 export async function inviteCallbackLink(): Promise<StaffFixture & { link: string }> {
   const db = admin();

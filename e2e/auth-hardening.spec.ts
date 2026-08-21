@@ -25,10 +25,18 @@ import {
 // in cookies across a top-level navigation, which is exactly what integration's
 // constructed `APIContext` cannot model — it has no browser and no navigation.
 //
-// The second test carries the load-bearing half: refusing must not BURN the
-// token. If the callback consumed it before refusing, the link would be dead by
-// the time the user did what the screen told them to do, and the refusal would
-// have turned a recoverable state into a lost one.
+// The second and third tests used to carry "refusing must not BURN the token".
+// invite-journey-fixes made that trivially true — the callback exchanges nothing
+// at all now — so they were RETARGETED at the property that replaced it and is
+// not trivial: the link is IDEMPOTENT. Opening it renders the form, closing the
+// tab changes nothing, and reopening renders the form again. That sequence IS
+// Bug 2, and it is unreachable from the integration layer: it needs a real
+// browser keeping (and re-sending) the pending-token cookie across navigations.
+//
+// They also carry the second half of the same fix: opening a link must mint NO
+// session. Measured on 2026-08-20, before the change, `GET /auth/callback` then
+// `GET /dashboard` answered 200 — clicking an invite link alone granted a working
+// employee session to someone who had never chosen a password.
 //
 // Runs on the chromium project's default `employee` storage state — this spec
 // NEEDS a signed-in browser, which is why it cannot live in `staff-auth.spec.ts`
@@ -73,44 +81,59 @@ test("a recovery link opened in a signed-in browser is refused, and that session
   await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
 });
 
-test("refusing the link does not consume it — the same link still works afterwards", async ({ page, browser }) => {
+test("a recovery link is idempotent — reopening it renders the form again, and mints no session", async ({
+  page,
+  browser,
+}) => {
   const { id, email } = await createActiveEmployee("Fl0ta-E2E-Nietkniety-2026!");
   cleanupId = id;
   const link = await recoveryCallbackLink(email);
 
-  // First open: refused, because this browser already holds a session.
+  // First open: refused, because this browser already holds a session. Still
+  // worth asserting — the refusal is what keeps a colleague's session intact.
   await page.goto(link);
   await page.waitForURL(/\/auth\/link-conflict/);
   await expect(page.getByRole("button", { name: "Wyloguj się" })).toBeVisible();
 
-  // Second open of the SAME link, from a browser with no session — the state the
-  // R11 copy tells the reader to get into. It must exchange and land on the form.
-  // A callback that consumed the token before refusing would strand them on
-  // "Link wygasł" here, having followed the instructions correctly.
-  //
   // A fresh context rather than clicking R11's own sign-out button: that button
   // posts to /api/auth/signout, which calls `signOut()` at supabase-js's default
   // GLOBAL scope, so clicking it would revoke every session of the shared
   // `employee` storage-state identity and poison any spec that starts afterwards
-  // (see e2e-rules.md). The property under test is "the refusal left the token
-  // spendable", and arriving signed-out is what proves it. The button's own
-  // behaviour is covered by the manual checks in the plan.
+  // (see e2e-rules.md).
   const anon = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const anonPage = await anon.newPage();
+
   await anonPage.goto(link);
   await anonPage.waitForURL(/\/auth\/reset-password/);
   await waitForIslands(anonPage);
   await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toBeVisible();
+
+  // NO SESSION was minted by merely opening the link. Before invite-journey-fixes
+  // this navigation answered 200 with the dashboard.
+  await anonPage.goto("/dashboard");
+  await anonPage.waitForURL(/\/auth\/signin/);
+
+  // BUG 2, EXACTLY: the hire walked away without setting a password, and comes
+  // back to the same link. It must still work. This used to answer "Link wygasł",
+  // because the token was spent when the form first RENDERED.
+  await anonPage.goto(link);
+  await anonPage.waitForURL(/\/auth\/reset-password/);
+  await waitForIslands(anonPage);
+  await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toBeVisible();
+
   await anon.close();
 });
 
-test("an INVITE link behaves the same — refused, not consumed, still activatable", async ({ page, browser }) => {
+test("an INVITE link behaves the same — refused inside a session, idempotent outside one", async ({
+  page,
+  browser,
+}) => {
   // The scenario R11 was designed for: a shared rental-desk workstation where a
   // new hire opens their invite inside a colleague's session. Worth its own case
-  // rather than trusting the recovery test to cover it — the callback takes a
-  // different branch for `type=invite`, and getting this wrong would strand a
-  // hire on their first day with a burnt link and no way to ask for a new one
-  // (unlike recovery, there is no self-service "send me another invite").
+  // rather than trusting the recovery test to cover it — the invite arm carries
+  // different copy and a different GoTrue token type, and getting this wrong
+  // would strand a hire on their first day with a burnt link and no way to ask
+  // for a new one (unlike recovery, there is no self-service "send me another").
   const { id, link } = await inviteCallbackLink();
   cleanupId = id;
 
@@ -126,6 +149,16 @@ test("an INVITE link behaves the same — refused, not consumed, still activatab
   // recovery screen's "Ustaw nowe hasło".
   await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
   await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
+
+  // Idempotent, and still in INVITE mode on the second open — the type comes from
+  // the cookie the callback stamped, which is re-resolved against the token every
+  // render, so a reopen cannot silently downgrade the welcome to recovery copy.
+  await anonPage.goto(link);
+  await anonPage.waitForURL(/\/auth\/reset-password/);
+  await waitForIslands(anonPage);
+  await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
+  await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
+
   await anon.close();
 });
 
