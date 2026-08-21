@@ -608,7 +608,14 @@ broken rather than empty.
 #### 3. Mobile: the picker is its own layer
 
 **Files**: `src/components/dashboard/ManualReservationCalendar.tsx`,
-`src/components/dashboard/ManualReservationModal.tsx`
+`src/components/dashboard/ManualReservationModal.tsx`,
+`src/components/hooks/useMediaQuery.ts` _(new — recorded retroactively in Phase 7, F5)_
+
+The breakpoint has to be read **in JS**, not as a responsive variant: the picker needs two different
+positions in the tree (in flow under the trigger on desktop; a sibling layer over the form sheet on mobile),
+and a Tailwind variant can only show/hide — which would mean mounting two live copies of an interactive
+widget and letting CSS pick one. The hook is SSR-safe (`useSyncExternalStore` with a `() => false` server
+snapshot) and the modal only ever mounts on a click, never during SSR or hydration.
 
 **Intent**: In flow inside a scrolling body, the mobile picker moves under the thumb as the body reflows and a
 tap beside the grid can dismiss it mid-range. It becomes a sheet over the form instead.
@@ -656,6 +663,192 @@ loses its "both `Termin` fields" plural.
 - Vision-diff against the re-rendered boards clean apart from recorded deviations
 
 ---
+
+## Phase 7: Implementation-review findings (F1–F9)
+
+### Overview
+
+The full-plan implementation review (`reviews/impl-review.md`, 2026-08-21) returned no critical findings and
+zero plan drift — every contract claim across Phases 1–6 verified literally against the code, and every
+automated gate re-ran green. What it did surface is nine defects in the shipped surface, four of them
+warnings. Two are behavioural and reachable on the happy path: the calendar's arrow keys do not move focus,
+and the first click on any day briefly renders a validation error. Appended here rather than opened as a new
+change for the same reason Phase 6 was — they live entirely in the code Phases 2–4 wrote.
+
+### Changes Required
+
+#### 1. Restore keyboard navigation in the calendar (F1)
+
+**File**: `src/components/dashboard/ManualReservationCalendar.tsx`
+
+**Intent**: `components={{ DayButton: MrDayCell }}` (:237) replaces shadcn's `CalendarDayButton`, and
+`MrDayCell` (:82) drops the focus plumbing that component carries — `ui/calendar.tsx:134-141` keeps a
+`useRef` plus `useEffect(() => { if (modifiers.focused) ref.current?.focus() })` and passes `ref={ref}`. The
+only `.focus()` call in all of `react-day-picker` lives in its own default `DayButton`; the library moves
+focus by state alone (`useFocus.js` → `setFocused`) and never touches the DOM. So arrow keys currently
+update `modifiers.focused` and `tabIndex` while DOM focus stays on the first day button — Enter re-activates
+the originally-focused day, and a screen reader announces it. The header comment at :32-34 asserts the
+opposite ("the house pattern … gives keyboard and screen-reader behaviour for free"); `BookingWidget` earns
+that for free precisely because it overrides only `labelDayButton`, never the component.
+
+**Contract**: `MrDayCell` takes the `ref` + `modifiers.focused` effect verbatim from `CalendarDayButton` and
+forwards `ref={ref}` to its `<button>`. The header comment is corrected to say the house pattern gives this
+behaviour _when `DayButton` is overridden with the ref carried over_, so the next reader does not re-derive
+the trap.
+
+#### 2. Open the range on the first click (F2)
+
+**File**: `src/components/dashboard/ManualReservationCalendar.tsx`
+
+**Intent**: `<Calendar mode="range">` (:184) passes no `min`, so `useRange` forwards `undefined` and
+`addToRange` takes its `min = 0` default, whose empty-range branch is
+`range = { from: date, to: min > 0 ? undefined : date }` — the **first** click yields a same-day range.
+`onSelect`'s `if (next?.from && next.to)` (:196) is therefore true on click one; `checkRangeBookable(busy, d, d)`
+returns `ok` (rule 3 skips both endpoints), so no veto fires and `onChange(d, d)` pushes `pickup === returnDate`
+into the modal. `resolveAvailability` then fails `validateDateRange` and the panel renders `invalid` —
+"Data zwrotu musi być późniejsza niż data odbioru." — between the two clicks, with the trigger reading
+"3 wrz – 3 wrz 2026" and the footer "0 dni". That is the "reads as broken rather than empty" state **D18**
+was written to prevent. Verified at the library level: `addToRange(d, undefined)` → `{from: d, to: d}`;
+`addToRange(d, undefined, 1)` → `{from: d, to: undefined}`.
+
+**Contract**: `min={1}` on `<Calendar>`. Only `min > 1` triggers `addToRange`'s `diff < min` reset, so
+one-day spans stay selectable and no other branch changes behaviour. After the first click the panel stays
+`idle` and the trigger keeps its **Wybierz termin** empty state.
+
+#### 3. Tell the calendar when the read is loading or failed (F3)
+
+**Files**: `src/components/dashboard/ManualReservationCalendar.tsx`,
+`src/components/dashboard/ManualReservationModal.tsx`,
+`context/changes/manual-reservation-date-picker/design-contract.md`
+
+**Intent**: `Props` (:116-125) carries `busyRanges` but no fetch state, and `useVehicleBusyRanges` wipes to
+`setRanges([])` on failure — so `[]` means "no bookings", "still loading" and "read failed" identically. The
+trigger is `disabled={busy}` only (modal :487), nothing gates it on `rangesState`, so the picker opens in the
+error state over a fully-free month: `disabledDays` holds only the past-day matcher, `dayModifiers` is empty,
+and the veto passes everything. The submit gate still holds — the panel resolves `error` and
+`canCreateReservation` only passes `available` — so this cannot double-book; the harm is an employee reading
+availability off the grid to a customer on the phone. It is worst on mobile, where the sheet is
+`absolute inset-0 z-[70]` (modal :642) and covers the availability panel outright: the all-free grid is on
+screen and "Nie udało się sprawdzić dostępności." is behind it.
+
+**Contract**: the calendar takes `rangesState: BusyRangesFetchState` and the modal passes it at both call
+sites (:524 desktop, :653 mobile). While `loading`, the grid is non-interactive; while `error`, the grid is
+non-interactive and the popover/sheet carries the panel's own
+**"Nie udało się sprawdzić dostępności."** — the same string, not a new one. Both are undrawn in the source,
+so record them as `deviation(undrawn-state)` **D19** in the contract. The trigger stays enabled in both
+states: it is the calendar that must stop asserting availability, not the entry point that must disappear
+(the rejected alternative was `disabled={busy || rangesState !== "ready"}`, which makes the common path pay
+for the rare failure and gives no reason for the dead button).
+
+#### 4. Guard the effect's commit with the id it fetched for (F4)
+
+**File**: `src/components/hooks/useVehicleBusyRanges.ts`
+
+**Intent**: the effect's `.then` commits unconditionally (:79-82) while `refetch` guards the identical commit
+with `if (currentId.current === vehicleId)` (:104, :110). The `AbortController` does not close the gap: on a
+switch A→B the render-phase reset (:57-61) commits synchronously, but `controller.abort()` only runs when
+React flushes passive effects, in a later task. A response for A landing in that window is neither aborted
+nor filtered, so it paints A's busy days and resolves the panel under B's name until B's fetch lands — and a
+failure for A can commit `state: "error"` against B. Narrow and self-healing, but it contradicts the hook's
+own comment at :54-55, "the calendar must never paint another vehicle's busy days."
+
+**Contract**: `currentId.current = vehicleId` moves into the render-phase reset block (:57-61), and both the
+effect's `.then` and its `.catch` open with `if (currentId.current !== vehicleId) return;` — the guard
+`refetch` already uses. The `AbortError` early-return stays; the two mechanisms are complementary, not
+redundant. The comment at :63-68, which currently explains why the ref is assigned in the effect, is rewritten
+to say why it is assigned during render.
+
+#### 5. Keep the pre-flight uncacheable (F6)
+
+**Files**: `src/components/hooks/useVehicleBusyRanges.ts`, `src/pages/api/vehicles/[id]/busy-ranges.ts`
+
+**Intent**: `readBusyRanges` (:40) sets no `cache` option and the route's `json()` helper emits only
+`Content-Type`. Phase 3 §4 justifies the whole pre-flight as "the answer that actually gates the write is
+re-read at the moment of the write" — a cached 200 would silently defeat exactly that, and the staleness
+window Phase 3 argued about would quietly reopen.
+
+**Contract**: `readBusyRanges` passes `cache: "no-store"`, merged with the existing conditional `signal`.
+Comment it against Phase 3 §4 so the reason survives.
+
+#### 6. Survive a failed pre-flight (F7)
+
+**Files**: `src/components/hooks/useVehicleBusyRanges.ts`, `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: `refetch`'s catch runs `setRanges([]); setState("error")` (:112-113) and returns `null`, and
+`submit()` correctly falls through to the POST. But if that POST also fails, the surface stays in `error` for
+that vehicle with no way out — the effect is keyed on `vehicleId`, so the only recovery is switching vehicle
+and back.
+
+**Contract**: `refetch`'s catch sets `state: "error"` but **leaves `ranges` untouched**, so a failed re-read
+does not also discard a good earlier answer (the `error` state already disarms submit, which is what keeps
+this safe). `MrAvailability`'s error branch (:117-126) gains a **Spróbuj ponownie** action calling `refetch`.
+The label is undrawn in the source — record it as `deviation(undrawn-state)` alongside D19.
+
+#### 7. Two design-contract divergences (F8)
+
+**Files**: `src/components/dashboard/ManualReservationCalendar.tsx`,
+`context/changes/manual-reservation-date-picker/design-contract.md`
+
+**Intent**: the review spot-checked roughly forty `exact` values and found two that diverge. (a) :100 puts
+`opacity-75` on the `<button>`, so it fades the `--flota-busy` fill along with the label; the contract
+(309-311, `exact`) scopes it to the label — composited over `--card` the fill renders ≈`#E1E5EA` instead of
+`#D7DCE3`. (b) :248's `gap-1.5` on the month-nav row is a magic value with no basis in the contract, which
+specifies the 26×26 buttons, radius 8, hairline and 13px chevron but no gap.
+
+**Contract**: (a) the opacity moves to the label — `cell-busy-full` keeps its solid `--flota-busy` fill and
+the text is `text-muted-foreground/75`; (b) the nav gap is transcribed from `MrCalendarPopover`'s header row
+in the design source, or recorded as `deviation(undrawn-value)` if the source draws none.
+
+#### 8. Stale references (F9)
+
+**Files**: `src/components/hooks/useVehicleBusyRanges.ts`,
+`context/changes/manual-reservation/design-contract.md`
+
+**Intent**: two pointers into deleted code. The hook's comment at :53 cites "React's documented pattern, as
+`useAvailability` uses it" — but Phase 3 §3 deleted `useAvailability` in this same slice. The S-12 contract's
+available-state bullet still quotes **"Pojazd wolny do {d MMM}"** / **"Brak innych rezerwacji w tym okresie."**,
+copy Phase 6 §1 retired; it defers to the S-12a contract's D10 so a reader lands correctly, but the line
+itself is the same staleness that started this slice.
+
+**Contract**: the comment names the pattern without the dead citation; the S-12 bullet drops the retired copy
+and defers to D10 outright.
+
+#### 9. Record `useMediaQuery` against Phase 6 §3 (F5)
+
+**File**: `context/changes/manual-reservation-date-picker/plan.md`
+
+**Intent**: `src/components/hooks/useMediaQuery.ts` is the one code file this plan never names. It is
+justified — the picker needs two different tree positions (in flow under the trigger vs. a sibling layer over
+the form sheet), which Tailwind variants cannot express without mounting two live copies of an interactive
+widget — and SSR-safe, via `useSyncExternalStore` with a `() => false` server snapshot on a modal that only
+mounts on click. Every sibling extra was recorded (the body-scroll lock in 6.12, `legend-busy-half` and
+`showOutsideDays={false}` in 4.10); this one was not.
+
+**Contract**: Phase 6 §3's **Files** line gains `src/components/hooks/useMediaQuery.ts`, with one sentence on
+why a media-query hook rather than a responsive variant.
+
+### Success Criteria
+
+#### Automated Verification
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification
+
+- Tab into the grid, then arrow-key across days: DOM focus moves with the highlight, and Enter selects the
+  day the arrows landed on — not the first one
+- The first click on a free day leaves the panel `idle` and the trigger on **Wybierz termin**; no
+  "Data zwrotu musi być późniejsza niż data odbioru." appears between the two clicks
+- With the busy-ranges route forced to 500, the picker's grid is non-interactive and shows
+  "Nie udało się sprawdzić dostępności." — on desktop **and** inside the mobile sheet, where the panel is
+  covered; **Spróbuj ponownie** recovers the surface once the route is restored
+- Switching vehicle rapidly never paints the previous vehicle's greying under the new vehicle's name
+- The pre-flight request carries `no-store` and is not served from cache on a repeated create attempt
+- A fully-blocked day's fill measures `#D7DCE3`, with only its label at 75% opacity
+- Vision-diff against the six boards still clean apart from recorded deviations (now incl. D19)
 
 ## Testing Strategy
 
@@ -811,3 +1004,25 @@ grant changes.
 - [x] 6.10 With the create held open the mobile sheet is gone — Phase 1's freeze re-run on the new layer (driven: 0 sheet layers, 0 day cells, trigger disabled, and a FORCED click on the frozen trigger still produced 0 layers. Also recorded: the sheet covers the footer, so on mobile a create cannot even be started while the picker is open) — f8ade37
 - [x] 6.11 Vision-diff against the re-rendered boards clean apart from recorded deviations (punch-list empty; the only differences from the six boards are fixture data and the vehicle-thumbnail glyph already recorded in the S-12 contract) — f8ade37
 - [x] 6.12 The page behind the modal no longer scrolls (added to this phase after manual verification surfaced it — pre-existing since S-12, not a Phase 6 regression: `document.body` was never locked, so a wheel over the scrim moved the dashboard 114px and the modal body's end chained through to the page. Fixed with the `MobileNav.tsx:65` idiom. Driven: overflow `hidden` while open incl. the done panel, `visible` again after X / scrim / Gotowe / a ClientRouter nav to /dashboard/calendar; modal body still scrolls internally 268/861) — f8ade37
+
+### Phase 7: Implementation-review findings (F1–F9)
+
+#### Automated
+
+- [x] 7.1 Type checking passes: `npx astro check`
+- [x] 7.2 Linting passes: `npm run lint`
+- [x] 7.3 Build passes: `npm run build`
+- [x] 7.4 Unit tests pass: `npm test`
+
+#### Manual
+
+- [ ] 7.5 Arrow keys move DOM focus across the grid and Enter selects the day the arrows landed on (F1)
+- [ ] 7.6 The first click leaves the panel `idle` and the trigger on **Wybierz termin** — no return-before-pickup error between the two clicks (F2)
+- [ ] 7.7 With the route forced to 500 the grid is non-interactive and shows "Nie udało się sprawdzić dostępności." on desktop and inside the mobile sheet (F3)
+- [ ] 7.8 **Spróbuj ponownie** recovers the surface once the route is restored, and a failed re-read no longer discards good ranges (F7)
+- [ ] 7.9 Rapid vehicle switching never paints the previous vehicle's greying under the new vehicle's name (F4)
+- [ ] 7.10 The pre-flight request carries `no-store` and is not served from cache on a repeated create attempt (F6)
+- [ ] 7.11 A fully-blocked day's fill measures `#D7DCE3` with only its label at 75% opacity; the nav gap is contract-backed (F8)
+- [ ] 7.12 Vision-diff against the six boards clean apart from recorded deviations, now including D19 (F3, F7)
+- [ ] 7.13 Stale references cleared: the hook's comment no longer cites the deleted `useAvailability`; the S-12 contract's available-state bullet no longer quotes the retired copy (F9)
+- [ ] 7.14 Phase 6 §3's Files line records `src/components/hooks/useMediaQuery.ts` (F5)

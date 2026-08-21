@@ -37,7 +37,14 @@ function busyRangesUrl(vehicleId: string): string {
 }
 
 async function readBusyRanges(vehicleId: string, signal?: AbortSignal): Promise<VehicleBusyRange[]> {
-  const res = await fetch(busyRangesUrl(vehicleId), signal ? { signal } : undefined);
+  const res = await fetch(busyRangesUrl(vehicleId), {
+    // The pre-flight (Phase 3 §4) exists so the answer that gates the write is
+    // re-read AT the moment of the write. A cached 200 would satisfy the call
+    // and silently reopen the staleness window the whole re-read is there to
+    // close — so the read must never be served from cache.
+    cache: "no-store",
+    ...(signal ? { signal } : {}),
+  });
   if (!res.ok) {
     throw new Error(`busy-ranges read failed: ${String(res.status)}`);
   }
@@ -45,31 +52,43 @@ async function readBusyRanges(vehicleId: string, signal?: AbortSignal): Promise<
   return body.ranges;
 }
 
+/**
+ * What was read, and WHICH VEHICLE it was read for. Stamping the id onto the
+ * answer is what makes a superseded response harmless: it is compared against
+ * the currently-selected vehicle during render, so an answer that no longer
+ * matches is simply not shown.
+ */
+interface BusyRangesData {
+  vehicleId: string;
+  ranges: VehicleBusyRange[];
+  state: BusyRangesState;
+}
+
 export function useVehicleBusyRanges(vehicleId: string): VehicleBusyRangesHandle {
-  const [ranges, setRanges] = React.useState<VehicleBusyRange[]>([]);
-  const [state, setState] = React.useState<BusyRangesState>(vehicleId ? "loading" : "ready");
+  const [data, setData] = React.useState<BusyRangesData>(() => ({
+    vehicleId,
+    ranges: [],
+    state: vehicleId ? "loading" : "ready",
+  }));
 
-  // React's documented "adjust state when the inputs change" pattern, as
-  // `useAvailability` uses it: a render-phase reset, so the previous vehicle's
-  // greying is dropped in the same render the selection changed rather than one
-  // paint later — the calendar must never paint another vehicle's busy days.
-  const [lastVehicleId, setLastVehicleId] = React.useState(vehicleId);
-  if (lastVehicleId !== vehicleId) {
-    setLastVehicleId(vehicleId);
-    setRanges([]);
-    setState(vehicleId ? "loading" : "ready");
-  }
-
-  // The id the UI is currently showing. A response is only committed when it
-  // still matches, so a `refetch` in flight across a vehicle switch cannot paint
-  // the old vehicle's ranges over the new one's (the effect has an
-  // AbortController for that; `refetch` is caller-driven and has none). Assigned
-  // in the effect, not during render — `refetch` is only ever called from an
-  // event handler, which always runs after the commit that set it.
-  const currentId = React.useRef(vehicleId);
+  // The whole identity guard, derived rather than reset. An answer for another
+  // vehicle is ignored in the same render the selection changed — so the
+  // calendar can never paint another vehicle's busy days, and there is no
+  // render-phase write of any kind to make it true.
+  //
+  // This replaces an earlier reset-plus-ref arrangement. The ref had to be
+  // assigned DURING RENDER to be early enough (assigning it in the effect left a
+  // window: on a switch A→B the reset commits synchronously, but the effect's
+  // cleanup — and so `controller.abort()` — only runs when React flushes passive
+  // effects, a task later, and a response for A landing in between was neither
+  // aborted nor filtered). A render-phase ref write is what `react-hooks/refs`
+  // forbids, and rightly. Deriving needs no write at all and closes the same
+  // window by construction.
+  const matches = data.vehicleId === vehicleId;
+  const ranges = matches ? data.ranges : [];
+  const state: BusyRangesState = matches ? data.state : vehicleId ? "loading" : "ready";
 
   React.useEffect(() => {
-    currentId.current = vehicleId;
     if (!vehicleId) {
       return;
     }
@@ -77,8 +96,7 @@ export function useVehicleBusyRanges(vehicleId: string): VehicleBusyRangesHandle
     const controller = new AbortController();
     readBusyRanges(vehicleId, controller.signal)
       .then((fresh) => {
-        setRanges(fresh);
-        setState("ready");
+        setData({ vehicleId, ranges: fresh, state: "ready" });
       })
       .catch((error: unknown) => {
         // An abort is a superseded fetch, not a failure — the newer effect run
@@ -86,8 +104,7 @@ export function useVehicleBusyRanges(vehicleId: string): VehicleBusyRangesHandle
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setRanges([]);
-        setState("error");
+        setData({ vehicleId, ranges: [], state: "error" });
       });
 
     return () => {
@@ -101,16 +118,24 @@ export function useVehicleBusyRanges(vehicleId: string): VehicleBusyRangesHandle
     }
     try {
       const fresh = await readBusyRanges(vehicleId);
-      if (currentId.current === vehicleId) {
-        setRanges(fresh);
-        setState("ready");
-      }
+      // Guarded against the reverse order — a re-read for the PREVIOUS vehicle
+      // landing after the new one's effect has already answered. `prev.vehicleId`
+      // is whatever is on screen, so it only matches while this read is still the
+      // relevant one; the render-time derivation handles every other case.
+      setData((prev) => (prev.vehicleId === vehicleId ? { vehicleId, ranges: fresh, state: "ready" } : prev));
       return fresh;
     } catch {
-      if (currentId.current === vehicleId) {
-        setRanges([]);
-        setState("error");
-      }
+      setData((prev) =>
+        prev.vehicleId === vehicleId
+          ? // `ranges` is deliberately CARRIED OVER — unlike the initial read, a
+            // failed re-read already has a good earlier answer on screen, and
+            // discarding it would blank the grid the employee is reading from.
+            // Nothing is made unsafe by keeping it: `state: "error"` resolves the
+            // panel to `error`, and `canCreateReservation` only ever passes
+            // `available`, so submit stays disarmed either way.
+            { ...prev, state: "error" }
+          : prev,
+      );
       return null;
     }
   }, [vehicleId]);

@@ -67,6 +67,10 @@ const COPY = {
   doneSub: "Termin zablokowany w kalendarzu. Klient dostanie potwierdzenie e-mailem.",
   seeCalendar: "Zobacz w kalendarzu",
   done: "Gotowe",
+  // D19 — undrawn in the source. A failed read strands the vehicle in `error`
+  // (the effect is keyed on `vehicleId`, so re-selecting the same one is a
+  // no-op); this is the way out that is not "switch vehicle and back".
+  avRetry: "Spróbuj ponownie",
   errorCreate: "Nie udało się utworzyć rezerwacji. Spróbuj ponownie.",
   errorConflict: "Termin został właśnie zajęty. Wybierz inny termin.",
   errorUnavailable: "Ten pojazd nie jest już dostępny.",
@@ -91,7 +95,7 @@ function formatDayFull(iso: string): string {
 
 // ── availability panel ───────────────────────────────────────────────────────
 
-function MrAvailability({ availability }: { availability: AvailabilityState }) {
+function MrAvailability({ availability, onRetry }: { availability: AvailabilityState; onRetry: () => void }) {
   const box = "flex items-start gap-[11px] rounded-[13px] px-[13px] py-3 md:px-[15px] md:py-[13px]";
 
   if (availability.state === "idle") {
@@ -118,8 +122,21 @@ function MrAvailability({ availability }: { availability: AvailabilityState }) {
     return (
       <div className={cn(box, "bg-[var(--flota-warning-soft)]")}>
         <AlertTriangle className="text-warning size-[18px] shrink-0" />
-        <div className="text-warning pt-px text-[12.5px] font-semibold">
-          {availability.state === "invalid" ? availability.message : COPY.avError}
+        <div className="pt-px">
+          <div className="text-warning text-[12.5px] font-semibold">
+            {availability.state === "invalid" ? availability.message : COPY.avError}
+          </div>
+          {/* `invalid` is a bad range, which no amount of re-reading fixes —
+              only the failed read gets the retry. */}
+          {availability.state === "error" && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-warning mt-1 text-[12.5px] font-bold underline underline-offset-2"
+            >
+              {COPY.avRetry}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -522,6 +539,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                   <ManualReservationCalendar
                     variant="popover"
                     busyRanges={ranges}
+                    rangesState={rangesState}
                     pickup={pickup}
                     returnDate={returnDate}
                     onChange={(nextPickup, nextReturn) => {
@@ -531,13 +549,21 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
                     onApply={() => {
                       setPickerOpen(false);
                     }}
+                    onRetry={() => {
+                      void refetch();
+                    }}
                   />
                 )}
               </div>
 
               <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
               <div className="mt-2.5">
-                <MrAvailability availability={availability} />
+                <MrAvailability
+                  availability={availability}
+                  onRetry={() => {
+                    void refetch();
+                  }}
+                />
               </div>
             </div>
 
@@ -651,6 +677,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
             <ManualReservationCalendar
               variant="sheet"
               busyRanges={ranges}
+              rangesState={rangesState}
               pickup={pickup}
               returnDate={returnDate}
               onChange={(nextPickup, nextReturn) => {
@@ -659,6 +686,9 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicl
               }}
               onApply={() => {
                 setPickerOpen(false);
+              }}
+              onRetry={() => {
+                void refetch();
               }}
             />
           </div>
