@@ -705,7 +705,7 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 1.5 Existing rows read `source='public'`; a hand-run RPC yields `manual`/`confirmed`
+- [x] 1.5 Existing rows read `source='public'`; a hand-run RPC yields `manual`/`confirmed` (psql 2026-08-21: 10 pre-existing rows read source='public' (2 pending / 8 confirmed) and 4 rows read manual/confirmed from RPC runs; column default is 'public'::reservation_source, NOT NULL)
 
 ### Phase 2: Service wrapper + shared email helper + endpoints
 
@@ -718,7 +718,7 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 2.5 Same-origin calls create a booking; dev adapter logs the confirmation
+- [x] 2.5 Same-origin calls create a booking; dev adapter logs the confirmation (driven 2026-08-21, no stubs: POST /api/reservations/manual → 201, and email_deliveries carries template=reservation_confirmed status=sent recipient=k.dabrowski+778990@example.pl)
 
 ### Phase 3: Manual-reservation modal + entry point
 
@@ -730,11 +730,11 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 3.4 Button opens the modal (desktop-centered / mobile sheet)
-- [ ] 3.5 Availability resolves live; submit enables only when available + name/email/phone valid
-- [ ] 3.6 Create → done panel (reference + Ręczna); booking appears confirmed on the calendar
-- [ ] 3.7 Customer receives the confirmation email
-- [ ] 3.8 Vision-diff of form/available/conflict/done (desktop + mobile) clean apart from deviations
+- [x] 3.4 Button opens the modal (desktop-centered / mobile sheet) (driven 2026-08-21: the Nowa rezerwacja button mounts the modal, Termin trigger visible; desktop-centred at 1320px and bottom-sheet at 390px both captured for the 7.12 vision-diff)
+- [x] 3.5 Availability resolves live; submit enables only when available + name/email/phone valid (driven 2026-08-21: submit disarmed with nothing filled; armed only with a resolved-available range plus all three customer fields; disarmed again when the panel flips to conflict)
+- [x] 3.6 Create → done panel (reference + Ręczna); booking appears confirmed on the calendar (driven 2026-08-21: done panel shows R-10EC + the RĘCZNA chip, name and "30 sie – 31 sie"; the row reads source=manual status=confirmed 2026-08-30→31; the booking appears as a green confirmed bar on the Iveco Daily calendar row)
+- [x] 3.7 Customer receives the confirmation email (verified in email_deliveries for R-10EC: reservation_confirmed / sent. Resend is unconfigured locally, so the dev adapter logs to the server — the banner on every page says so)
+- [x] 3.8 Vision-diff of form/available/conflict/done (desktop + mobile) clean apart from deviations (SCOPED, 2026-08-21 — see 8.3 for why. Done panel diffed directly against desktop-05-created: structure, ordering and treatments all match (check disc, title, subtitle, reference + RĘCZNA chip, name, vehicle, range, ghost + crimson buttons); only fixture data differs. Form/available/conflict surfaces other than Termin were diffed under S-12a 7.12 with an empty punch-list; the Termin block itself is covered there against the CURRENT source)
 
 ### Phase 4: "Ręczna" on the calendar
 
@@ -746,8 +746,8 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 4.4 A manual confirmed booking shows a Ręczna chip in its calendar detail; a public one shows none
-- [ ] 4.5 No change to calendar colors or the 2-item legend
+- [x] 4.4 A manual confirmed booking shows a Ręczna chip in its calendar detail; a public one shows none (driven 2026-08-21: the manual booking's detail reads "R-10EC | POTWIERDZONA | Ręczna | Krzysztof Dąbrowski 778990 | Iveco Daily | ODBIÓR 30 sie · 14:00 | ZWROT 31 sie · 10:00"; a public booking's detail has 0 occurrences of Ręczna)
+- [x] 4.5 No change to calendar colors or the 2-item legend (driven 2026-08-21: the legend reads exactly ["Oczekujące","Potwierdzone"] — two swatches, no third for Ręczna; bars stay amber/green and the manual booking draws as an ordinary green confirmed bar)
 
 ### Phase 5: Review fixes — modal correctness + design radii
 
@@ -760,9 +760,9 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 5.5 F1 — a lost race flips the panel to "Termin zajęty" and disables submit; editing a date re-checks
-- [ ] 5.6 F2 — submit + both done-panel buttons render 12px, the chevron 8px (no other radius changed)
-- [ ] 5.7 F6 — scrim and X are inert while a create is in flight
+- [x] 5.5 F1 — a lost race flips the panel to "Termin zajęty" and disables submit; editing a date re-checks (driven 2026-08-21 with a held-open create answered 409: banner=true and panel reads Termin zajęty; changing the range clears both and the panel resolves green)
+- [x] 5.6 F2 — submit + both done-panel buttons render 12px, the chevron 8px (no other radius changed) (measured 2026-08-21: submit 12px, Zobacz w kalendarzu 12px, Gotowe 12px, vehicle chevron 8px — matching --flota-radius-md 12px / -sm 8px)
+- [x] 5.7 F6 — scrim and X are inert while a create is in flight (driven 2026-08-21: with the create held open the X is disabled and the scrim's onClick is undefined; covered by the same freeze verified for 9.5)
 
 ### Phase 6: Review fixes — endpoint response + RPC date-order hardening
 
@@ -782,10 +782,10 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 7.2 F3 — `:114` records `deviation(native-select)`
-- [ ] 7.3 F4 — D6 `:90` / `:98` record mobile top radius `exact 26px` and drop the drag-handle clause
-- [ ] 7.4 F5 — `:127` / `:167` record `deviation(same-day-rejected)` + the four undocumented states/strings
-- [ ] 7.5 Confirmed-exact lines recorded (tracking 0.3; badge 10 / 9.5; done panel 22 / 20; shell 560 / 20)
+- [x] 7.2 F3 — `:114` records `deviation(native-select)` (verified in the contract: D8 `deviation(native-select)` records the transparent native <select> over the card as the source's own affordance)
+- [x] 7.3 F4 — D6 `:90` / `:98` record mobile top radius `exact 26px` and drop the drag-handle clause (verified: D6 records `exact` 26px `rounded-t-[26px]` and states there is NO drag handle — the only one in the source belongs to the out-of-scope quick-action sheet)
+- [x] 7.4 F5 — `:127` / `:167` record `deviation(same-day-rejected)` + the four undocumented states/strings (verified: D9 `deviation(same-day-rejected)` records the copy and why the source's wording is false for ret == pick)
+- [x] 7.5 Confirmed-exact lines recorded (tracking 0.3; badge 10 / 9.5; done panel 22 / 20; shell 560 / 20) (verified present in the contract: tracking-[0.3px], badge 10/9.5, done panel rounded-[22px]/md:rounded-[20px], shell md:w-[560px]/md:rounded-[20px])
 
 ### Phase 8: Manual verification + vision-diff gate
 
@@ -795,22 +795,22 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Manual
 
-- [ ] 8.2 Progress items 1.5, 2.5, 3.4–3.7, 4.4, 4.5 executed and checked with evidence
-- [ ] 8.3 3.8 vision-diff run against the 10 canonical mockups; punch-list empty apart from Phase 7 deviations
-- [ ] 8.4 `change.md` status moved past `implementing`
+- [x] 8.2 Progress items 1.5, 2.5, 3.4–3.7, 4.4, 4.5 executed and checked with evidence (all nine closed 2026-08-21 with driven or psql evidence recorded on each row)
+- [x] 8.3 3.8 vision-diff run against the 10 canonical mockups; punch-list empty apart from Phase 7 deviations (SCOPED rather than a straight 10-board diff, deliberately. 4 of the 10 are out of scope by D4 — the quick-action menu (desktop-01/mobile-01) and the calendar-cell confirm (desktop-02/mobile-02) were never shipped. 4 more (desktop-03/04, mobile-03/04) are recorded SUPERSEDED by S-12a's freshness audit: they draw two native date inputs where the source and the app now have one Termin button, so diffing them would manufacture findings across that whole block. The 2 created boards are current and were diffed directly. PUNCH-LIST EMPTY; every difference is fixture data or an already-recorded deviation)
+- [x] 8.4 `change.md` status moved past `implementing` (set to implemented 2026-08-21 once every row above closed)
 
 ### Phase 9: Review fixes — in-flight form freeze + stale conflict banner
 
 #### Automated
 
-- [ ] 9.1 Type checking passes: `npx astro check`
-- [ ] 9.2 Linting passes: `npm run lint`
-- [ ] 9.3 Build passes: `npm run build`
-- [ ] 9.4 Unit tests pass: `npm test`
+- [x] 9.1 Type checking passes: `npx astro check` (2026-08-21: 0 errors, 0 warnings)
+- [x] 9.2 Linting passes: `npm run lint` (2026-08-21: 0 errors, 2 pre-existing RHF warnings)
+- [x] 9.3 Build passes: `npm run build` (2026-08-21: Complete)
+- [x] 9.4 Unit tests pass: `npm test` (2026-08-21: 327/327 across 27 files)
 
 #### Manual
 
-- [ ] 9.5 F11(a) — with the create held open, the picker and all five fields refuse input; the done panel's dates + name match the `reservations` row
-- [ ] 9.6 F11(b) — a date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner
-- [ ] 9.7 `design-contract.md` Surface 1 `deviation(busy-guard)` extended to the form fields
-- [ ] 9.8 F12 — a lost create's banner clears when the range changes (panel green ⇒ no stale banner) and survives a customer-field edit
+- [x] 9.5 F11(a) — with the create held open, the picker and all five fields refuse input; the done panel's dates + name match the `reservations` row (driven 2026-08-21 with the create held open: vehicle select, Termin trigger, name, phone and e-mail all disabled=true, 0 day cells rendered (picker unmounted), button reads Tworzenie…)
+- [x] 9.6 F11(b) — a date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner (driven 2026-08-21: a FORCED programmatic click on the frozen Termin trigger produced 0 day cells)
+- [x] 9.7 `design-contract.md` Surface 1 `deviation(busy-guard)` extended to the form fields (verified: the busy-guard line records the widening to the vehicle <select>, the Termin field and the three Klient inputs)
+- [x] 9.8 F12 — a lost create's banner clears when the range changes (panel green ⇒ no stale banner) and survives a customer-field edit (driven 2026-08-21: after a 409 the banner persists through a phone-field edit, then clears on a range change while the panel resolves Termin wolny)

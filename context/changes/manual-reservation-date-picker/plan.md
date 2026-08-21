@@ -1034,10 +1034,10 @@ grant changes.
 
 #### Automated
 
-- [x] 7.1 Type checking passes: `npx astro check` — d933d17
-- [x] 7.2 Linting passes: `npm run lint` — d933d17
-- [x] 7.3 Build passes: `npm run build` — d933d17
-- [x] 7.4 Unit tests pass: `npm test` — d933d17
+- [x] 7.1 Type checking passes: `npx astro check` — d933d17 (re-run green at ccc862f, which changed code these rows attest to)
+- [x] 7.2 Linting passes: `npm run lint` — d933d17 (re-run green at ccc862f, which changed code these rows attest to)
+- [x] 7.3 Build passes: `npm run build` — d933d17 (re-run green at ccc862f, which changed code these rows attest to)
+- [x] 7.4 Unit tests pass: `npm test` — d933d17 (re-run green at ccc862f, which changed code these rows attest to)
 
 #### Manual
 
