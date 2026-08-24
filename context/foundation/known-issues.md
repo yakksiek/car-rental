@@ -92,3 +92,36 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   the silhouette — real photos are correct when they're actually of the vehicle).
 - **To action:** owner decision on real photography vs. placeholder, then a seed-only edit (+ prod
   data cleanup if prod carries the same placeholders).
+
+## FIXED (S-12b): "Wnioski" nav badge read 0 on `/dashboard/protocols/[id]`
+
+- **Symptom:** The staff sidebar's **Wnioski** count badge disappears on the protocol detail route
+  and only there. Open `/dashboard/reservations` with pending requests → sidebar shows `Wnioski ②`;
+  click into any protocol (`/dashboard/protocols/<id>`) → the ② vanishes although both requests are
+  still pending; navigate anywhere else → it returns. The **Zwroty** badge beside it stays correct
+  throughout, which is what makes the gap visible. Found 2026-08-24 while researching
+  `staff-quick-actions`.
+- **Cause:** `StaffShell` does not compute the count — every page fetches it and passes it in
+  (`StaffShell.astro:21` declares `pendingCount?: number`, `:32` defaults it to `0`, `:40` binds it
+  to the nav row, `:99` / `:196` render the badge only when `> 0`). Nine of the ten staff pages pass
+  it; `src/pages/dashboard/protocols/[id].astro:118-126` passes `active`, `title`, `user`, `role`,
+  `overdueCount` and `showHeader` — but **not `pendingCount`** — so the `= 0` default silences the
+  badge. S-07 added `overdueCount` to this route (see its comment at `:32-33`, "this route
+  previously passed no nav badge at all") and fixed only the badge that slice cared about.
+- **Scope:** One route, cosmetic-but-misleading: the badge reads as _zero pending_ rather than as
+  _unknown_, and it is the app's only ambient "work is queued" signal. No data or auth impact.
+- **Decision:** **Not fixed ad hoc — deliberately deferred to planning.** The one-line repair (fetch
+  `listPendingReservations` and pass `.length`) would add a third duplicated per-page fetch, and
+  nine pages already call that RPC **only** to read `.length` off full reservation rows. The better
+  shape is a `count_pending_reservations` RPC mirroring the existing `count_overdue_returns`
+  (`src/lib/services/protocols.ts:385-395`), which pays back on every staff page. That decision
+  belongs to `context/changes/service-read-projections/`, so this is recorded here rather than
+  patched in isolation.
+- **If it ever needs fixing sooner:** passing `pendingCount={…}` on `protocols/[id].astro` is a
+  correct standalone fix and does not block the RPC work later.
+- **Fixed 2026-08-24** in `staff-quick-actions` Phase 3, by exactly that standalone route: the page
+  now fetches `listPendingReservations` alongside `countOverdueReturns` and passes
+  `pendingCount={pending.length}`. Verified rendering `Wnioski 2` on `/dashboard/protocols/<id>`
+  with two pending requests. The tenth duplicated `.length` read this adds is deliberate — it keeps
+  the badge honest today and is replaced together with the other nine by the
+  `count_pending_reservations` RPC in `context/changes/service-read-projections/`.

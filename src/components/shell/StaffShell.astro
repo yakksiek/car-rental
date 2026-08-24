@@ -2,6 +2,7 @@
 // components
 import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
+import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import type { AppRole } from "../../types";
@@ -24,8 +25,11 @@ interface Props {
   overdueCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
-  // Full-page forms (e.g. add/edit vehicle) render their own eyebrow+title header,
-  // so they suppress the shell's desktop title bar to avoid a duplicate heading.
+  // "This page has a normal title header" — and therefore, since S-12b, "this
+  // page gets the quick-add pill". The task screens (add/edit vehicle, protocol)
+  // draw their own back/close/submit header over unsaved form state, which is
+  // both a duplicate heading and no place for a create action (design contract
+  // D10). Keep the two coupled: do NOT add a second opt-out prop.
   showHeader?: boolean;
 }
 
@@ -162,8 +166,17 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
       showHeader && (
         <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
           <div>
-            <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-            {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
+            <div class="text-foreground text-[21px] leading-[1.1] font-bold tracking-[-0.5px]">{title}</div>
+            {subtitle && <div class="text-muted-foreground mt-[3px] text-[13px]">{subtitle}</div>}
+          </div>
+          {/* The band's right cluster, which the design (`StaffTopbar`) draws and
+              this shell left empty. A page contributes its own controls through
+              `header-actions`; the quick-add pill is the unconditional last child,
+              so it rides onto every page with a normal header. S-13's SearchField
+              lands in this same cluster. Gap 12 per the design. */}
+          <div class="flex items-center gap-3">
+            <slot name="header-actions" />
+            <QuickAddButton client:load mode="desktop" />
           </div>
         </header>
       )

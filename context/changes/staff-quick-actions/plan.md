@@ -653,35 +653,35 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Unit tests pass, including the 4 merge cases: `npm test`
-- [x] 2.4 No remaining importers of `NewReservationButton`
+- [x] 2.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — cc1ad29
+- [x] 2.2 Linting passes: `npm run lint` — cc1ad29
+- [x] 2.3 Unit tests pass, including the 4 merge cases: `npm test` — cc1ad29
+- [x] 2.4 No remaining importers of `NewReservationButton` — cc1ad29
 
 #### Manual
 
-- [x] 2.5 Circle opens the sheet; "Nowa rezerwacja" spins, then the modal opens with a populated picker
-- [x] 2.6 Repeated opens issue exactly one `/api/vehicles` request
-- [x] 2.7 With every vehicle deactivated, the sheet still opens and "Dodaj pojazd" still works
+- [x] 2.5 Circle opens the sheet; "Nowa rezerwacja" spins, then the modal opens with a populated picker — cc1ad29
+- [x] 2.6 Repeated opens issue exactly one `/api/vehicles` request — cc1ad29
+- [x] 2.7 With every vehicle deactivated, the sheet still opens and "Dodaj pojazd" still works — cc1ad29
 
 ### Phase 3: `StaffShell` header restructure (desktop)
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Unit tests pass: `npm test`
-- [ ] 3.4 Integration tests pass: `npm run test:integration`
-- [ ] 3.5 Page authorization tests still pass
+- [x] 3.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Unit tests pass: `npm test`
+- [x] 3.4 Integration tests pass: `npm run test:integration`
+- [x] 3.5 Page authorization tests still pass
 
 #### Manual
 
-- [ ] 3.6 The pill renders at md+ on all 7 routes
-- [ ] 3.7 The pill is absent on all 5 task routes
-- [ ] 3.8 Each of the 7 renders exactly one header band — Pulpit and Zespół verified specifically
-- [ ] 3.9 `/dashboard/vehicles` shows its title once at md+, and still shows it below md
-- [ ] 3.10 The Wnioski badge shows a non-zero count on `/dashboard/protocols/<id>`
-- [ ] 3.11 Pulpit's calendar button still works and sits left of the pill at `gap: 12`
+- [x] 3.6 The pill renders at md+ on all 7 routes
+- [x] 3.7 The pill is absent on all 5 task routes
+- [x] 3.8 Each of the 7 renders exactly one header band — Pulpit and Zespół verified specifically
+- [x] 3.9 `/dashboard/vehicles` shows its title once at md+, and still shows it below md
+- [x] 3.10 The Wnioski badge shows a non-zero count on `/dashboard/protocols/<id>`
+- [x] 3.11 Pulpit's calendar button still works and sits left of the pill at `gap: 12`
 
 ### Phase 4: Mobile right-slot rollout
 
