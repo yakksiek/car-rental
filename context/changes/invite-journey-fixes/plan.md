@@ -1975,26 +1975,26 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 10.1 Unit tests pass, including the widened outcome-to-surface table: `npm test`
-- [x] 10.2 No row-triggered arm resolves outside the reachable-surface set §3's decision defines — the concrete predicate per §1, not the prose
-- [x] 10.3 Lint passes: `npm run lint`
-- [x] 10.4 Type checking passes: `npx astro check`
-- [x] 10.5 Integration tests pass: `npm run test:integration`
-- [x] 10.6 Production build succeeds: `npm run build`
-- [x] 10.7 E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success, at 390×844 — the only viewport where a seeded roster scrolls
-- [x] 10.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [x] 10.9 `design-contract.md` carries the remove-modal entry, the chosen row-action surface and its dismissal, its copy, and §11 rows
-- [x] 10.10 The §1 shape and module-name decisions are recorded, not taken silently
-- [x] 10.11 The §5 body-scroll-lock decision is recorded as in-scope or follow-up
+- [x] 10.1 Unit tests pass, including the widened outcome-to-surface table: `npm test` — 401416f
+- [x] 10.2 No row-triggered arm resolves outside the reachable-surface set §3's decision defines — the concrete predicate per §1, not the prose — 401416f
+- [x] 10.3 Lint passes: `npm run lint` — 401416f
+- [x] 10.4 Type checking passes: `npx astro check` — 401416f
+- [x] 10.5 Integration tests pass: `npm run test:integration` — 401416f
+- [x] 10.6 Production build succeeds: `npm run build` — 401416f
+- [x] 10.7 E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success, at 390×844 — the only viewport where a seeded roster scrolls — 401416f
+- [x] 10.8 E2E suite passes on `:4321`: `npm run test:e2e` — 401416f
+- [x] 10.9 `design-contract.md` carries the remove-modal entry, the chosen row-action surface and its dismissal, its copy, and §11 rows — 401416f
+- [x] 10.10 The §1 shape and module-name decisions are recorded, not taken silently — 401416f
+- [x] 10.11 The §5 body-scroll-lock decision is recorded as in-scope or follow-up — 401416f
 
 #### Manual
 
-- [x] 10.12 A failed remove reports inside the remove modal, with the typed confirmation intact
-- [x] 10.13 The remove modal's 200 and 409 (last-admin) arms are unchanged
-- [x] 10.14 A failed invite or reset from a scrolled row is readable without scrolling
-- [x] 10.15 `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
-- [x] 10.16 Exactly one retry control is on screen for one failure
-- [x] 10.17 The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px
+- [x] 10.12 A failed remove reports inside the remove modal, with the typed confirmation intact — 401416f
+- [x] 10.13 The remove modal's 200 and 409 (last-admin) arms are unchanged — 401416f
+- [x] 10.14 A failed invite or reset from a scrolled row is readable without scrolling — 401416f
+- [x] 10.15 `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling — 401416f
+- [x] 10.16 Exactly one retry control is on screen for one failure — 401416f
+- [x] 10.17 The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px — 401416f
 
 ### Phase 11: The same defect on the fleet roster
 
