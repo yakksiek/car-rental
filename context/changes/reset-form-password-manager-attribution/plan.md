@@ -430,8 +430,8 @@ None — no schema, no data, no API contract changes. Fully revertible by deleti
 #### Manual
 
 - [x] 1.5 DOM check — input precedes both password fields, correct `autocomplete`/address, no `name` — 4f2993c
-- [ ] 1.6 Actual symptom, invite mode — Chrome offers SAVE for the hire, not UPDATE for the admin
-- [ ] 1.7 Actual symptom, recovery mode
+- [x] 1.6 Actual symptom, invite mode — Chrome offers SAVE for the hire, not UPDATE for the admin — 4f2993c
+- [x] 1.7 Actual symptom, recovery mode — 4f2993c
 - [x] 1.8 Rendered delta is zero at desktop and mobile — 4f2993c
 
 ### Phase 2: Change-password form — the same anchor
@@ -446,7 +446,7 @@ None — no schema, no data, no API contract changes. Fully revertible by deleti
 #### Manual
 
 - [x] 2.5 DOM check — input precedes `Obecne hasło`, carries the session's address, no `name` — e4c0e2f
-- [ ] 2.6 Narrower symptom — two saved credentials, bubble targets the signed-in account
+- [x] 2.6 Narrower symptom — two saved credentials, bubble targets the signed-in account — e4c0e2f
 - [x] 2.7 Rendered delta is zero at desktop and mobile — e4c0e2f
 - [x] 2.8 Existing change-password flow still works end to end — e4c0e2f
 
