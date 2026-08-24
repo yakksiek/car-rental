@@ -438,26 +438,26 @@ None — no schema, no data, no API contract changes. Fully revertible by deleti
 
 #### Automated
 
-- [x] 2.1 Lint passes
-- [x] 2.2 Type + Astro checks pass
-- [x] 2.3 Production build succeeds
-- [x] 2.4 Integration suite still green
+- [x] 2.1 Lint passes — e4c0e2f
+- [x] 2.2 Type + Astro checks pass — e4c0e2f
+- [x] 2.3 Production build succeeds — e4c0e2f
+- [x] 2.4 Integration suite still green — e4c0e2f
 
 #### Manual
 
-- [x] 2.5 DOM check — input precedes `Obecne hasło`, carries the session's address, no `name`
+- [x] 2.5 DOM check — input precedes `Obecne hasło`, carries the session's address, no `name` — e4c0e2f
 - [ ] 2.6 Narrower symptom — two saved credentials, bubble targets the signed-in account
-- [x] 2.7 Rendered delta is zero at desktop and mobile
-- [x] 2.8 Existing change-password flow still works end to end
+- [x] 2.7 Rendered delta is zero at desktop and mobile — e4c0e2f
+- [x] 2.8 Existing change-password flow still works end to end — e4c0e2f
 
 ### Phase 3: Documentation truth-up
 
 #### Automated
 
-- [ ] 3.1 Formatting passes on the edited markdown
-- [ ] 3.2 Lint + Astro check still pass
+- [x] 3.1 Formatting passes on the edited markdown
+- [x] 3.2 Lint + Astro check still pass
 
 #### Manual
 
-- [ ] 3.3 `CLAUDE.md`'s test description matches `vitest.config.ts`
-- [ ] 3.4 Inherited entry reads correctly without the two archived contracts
+- [x] 3.3 `CLAUDE.md`'s test description matches `vitest.config.ts`
+- [x] 3.4 Inherited entry reads correctly without the two archived contracts
