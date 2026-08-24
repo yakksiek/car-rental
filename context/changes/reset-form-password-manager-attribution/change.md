@@ -1,7 +1,7 @@
 ---
 change_id: reset-form-password-manager-attribution
 title: The set-password form has no username field, so Chrome offers to overwrite the admin's saved password
-status: implementing
+status: implemented
 created: 2026-08-24
 updated: 2026-08-24
 archived_at: null
