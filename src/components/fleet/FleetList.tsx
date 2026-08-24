@@ -5,8 +5,10 @@ import { Pencil, Plus, RotateCcw, Search, Truck, X } from "lucide-react";
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
+import type { QuickActionItem } from "../dashboard/quick-actions";
 import { cn } from "../../lib/utils";
 import { categoryLabelPl, formatPln, fuelLabelPl, transmissionLabelPl } from "../../lib/format";
 import type { CategoryCounts } from "../../lib/services/vehicles";
@@ -18,6 +20,17 @@ import type { Vehicle, VehicleCategory } from "../../types";
 // Edit links out to the form route; the red × opens the guarded retire confirm,
 // which POSTs /api/vehicles/[id]/active and maps the 409 (active reservations)
 // to an inline message. Retired rows offer restore. Polish copy is canonical.
+
+// This board's own create action, as the quick-action sheet's promoted first row
+// on mobile. Its key collides with the canonical `vehicle` row, so
+// `buildQuickActions` de-duplicates and the sheet renders 2 rows, not 3.
+const PROMOTED_VEHICLE: QuickActionItem = {
+  key: "vehicle",
+  icon: Truck,
+  label: "Dodaj pojazd",
+  desc: "Nowy pojazd do floty",
+  href: "/dashboard/vehicles/new",
+};
 
 const COPY = {
   eyebrow: "pojazdów",
@@ -289,14 +302,15 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
             {COPY.add}
           </a>
         </Button>
-        <Button
-          asChild
-          className="bg-foreground text-background hover:bg-foreground/90 shadow-accent flex size-12 shrink-0 rounded-full md:hidden"
-        >
-          <a href="/dashboard/vehicles/new" aria-label={COPY.add}>
-            <Plus className="size-5" />
-          </a>
-        </Button>
+        {/* Below md this board's own create action is ABSORBED into the
+            quick-action sheet as its promoted (crimson) first row, so the screen
+            carries a single `＋` and manual reservation stays reachable from here.
+            `vehicle` collides with a canonical key, so the sheet is 2 rows with no
+            duplicate. Size 48 → 40 per the settled reconciliation, with the
+            design's own shadow (replacing `shadow-accent`). */}
+        <div className="md:hidden">
+          <QuickAddButton mode="mobile" promoted={PROMOTED_VEHICLE} />
+        </div>
       </div>
 
       {/* Search */}

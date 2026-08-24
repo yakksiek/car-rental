@@ -668,36 +668,36 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Unit tests pass: `npm test`
-- [x] 3.4 Integration tests pass: `npm run test:integration`
-- [x] 3.5 Page authorization tests still pass
+- [x] 3.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — 80c1c92
+- [x] 3.2 Linting passes: `npm run lint` — 80c1c92
+- [x] 3.3 Unit tests pass: `npm test` — 80c1c92
+- [x] 3.4 Integration tests pass: `npm run test:integration` — 80c1c92
+- [x] 3.5 Page authorization tests still pass — 80c1c92
 
 #### Manual
 
-- [x] 3.6 The pill renders at md+ on all 7 routes
-- [x] 3.7 The pill is absent on all 5 task routes
-- [x] 3.8 Each of the 7 renders exactly one header band — Pulpit and Zespół verified specifically
-- [x] 3.9 `/dashboard/vehicles` shows its title once at md+, and still shows it below md
-- [x] 3.10 The Wnioski badge shows a non-zero count on `/dashboard/protocols/<id>`
-- [x] 3.11 Pulpit's calendar button still works and sits left of the pill at `gap: 12`
+- [x] 3.6 The pill renders at md+ on all 7 routes — 80c1c92
+- [x] 3.7 The pill is absent on all 5 task routes — 80c1c92
+- [x] 3.8 Each of the 7 renders exactly one header band — Pulpit and Zespół verified specifically — 80c1c92
+- [x] 3.9 `/dashboard/vehicles` shows its title once at md+, and still shows it below md — 80c1c92
+- [x] 3.10 The Wnioski badge shows a non-zero count on `/dashboard/protocols/<id>` — 80c1c92
+- [x] 3.11 Pulpit's calendar button still works and sits left of the pill at `gap: 12` — 80c1c92
 
 ### Phase 4: Mobile right-slot rollout
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Unit tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Unit tests pass: `npm test`
 
 #### Manual
 
-- [ ] 4.4 At 360px and 390px, all 7 mobile headers render without clipping — Pulpit measured explicitly
-- [ ] 4.5 Flota and Zespół each show exactly one `＋`, with the page action in the crimson tile
-- [ ] 4.6 Zespół's sheet has 3 rows and one divider; Flota's has 2 rows and no duplicate
-- [ ] 4.7 Zespół's promoted row opens the add-employee dialog; Flota's navigates to `/dashboard/vehicles/new`
-- [ ] 4.8 Every centred header's title remains optically centred with the circle present
+- [x] 4.4 At 360px and 390px, all 7 mobile headers render without clipping — Pulpit measured explicitly
+- [x] 4.5 Flota and Zespół each show exactly one `＋`, with the page action in the crimson tile
+- [x] 4.6 Zespół's sheet has 3 rows and one divider; Flota's has 2 rows and no duplicate
+- [x] 4.7 Zespół's promoted row opens the add-employee dialog; Flota's navigates to `/dashboard/vehicles/new`
+- [x] 4.8 Every centred header's title remains optically centred with the circle present
 
 ### Phase 5: Verification gate
 
