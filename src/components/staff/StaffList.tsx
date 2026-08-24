@@ -8,7 +8,7 @@ import { Button } from "../ui/button";
 
 // others
 import { cn } from "../../lib/utils";
-import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
+import { formatLastActive, plForm, staffInitials } from "../../lib/staff-format";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -546,61 +546,43 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
   return (
     <div>
-      {/* ── Header band (full-width white, flush top — aligned with other sections) ── */}
-      <header className="bg-card border-border border-b">
-        <div className="mx-auto w-full max-w-[1024px] px-4 py-5 md:px-6">
+      {/* ── Mobile page header (below md) ──────────────────────────────
+          At md+ the shell's own band carries the title and the count subtitle
+          (S-12b) — this island no longer draws a second one. Below md there is
+          no shell header at all, so the board keeps its own, matching the
+          canonical mobile board (eyebrow + `Zespół` + one right-hand action). */}
+      <header className="bg-card border-border border-b md:hidden">
+        <div className="mx-auto w-full max-w-[1024px] px-4 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase md:hidden">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {COPY.eyebrowMobileWord(total)}
               </div>
-              <div className="text-muted-foreground hidden text-xs font-semibold tracking-wide uppercase md:block">
-                {staffCountLabel(total, adminCount)}
-              </div>
-              <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
-                <span className="md:hidden">{COPY.titleMobile}</span>
-                <span className="hidden md:inline">{COPY.title}</span>
+              <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">
+                {COPY.titleMobile}
               </h1>
             </div>
-
-            <div className="flex items-center gap-3">
-              {/* Search inline only at lg+ (moves to its own row below on tablet/mobile) */}
-              <div className="relative hidden w-64 lg:block">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                  }}
-                  placeholder={COPY.searchPlaceholder}
-                  className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
-                />
-              </div>
-              {/* Add employee — labeled dark button at md+ (tablet + desktop), circular FAB below md */}
-              <Button
-                className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 px-4 md:inline-flex"
-                onClick={() => {
-                  setAddOpen(true);
-                }}
-              >
-                <Plus className="size-4" />
-                {COPY.add}
-              </Button>
-              <Button
-                className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full md:hidden"
-                aria-label={COPY.add}
-                onClick={() => {
-                  setAddOpen(true);
-                }}
-              >
-                <Plus className="size-5" />
-              </Button>
-            </div>
+            <Button
+              className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full"
+              aria-label={COPY.add}
+              onClick={() => {
+                setAddOpen(true);
+              }}
+            >
+              <Plus className="size-5" />
+            </Button>
           </div>
+        </div>
+      </header>
 
-          {/* Search full-width — mobile + tablet (below lg) */}
-          <div className="relative mt-4 lg:hidden">
+      {/* ── Content (grey) ─────────────────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
+        {/* Page action row — search plus this page's own create action. It sits
+            on the grey field, in its own band below the shell's white one, which
+            is what lets it coexist with the quick-add pill without ambiguity
+            (design board `qa-v5`). */}
+        <div className="mb-5 flex items-center gap-3">
+          <div className="relative flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
             <input
               type="search"
@@ -609,14 +591,20 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 setSearch(e.target.value);
               }}
               placeholder={COPY.searchPlaceholder}
-              className="border-border bg-background text-foreground placeholder:text-muted-foreground h-12 w-full rounded-[10px] border pr-4 pl-11 text-sm outline-none"
+              className="border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
             />
           </div>
+          <Button
+            className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 shrink-0 px-4 md:inline-flex"
+            onClick={() => {
+              setAddOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            {COPY.add}
+          </Button>
         </div>
-      </header>
 
-      {/* ── Content (grey) ─────────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
         {/* Mutation banner (§3.12) — above the filter card */}
         {banner && (
           <div

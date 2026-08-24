@@ -267,15 +267,17 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
 
   return (
     <div>
-      {/* Header: eyebrow count, title, primary add action */}
+      {/* Header: eyebrow count, title, primary add action.
+          The title block is `md:hidden` since S-12b: at md+ the shell's band
+          already renders "Zarządzanie flotą", so drawing it here too put the
+          page title on screen twice — a defect the band's new right-hand pill
+          sits directly above. Below md there is no shell header, so it stays. */}
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 md:hidden">
           <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {filtered.length} {COPY.eyebrow}
           </div>
-          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
-            {COPY.title}
-          </h1>
+          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">{COPY.title}</h1>
         </div>
         {/* Dark button at md+, dark circular FAB below md */}
         <Button

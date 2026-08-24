@@ -11,6 +11,7 @@ import type {
   ProtocolViewPhoto,
 } from "../../../components/protocol/ProtocolView";
 import { countOverdueReturns, getProtocol } from "../../../lib/services/protocols";
+import { listPendingReservations } from "../../../lib/services/reservations";
 import { resolveBackTarget } from "../../../lib/back-target";
 import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
 import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
@@ -29,9 +30,13 @@ import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protoc
 const { user, role, supabase } = Astro.locals;
 const { id } = Astro.params;
 
-// Overdue-returns badge count for the shell nav (S-07) — consistent with every
-// other staff page (this route previously passed no nav badge at all).
-const overdueCount = await countOverdueReturns(supabase);
+// Nav badge counts for the shell (S-07 added the overdue one; S-12b adds the
+// pending one). This was the ONE staff route that never passed `pendingCount`,
+// so the Wnioski badge silently read 0 here and only here — the shell defaults
+// it to 0 rather than treating it as unknown (known-issues.md). Fetching the
+// pending list only to read `.length` is the same duplication the other nine
+// pages carry; `service-read-projections` replaces all ten with a count RPC.
+const [overdueCount, pending] = await Promise.all([countOverdueReturns(supabase), listPendingReservations(supabase)]);
 
 const protocol = id ? await getProtocol(supabase, id) : null;
 
@@ -122,6 +127,7 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
     title="Protokół"
     user={user}
     role={role}
+    pendingCount={pending.length}
     overdueCount={overdueCount}
     showHeader={false}
   >
