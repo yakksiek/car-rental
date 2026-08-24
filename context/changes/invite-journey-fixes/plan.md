@@ -84,8 +84,18 @@ password exists, and leaves the reopened link dead.
 
 **Bug 1.** When the `profiles` insert fails, `createEmployee` attempts a compensating `deleteUser`
 and returns a distinguishable result. `api/staff.ts` maps it to its own status and `StaffList`
-renders its own message naming what happened and what to do — never the network banner. An admin can
-tell "the invite went out but the account wasn't finished" from "your connection dropped".
+renders its own message naming what happened and what to do — never the network banner. ~~An admin
+can tell "the invite went out but the account wasn't finished" from "your connection dropped".~~
+**Restated by phases 7–9.** Phase 8 stopped sending any mail on create, so there is no "the invite
+went out" half left to distinguish; phase 7 collapsed both provisioning codes to one sentence, and
+phase 9 moved every add failure — provisioning and dropped connection alike — into the modal the
+admin is still in, where the typed values remain and the submit button is the retry.
+
+**Roster feedback (phases 9–10).** Every mutation on `/dashboard/staff` reports where the admin
+actually is: an add failure inside the add modal, a remove failure inside the remove modal, and the
+row actions' successes and failures on a surface reachable from the row that triggered them at any
+scroll depth. No message is rendered behind a modal overlay or outside the viewport, and the routing
+decision that guarantees it lives in a tested pure function rather than in an island's `if`.
 
 **The status signal.** `profiles.password_set_at` is the single answer to "does this person have a
 working password", written only by the two routes that set one. Both `wasActive` on the repair path
@@ -1348,6 +1358,14 @@ Phase 9's fix is immune by construction — the message now lives inside a `fixe
 position cannot move it — and `repairedMailFailed`, the one add outcome still on the banner, is safe
 for the same reason the add modal was.
 
+**With one qualification, and it is §5's.** That safety is not construction, it is an initial
+condition: the admin is at scrollY≈0 when the modal opens, because the button that opens it is up
+there. `body` keeps `overflow: visible` while `ModalShell` is open, so the page can be scrolled
+_during_ the modal's lifetime — the add then completes, the modal closes on the 200, and its banner
+paints above a page that has moved. Narrow, and it takes a deliberate scroll behind an open dialog,
+but it means this banner's immunity and §5's scroll-lock decision are the same question. Decide §5
+first, or say plainly that `repairedMailFailed` is safe only from the top of the page.
+
 **The row actions are the harder half, and they include the SUCCESS banners.** `removeEmployee` has a
 modal to move its message into; `sendInvite` and `resetPassword` do not. Their failures use
 `mutationError` + `Ponów`, and their successes use `inviteSent` / `resetSent` — and `inviteSent` is
@@ -1373,6 +1391,29 @@ covers are the same decision for a different mutation.
 9's invariant sweep and adding the new one this phase discovers: **no arm may report to a surface the
 admin cannot reach from the control that triggered it.** Every arm gets a case, successes included.
 
+**That sentence is the intent, not the assertion — it is not a property the module can see.** Phase
+9's invariant works because it is a property of the returned object: `target === "banner" &&
+keepsModalOpen` is decidable in `staff-banner.test.ts`, and the `inModal` / `inBanner` constructors
+make its violation unrepresentable. Reachability is not that kind of property — it depends on scroll
+position and on the overlay, neither of which a pure function over outcomes has any view of. Left as
+prose, criterion 10.2 would be green under §3 options (a) and (b) **by construction**, because those
+leave every row arm resolving to `banner` and put the whole fix in CSS.
+
+So the phase owes a concrete predicate, and it is a **consequence of §3's decision, written after
+it** — not before. The shape: each arm carries the control that triggers it, the module declares
+which surfaces are reachable from a per-row control under the §3 answer, and the sweep asserts no
+row-triggered arm resolves outside that set. Where §3 makes the banner itself reachable, say so —
+the unit half then reduces to "the row arms target the surface §3 chose", and §6's e2e is the layer
+that proves the surface is reachable at all. Record which half is enforced where; a criterion no
+layer can fail is worse than no criterion.
+
+**§3 is decided first, and it scopes this section.** Remove needs the table unconditionally — it
+changes surface, banner → modal. The row actions may not: under §3's options (a) and (b) their arms
+still resolve to `banner` with the copy they ship today, so widening the module for them adds no
+behaviour, and the rename question below would then be triggered by entries that encode nothing. Take
+§3's answer, then widen §1 to exactly what that answer requires. Writing the row arms out to reason
+about them is fine and cheap; landing them as module surface before §3 is decided is not.
+
 **Two open decisions, neither for the implementer to take silently:**
 
 - **Shape.** A sibling `resolveRemoveReport` / `resolveRowActionReport`, or one
@@ -1382,7 +1423,9 @@ admin cannot reach from the control that triggered it.** Every arm gets a case, 
 - **Module name.** `staff-banner.ts` already outgrew its name in phase 9 (it owns modal copy and
   routing, not banners). If this phase adds two more non-banner surfaces, rename it — and if it is
   renamed, that is a mechanical move plus import updates, recorded here so it is not smuggled in as
-  part of a behaviour change.
+  part of a behaviour change. Measured, so the decision is cheap to take: the module has exactly one
+  importer (`StaffList.tsx:12`) and two comment references (`services/staff.ts:95`,
+  `api/staff.ts:89`).
 
 #### 2. A form-level error slot in the remove modal
 
@@ -1391,9 +1434,12 @@ admin cannot reach from the control that triggered it.** Every arm gets a case, 
 **Intent**: `RemoveModal` has no error slot at all today — unlike `AddModal`, which had two
 field-level ones to generalise from — so this is slightly more than phase 9's edit.
 
-**Contract**: One form-level slot, reusing phase 9's §8.4 element **verbatim** (`text-destructive mt-5
-flex items-start gap-1.5 text-[13px]`, glyph `mt-0.5 size-3.5 shrink-0`, `role="alert"`); it is the
-same state on a sibling surface, so nothing here is a new dimension. The modal stays open on both
+**Contract**: One form-level slot, reusing phase 9's §8.4 element — same tokens, verbatim:
+`text-destructive flex items-start gap-1.5 text-[13px]`, glyph `mt-0.5 size-3.5 shrink-0`,
+`role="alert"`. Colour, type ramp, glyph and gap are inherited-exact; **the block spacing above the
+slot is the one value §4 owns**, because `RemoveModal` lands it between a bare input (`:462`,
+`mt-1.5`) and the button row (`:465`, `mt-5`) rather than after `AddModal`'s field group, so `mt-5`
+there is a measurement, not an inheritance. Do not take it from this section. The modal stays open on both
 failure arms, its `Usuń` button becomes the retry, and the typed-confirm value survives the retry
 exactly as the add modal's field values do.
 
@@ -1420,8 +1466,30 @@ decision as "an inline banner + optimistic list mutation (**no toast**)", and re
 design decision for the whole app, not a bug fix for one screen. If the phase concludes a toast is
 nonetheless right, it stops and re-plans rather than shipping it here.
 
+**Whichever surface wins, it owes an exit — and today's banner has none of its own.** The element
+carries no dismiss control (§8.1's table is wrapper, message, icon, retry button, and nothing else),
+and `setBanner(null)` fires only at the start of the next mutation or on a `Ponów` click
+(`StaffList.tsx:588,626,659,679,799`). Scrolling past it is what currently makes it go away — which
+is this phase's defect, and simultaneously the only exit the design has. Option (a) removes that exit
+and supplies no replacement: `Wysłano zaproszenie.` would sit pinned over the roster until the admin
+mutates something else or reloads, and at 390px §8.1 measures this element at 3–4 lines, so it would
+hold ~80–100px of an 844px viewport indefinitely. Decide dismissal **in this phase** — an auto-clear
+for the success tone, or an explicit close control — and carry the answer into §4 as its own
+dimension with copy and affordance. Note the test trap before picking auto-clear: proving it without
+`page.waitForTimeout()` is not obvious, and `e2e/e2e-rules.md` forbids the sleep.
+
 Note (b)'s trap before choosing it: a scroll-into-view fires while a modal may be open, and scrolling
 the page behind an open modal is the behaviour §5 is about.
+
+And (c)'s, which is worse: **the anchor row can be gone by the time the message exists.** The filter
+tabs partition by status (`StaffList.tsx:530-534`) and `sendInvite`'s success optimistically flips
+`created` → `invited` (`:665`), so with the DODANI tab selected a successful invite drops the row out
+of `filtered` at the exact moment `inviteSent` needs to be shown. That is not a corner — DODANI is the
+tab an admin working through freshly added hires would sit on, and phase 8 created it. It also
+sharpens why the message matters there: the row vanishing is the only other signal, and it reads as
+"the row disappeared", not "the invite went out". `resetPassword` changes no status, so (c) survives
+for that arm; a split answer per arm is allowed, but it must be a decision, not a discovery at build
+time. Any (c)-shaped answer must state where the message goes when its row leaves `filtered`.
 
 #### 4. Design contract
 
@@ -1459,29 +1527,171 @@ prove both bite by deliberately reintroducing the defect and watching them go re
 `e2e/e2e-rules.md`. Cover a **success** banner too (`inviteSent` after a resend from a scrolled row),
 not only failures.
 
+**The scrolled precondition is not free, and the default viewport does not give it.** This defect
+only exists on a page tall enough to scroll, and a seeded roster is five rows
+(`supabase/seed.sql:232,308`). Measured against the running app (admin `storageState`,
+`/dashboard/staff`, 2026-08-21):
+
+| Viewport | Rows                          | Max scroll |
+| -------- | ----------------------------- | ---------- |
+| 1280×900 | 10 (5 seeded + local residue) | 188px      |
+| 1280×900 | 5 (a clean seed)              | **46px**   |
+| 390×844  | 5 (a clean seed)              | **488px**  |
+
+The table in this phase's Overview cites scrollY 329 and 259 — more than even the polluted local
+roster can scroll — so those readings came from ad-hoc local data volume, not from anything the suite
+reproduces. At Playwright's default `devices["Desktop Chrome"]` viewport a seeded roster scrolls
+~46px: the banner never leaves the viewport, no row control is below the fold, and **both** the
+in-viewport assertion and the deliberate-reintroduction check pass whether or not the fix exists.
+
+So the reachability spec runs at **390×844**, pinned per-test with `test.use({ viewport })`, where a
+seeded roster scrolls 488px with no fixture rows added. 390px is already a gated breakpoint (§11
+carries rows at both widths) and is where the banner is worst — §8.1 measures `mutationError`
+wrapping to 3 lines in a 227px message column. Two consequences to carry: the mobile surface is the
+card list (`StaffList.tsx:961`), not the table, so the row-action locators need re-checking rather
+than reusing the desktop spec's; and the desktop reading of criteria 10.14/10.15 stays a **manual**
+gate, which the phase accepts rather than faking with a seeded row count that would land in the
+filter-tab counts other specs read under `fullyParallel`.
+
 ### Success Criteria:
 
 #### Automated Verification:
 
 - Unit tests pass, including the widened outcome-to-surface table: `npm test`
-- No arm resolves to a surface unreachable from the control that triggered it
+- No row-triggered arm resolves outside the reachable-surface set §3's decision defines — the concrete predicate per §1, not the prose
 - Lint passes: `npm run lint`
 - Type checking passes: `npx astro check`
 - Integration tests pass: `npm run test:integration`
 - Production build succeeds: `npm run build`
-- E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success
+- E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success, at 390×844 — the only viewport where a seeded roster scrolls
 - E2E suite passes on `:4321`: `npm run test:e2e`
-- `design-contract.md` carries the remove-modal entry, §3's chosen surface, its copy, and §11 rows
+- `design-contract.md` carries the remove-modal entry, §3's chosen surface and its dismissal, its copy, and §11 rows
+- The §1 shape and module-name decisions are recorded, not taken silently
+- The §5 body-scroll-lock decision is recorded as in-scope or follow-up
 
 #### Manual Verification:
 
 - A failed remove reports inside the remove modal, with the typed confirmation intact
 - The remove modal's 200 and 409 (last-admin) arms are unchanged
 - A failed invite or reset, triggered from a row scrolled to the bottom of the roster, is readable
-  without scrolling
+  without scrolling — checked by hand at 1280px, which the automated spec deliberately does not cover
 - `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
 - Exactly one retry control is on screen for one failure
 - The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px
+
+## Phase 11: The same defect on the fleet roster
+
+### Overview
+
+`/dashboard/vehicles` carries phase 10's defect in its row-action half. Raised at phase 10's triage
+(owner, 2026-08-21) — "if the same problem exists in the fleet list, it should be fixed as well" —
+then verified against the code and the running app.
+
+`FleetList.tsx:246-255`'s `restore` — the per-row `Przywróć` — sets a banner that renders at
+`:352-354`, above the table and just below the show-retired toggle: the top of the document flow,
+reachable only from the top of the page, exactly the shape phase 10 measured on the roster. The page
+scrolls 140px at 1280×900 and **1015px at 390×844** with the eight seeded vehicles (measured
+2026-08-21), so the control and its message are not on screen together once the list is any longer
+than the seed.
+
+**Half of phase 10's problem is already absent here, which is why this is the smaller phase.** The
+retire confirmation reports **inside its dialog** (`setDialogError`, `:242`, rendered through
+`RetireDialog`'s `error` prop at `:499`) — the shape phase 9 had to build for the add modal. Fleet
+got it right on the modal arm and wrong on the row arm; only the row arm is in scope.
+
+**What the seed understates.** Exactly one vehicle is retired
+(`count(*) filter (where not is_active)` → 1), so today's single `Przywróć` sits near the top of the
+list and its banner happens to be in view. That is a property of the fixture, not of the design: the
+banner is anchored above the list and the control is per-row, so the gap grows with every retired
+vehicle below the first. Do not take the seed's reading as the absence of the defect — and note the
+same trap phase 10 §6 documents, that a fixture too small to scroll makes the assertion vacuous.
+
+**Ordered after phase 10 on purpose, and it takes no decision of its own.** Phase 10 §3 chooses this
+app's answer for "feedback from a per-row control"; this phase applies that answer to the second
+consumer. If it ran first, or decided independently, the app would ship two answers to one question.
+
+### Changes Required:
+
+#### 1. Phase 10 §3's surface, applied — not re-decided
+
+**File**: `src/components/fleet/FleetList.tsx`
+
+**Contract**: Whatever §3 chose — sticky, scroll-into-view, or row-anchored — the fleet banner gets
+the same treatment, including the dismissal answer §3 owes (phase 10 §3, "whichever surface wins, it
+owes an exit"). A fleet-specific variant is a failure of this phase, not a refinement: the point of
+ordering it second is that the decision is already taken.
+
+#### 2. No new shared module unless §3's answer needs one
+
+**File**: `src/components/fleet/FleetList.tsx`
+
+**Intent**: Lean execution, and a slice boundary. `staff-banner.ts` exists because the staff roster's
+routing was provably wrong and had to be gated by a test. The fleet screen has two failure arms, both
+already resolved inside `postActive` (`:206-226`), and its copy is local (`COPY.genericError`,
+`COPY.hasReservations`).
+
+**Contract**: If §3's answer is presentational, this change is presentational — do **not** port
+`staff-banner.ts` across the slice boundary to make the two screens look symmetric, and do not widen
+its `Outcome` union with vehicle arms. If §3's answer needs a routing predicate to be testable, then
+extract only the shared part at that point and name in the plan what is shared and what stays local.
+
+#### 3. Two fleet-specific arms to decide, not inherit
+
+**File**: `src/components/fleet/FleetList.tsx`
+
+**Contract**: Decide and record both:
+
+- **The vanishing anchor exists here too.** Retiring with "Pokaż wycofane" unchecked drops the row out
+  of `filtered` (`:187-189`), so any row-anchored answer inherits phase 10 §3's constraint on the
+  same terms.
+- **`restore` has no success feedback at all today** — the row simply flips. Phase 10 treated
+  `inviteSent` as load-bearing; whether the fleet needs the same is a strictly larger question than
+  the failure banner. Decide it **in this phase** as in-scope or follow-up, and record which — an
+  unstated omission here is what produced this phase.
+
+#### 4. Design contract
+
+**File**: `context/changes/invite-journey-fixes/design-contract.md`
+
+**Contract**: The fleet banner is **not** §8.1's element and must not inherit its values —
+`text-destructive mt-4 rounded-xl bg-[var(--flota-danger-soft)] px-4 py-3 text-sm` (`:353`), with no
+icon, no retry button, a different radius and different padding. Measure it as rendered, then record
+the changed dimension with §11 vision-diff rows at both breakpoints. This screen belongs to a
+different slice, so state where its contract lives rather than silently annexing it into this
+change's file.
+
+#### 5. Tests
+
+**Files**: `e2e/fleet-admin.spec.ts` (new — `ls e2e/` shows no fleet spec today)
+
+**Contract**: Same measurement discipline as phase 10 §6, for the same reason: `toBeVisible()` cannot
+see this defect. Assert in-viewport **and** topmost-at-its-own-centre at **390×844**, pinned with
+`test.use({ viewport })` — the seeded fleet scrolls 1015px there and 140px at the default viewport.
+Force the failure by stubbing `**/api/vehicles/*/active`, the pattern phase 9 used for
+`POST /api/staff`. Prove the assertions bite by reintroducing the defect, per `e2e/e2e-rules.md`.
+Decide whether `isTopmostAtItsOwnCentre` moves to `e2e/support/` or is duplicated — it is currently
+module-local to `staff-admin.spec.ts:219`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Unit tests pass: `npm test`
+- Lint passes: `npm run lint`
+- Type checking passes: `npx astro check`
+- Integration tests pass: `npm run test:integration`
+- Production build succeeds: `npm run build`
+- E2E asserts in-viewport AND topmost-at-its-own-centre for a failed `Przywróć` at 390×844
+- E2E suite passes on `:4321`: `npm run test:e2e`
+- The shipped surface is phase 10 §3's answer, not a fleet-specific variant
+- `design-contract.md` carries the fleet banner's measured values and §11 rows
+
+#### Manual Verification:
+
+- A failed `Przywróć` from a row below the fold is readable without scrolling
+- The retire confirm dialog's in-dialog error is unchanged
+- The §3 decisions — vanishing anchor, and restore-success feedback — are recorded as in-scope or follow-up
+- The fleet banner matches its design entry verbatim at 1280px and 390px
 
 ## Testing Strategy
 
@@ -1742,46 +1952,67 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [x] 9.1 Unit tests pass, including the outcome→target table: `npm test`
-- [x] 9.2 No arm resolves to a banner-only report while the modal stays open
-- [x] 9.3 Lint passes: `npm run lint`
-- [x] 9.4 Type checking passes: `npx astro check`
-- [x] 9.5 Integration tests pass: `npm run test:integration`
-- [x] 9.6 Production build succeeds: `npm run build`
-- [x] 9.7 E2E asserts the error is topmost at its own centre, not merely present in the DOM
-- [x] 9.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [x] 9.9 `design-contract.md` carries the form-level error entry, its copy, and a §11 diff row
+- [x] 9.1 Unit tests pass, including the outcome→target table: `npm test` — 9223993
+- [x] 9.2 No arm resolves to a banner-only report while the modal stays open — 9223993
+- [x] 9.3 Lint passes: `npm run lint` — 9223993
+- [x] 9.4 Type checking passes: `npx astro check` — 9223993
+- [x] 9.5 Integration tests pass: `npm run test:integration` — 9223993
+- [x] 9.6 Production build succeeds: `npm run build` — 9223993
+- [x] 9.7 E2E asserts the error is topmost at its own centre, not merely present in the DOM — 9223993
+- [x] 9.8 E2E suite passes on `:4321`: `npm run test:e2e` — 9223993
+- [x] 9.9 `design-contract.md` carries the form-level error entry, its copy, and a §11 diff row — 9223993
 
 #### Manual
 
-- [x] 9.10 A forced provisioning failure reports inside the modal, values intact
-- [x] 9.11 A dropped connection reports inside the modal — the phase-9 defect, closed
-- [x] 9.12 Exactly one retry control is on screen for one failure
-- [x] 9.13 A 409 duplicate still reports inline under the email field, unchanged
-- [x] 9.14 `repairedMailFailed` still closes the modal and reports as a banner
-- [x] 9.15 The error state matches `design-contract.md` verbatim at 1280px and 390px
+- [x] 9.10 A forced provisioning failure reports inside the modal, values intact — 9223993
+- [x] 9.11 A dropped connection reports inside the modal — the phase-9 defect, closed — 9223993
+- [x] 9.12 Exactly one retry control is on screen for one failure — 9223993
+- [x] 9.13 A 409 duplicate still reports inline under the email field, unchanged — 9223993
+- [x] 9.14 `repairedMailFailed` still closes the modal and reports as a banner — 9223993
+- [x] 9.15 The error state matches `design-contract.md` verbatim at 1280px and 390px — 9223993
 
 ### Phase 10: The roster banner is unreachable from the row that triggers it
 
 #### Automated
 
-- [ ] 10.1 Unit tests pass, including the widened outcome-to-surface table: `npm test`
-- [ ] 10.2 No arm resolves to a surface unreachable from the control that triggered it
-- [ ] 10.3 Lint passes: `npm run lint`
-- [ ] 10.4 Type checking passes: `npx astro check`
-- [ ] 10.5 Integration tests pass: `npm run test:integration`
-- [ ] 10.6 Production build succeeds: `npm run build`
-- [ ] 10.7 E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success
-- [ ] 10.8 E2E suite passes on `:4321`: `npm run test:e2e`
-- [ ] 10.9 `design-contract.md` carries the remove-modal entry, the chosen row-action surface, its copy, and §11 rows
-- [ ] 10.10 The §1 shape and module-name decisions are recorded, not taken silently
-- [ ] 10.11 The §5 body-scroll-lock decision is recorded as in-scope or follow-up
+- [x] 10.1 Unit tests pass, including the widened outcome-to-surface table: `npm test`
+- [x] 10.2 No row-triggered arm resolves outside the reachable-surface set §3's decision defines — the concrete predicate per §1, not the prose
+- [x] 10.3 Lint passes: `npm run lint`
+- [x] 10.4 Type checking passes: `npx astro check`
+- [x] 10.5 Integration tests pass: `npm run test:integration`
+- [x] 10.6 Production build succeeds: `npm run build`
+- [x] 10.7 E2E asserts in-viewport AND topmost-at-its-own-centre, on a failure and on a success, at 390×844 — the only viewport where a seeded roster scrolls
+- [x] 10.8 E2E suite passes on `:4321`: `npm run test:e2e`
+- [x] 10.9 `design-contract.md` carries the remove-modal entry, the chosen row-action surface and its dismissal, its copy, and §11 rows
+- [x] 10.10 The §1 shape and module-name decisions are recorded, not taken silently
+- [x] 10.11 The §5 body-scroll-lock decision is recorded as in-scope or follow-up
 
 #### Manual
 
-- [ ] 10.12 A failed remove reports inside the remove modal, with the typed confirmation intact
-- [ ] 10.13 The remove modal's 200 and 409 (last-admin) arms are unchanged
-- [ ] 10.14 A failed invite or reset from a scrolled row is readable without scrolling
-- [ ] 10.15 `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
-- [ ] 10.16 Exactly one retry control is on screen for one failure
-- [ ] 10.17 The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px
+- [x] 10.12 A failed remove reports inside the remove modal, with the typed confirmation intact
+- [x] 10.13 The remove modal's 200 and 409 (last-admin) arms are unchanged
+- [x] 10.14 A failed invite or reset from a scrolled row is readable without scrolling
+- [x] 10.15 `Wysłano zaproszenie.` after a resend from a scrolled row is readable without scrolling
+- [x] 10.16 Exactly one retry control is on screen for one failure
+- [x] 10.17 The remove modal's error state matches `design-contract.md` verbatim at 1280px and 390px
+
+### Phase 11: The same defect on the fleet roster
+
+#### Automated
+
+- [ ] 11.1 Unit tests pass: `npm test`
+- [ ] 11.2 Lint passes: `npm run lint`
+- [ ] 11.3 Type checking passes: `npx astro check`
+- [ ] 11.4 Integration tests pass: `npm run test:integration`
+- [ ] 11.5 Production build succeeds: `npm run build`
+- [ ] 11.6 E2E asserts in-viewport AND topmost-at-its-own-centre for a failed `Przywróć` at 390×844
+- [ ] 11.7 E2E suite passes on `:4321`: `npm run test:e2e`
+- [ ] 11.8 The shipped surface is phase 10 §3's answer, not a fleet-specific variant
+- [ ] 11.9 `design-contract.md` carries the fleet banner's measured values and §11 rows
+
+#### Manual
+
+- [ ] 11.10 A failed `Przywróć` from a row below the fold is readable without scrolling
+- [ ] 11.11 The retire confirm dialog's in-dialog error is unchanged
+- [ ] 11.12 The §3 decisions — vanishing anchor, and restore-success feedback — are recorded as in-scope or follow-up
+- [ ] 11.13 The fleet banner matches its design entry verbatim at 1280px and 390px

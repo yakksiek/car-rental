@@ -9,7 +9,15 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
-import { type AddOutcome, type AddReport, inviteActionLabel, resolveAddReport } from "../../lib/staff-banner";
+import {
+  type AddOutcome,
+  type Report,
+  type ReportTone,
+  inviteActionLabel,
+  resolveAddReport,
+  resolveRemoveReport,
+  resolveRowActionReport,
+} from "../../lib/staff-report";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -58,7 +66,7 @@ const COPY = {
   // Row action — TWO labels, one per password-less state (owner, 2026-08-21):
   // a first send on a DODANY row, a resend on a ZAPROSZONY one, where reusing
   // the first-send wording read as if nothing had been sent yet. Both are
-  // authored in `lib/staff-banner.ts` rather than here, because
+  // authored in `lib/staff-report.ts` rather than here, because
   // `repairedMailFailed` has to NAME whichever button that row shows — the
   // coupling that made a single shared label tempting in the first place.
   sendInvite: inviteActionLabel,
@@ -79,20 +87,16 @@ const COPY = {
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
   //
-  // `mutationError` is the ROW actions' failure banner (invite, reset, remove) —
-  // those have no form to report into, so the banner is where the admin is. The
-  // ADD flow no longer routes here at all: every one of its outcomes, including
-  // a thrown `fetch`, is placed by `resolveAddReport` in `lib/staff-banner.ts`.
-  mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
-  // `repairedMailFailed` used to sit here. It is still a banner — the one add
-  // outcome that is — but its string is now produced by `resolveAddReport`
-  // alongside every other arm, so the island no longer authors it. See
-  // `lib/staff-banner.ts` for why it names an INVITE button rather than
-  // `„Resetuj hasło”` (design-contract §9.2, §10 entry 2).
+  // No message string lives here any more. `mutationError`, `inviteSent`,
+  // `resetSent` and `repairedMailFailed` all moved into `lib/staff-report.ts`
+  // alongside the routing that places them, so the outcome→surface table owns
+  // every arm's words rather than owning some of them (phase 10 §1). What stays
+  // are the two CONTROL labels the banner renders, which belong to the island.
+  // The dismiss control phase 10 §3 owes the sticky banner reuses `close` above
+  // — the shipped `ModalShell` label — rather than authoring a second word for
+  // the same affordance. (`genericError` used to sit here and was dead: nothing
+  // referenced it. Removed with the strings that moved.)
   retry: "Ponów",
-  resetSent: "Wysłano e-mail do resetu hasła.",
-  inviteSent: "Wysłano zaproszenie.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
   // mobile
   eyebrowMobileWord: (n: number) => `${n} ${plForm(n, "osoba", "osoby", "osób").toUpperCase()}`,
   chipActive: "Aktywni",
@@ -113,8 +117,11 @@ const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 type Filter = "all" | "active" | "invited" | "created" | "admin";
 
+// What the island holds for a banner it has been told to render. `tone` and
+// `msg` come straight off the `Report`; `retry` is the callback the module can
+// only ask for (`offersRetry`), never supply.
 interface Banner {
-  kind: "error" | "success";
+  tone: ReportTone;
   msg: string;
   retry?: () => void;
 }
@@ -278,7 +285,7 @@ function AddModal({
 }: {
   busy: boolean;
   onClose: () => void;
-  onSubmit: (values: { full_name: string; email: string }) => Promise<AddReport>;
+  onSubmit: (values: { full_name: string; email: string }) => Promise<Report>;
 }) {
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -430,10 +437,23 @@ function RemoveModal({
   member: StaffMember;
   busy: boolean;
   onClose: () => void;
-  onConfirm: (confirmEmail: string) => void;
+  onConfirm: (confirmEmail: string) => Promise<Report>;
 }) {
   const [typed, setTyped] = React.useState("");
+  // The form-level slot phase 10 §2 adds. `RemoveModal` had no error slot at
+  // all — unlike `AddModal`, which had two field-level ones to generalise from
+  // — because both of its failure arms used to set the roster banner and leave
+  // this modal open. That put the message off-screen while the admin was
+  // scrolled, and under `ModalShell`'s own overlay once they scrolled up to it.
+  const [formError, setFormError] = React.useState<string | null>(null);
   const matches = typed.trim().toLowerCase() === member.email.toLowerCase();
+
+  async function confirm() {
+    setFormError(null);
+    const report = await onConfirm(typed.trim());
+    if (report.slot === "form") setFormError(report.message);
+  }
+
   return (
     <ModalShell onClose={onClose}>
       <div className="text-destructive flex size-12 items-center justify-center rounded-lg bg-[var(--flota-danger-soft)]">
@@ -456,23 +476,36 @@ function RemoveModal({
         value={typed}
         onChange={(e) => {
           setTyped(e.target.value);
+          setFormError(null);
         }}
         placeholder={member.email}
         autoComplete="off"
         className="border-border bg-background text-foreground mt-1.5 h-11 w-full rounded-xl border px-3.5 font-mono text-sm"
       />
+
+      {/* Form-level error (§8.5) — inherited-exact from the add modal's §8.4
+          slot: colour, type ramp, glyph, gap, `items-start`, `shrink-0` and
+          `role="alert"` are that element verbatim, and this modal's content
+          column is the same 400px / 342px, so the wrap behaviour transfers with
+          them. `mt-5` is the ONE value measured here rather than inherited: the
+          slot lands between a bare input (`mt-1.5` above it) and the button row,
+          and that gap measures 20px, so a 20/20 split keeps the modal's own
+          block rhythm instead of borrowing the add modal's field-group rhythm. */}
+      {formError && (
+        <p role="alert" className="text-destructive mt-5 flex items-start gap-1.5 text-[13px]">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {formError}
+        </p>
+      )}
+
       <div className="mt-5 flex gap-2.5">
         <Button variant="outline" className="h-12 flex-1" disabled={busy} onClick={onClose}>
           {COPY.cancel}
         </Button>
-        <Button
-          variant="destructive"
-          className="h-12 flex-1 gap-2"
-          disabled={busy || !matches}
-          onClick={() => {
-            onConfirm(typed.trim());
-          }}
-        >
+        {/* Stays enabled through a form-level error — it IS the retry now, and
+            the typed confirmation is still in the field behind it, so there is
+            exactly one retry control on screen for one failure. */}
+        <Button variant="destructive" className="h-12 flex-1 gap-2" disabled={busy || !matches} onClick={confirm}>
           {busy && <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
           {COPY.remove}
         </Button>
@@ -551,15 +584,19 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
   // ── mutations ──────────────────────────────────────────────────────────────
 
-  // Applies a routing decision to the two surfaces it can name. The modal reads
-  // `slot` off the returned report and places the message itself; here we only
-  // open/close it and fill the banner on the single arm that still uses one
-  // (`repairedMailFailed` — it rides a 200, the row really did land, and its
-  // remedy is the row's own action rather than a retry, so it carries no `Ponów`).
-  function applyAddReport(report: AddReport): AddReport {
-    if (!report.keepsModalOpen) setAddOpen(false);
-    if (report.target === "banner" && report.message) {
-      setBanner({ kind: "error", msg: report.message });
+  // Applies a routing decision to the surfaces it can name. Every mutation goes
+  // through here (phase 10 §1): the modal that owns a report reads `slot` off
+  // the returned value and places the message itself, while this function only
+  // opens/closes modals and fills the banner.
+  //
+  // `retry` is passed IN rather than read out. The module can say an arm needs a
+  // retry control (`offersRetry`) but has no way to produce the callback, so the
+  // caller supplies the one that re-runs its own mutation.
+  function applyReport(report: Report, closeOwnModal: () => void, retry?: () => void): Report {
+    if (!report.keepsModalOpen) closeOwnModal();
+    if (report.target === "last-admin-modal") setLastAdminOpen(true);
+    if (report.target === "banner" && report.message && report.tone) {
+      setBanner({ tone: report.tone, msg: report.message, retry: report.offersRetry ? retry : undefined });
     }
     return report;
   }
@@ -583,7 +620,10 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   // to set a banner and leave the modal open, so the message painted behind
   // `ModalShell`'s overlay — the most common failure, and the one case where the
   // typed values are still perfectly good, was invisible.
-  async function addEmployee(values: { full_name: string; email: string }): Promise<AddReport> {
+  async function addEmployee(values: { full_name: string; email: string }): Promise<Report> {
+    const closeAddModal = () => {
+      setAddOpen(false);
+    };
     setAddBusy(true);
     setBanner(null);
     try {
@@ -613,15 +653,30 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         const failure = (await res.json().catch(() => null)) as { code?: string } | null;
         outcome = { kind: "http", httpStatus: res.status, code: failure?.code ?? null };
       }
-      return applyAddReport(resolveAddReport(outcome));
+      return applyReport(resolveAddReport(outcome), closeAddModal);
     } catch {
-      return applyAddReport(resolveAddReport({ kind: "network" }));
+      return applyReport(resolveAddReport({ kind: "network" }), closeAddModal);
     } finally {
       setAddBusy(false);
     }
   }
 
-  async function removeEmployee(member: StaffMember, confirmEmail: string) {
+  // THE PHASE-10 DEFECT, half one. Both failure arms used to set the roster
+  // banner and leave `RemoveModal` open — and `RemoveModal` is `fixed inset-0`
+  // while the banner sits in the flow at the top of a document the admin has
+  // scrolled. Measured 2026-08-21 at 390×844: banner top `-1033`,
+  // `elementFromPoint` at its centre `null`, and `toBeVisible()` green. Scroll up
+  // to it and the second failure takes over — `ModalShell`'s `z-[60]` overlay is
+  // then what answers the hit test. There was no scroll position that showed the
+  // message legibly while the dialog was open.
+  //
+  // Both now report in the modal, whose `Usuń` is the retry with the typed
+  // confirmation still in the field. The 200 and 409 arms are deliberately
+  // untouched: the row really went, or the refusal is a different screen.
+  async function removeEmployee(member: StaffMember, confirmEmail: string): Promise<Report> {
+    const closeRemoveModal = () => {
+      setRemoveFor(null);
+    };
     setBusyId(member.id);
     setBanner(null);
     try {
@@ -632,18 +687,10 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       });
       if (res.status === 200) {
         setStaff((rows) => rows.filter((r) => r.id !== member.id));
-        setRemoveFor(null);
-        return;
       }
-      if (res.status === 409) {
-        // last admin — swap to the refusal modal
-        setRemoveFor(null);
-        setLastAdminOpen(true);
-        return;
-      }
-      setBanner({ kind: "error", msg: COPY.mutationError });
+      return applyReport(resolveRemoveReport({ kind: "http", httpStatus: res.status }), closeRemoveModal);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError });
+      return applyReport(resolveRemoveReport({ kind: "network" }), closeRemoveModal);
     } finally {
       setBusyId(null);
     }
@@ -654,7 +701,24 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   // link on a resend, so there is never more than one live token per person.
   // On success the row moves DODANY → ZAPROSZONY off the server's own
   // `invited_at`, not a locally-guessed timestamp.
-  async function sendInvite(member: StaffMember) {
+  // THE PHASE-10 DEFECT, half two — and the half with no modal to move into.
+  // These two are triggered from a per-row control reachable at any scroll
+  // depth, and their SUCCESS messages are load-bearing: a resend changes nothing
+  // else on screen (the badge is already ZAPROSZONY), so `inviteSent` is the
+  // only feedback there is. A success banner the admin never sees fails that job
+  // exactly as completely as a failure banner does. §3's answer is not to
+  // relocate them but to make the banner itself reachable — see its `sticky`
+  // placement below.
+  //
+  // `noModal` reads as ceremony for one line, and is deliberate: it says these
+  // arms own no modal, which is why the banner is the only surface they can use
+  // and why §3 had to be a layout decision rather than a routing one.
+  const noModal = () => {
+    /* row actions open no modal — nothing to close */
+  };
+
+  async function sendInvite(member: StaffMember): Promise<Report> {
+    const retry = () => void sendInvite(member);
     setBusyId(member.id);
     setBanner(null);
     try {
@@ -663,29 +727,24 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
         const invitedAt = body?.invitedAt ?? new Date().toISOString();
         setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
-        setBanner({ kind: "success", msg: COPY.inviteSent });
-      } else {
-        setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void sendInvite(member) });
       }
+      return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: res.status }), noModal, retry);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void sendInvite(member) });
+      return applyReport(resolveRowActionReport("invite", { kind: "network" }), noModal, retry);
     } finally {
       setBusyId(null);
     }
   }
 
-  async function resetPassword(member: StaffMember) {
+  async function resetPassword(member: StaffMember): Promise<Report> {
+    const retry = () => void resetPassword(member);
     setBusyId(member.id);
     setBanner(null);
     try {
       const res = await fetch(`/api/staff/${member.id}/reset-password`, { method: "POST" });
-      if (res.status === 200) {
-        setBanner({ kind: "success", msg: COPY.resetSent });
-      } else {
-        setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void resetPassword(member) });
-      }
+      return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: res.status }), noModal, retry);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void resetPassword(member) });
+      return applyReport(resolveRowActionReport("reset", { kind: "network" }), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -767,12 +826,31 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
       {/* ── Content (grey) ─────────────────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
-        {/* Mutation banner (§3.12) — above the filter card */}
+        {/* Mutation banner (§3.12, §8.6) — above the filter card, and PINNED.
+
+            `sticky top-4 z-20` is phase 10 §3's answer for the row actions,
+            which have no modal to report into. The element and every one of its
+            dimensions are unchanged; what changed is that it no longer sits at a
+            document offset the admin has scrolled away from. Measured
+            2026-08-21 at 390×844: without it, top `-1033` and `elementFromPoint`
+            `null` at its own centre — outside the viewport, while
+            `toBeVisible()` passed. With it, top `16`, in viewport, topmost.
+
+            This also restores the design's own behaviour rather than inventing
+            one: `EsShell` in `employee-states.jsx` puts the banner OUTSIDE the
+            scrolling region (`flex: 1; overflow: auto` is on the table body
+            alone), so only the list scrolls and the banner is permanently on
+            screen. The app built the same screen as a document that scrolls
+            whole. Sticky is the local way back to the intended behaviour without
+            restructuring the app shell.
+
+            At scrollY 0 it renders byte-identically to before, so §11's existing
+            baselines still hold — sticky only engages once the page has moved. */}
         {banner && (
           <div
             className={cn(
-              "mb-5 flex items-center justify-between gap-3 rounded-lg border px-5 py-3.5",
-              banner.kind === "error"
+              "sticky top-4 z-20 mb-5 flex items-center justify-between gap-3 rounded-lg border px-5 py-3.5",
+              banner.tone === "error"
                 ? "border-destructive/30 bg-[var(--flota-danger-soft)]"
                 : "border-success/30 bg-[var(--flota-success-soft)]",
             )}
@@ -780,29 +858,52 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
             <span
               className={cn(
                 "flex items-center gap-2.5 text-sm font-[540]",
-                banner.kind === "error" ? "text-destructive" : "text-success",
+                banner.tone === "error" ? "text-destructive" : "text-success",
               )}
             >
-              {banner.kind === "error" ? (
+              {banner.tone === "error" ? (
                 <AlertTriangle className="size-4 shrink-0" />
               ) : (
                 <ShieldCheck className="size-4 shrink-0" />
               )}
               {banner.msg}
             </span>
-            {banner.kind === "error" && banner.retry && (
-              <Button
-                variant="outline"
-                className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
+            <span className="flex shrink-0 items-center gap-2">
+              {banner.tone === "error" && banner.retry && (
+                <Button
+                  variant="outline"
+                  className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
+                  onClick={() => {
+                    const r = banner.retry;
+                    setBanner(null);
+                    r?.();
+                  }}
+                >
+                  {COPY.retry}
+                </Button>
+              )}
+              {/* The exit pinning takes away. Scrolling past the banner used to
+                  be how it went away — which IS phase 10's defect, and was
+                  simultaneously the only dismissal the design had. Sticky
+                  removes it, so §3 owes a replacement: an explicit control on
+                  both tones, chosen over auto-clearing the success tone because
+                  an error that vanishes on a timer is worse than one that
+                  persists, and because proving a timer without a sleep is a
+                  cost `e2e-rules.md` should not have to carry. Geometry and
+                  label are `ModalShell`'s shipped ✕ (`:264`), minus its absolute
+                  positioning; `setBanner(null)` on the next mutation is
+                  unchanged and still fires. */}
+              <button
+                type="button"
+                aria-label={COPY.close}
                 onClick={() => {
-                  const r = banner.retry;
                   setBanner(null);
-                  r?.();
                 }}
+                className="bg-card text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-full"
               >
-                {COPY.retry}
-              </Button>
-            )}
+                <X className="size-4" />
+              </button>
+            </span>
           </div>
         )}
 

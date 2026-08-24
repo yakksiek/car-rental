@@ -83,6 +83,11 @@ and `staff.ts` has no unit coverage.
 | 4. Deferred exchange — callback | Token-lookup RPC; no `verifyOtp` on GET; `?code=` dropped            | Couples one RPC to a GoTrue-internal table with no stability contract                  |
 | 5. Submit-time exchange         | `verifyOtp` + set + stamp as one op; page re-sourced from the lookup | Retryability must survive — a typo must not spend the token                            |
 | 6. Deletion sweep               | `readSessionOrigin` family removed; helpers and specs rewritten      | `shouldSecureCookies` is shared with middleware/signin/signout — deleting it is silent |
+| 7. One-step failure framing     | Both provisioning codes collapse to one sentence, moved to `lib/`    | Copy lives in an island where no gate can hold it — hence the extracted module         |
+| 8. Two-step add                 | Create, then invite: a DODANY roster state and a per-row invite      | The reorder rests on `inviteUserByEmail` working on an already-created user            |
+| 9. Report the add failure       | Form-level error slot in the add modal; routing becomes a function   | Reopens phase 1's close-the-modal decision — it must be replaced, not inherited        |
+| 10. Reachable roster feedback   | Remove-modal error slot; a surface the row actions can reach         | The defect needs a scrolled page — the default viewport cannot reproduce it            |
+| 11. Same defect, fleet roster   | Phase 10's surface applied to `FleetList`'s per-row restore banner   | The seed retires one vehicle, so the fixture understates the defect                    |
 
 **Prerequisites:** local Supabase running (`npx supabase start`); apply migrations with
 `supabase migration up`, never `db reset` — four worktrees share one Docker stack. Manual auth
@@ -104,8 +109,11 @@ testing uses throwaway addresses only, never the seeded `employee@`/`admin@` acc
 
 ## Success Criteria (Summary)
 
-- An admin whose employee-add fails can tell "the invite went out but the account wasn't finished"
-  from "your connection dropped" — and has a labelled action that fixes it.
+- An admin whose employee-add fails is told so **in the modal they are still in**, with their typed
+  values intact and the submit button as the retry. (Phase 8 retired the earlier form of this
+  criterion — "the invite went out but the account wasn't finished" — by sending no mail on create.)
+- Every roster mutation reports where the admin is: reachable from the control that triggered it, at
+  any scroll depth, never behind a modal overlay.
 - The roster tells the truth in both directions: no AKTYWNY for someone who cannot sign in, no
   ZAPROSZONY for someone already inside.
 - An invited hire can open their link, walk away, and come back to a working set-password form.

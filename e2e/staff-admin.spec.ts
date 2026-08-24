@@ -1,10 +1,10 @@
 // core
-import { test, expect, type Locator } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 // others
 import { fillHydrated, waitForIslands } from "./support/hydration";
 import { waitForCallbackLink } from "./support/mailpit";
-import { createActiveEmployee, deleteStaffByEmail, deleteStaffUser } from "./fixtures/staff";
+import { createActiveEmployee, createPendingEmployee, deleteStaffByEmail, deleteStaffUser } from "./fixtures/staff";
 
 // ---------------------------------------------------------------------------
 // EMPLOYEES ADMIN CRUD (S-08, plan Phase 4) — the rendered admin roster:
@@ -224,6 +224,30 @@ async function isTopmostAtItsOwnCentre(locator: Locator): Promise<boolean> {
   });
 }
 
+/**
+ * Is this element inside the viewport at all?
+ *
+ * The half `isTopmostAtItsOwnCentre` cannot see (phase 10). When an element is
+ * scrolled off-screen, `elementFromPoint` at its centre returns `null` — the
+ * point is not covered by something else, it is outside the document's visible
+ * box entirely. So "topmost" alone cannot distinguish "readable" from "nowhere
+ * near the screen", and the two assertions have to be made together.
+ */
+async function isInViewport(locator: Locator): Promise<boolean> {
+  return locator.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 0 && box.bottom <= window.innerHeight && box.left >= 0 && box.right <= window.innerWidth;
+  });
+}
+
+/** Scroll the page to the bottom of the roster, where every row control still is. */
+async function scrollToBottom(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+    return Math.round(window.scrollY);
+  });
+}
+
 test("a dropped connection reports inside the add modal, on top of the overlay — not behind it", async ({ page }) => {
   // THE PHASE-9 DEFECT. `fetch` throws, the typed values are still perfectly
   // good, and this arm used to give the admin a blurred red smear behind a
@@ -323,4 +347,193 @@ test("a duplicate still reports inline under the e-mail field, unchanged", async
   } finally {
     await page.unroute("**/api/staff");
   }
+});
+
+// ---------------------------------------------------------------------------
+// WHERE the OTHER three mutations are reported (invite-journey-fixes, phase 10).
+//
+// Phase 9 fixed the add flow and, in doing so, established the measurement: an
+// error can be in the DOM, pass `toBeVisible()`, and still be unreadable. Phase
+// 10 found the same class of defect on the row-triggered mutations, in a form
+// phase 9's assertion could not have caught — the message was not COVERED, it
+// was outside the viewport, because the banner sits at the top of a scrolling
+// document while the ✕ / invite / reset controls are per-row.
+//
+// Measured against the running app, 2026-08-21:
+//
+//   removeEmployee failure, 390×844, scrollY 1298 → banner top -1033, hit null
+//   resetPassword success,  390×844, scrollY  689 → banner top  -424, hit null
+//
+// `toBeVisible()` passed on every one of those. So these specs assert BOTH
+// halves: in the viewport, and topmost at its own centre.
+// ---------------------------------------------------------------------------
+
+test("a failed remove reports inside the remove modal, with the typed confirmation intact", async ({ page }) => {
+  // Half one of the phase-10 defect. Both failure arms used to set the roster
+  // banner and leave `RemoveModal` open — so the message was off-screen while
+  // the admin was scrolled, and under `ModalShell`'s own `z-[60]` overlay once
+  // they scrolled up to it. There was no scroll position that showed it.
+  const { id, email } = await createActiveEmployee("Fl0ta-E2E-RemoveFail-2026!");
+  await page.route("**/api/staff/*/deactivate", (route) => route.abort());
+  try {
+    await page.goto("/dashboard/staff");
+    await waitForIslands(page);
+
+    const row = page.getByRole("row", { name: new RegExp(email, "i") });
+    await row.getByRole("button", { name: "Usuń pracownika" }).click();
+    await fillHydrated(page.getByLabel("WPISZ E-MAIL, ABY POTWIERDZIĆ"), email);
+    await page.getByRole("button", { name: "Usuń", exact: true }).click();
+
+    const error = page.getByText("Nie udało się usunąć pracownika. Sprawdź połączenie i spróbuj ponownie.");
+    await expect(error).toBeVisible();
+    // Present is not the same as readable — the assertions that matter.
+    expect(await isInViewport(error)).toBe(true);
+    expect(await isTopmostAtItsOwnCentre(error)).toBe(true);
+
+    // The modal stayed open with the typed confirmation intact, and its own
+    // `Usuń` is the retry — so exactly one retry control is on screen, not two.
+    await expect(page.getByLabel("WPISZ E-MAIL, ABY POTWIERDZIĆ")).toHaveValue(email);
+    await expect(page.getByRole("button", { name: "Usuń", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Ponów" })).toHaveCount(0);
+    // And the row is still there — the abort changed nothing server-side.
+    await expect(row).toBeVisible();
+  } finally {
+    await page.unroute("**/api/staff/*/deactivate");
+    await deleteStaffUser(id);
+  }
+});
+
+test("the last-admin refusal still swaps modals rather than reporting in the form", async ({ page }) => {
+  // The arm phase 10 must NOT move. A 409 is a different screen with its own
+  // copy, and `resolveRemoveReport` returns it as a surface swap carrying no
+  // message — so the new form-level slot has to stay empty here.
+  const { id, email } = await createActiveEmployee("Fl0ta-E2E-LastAdmin2-2026!");
+  await page.route("**/api/staff/*/deactivate", (route) =>
+    route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "last_admin" }) }),
+  );
+  try {
+    await page.goto("/dashboard/staff");
+    await waitForIslands(page);
+
+    const row = page.getByRole("row", { name: new RegExp(email, "i") });
+    await row.getByRole("button", { name: "Usuń pracownika" }).click();
+    await fillHydrated(page.getByLabel("WPISZ E-MAIL, ABY POTWIERDZIĆ"), email);
+    await page.getByRole("button", { name: "Usuń", exact: true }).click();
+
+    await expect(page.getByText("Nie można usunąć ostatniego administratora")).toBeVisible();
+    await expect(page.getByText(/^Nie udało się usunąć pracownika\./)).toHaveCount(0);
+    await expect(row).toBeVisible();
+  } finally {
+    await page.unroute("**/api/staff/*/deactivate");
+    await deleteStaffUser(id);
+  }
+});
+
+// The reachability specs run at 390×844, pinned here rather than in the config.
+//
+// This defect only exists on a page tall enough to scroll, and the default
+// `devices["Desktop Chrome"]` viewport does not give one: measured 2026-08-21, a
+// seeded roster scrolls 46px at 1280×900 and 488px at 390×844. At the desktop
+// default the banner never leaves the viewport, so BOTH the assertion and the
+// deliberate-reintroduction check would pass whether or not the fix exists —
+// a spec that cannot fail. 390px is also where the banner is worst (a 227px
+// message column, wrapping to 3–4 lines) and is already a gated breakpoint.
+//
+// Consequence carried deliberately: below `lg` the roster is the CARD list, not
+// the table, so these use the cards' own icon-button labels. The desktop reading
+// stays a manual gate rather than being faked with a seeded row count that would
+// land in the filter-tab counts other specs read under `fullyParallel`.
+test.describe("the row actions' banner is reachable from the row that set it", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("a failed invite from a scrolled row is readable without scrolling", async ({ page }) => {
+    // The fixture exists to put a DODANY row on the roster (so a row carries an
+    // invite action) and to make the page tall enough to scroll. The spec never
+    // needs its address — the failure banner names no one.
+    const { id } = await createPendingEmployee();
+    await page.route("**/api/staff/*/invite", (route) => route.abort());
+    try {
+      await page.goto("/dashboard/staff");
+      await waitForIslands(page);
+
+      const scrollY = await scrollToBottom(page);
+      expect(scrollY, "the roster must actually scroll or this proves nothing").toBeGreaterThan(200);
+
+      await page.getByRole("button", { name: "Wyślij zaproszenie", exact: true }).last().click();
+
+      const banner = page.getByText("Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.");
+      await expect(banner).toBeVisible();
+      // THE PHASE-10 ASSERTIONS. Before the fix this banner sat at top -424 with
+      // `elementFromPoint` answering `null`, and `toBeVisible()` passed anyway.
+      expect(await isInViewport(banner), "banner is outside the viewport").toBe(true);
+      expect(await isTopmostAtItsOwnCentre(banner), "banner is covered").toBe(true);
+      // The admin was not moved to achieve that — the property that separates a
+      // pinned banner from scrolling one into view, which would land near 0.
+      // `>=` rather than `===` because Chrome's SCROLL ANCHORING bumps scrollY by
+      // the banner's own height when it is inserted above the viewport, which is
+      // the browser keeping the visible content still — the effect we want.
+      expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThanOrEqual(scrollY);
+
+      // A failure keeps its retry, and the banner now carries its own exit.
+      await expect(page.getByRole("button", { name: "Ponów" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Zamknij" })).toBeVisible();
+    } finally {
+      await page.unroute("**/api/staff/*/invite");
+      await deleteStaffUser(id);
+    }
+  });
+
+  test("a successful invite from a scrolled row is readable without scrolling, and dismissible", async ({ page }) => {
+    // The success arm is load-bearing, which is why it gets its own spec rather
+    // than riding on the failure one: a resend changes nothing else on screen —
+    // the badge is already ZAPROSZONY — so `inviteSent` is the ONLY feedback
+    // there is (design-contract §9.3). A success banner the admin never sees
+    // fails that job exactly as completely as a failure banner does.
+    //
+    // The route is stubbed rather than really sent: what this spec is about is
+    // the SURFACE, the real GoTrue invite is already proven by the phase-8 spec
+    // above, and a real send would burn one of the two emails per hour.
+    const { id, email } = await createPendingEmployee();
+    await page.route("**/api/staff/*/invite", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "sent", invitedAt: new Date().toISOString() }),
+      }),
+    );
+    try {
+      await page.goto("/dashboard/staff");
+      await waitForIslands(page);
+
+      const scrollY = await scrollToBottom(page);
+      expect(scrollY, "the roster must actually scroll or this proves nothing").toBeGreaterThan(200);
+
+      await page.getByRole("button", { name: "Wyślij zaproszenie", exact: true }).last().click();
+
+      const banner = page.getByText("Wysłano zaproszenie.");
+      await expect(banner).toBeVisible();
+      expect(await isInViewport(banner), "banner is outside the viewport").toBe(true);
+      expect(await isTopmostAtItsOwnCentre(banner), "banner is covered").toBe(true);
+      // Same scroll-anchoring caveat as the failure spec above.
+      expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThanOrEqual(scrollY);
+
+      // A success needs no retry, and pinning removed the old exit (scrolling
+      // past it), so the ✕ is what replaces it.
+      await expect(page.getByRole("button", { name: "Ponów" })).toHaveCount(0);
+      await page.getByRole("button", { name: "Zamknij" }).click();
+      await expect(banner).toHaveCount(0);
+      // Dismissing the message must not undo the mutation it reported. The
+      // DODANY → ZAPROSZONY flip and the action's re-label are the phase-8
+      // spec's subject, proven above at the desktop breakpoint; what belongs
+      // here is only that the row survived the ✕.
+      //
+      // `.first()` because the roster renders BOTH surfaces into the DOM and
+      // hides one per breakpoint (`hidden lg:block` table, `lg:hidden` cards),
+      // so the address is present twice at any width.
+      await expect(page.getByText(email).first()).toBeAttached();
+    } finally {
+      await page.unroute("**/api/staff/*/invite");
+      await deleteStaffUser(id);
+    }
+  });
 });

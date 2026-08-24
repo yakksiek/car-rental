@@ -86,7 +86,7 @@ export const POST: APIRoute = async (context) => {
     // network banner exactly as before.
     //
     // KEEP BOTH CODES. As of phase 7 the roster island renders one identical
-    // sentence for the two (`lib/staff-banner.ts`), so this looks like a
+    // sentence for the two (`lib/staff-report.ts`), so this looks like a
     // distinction with no consumer — it is not. `provision_orphaned` means the
     // compensating `deleteUser` ALSO failed and a role-less auth user survives;
     // that is a system-health signal for logs and monitoring, and it is the only
