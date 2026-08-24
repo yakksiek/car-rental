@@ -454,10 +454,10 @@ None — no schema, no data, no API contract changes. Fully revertible by deleti
 
 #### Automated
 
-- [x] 3.1 Formatting passes on the edited markdown
-- [x] 3.2 Lint + Astro check still pass
+- [x] 3.1 Formatting passes on the edited markdown — b63b44b
+- [x] 3.2 Lint + Astro check still pass — b63b44b
 
 #### Manual
 
-- [x] 3.3 `CLAUDE.md`'s test description matches `vitest.config.ts`
-- [x] 3.4 Inherited entry reads correctly without the two archived contracts
+- [x] 3.3 `CLAUDE.md`'s test description matches `vitest.config.ts` — b63b44b
+- [x] 3.4 Inherited entry reads correctly without the two archived contracts — b63b44b
