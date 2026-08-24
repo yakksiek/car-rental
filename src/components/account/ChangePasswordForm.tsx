@@ -1,5 +1,5 @@
 // core
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import { Lock, Check } from "lucide-react";
 
 // components
@@ -10,6 +10,11 @@ import { ServerError } from "../auth/ServerError";
 
 interface Props {
   serverError?: string | null;
+  // Server-rendered markup slotted into the <form> from password.astro — today
+  // just the `autocomplete="username"` anchor. Mirrors ResetPasswordForm.tsx:19
+  // rather than inventing a second pattern; Astro renders it to static HTML
+  // before hydration, so it is inert as far as this island is concerned.
+  children?: ReactNode;
 }
 
 // In-session change-password form (S-11, design-contract D6 — no mockup; forks the
@@ -18,7 +23,7 @@ interface Props {
 // the current password is verified server-side — the checks here are only to spare
 // an obviously-doomed round-trip. Plain useState: three fields is a small form (RHF
 // is reserved for 8+ per lessons).
-export default function ChangePasswordForm({ serverError }: Props) {
+export default function ChangePasswordForm({ serverError, children }: Props) {
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -53,6 +58,12 @@ export default function ChangePasswordForm({ serverError }: Props) {
       onSubmit={handleSubmit}
       noValidate
     >
+      {/* First child of the <form>, above the whole password group: Firefox's
+          LoginManager only searches fields BEFORE the first password field, and
+          here that first field is `current`. A slot placed between the fields
+          would never be found. */}
+      {children}
+
       <div className="flex flex-col gap-3.5">
         <FormField
           id="current"

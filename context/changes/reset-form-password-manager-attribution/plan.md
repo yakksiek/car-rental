@@ -422,33 +422,33 @@ None — no schema, no data, no API contract changes. Fully revertible by deleti
 
 #### Automated
 
-- [x] 1.1 Lint passes, including `astro/jsx-a11y/autocomplete-valid`
-- [x] 1.2 Type + Astro checks pass
-- [x] 1.3 Production build succeeds
-- [x] 1.4 Integration suite still green
+- [x] 1.1 Lint passes, including `astro/jsx-a11y/autocomplete-valid` — 4f2993c
+- [x] 1.2 Type + Astro checks pass — 4f2993c
+- [x] 1.3 Production build succeeds — 4f2993c
+- [x] 1.4 Integration suite still green — 4f2993c
 
 #### Manual
 
-- [x] 1.5 DOM check — input precedes both password fields, correct `autocomplete`/address, no `name`
+- [x] 1.5 DOM check — input precedes both password fields, correct `autocomplete`/address, no `name` — 4f2993c
 - [ ] 1.6 Actual symptom, invite mode — Chrome offers SAVE for the hire, not UPDATE for the admin
 - [ ] 1.7 Actual symptom, recovery mode
-- [x] 1.8 Rendered delta is zero at desktop and mobile
+- [x] 1.8 Rendered delta is zero at desktop and mobile — 4f2993c
 
 ### Phase 2: Change-password form — the same anchor
 
 #### Automated
 
-- [ ] 2.1 Lint passes
-- [ ] 2.2 Type + Astro checks pass
-- [ ] 2.3 Production build succeeds
-- [ ] 2.4 Integration suite still green
+- [x] 2.1 Lint passes
+- [x] 2.2 Type + Astro checks pass
+- [x] 2.3 Production build succeeds
+- [x] 2.4 Integration suite still green
 
 #### Manual
 
-- [ ] 2.5 DOM check — input precedes `Obecne hasło`, carries the session's address, no `name`
+- [x] 2.5 DOM check — input precedes `Obecne hasło`, carries the session's address, no `name`
 - [ ] 2.6 Narrower symptom — two saved credentials, bubble targets the signed-in account
-- [ ] 2.7 Rendered delta is zero at desktop and mobile
-- [ ] 2.8 Existing change-password flow still works end to end
+- [x] 2.7 Rendered delta is zero at desktop and mobile
+- [x] 2.8 Existing change-password flow still works end to end
 
 ### Phase 3: Documentation truth-up
 
