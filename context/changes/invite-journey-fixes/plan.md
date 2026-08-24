@@ -2000,19 +2000,19 @@ row (`lessons.md` → "Wrap auth calls and role helpers in (select …)"; the pa
 
 #### Automated
 
-- [ ] 11.1 Unit tests pass: `npm test`
-- [ ] 11.2 Lint passes: `npm run lint`
-- [ ] 11.3 Type checking passes: `npx astro check`
-- [ ] 11.4 Integration tests pass: `npm run test:integration`
-- [ ] 11.5 Production build succeeds: `npm run build`
-- [ ] 11.6 E2E asserts in-viewport AND topmost-at-its-own-centre for a failed `Przywróć` at 390×844
-- [ ] 11.7 E2E suite passes on `:4321`: `npm run test:e2e`
-- [ ] 11.8 The shipped surface is phase 10 §3's answer, not a fleet-specific variant
-- [ ] 11.9 `design-contract.md` carries the fleet banner's measured values and §11 rows
+- [x] 11.1 Unit tests pass: `npm test`
+- [x] 11.2 Lint passes: `npm run lint`
+- [x] 11.3 Type checking passes: `npx astro check`
+- [x] 11.4 Integration tests pass: `npm run test:integration`
+- [x] 11.5 Production build succeeds: `npm run build`
+- [x] 11.6 E2E asserts in-viewport AND topmost-at-its-own-centre for a failed `Przywróć` at 390×844
+- [x] 11.7 E2E suite passes on `:4321`: `npm run test:e2e`
+- [x] 11.8 The shipped surface is phase 10 §3's answer, not a fleet-specific variant
+- [x] 11.9 `design-contract.md` carries the fleet banner's measured values and §11 rows
 
 #### Manual
 
-- [ ] 11.10 A failed `Przywróć` from a row below the fold is readable without scrolling
-- [ ] 11.11 The retire confirm dialog's in-dialog error is unchanged
-- [ ] 11.12 The §3 decisions — vanishing anchor, and restore-success feedback — are recorded as in-scope or follow-up
-- [ ] 11.13 The fleet banner matches its design entry verbatim at 1280px and 390px
+- [x] 11.10 A failed `Przywróć` from a row below the fold is readable without scrolling
+- [x] 11.11 The retire confirm dialog's in-dialog error is unchanged
+- [x] 11.12 The §3 decisions — vanishing anchor, and restore-success feedback — are recorded as in-scope or follow-up
+- [x] 11.13 The fleet banner matches its design entry verbatim at 1280px and 390px

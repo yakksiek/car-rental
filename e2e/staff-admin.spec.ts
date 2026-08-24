@@ -1,8 +1,9 @@
 // core
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 // others
 import { fillHydrated, waitForIslands } from "./support/hydration";
+import { isInViewport, isTopmostAtItsOwnCentre, scrollToBottom } from "./support/reachability";
 import { waitForCallbackLink } from "./support/mailpit";
 import { createActiveEmployee, createPendingEmployee, deleteStaffByEmail, deleteStaffUser } from "./fixtures/staff";
 
@@ -209,44 +210,11 @@ test("a last-admin refusal surfaces the refusal modal", async ({ page }) => {
 // future edit routes either arm back to a surface the overlay covers.
 // ---------------------------------------------------------------------------
 
-/**
- * Does this element actually receive the pixel at the middle of itself?
- *
- * `elementFromPoint` answers with whatever the compositor puts on top, so an
- * element buried under a fixed overlay fails here while passing `toBeVisible()`.
- * Children count — the error paragraph wraps an icon and a text node.
- */
-async function isTopmostAtItsOwnCentre(locator: Locator): Promise<boolean> {
-  return locator.evaluate((el) => {
-    const box = el.getBoundingClientRect();
-    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    return hit !== null && (hit === el || el.contains(hit));
-  });
-}
-
-/**
- * Is this element inside the viewport at all?
- *
- * The half `isTopmostAtItsOwnCentre` cannot see (phase 10). When an element is
- * scrolled off-screen, `elementFromPoint` at its centre returns `null` — the
- * point is not covered by something else, it is outside the document's visible
- * box entirely. So "topmost" alone cannot distinguish "readable" from "nowhere
- * near the screen", and the two assertions have to be made together.
- */
-async function isInViewport(locator: Locator): Promise<boolean> {
-  return locator.evaluate((el) => {
-    const box = el.getBoundingClientRect();
-    return box.top >= 0 && box.bottom <= window.innerHeight && box.left >= 0 && box.right <= window.innerWidth;
-  });
-}
-
-/** Scroll the page to the bottom of the roster, where every row control still is. */
-async function scrollToBottom(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    window.scrollTo(0, document.body.scrollHeight);
-    return Math.round(window.scrollY);
-  });
-}
+// The three measurements live in `support/reachability.ts` — phase 11 moved them
+// there when `/dashboard/vehicles` turned out to need the same pair, so the
+// definition of "readable" stays one definition. `isInViewport` +
+// `isTopmostAtItsOwnCentre` are always asserted together; `scrollToBottom`
+// supplies the precondition without which neither can fail.
 
 test("a dropped connection reports inside the add modal, on top of the overlay — not behind it", async ({ page }) => {
   // THE PHASE-9 DEFECT. `fetch` throws, the typed values are still perfectly
