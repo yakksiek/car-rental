@@ -18,6 +18,12 @@ export type { Database };
 export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 export type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 
+// The quick-action manual-reservation picker reads exactly these seven columns
+// (S-12b). Naming the projection is what keeps `listFleetForPicker`, the
+// `GET /api/vehicles` body and `ManualReservationModal`'s `vehicles` prop from
+// silently widening back to the full row.
+export type PickerVehicle = Pick<Vehicle, "id" | "name" | "make" | "model" | "plate" | "daily_rate" | "deposit">;
+
 export type Reservation = Database["public"]["Tables"]["reservations"]["Row"];
 export type ReservationInsert = Database["public"]["Tables"]["reservations"]["Insert"];
 

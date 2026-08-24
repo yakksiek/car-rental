@@ -3,7 +3,7 @@ import type { APIRoute } from "astro";
 
 // others
 import { requireRole } from "../../lib/access";
-import { createVehicle } from "../../lib/services/vehicles";
+import { createVehicle, listFleetForPicker } from "../../lib/services/vehicles";
 import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema";
 
 // Fleet create endpoint (S-04). Mirrors the S-02/S-03 route defenses for an
@@ -15,6 +15,14 @@ import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema
 //   (c) zod body validation (`vehicleInputSchema`, the shared client/server
 //       contract), 400 `{ errors }` on failure,
 //   (d) the insert, mapping an RLS denial to 403.
+//
+// `GET` (S-12b) serves the quick-action menu's bookable-fleet picker. It gates
+// (a) auth → 401, (b) role → 403, then returns the seven-column projection. No
+// Origin check: it is a read, not a mutation. This is deliberately the two-step
+// 401/403 split lessons.md prescribes, NOT the collapsed 403 of
+// `api/reservations/calendar.ts` — `vehicles_select_authenticated` is
+// `using (true)`, so this handler is the only barrier and must fail closed at
+// each step distinctly.
 
 const MSG = {
   badOrigin: "Nieprawidłowe źródło żądania.",
@@ -27,6 +35,19 @@ const MSG = {
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
+
+export const GET: APIRoute = async (context) => {
+  // (a) Auth, then (b) role — no CSRF step: reads carry no state change.
+  if (!context.locals.user) {
+    return json(401, { error: MSG.unauthenticated });
+  }
+  if (!requireRole(context.locals, "employee")) {
+    return json(403, { error: MSG.forbidden });
+  }
+
+  const vehicles = await listFleetForPicker(context.locals.supabase);
+  return json(200, { vehicles });
+};
 
 export const POST: APIRoute = async (context) => {
   // (a) CSRF: reject anything not same-origin before doing any work.
