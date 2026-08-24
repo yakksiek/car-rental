@@ -934,9 +934,9 @@ artboards into `design-system.md` should carry the correction forward.
 | `/dashboard/staff`, banner forced                       | `19-admin-desktop-employees.png` (desktop)                                                  | Only the banner region differs; §8.1 values match exactly                                                                          |
 | `/dashboard/staff`, banner forced                       | `25-admin-mobile-employees.jpg` (mobile)                                                    | Same, reflowed at the shared breakpoint                                                                                            |
 | `/dashboard/staff`, healthy                             | catalog 19 / 25                                                                             | **Zero** delta — the badge fix changes inputs, not pixels                                                                          |
-| `/dashboard/staff`, DODANY row present (desktop)        | `design-review/boards-after/emp-roster.png`                                                 | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta                                                |
+| `/dashboard/staff`, DODANY row present (desktop)        | `design-review/boards-canonical/emp-self.png` (canonical; see note)                         | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta                                                |
 | `/dashboard/staff`, DODANY row present (tablet/mobile)  | `design-review/boards-after/emp-tablet.png`                                                 | Same rule reflowed; the ✕ and every other element unchanged                                                                        |
-| `/dashboard/staff`, add modal                           | `design-review/boards-after/emp-add.png`                                                    | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                                                                              |
+| `/dashboard/staff`, add modal                           | `design-review/boards-canonical/emp-add.png` (canonical 1320×820)                           | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                                                                              |
 | `/dashboard/staff`, add modal + form error (desktop)    | `design-review/rendered/modal-form-error-{d,provision-d}.png`                               | Error slot matches §8.4 exactly; every other element zero-delta vs `emp-add.png`                                                   |
 | `/dashboard/staff`, add modal + form error (mobile)     | `design-review/rendered/modal-form-error-{m,provision-m}.png`                               | Same reflowed at 390px; glyph on the first line, no overflow                                                                       |
 | `/dashboard/staff`, remove modal + form error (desktop) | `design-review/rendered/remove-error-{net,srv}-d.png`                                       | Error slot matches §8.5 exactly; every other element zero-delta vs `emp-remove.png`                                                |
@@ -946,6 +946,22 @@ artboards into `design-system.md` should carry the correction forward.
 | `/dashboard/staff`, banner at scrollY 0                 | the phase-1 banner rows above                                                               | Placement zero-delta (`sticky` is inert at rest); the ✕ raises three of four heights per §8.6's table — **re-baselined, not zero** |
 | `/auth/link-conflict`                                   | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                                                                       |
 | `/auth/reset-password` × 6 states                       | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                                                                       |
+
+**Baselines updated 2026-08-24.** The phase-8 rows above pointed at `boards-after/`, which §12.2a
+recorded as preview renders at non-canonical dimensions. They now point at
+`boards-canonical/`, re-rendered at the artboard sizes read out of `Flota Rental.html`.
+`boards-after/` is kept as the phase-8 record and is no longer a diff target. The tablet row still
+cites `emp-tablet.png`, which is an artboard but has never been a project export — it is rendered
+locally, not pulled.
+
+**Baselines re-pointed 2026-08-24.** The phase-8 rows cited `boards-after/`, which §12.2a recorded
+as preview renders at non-canonical dimensions. Where a canonical artboard exists they now cite
+`boards-canonical/` (re-rendered at the sizes read out of `Flota Rental.html`). Two caveats, stated
+rather than papered over: phase 8's `emp-roster.png` has **no** canonical counterpart — it was a
+custom render, and the nearest artboard showing the full roster with its row actions is `emp-self`,
+which additionally carries the `· Ty` marker and the self-remove note, so diff the roster region
+only. `emp-tablet` is a real artboard but has never been a project export, so its row still cites the
+locally-rendered `boards-after/` copy. `boards-after/` is retained as the phase-8 record.
 
 The zero-delta rows are the load-bearing ones: phase group B's whole claim is that it re-sources six
 auth surfaces without changing any of them. A non-zero diff on any of them is a phase-5 defect, not a
@@ -957,14 +973,14 @@ design decision to be renegotiated at review time.
 
 Captured 2026-08-21 so they survive outside a conversation. None of these blocks phase 7.
 
-### 12.1 Pull the ten un-pulled S-08 artboards
+### 12.1 Pull the un-pulled S-08 artboards — **DONE 2026-08-24 (9 of 10)**
 
-`DesignSync list_files` on `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`) shows ten
-employee-state artboards under `design-review/` that were never pulled into the repo: `emp-add`,
-`emp-add-dup`, `emp-remove`, `emp-lastadmin`, `emp-self`, `emp-empty`, `emp-nores`, `emp-loading`,
-`emp-error` (**the mutation error banner** — see the second correction in §1), and `am-team`.
-Phase 7 rewrites the banner copy and should diff against `emp-error.png`; phase 8 renames the
-add-modal CTA and should diff against `emp-add.png`. Costs nothing and needs no decisions.
+Nine `emp-*` boards are now in the repo at `design-review/boards-canonical/`, re-rendered from the
+current design source at the **canonical** `DCArtboard` dimensions (below) and written back to the
+project, so the repo copy and the project agree for the first time since phase 8.
+
+**`am-team.png` is NOT done, and deliberately so** — see §12.6. Re-exporting it would have produced
+a board that is current but still wrong.
 
 ### 12.2 The `employee-states.jsx` edit for phase 8 — **DONE 2026-08-21**
 
@@ -980,30 +996,51 @@ parse as JSX, and — the step that actually mattered — the **unpatched** base
 and matched the canonical design, proving the local reconstruction was faithful. Boards at 2× are in
 `design-review/boards-{before,after}/`.
 
-### 12.2a Re-export the canonical `emp-*` PNGs — **STILL OPEN**
+### 12.2a Re-export the canonical `emp-*` PNGs — **DONE 2026-08-24**
 
-The JSX changed, so the project's own `design-review/emp-*.png` exports now show the OLD design.
-This is the same stale-cache problem §1's corrections describe, freshly created. The boards under
-`boards-after/` are **preview renders at my own dimensions**, not the canonical `data-dc-slot`
-exports — they are evidence, not replacements. Re-export `emp-add`, `emp-add-dup`, `emp-remove`,
-`emp-lastadmin`, `emp-self`, `emp-empty`, `emp-nores`, `emp-loading`, `emp-error` and `am-team` from
-`Flota Rental.html` (note: `export-shot.html`'s `SCREENS` map has **no** `emp-*` entries, so either
-add them or drive `Flota Rental.html` directly).
+Nine boards re-rendered and written back to the project's `design-review/`, replacing exports that
+had shown the pre-phase-8 design since 2026-08-21.
 
-### 12.2b Carry the resend label into `employee-states.jsx` — **OPEN**
+**These are canonical, where the phase-8 `boards-after/` set was not.** That set was rendered at
+1320×720 — a size chosen at render time, which is exactly what this entry objected to. The real
+artboard sizes were read out of `Flota Rental.html`'s `DCArtboard` entries in the `s08-emp-states`
+section and used verbatim:
 
-§12.2's applied edit renders **one** invite label for both password-less states (`EsRow` and `EtRow`
-both emit `t.sendInvite`). The phase-8 manual gate reversed that in the app (§9.2), so the design
-source is now one step behind on this single point — everything else in §12.2 still matches.
+| Board                                                                            | Artboard | Exported (2×) |
+| -------------------------------------------------------------------------------- | -------- | ------------- |
+| `emp-add`, `emp-add-dup`, `emp-remove`, `emp-lastadmin`, `emp-self`, `emp-error` | 1320×820 | 2640×1640     |
+| `emp-empty`, `emp-nores`, `emp-loading`                                          | 1320×720 | 2640×1440     |
 
-The hunk, when someone picks this up: `shared.jsx` gains `resendInvite` (EN `Resend invite`, PL
-`Wyślij ponownie zaproszenie`) beside `sendInvite`; `EsRow` and `EtRow` become three-way —
-`active` → `t.resetPassword`, `invited` → `t.resendInvite`, otherwise `t.sendInvite`. Deliberately
-NOT applied mid-gate: the design source should follow a confirmed decision, not race it, and
-§12.2a's re-export is still outstanding, so both should land in one pass.
+2640×1640 is also the size of catalog `19-admin-desktop-employees.png`, which independently confirms
+the artboard figure rather than resting on the transcription alone.
 
-Until then the app is the more current of the two on this line, and §8.3 carries the measured
-layout consequence.
+**Method, and why it is trustworthy.** `export-shot.html` still has no `emp-*` entries and does not
+load `employee-states.jsx`, so the boards were rendered from a local harness built out of the
+project's own `shared.jsx` + `desktop-screens.jsx` + `employee-states.jsx`, bundled with esbuild.
+Three guards, all of which held:
+
+1. **The transcription was proved byte-faithful before anything was written.** The local
+   `employee-states.jsx` was diffed against phase 8's uploaded copy; the only differences were the
+   two intended hunks. `shared.jsx` was then round-tripped after upload and came back identical.
+2. **The unpatched baseline was rendered first** and matched the canonical design — the §12.2
+   discipline, repeated.
+3. **Font parity.** The harness inlines the app's own **variable** Inter (`400..700`) as a data URI
+   rather than the CDN's static instances, which snap to 540/650/750 and skew every weight on the
+   board.
+
+Only 7 of the 9 boards changed against that baseline; `emp-empty`, `emp-nores` and `emp-loading` are
+byte-identical, which is the correct signature for an additive row-level change and a check that the
+harness is deterministic.
+
+### 12.2b Carry the resend label into `employee-states.jsx` — **DONE 2026-08-24**
+
+`shared.jsx` gained `resendInvite` (EN `Resend invite`, PL `Wyślij ponownie zaproszenie`) beside
+`sendInvite`, and `EsRow` / `EtRow` now pick three ways: `active` → `resetPassword`, `invited` →
+`resendInvite`, otherwise `sendInvite`. The design source and the app agree again on this line.
+
+Implemented as a label-level ternary inside the existing two-branch structure rather than a
+restructure — the smallest diff that expresses the rule, and it leaves the shipped geometry of both
+rows untouched.
 
 ### 12.3 A lesson worth promoting
 
@@ -1021,25 +1058,17 @@ review: the diff never touched that line, and nothing flagged it. It surfaced on
 before believing a copy change is complete — a stale promise one line above your edit is invisible in
 a diff.**
 
-### 12.4 Record the `EsShell` scroll-region divergence in the design source — **OPEN**
+### 12.4 Record the `EsShell` scroll-region divergence in the design source — **DONE 2026-08-24**
 
-Phase 10 found that the design already answers "where does feedback from a per-row control go":
-`EsShell` in `employee-states.jsx` puts `{banner}` and the filter card **outside** the scrolling
-region (`flex: 1; overflow: auto` is on the table body alone), so only the list scrolls and the
-banner is permanently on screen. The app renders the same screen as a document that scrolls whole,
-which is what put the banner off-viewport.
+`EsShell` now carries a comment on the `{banner}` slot stating that the banner sitting **outside**
+the scroll region is load-bearing rather than incidental: only the body scrolls, the controls that
+set the banner are per-row and reachable at any depth, and an implementation that scrolls the whole
+document instead must pin the banner to restore the guarantee. It cites the measured failure
+(`top: -1033`, `elementFromPoint` → null at 390×844) and points at §8.6 / §10 entry 4. A second
+one-line note marks the scrolling `<div>` itself.
 
-Nothing in the design source records that the app diverged here, so the next person to read
-`EsShell` cannot tell that its scroll structure is load-bearing rather than incidental. The hunk,
-when someone picks this up: a comment on `EsShell`'s body `<div>` naming the constraint — the banner
-must remain reachable from a per-row control at any scroll depth, and an app that scrolls the
-document instead must pin it. **Deliberately not applied mid-phase**, on §12.2b's own principle:
-the design source should follow a confirmed decision rather than race it, and §12.2a's re-export is
-still outstanding, so this should land in the same pass.
-
-No board changes with it. The sticky banner is invisible at rest — it only differs from the shipped
-element once the page has scrolled — so there is no new artboard to draw, and the evidence renders
-live in `design-review/rendered/sticky-*.png`.
+The next person to read `EsShell` can now tell that its structure encodes a decision. Nothing else
+changed, and no board moved: the boards render the healthy state, where the difference is invisible.
 
 ### 12.5 Lock `body` scroll under an open modal — **OPEN, deferred from phase 10 §5**
 
@@ -1054,3 +1083,37 @@ modal's §11 row and needs its own measurement pass and its own scrollbar-compen
 
 Scope when picked up: all three modals on `/dashboard/staff` (`AddModal`, `RemoveModal`,
 `LastAdminModal`) plus `RetireDialog` on `/dashboard/vehicles`, which shares the shell idiom.
+
+### 12.6 `am-team` (board 23, admin · mobile) is behind the app on FOUR points — **OPEN, found 2026-08-24**
+
+Found while re-exporting §12.2a's ten boards. `am-team` was the tenth, and re-exporting it was
+**deliberately not done**: the export would have been current and still wrong, which is the exact
+trap §12.3 describes.
+
+`ScreenAdminTeamMobile` (`admin-mobile.jsx`) does **not** reuse `EmpStatusBadge` or `EsRow` — it
+carries its own inline row markup, so none of phase 8's or §12.2b's edits reached it. Measured
+against the file, not inferred:
+
+| #   | Divergence          | In `admin-mobile.jsx`                                                   | In the app                                           |
+| --- | ------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| 1   | Status states       | `active ? t.activeS : t.invitedS` — **two**                             | three; DODANY exists (`StaffList.tsx` `STATUS_TONE`) |
+| 2   | Row action          | **always** `Resetuj hasło` (`Icon.key`), including on the `invited` row | one action per state; invite while password-less     |
+| 3   | Add-sheet CTA       | `t.sendInvite` — "Wyślij zaproszenie"                                   | `Dodaj` (`t.addConfirm`) — create sends nothing      |
+| 4   | New member's status | `status: 'invited'` on add                                              | `created` / DODANY                                   |
+
+**#2 is the one that matters.** It is §10 entry 2's defect — `Resetuj hasło` offered to someone who
+has never had a password, sending a recovery link and recovery copy — alive on the mobile board
+after being fixed on desktop. Karolina Mazur is `invited` in this board's fixture and is offered the
+key icon. The app's mobile card list already does the right thing (`StaffList.tsx:987-1013`), so
+this is the design source trailing the app, not a real design decision.
+
+**Why it was not just fixed in this pass.** It is a four-point edit to a canonical artboard for a
+screen this change never touched on mobile (catalog 25), and #4 changes the board's fixture data
+rather than a label. That is phase-8-sized work on a second surface, not the label carry §12.2b
+asked for — so it is recorded with the hunks identified rather than smuggled in.
+
+**When picked up**, the edit mirrors what is already settled on desktop: add a `created` arm to the
+status pill and to the filter chips; make the row action mutually exclusive on `status === 'active'`
+using `t.resendInvite` / `t.sendInvite`; change the sheet CTA to `t.addConfirm`; and default a newly
+added member to `status: 'created'`. Then re-export `am-team.png` — its artboard is 390×844, so
+780×1688 at 2×.
