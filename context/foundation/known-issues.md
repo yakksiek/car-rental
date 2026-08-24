@@ -177,3 +177,28 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   **not** a flag flip: it breaks the direct-to-Storage upload path, so the prerequisite is another
   way to authorize that upload — most likely a short-lived signed upload URL minted server-side in an
   admin-gated route. Do that first, then flip.
+
+## The auth link journey depends on `auth.one_time_tokens`, a GoTrue-internal table
+
+- **Symptom (if it ever fires):** every invite and recovery link lands on
+  `/auth/forgot-password?expired=1` ("Link wygasł") immediately after a GoTrue upgrade, for
+  everyone — including links minted seconds earlier.
+- **Cause:** `invite-journey-fixes` moved the token exchange off the `/auth/callback` GET and onto
+  the set-password POST, so the link becomes idempotent and no session is minted before a password
+  exists. To keep the R14 role refusal ("Konto jest nieaktywne") running _before_ the form, the GET
+  resolves the link's target through `public.resolve_link_token`, which reads
+  `auth.one_time_tokens` — a **GoTrue-internal table with no stability contract**. The app now
+  depends on its `token_hash`, `token_type` and `user_id` columns, and on
+  `auth.users.confirmation_sent_at` / `recovery_sent_at` for the expiry window (the token table has
+  **no** expiry column, and GoTrue deletes a token on _use_, not on expiry).
+- **Scope:** Probed against **GoTrue v2.188.1 on 2026-08-20/21**: the `hashed_token` the admin
+  `generateLink` API returns is byte-identical to `token_hash`; an invite's `token_type` is
+  `confirmation_token` (shared with signup, exactly as `verifyOtp` treats them) and a recovery's is
+  `recovery_token`; both `*_sent_at` columns land within ~8ms of the token row's `created_at`. That
+  is when the assumption was last true.
+- **Decision:** Accepted, because the function **fails closed** — no row means refuse — so a GoTrue
+  change that renames or restructures these columns breaks the **role gate**, not the flow: the
+  symptom is a refused link, never an open one. `tests/integration/resolve-link-token.test.ts` holds
+  every clause against real GoTrue-minted tokens, so an upgrade that moves the ground reds the suite
+  before it reaches production. If it does fire, the fix is to re-probe the table and update the
+  migration's clauses — not to loosen them.

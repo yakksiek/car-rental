@@ -2,7 +2,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // others
+import { POST as resetPasswordPOST } from "../../src/pages/api/auth/reset-password";
+import { LINK_ORIGIN_COOKIE } from "../../src/lib/auth-session";
 import { anonClient, serviceClient } from "../helpers/clients";
+import { buildApiContext } from "../helpers/context";
 
 // Link-type provenance for `/auth/callback` (auth-followups, F3).
 //
@@ -23,6 +26,13 @@ import { anonClient, serviceClient } from "../helpers/clients";
 // If the mismatch case ever turns green-by-acceptance, the premise is gone —
 // `type` is then as forgeable as `flow` was, and `callback.ts` must go back to
 // treating the marker's value as a hint (the plan's stated fallback).
+//
+// RETARGETED (invite-journey-fixes): the exchange no longer happens on the
+// callback GET, so the second block below drives the same relabelling attack at
+// the POST, where `verifyOtp` now lives. The two blocks pin DIFFERENT layers and
+// both are needed — `resolve_link_token`'s clause 1 refuses the mismatched
+// pairing before GoTrue is ever asked, so the POST-level case would stay green
+// even if GoTrue loosened. Only the direct probe can catch that.
 //
 // `serviceClient()` mints the link exactly as `/api/auth/forgot-password` does;
 // every exchange runs on the anon key, as a real recipient's browser would.
@@ -101,5 +111,35 @@ describe("verifyOtp — the link's type is resolved against the token, not taken
     expect(error).toBeNull();
     expect(data.session).not.toBeNull();
     expect(data.user?.email).toBe(EMAIL);
+  });
+});
+
+describe("the same relabelling attack, at the POST where the exchange now lives", () => {
+  it("sets NO password when a recovery token is presented as an invite", async () => {
+    const tokenHash = await mintRecoveryToken();
+
+    // The cookie a browser would carry if `/auth/callback` could be talked into
+    // stamping the wrong type — or if a user hand-wrote one.
+    const context = buildApiContext({
+      method: "POST",
+      path: "/api/auth/reset-password",
+      supabase: anonClient(),
+      user: null,
+      role: null,
+      formBody: { password: "Fl33tRent-Relabel_2026!", confirm: "Fl33tRent-Relabel_2026!" },
+      cookies: { [LINK_ORIGIN_COOKIE]: `invite.${tokenHash}` },
+    });
+
+    const response = await resetPasswordPOST(context);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/auth/reset-password");
+
+    // The assertion of record: the account is untouched, and the original
+    // password still works.
+    expect((await anonClient().auth.signInWithPassword({ email: EMAIL, password: PASSWORD })).error).toBeNull();
+    expect(
+      (await anonClient().auth.signInWithPassword({ email: EMAIL, password: "Fl33tRent-Relabel_2026!" })).error,
+    ).not.toBeNull();
   });
 });

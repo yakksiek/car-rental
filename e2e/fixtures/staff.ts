@@ -36,9 +36,44 @@ export async function createActiveEmployee(password: string): Promise<StaffFixtu
   if (error) {
     throw new Error(`fixture: createUser failed — ${error.message}`);
   }
+  // `createUser({ password })` mints the password out-of-band — it never passes
+  // through api/auth/{reset,change}-password.ts, the only writers of
+  // password_set_at — so stamp it here or this ACTIVE fixture reads as INVITED.
+  const { error: pErr } = await db.from("profiles").insert({
+    user_id: data.user.id,
+    role: "employee",
+    full_name: "E2E Aktywny",
+    password_set_at: new Date().toISOString(),
+  });
+  if (pErr) {
+    await db.auth.admin.deleteUser(data.user.id).catch(() => undefined);
+    throw new Error(`fixture: profile insert failed — ${pErr.message}`);
+  }
+  return { id: data.user.id, email };
+}
+
+/**
+ * A DODANY employee — created, never invited, no password (phase 8's first step).
+ *
+ * Mirrors what `createEmployee` does on the net-new arm, and deliberately sends
+ * NOTHING: no `inviteUserByEmail`, so it burns none of the two emails per hour
+ * `config.toml` allows and cannot collide with the invite specs. The row it
+ * produces is the one that offers `Wyślij zaproszenie`, which is what a spec
+ * about the row actions' feedback needs.
+ */
+export async function createPendingEmployee(): Promise<StaffFixture> {
+  const db = admin();
+  const email = uniqueEmail("pending");
+  const { data, error } = await db.auth.admin.createUser({ email, email_confirm: false });
+  if (error) {
+    throw new Error(`fixture: createUser failed — ${error.message}`);
+  }
+  // No `password_set_at`: that is what makes `deriveStaffStatus` read this row
+  // as password-less, and `invited_at` being null is what makes it DODANY rather
+  // than ZAPROSZONY.
   const { error: pErr } = await db
     .from("profiles")
-    .insert({ user_id: data.user.id, role: "employee", full_name: "E2E Aktywny" });
+    .insert({ user_id: data.user.id, role: "employee", full_name: "E2E Dodany" });
   if (pErr) {
     await db.auth.admin.deleteUser(data.user.id).catch(() => undefined);
     throw new Error(`fixture: profile insert failed — ${pErr.message}`);
@@ -112,9 +147,13 @@ export async function recoveryCallbackLink(email: string): Promise<string> {
  * `services/staff.ts`, which writes one immediately after inviting — that is what
  * gives a new hire a role before they ever accept.
  *
- * SINGLE USE: the token is consumed by the callback's `verifyOtp` exchange — i.e.
- * the moment it lands on the set-password form, NOT when a password is submitted.
- * A second open of the same link is correctly refused.
+ * IDEMPOTENT since invite-journey-fixes: `/auth/callback` resolves the token but
+ * does NOT exchange it, so the link renders the set-password form every time it
+ * is opened. It is spent only by a successful POST to /api/auth/reset-password.
+ * (It used to be single-use from the first render — that was Bug 2.)
+ *
+ * The profiles row deliberately carries NO `password_set_at`: this fixture is the
+ * password-less invited shape the phase-group-B specs are read from.
  */
 export async function inviteCallbackLink(): Promise<StaffFixture & { link: string }> {
   const db = admin();

@@ -59,6 +59,23 @@ describe("formatLastActive (invited)", () => {
   });
 });
 
+describe("formatLastActive (created — the two-step add's first step)", () => {
+  const created = { status: "created" as const, lastSignInAt: null, invitedAt: null };
+
+  it("renders an em dash — nothing has been sent for this account yet", () => {
+    expect(formatLastActive(created, NOW)).toBe("—");
+    expect(formatLastActive(created, NOW, { invitePrefix: false })).toBe("—");
+  });
+
+  it("does not fall through to the active branch's 'przed chwilą'", () => {
+    // The active branch answers "przed chwilą" for a null lastSignInAt, which
+    // would read as a sign-in that never happened.
+    expect(formatLastActive(created, NOW)).not.toBe(
+      formatLastActive({ status: "active", lastSignInAt: null, invitedAt: null }, NOW),
+    );
+  });
+});
+
 describe("staffInitials", () => {
   it("takes first letters of the first two words, uppercased", () => {
     expect(staffInitials("Piotr Bednarz", "p@x.pl")).toBe("PB");

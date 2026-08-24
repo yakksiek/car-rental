@@ -225,9 +225,13 @@ insert into auth.identities (
 
 -- NOTE: norole@fleetrent.test (b0…b0) intentionally has NO profiles row below,
 -- so current_app_role() resolves to NULL (fail-closed). Do not add it here.
-insert into profiles (user_id, role, full_name) values
-  ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik'),
-  ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur');
+-- password_set_at is stamped for every account whose auth.users row carries a
+-- real crypt() password above. These accounts never pass through
+-- api/auth/{reset,change}-password.ts, which is the only writer in the app, so
+-- without this they would read as password-less (ZAPROSZONY) on the roster.
+insert into profiles (user_id, role, full_name, password_set_at) values
+  ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik', now() - interval '2 hours'),
+  ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur', now() - interval '2 hours');
 
 -- ---------------------------------------------------------------------------
 -- staff roster (S-08) — extra employees so /dashboard/staff renders both the
@@ -298,10 +302,13 @@ insert into auth.identities (
     'email', now(), now(), now()
   );
 
-insert into profiles (user_id, role, full_name) values
-  ('e1000000-0000-0000-0000-0000000000e1', 'employee', 'Grzegorz Jabłoński'),
-  ('e2000000-0000-0000-0000-0000000000e2', 'employee', 'Zofia Wróbel'),
-  ('e3000000-0000-0000-0000-0000000000e3', 'employee', 'Łukasz Piątek');
+-- Łukasz is the invited-never-accepted shape (empty encrypted_password, no
+-- identity) — his password_set_at stays NULL deliberately; he is the fixture the
+-- ZAPROSZONY badge and the activation-mail path are read from.
+insert into profiles (user_id, role, full_name, password_set_at) values
+  ('e1000000-0000-0000-0000-0000000000e1', 'employee', 'Grzegorz Jabłoński', now() - interval '1 day'),
+  ('e2000000-0000-0000-0000-0000000000e2', 'employee', 'Zofia Wróbel', now() - interval '3 days'),
+  ('e3000000-0000-0000-0000-0000000000e3', 'employee', 'Łukasz Piątek', null);
 
 -- ---------------------------------------------------------------------------
 -- issue protocol baseline (S-06) — makes the returns worklist + deltas demoable
