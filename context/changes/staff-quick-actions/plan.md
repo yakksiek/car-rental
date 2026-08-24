@@ -687,28 +687,28 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Unit tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — c346a89
+- [x] 4.2 Linting passes: `npm run lint` — c346a89
+- [x] 4.3 Unit tests pass: `npm test` — c346a89
 
 #### Manual
 
-- [x] 4.4 At 360px and 390px, all 7 mobile headers render without clipping — Pulpit measured explicitly
-- [x] 4.5 Flota and Zespół each show exactly one `＋`, with the page action in the crimson tile
-- [x] 4.6 Zespół's sheet has 3 rows and one divider; Flota's has 2 rows and no duplicate
-- [x] 4.7 Zespół's promoted row opens the add-employee dialog; Flota's navigates to `/dashboard/vehicles/new`
-- [x] 4.8 Every centred header's title remains optically centred with the circle present
+- [x] 4.4 At 360px and 390px, all 7 mobile headers render without clipping — Pulpit measured explicitly — c346a89
+- [x] 4.5 Flota and Zespół each show exactly one `＋`, with the page action in the crimson tile — c346a89
+- [x] 4.6 Zespół's sheet has 3 rows and one divider; Flota's has 2 rows and no duplicate — c346a89
+- [x] 4.7 Zespół's promoted row opens the add-employee dialog; Flota's navigates to `/dashboard/vehicles/new` — c346a89
+- [x] 4.8 Every centred header's title remains optically centred with the circle present — c346a89
 
 ### Phase 5: Verification gate
 
 #### Automated
 
-- [ ] 5.1 E2E passes: `npm run test:e2e`
-- [ ] 5.2 Full unit + integration suites pass
-- [ ] 5.3 Production build succeeds: `npm run build`
+- [x] 5.1 E2E passes: `npm run test:e2e`
+- [x] 5.2 Full unit + integration suites pass
+- [x] 5.3 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 5.4 Vision-diff punch-list is empty except the contract's recorded deviations
-- [ ] 5.5 Both absorb boards match their canonical renders
-- [ ] 5.6 The desktop popover never shows a promoted row on any page
+- [x] 5.4 Vision-diff punch-list is empty except the contract's recorded deviations
+- [x] 5.5 Both absorb boards match their canonical renders
+- [x] 5.6 The desktop popover never shows a promoted row on any page

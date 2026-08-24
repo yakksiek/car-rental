@@ -1,7 +1,7 @@
 ---
 change_id: staff-quick-actions
 title: Staff quick-action menu in the shell header — manual reservation + add vehicle
-status: implementing
+status: implemented
 created: 2026-08-21
 updated: 2026-08-24
 archived_at: null
@@ -210,3 +210,26 @@ Sequencing matters for the first: this change multiplies that payload across ~10
 if it lands first the projection work becomes a second pass over the same code.
 
 Research: `research.md`
+
+**Implemented 2026-08-24 — all 5 phases.** Commits: `a75a2ab` (endpoint), `cc1ad29` (menu
+components), `80c1c92` (shell restructure), `c346a89` (mobile rollout), plus the Phase 5 gate.
+Vision-diff punch-list and the measured-values table: `design-review/vision-diff.md`.
+
+Three notes for whoever picks this up next:
+
+- **`GET /api/vehicles` measured 1149 B vs 4918 B** for the same seven active vehicles read as
+  `select("*")` — a 4.3× drop, and it fires at most once per page view. `reservations.astro` also
+  lost its SSR `listFleet` call, so this change _removes_ a read rather than multiplying one.
+- **Two adaptations against `plan.md`**, both settled by the canonical boards. (1) Phase 3 said
+  `StaffList` drops its `<h1>`; it keeps a `md:hidden` mobile header instead, because below `md`
+  there is no shell band and `mobile-zespol-absorb-closed.png` clearly draws the title. Flota's
+  treatment, applied to Zespół. (2) Phase 4 named `UserPlus` for the promoted Zespół row; the design
+  source uses `Icon.user`, so lucide `User` shipped.
+- **The integration suite has one pre-existing red** unrelated to this change:
+  `security-definer-anon-guardrail` flags `resolve_link_token`, a function that exists in no
+  migration, test or source file in this repo — a sibling worktree's migration living in the shared
+  local Supabase stack. 213/214 pass; the same failure is present before any commit here.
+
+**Follow-up spotted, not fixed** (per the standing rule on not patching ad hoc): `AddModal` in
+`StaffList.tsx` renders no `role="dialog"` / `aria-modal`, so the add-employee overlay is not
+announced as a dialog. Pre-existing, out of this change's scope.
