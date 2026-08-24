@@ -703,12 +703,12 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 5.1 E2E passes: `npm run test:e2e`
-- [x] 5.2 Full unit + integration suites pass
-- [x] 5.3 Production build succeeds: `npm run build`
+- [x] 5.1 E2E passes: `npm run test:e2e` — 66032a4
+- [x] 5.2 Full unit + integration suites pass — 66032a4
+- [x] 5.3 Production build succeeds: `npm run build` — 66032a4
 
 #### Manual
 
-- [x] 5.4 Vision-diff punch-list is empty except the contract's recorded deviations
-- [x] 5.5 Both absorb boards match their canonical renders
-- [x] 5.6 The desktop popover never shows a promoted row on any page
+- [x] 5.4 Vision-diff punch-list is empty except the contract's recorded deviations — 66032a4
+- [x] 5.5 Both absorb boards match their canonical renders — 66032a4
+- [x] 5.6 The desktop popover never shows a promoted row on any page — 66032a4
