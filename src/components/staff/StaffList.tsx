@@ -9,6 +9,15 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
+import {
+  type AddOutcome,
+  type Report,
+  type ReportTone,
+  inviteActionLabel,
+  resolveAddReport,
+  resolveRemoveReport,
+  resolveRowActionReport,
+} from "../../lib/staff-report";
 import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff";
 
 // Employees admin roster (S-08 Phase 4). One responsive surface over the
@@ -26,6 +35,7 @@ const COPY = {
   tabAll: "Wszyscy",
   tabActive: "Aktywny",
   tabInvited: "Zaproszony",
+  tabCreated: "Dodany",
   tabAdmin: "Administrator",
   colName: "Imię i nazwisko",
   colRole: "Rola",
@@ -36,20 +46,31 @@ const COPY = {
   roleEmployee: "PRACOWNIK",
   statusActive: "AKTYWNY",
   statusInvited: "ZAPROSZONY",
+  statusCreated: "DODANY",
   reset: "Resetuj hasło",
   removeAria: "Usuń pracownika",
   resetAria: "Resetuj hasło",
   footerBold: "Nie możesz usunąć siebie.",
   footerRest: " Poproś innego administratora o usunięcie Twojego konta.",
-  // add modal
+  // add modal — step 1 of two. The subtitle and the CTA both stopped promising
+  // an email when the add stopped sending one (design-contract §9.2): the CTA
+  // now names what the button does (`Dodaj`, matching the modal's own title),
+  // and `Wyślij zaproszenie` moved to the row action that really sends.
   addTitle: "Dodaj pracownika",
-  addSubtitle: "Wyślemy link aktywacyjny e-mailem. Nowa osoba sama ustawi hasło.",
+  addSubtitle: "Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.",
   labelName: "IMIĘ I NAZWISKO",
   labelEmail: "ADRES E-MAIL",
   cancel: "Anuluj",
-  sendInvite: "Wyślij zaproszenie",
+  addConfirm: "Dodaj",
+  adding: "Dodawanie…",
+  // Row action — TWO labels, one per password-less state (owner, 2026-08-21):
+  // a first send on a DODANY row, a resend on a ZAPROSZONY one, where reusing
+  // the first-send wording read as if nothing had been sent yet. Both are
+  // authored in `lib/staff-report.ts` rather than here, because
+  // `repairedMailFailed` has to NAME whichever button that row shows — the
+  // coupling that made a single shared label tempting in the first place.
+  sendInvite: inviteActionLabel,
   sending: "Wysyłanie…",
-  dupEmail: "Ten adres e-mail jest już w zespole.",
   close: "Zamknij",
   // remove modal
   removeTitle: "Usunąć tego pracownika?",
@@ -61,22 +82,31 @@ const COPY = {
   lastAdminBody: "Musi pozostać co najmniej jeden administrator. Najpierw awansuj inną osobę.",
   // states
   emptyTitle: "Brak pracowników",
-  emptyHint: "Dodaj pierwszą osobę — wyślemy jej link aktywacyjny e-mailem.",
+  emptyHint: "Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.",
   noResultsTitle: "Brak wyników",
   noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
   // banners
-  mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
+  //
+  // No message string lives here any more. `mutationError`, `inviteSent`,
+  // `resetSent` and `repairedMailFailed` all moved into `lib/staff-report.ts`
+  // alongside the routing that places them, so the outcome→surface table owns
+  // every arm's words rather than owning some of them (phase 10 §1). What stays
+  // are the two CONTROL labels the banner renders, which belong to the island.
+  // The dismiss control phase 10 §3 owes the sticky banner reuses `close` above
+  // — the shipped `ModalShell` label — rather than authoring a second word for
+  // the same affordance. (`genericError` used to sit here and was dead: nothing
+  // referenced it. Removed with the strings that moved.)
   retry: "Ponów",
-  resetSent: "Wysłano e-mail do resetu hasła.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
   // mobile
   eyebrowMobileWord: (n: number) => `${n} ${plForm(n, "osoba", "osoby", "osób").toUpperCase()}`,
   chipActive: "Aktywni",
   chipInvited: "Zaproszeni",
+  chipCreated: "Dodani",
   chipAdmin: "Administratorzy",
   roleAdminMobile: "ADMIN",
   statusActiveMobile: "Aktywny",
   statusInvitedMobile: "Zaproszony",
+  statusCreatedMobile: "Dodany",
   footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
 } as const;
 
@@ -85,10 +115,13 @@ const COPY = {
 // (28px is sheet-only — applied as an explicit rounded-t-[28px], not a utility.)
 const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
-type Filter = "all" | "active" | "invited" | "admin";
+type Filter = "all" | "active" | "invited" | "created" | "admin";
 
+// What the island holds for a banner it has been told to render. `tone` and
+// `msg` come straight off the `Report`; `retry` is the callback the module can
+// only ask for (`offersRetry`), never supply.
 interface Banner {
-  kind: "error" | "success";
+  tone: ReportTone;
   msg: string;
   retry?: () => void;
 }
@@ -130,16 +163,35 @@ function RoleBadge({ role, mobile = false }: { role: StaffMember["role"]; mobile
   );
 }
 
+// Three tones, transcribed from the design's `EmpStatusBadge`: green
+// (success) = AKTYWNY, amber (warning) = ZAPROSZONY, neutral grey = DODANY.
+// The grey pair is `--flota-neutral` / `--flota-neutral-soft` — the palette's
+// own "inert state" colours, sampled #64748B on #EEF1F5 off the design board —
+// and has no semantic Tailwind utility here, hence the explicit var(). Additive:
+// the two shipped arms render byte-identically to before.
+const STATUS_TONE = {
+  active: { label: COPY.statusActive, mobile: COPY.statusActiveMobile, text: "text-success", dot: "bg-success" },
+  invited: { label: COPY.statusInvited, mobile: COPY.statusInvitedMobile, text: "text-warning", dot: "bg-warning" },
+  created: {
+    label: COPY.statusCreated,
+    mobile: COPY.statusCreatedMobile,
+    text: "text-[var(--flota-neutral)]",
+    dot: "bg-[var(--flota-neutral)]",
+  },
+} as const;
+
+const STATUS_SOFT: Record<StaffMember["status"], string> = {
+  active: "bg-[var(--flota-success-soft)]",
+  invited: "bg-[var(--flota-warning-soft)]",
+  created: "bg-[var(--flota-neutral-soft)]",
+};
+
 function StatusBadge({ status }: { status: StaffMember["status"] }) {
-  return status === "active" ? (
-    <Badge className="text-success gap-1.5 bg-[var(--flota-success-soft)]">
-      <span className="bg-success size-1.5 rounded-full" />
-      {COPY.statusActive}
-    </Badge>
-  ) : (
-    <Badge className="text-warning gap-1.5 bg-[var(--flota-warning-soft)]">
-      <span className="bg-warning size-1.5 rounded-full" />
-      {COPY.statusInvited}
+  const tone = STATUS_TONE[status];
+  return (
+    <Badge className={cn("gap-1.5", tone.text, STATUS_SOFT[status])}>
+      <span className={cn("size-1.5 rounded-full", tone.dot)} />
+      {tone.label}
     </Badge>
   );
 }
@@ -233,13 +285,19 @@ function AddModal({
 }: {
   busy: boolean;
   onClose: () => void;
-  onSubmit: (values: { full_name: string; email: string }) => Promise<{ dupEmail?: boolean } | undefined>;
+  onSubmit: (values: { full_name: string; email: string }) => Promise<Report>;
 }) {
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [errors, setErrors] = React.useState<{ full_name?: string; email?: string }>({});
-  const [dup, setDup] = React.useState(false);
-  const emailInvalid = Boolean(errors.email) || dup;
+  // Two server-side error slots, one per shape of failure. `dup` belongs to the
+  // e-mail the admin typed (the shipped idiom); `formError` belongs to the
+  // SUBMISSION — a provisioning failure or a dropped connection attaches to no
+  // field, and before phase 9 it had nowhere to go but a banner the modal's own
+  // overlay painted over. `resolveAddReport` decides which one a response fills.
+  const [dup, setDup] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const emailInvalid = Boolean(errors.email) || dup !== null;
 
   async function submit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -254,9 +312,11 @@ function AddModal({
       return;
     }
     setErrors({});
-    setDup(false);
-    const result = await onSubmit(parsed.data);
-    if (result?.dupEmail) setDup(true);
+    setDup(null);
+    setFormError(null);
+    const report = await onSubmit(parsed.data);
+    if (report.slot === "email") setDup(report.message);
+    else if (report.slot === "form") setFormError(report.message);
   }
 
   const inputBase = "border-border bg-background text-foreground h-11 w-full rounded-xl border px-3.5 text-sm";
@@ -279,6 +339,7 @@ function AddModal({
               value={fullName}
               onChange={(e) => {
                 setFullName(e.target.value);
+                setFormError(null);
                 if (errors.full_name) setErrors((p) => ({ ...p, full_name: undefined }));
               }}
               className={cn(inputBase, errors.full_name && "border-destructive")}
@@ -301,7 +362,8 @@ function AddModal({
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                setDup(false);
+                setDup(null);
+                setFormError(null);
                 if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
               }}
               className={cn(inputBase, emailInvalid && "border-destructive bg-[var(--flota-danger-soft)]")}
@@ -310,26 +372,51 @@ function AddModal({
             {emailInvalid && (
               <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-[13px]">
                 <AlertTriangle className="size-3.5" />
-                {dup ? COPY.dupEmail : errors.email}
+                {dup ?? errors.email}
               </p>
             )}
           </div>
         </div>
 
+        {/* Form-level error (§8.4) — the submission failed, and it belongs to no
+            field. Type ramp, colour, glyph and gap are the field-level idiom
+            above, verbatim. Three properties differ, and all three are because
+            this string WRAPS where a field error never does — measured at 2 lines
+            at both breakpoints (400px desktop, 342px mobile), not assumed:
+            `items-start` + `mt-0.5` put the glyph on the first line instead of
+            floating it on the line boundary (the app's own idiom for a glyph
+            leading wrapping text — `ReservationForm.tsx:531,540`,
+            `pricing.astro:258`), and `shrink-0` stops the 14px glyph being
+            squeezed. `mt-5` is the modal's block rhythm, matching above and below. */}
+        {formError && (
+          <p role="alert" className="text-destructive mt-5 flex items-start gap-1.5 text-[13px]">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            {formError}
+          </p>
+        )}
+
         <div className="mt-5 flex gap-2.5">
           <Button type="button" variant="outline" className="h-12 flex-1" disabled={busy} onClick={onClose}>
             {COPY.cancel}
           </Button>
-          <Button type="submit" className="bg-primary text-primary-foreground h-12 flex-1 gap-2" disabled={busy || dup}>
+          {/* Stays enabled through a form-level error — it IS the retry now, and
+              the typed values are still in the fields behind it. Only a duplicate
+              disables it, because retrying that address cannot succeed until the
+              admin edits it. */}
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground h-12 flex-1 gap-2"
+            disabled={busy || dup !== null}
+          >
             {busy ? (
               <>
                 <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {COPY.sending}
+                {COPY.adding}
               </>
             ) : (
               <>
-                <Send className="size-4" />
-                {COPY.sendInvite}
+                <Plus className="size-4" />
+                {COPY.addConfirm}
               </>
             )}
           </Button>
@@ -350,10 +437,23 @@ function RemoveModal({
   member: StaffMember;
   busy: boolean;
   onClose: () => void;
-  onConfirm: (confirmEmail: string) => void;
+  onConfirm: (confirmEmail: string) => Promise<Report>;
 }) {
   const [typed, setTyped] = React.useState("");
+  // The form-level slot phase 10 §2 adds. `RemoveModal` had no error slot at
+  // all — unlike `AddModal`, which had two field-level ones to generalise from
+  // — because both of its failure arms used to set the roster banner and leave
+  // this modal open. That put the message off-screen while the admin was
+  // scrolled, and under `ModalShell`'s own overlay once they scrolled up to it.
+  const [formError, setFormError] = React.useState<string | null>(null);
   const matches = typed.trim().toLowerCase() === member.email.toLowerCase();
+
+  async function confirm() {
+    setFormError(null);
+    const report = await onConfirm(typed.trim());
+    if (report.slot === "form") setFormError(report.message);
+  }
+
   return (
     <ModalShell onClose={onClose}>
       <div className="text-destructive flex size-12 items-center justify-center rounded-lg bg-[var(--flota-danger-soft)]">
@@ -376,23 +476,36 @@ function RemoveModal({
         value={typed}
         onChange={(e) => {
           setTyped(e.target.value);
+          setFormError(null);
         }}
         placeholder={member.email}
         autoComplete="off"
         className="border-border bg-background text-foreground mt-1.5 h-11 w-full rounded-xl border px-3.5 font-mono text-sm"
       />
+
+      {/* Form-level error (§8.5) — inherited-exact from the add modal's §8.4
+          slot: colour, type ramp, glyph, gap, `items-start`, `shrink-0` and
+          `role="alert"` are that element verbatim, and this modal's content
+          column is the same 400px / 342px, so the wrap behaviour transfers with
+          them. `mt-5` is the ONE value measured here rather than inherited: the
+          slot lands between a bare input (`mt-1.5` above it) and the button row,
+          and that gap measures 20px, so a 20/20 split keeps the modal's own
+          block rhythm instead of borrowing the add modal's field-group rhythm. */}
+      {formError && (
+        <p role="alert" className="text-destructive mt-5 flex items-start gap-1.5 text-[13px]">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {formError}
+        </p>
+      )}
+
       <div className="mt-5 flex gap-2.5">
         <Button variant="outline" className="h-12 flex-1" disabled={busy} onClick={onClose}>
           {COPY.cancel}
         </Button>
-        <Button
-          variant="destructive"
-          className="h-12 flex-1 gap-2"
-          disabled={busy || !matches}
-          onClick={() => {
-            onConfirm(typed.trim());
-          }}
-        >
+        {/* Stays enabled through a form-level error — it IS the retry now, and
+            the typed confirmation is still in the field behind it, so there is
+            exactly one retry control on screen for one failure. */}
+        <Button variant="destructive" className="h-12 flex-1 gap-2" disabled={busy || !matches} onClick={confirm}>
           {busy && <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
           {COPY.remove}
         </Button>
@@ -438,6 +551,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const total = staff.length;
   const activeCount = staff.filter((m) => m.status === "active").length;
   const invitedCount = staff.filter((m) => m.status === "invited").length;
+  const createdCount = staff.filter((m) => m.status === "created").length;
   const adminCount = staff.filter((m) => m.role === "admin").length;
 
   // Pin the current admin to the top of the roster (design row 1 = `· Ty`), so
@@ -449,6 +563,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const filtered = orderedStaff.filter((m) => {
     if (filter === "active" && m.status !== "active") return false;
     if (filter === "invited" && m.status !== "invited") return false;
+    if (filter === "created" && m.status !== "created") return false;
     if (filter === "admin" && m.role !== "admin") return false;
     if (q) {
       const hay = `${m.fullName ?? ""} ${m.email}`.toLowerCase();
@@ -457,19 +572,58 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
     return true;
   });
 
+  // Lifecycle order, most-progressed first (design `EsShell` pill row): the new
+  // `Dodany` pill sits between `Zaproszony` and `Administrator`.
   const tabs: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: COPY.tabAll, count: total },
     { key: "active", label: COPY.tabActive, count: activeCount },
     { key: "invited", label: COPY.tabInvited, count: invitedCount },
+    { key: "created", label: COPY.tabCreated, count: createdCount },
     { key: "admin", label: COPY.tabAdmin, count: adminCount },
   ];
 
   // ── mutations ──────────────────────────────────────────────────────────────
 
-  async function addEmployee(values: {
-    full_name: string;
-    email: string;
-  }): Promise<{ dupEmail?: boolean } | undefined> {
+  // Applies a routing decision to the surfaces it can name. Every mutation goes
+  // through here (phase 10 §1): the modal that owns a report reads `slot` off
+  // the returned value and places the message itself, while this function only
+  // opens/closes modals and fills the banner.
+  //
+  // `retry` is passed IN rather than read out. The module can say an arm needs a
+  // retry control (`offersRetry`) but has no way to produce the callback, so the
+  // caller supplies the one that re-runs its own mutation.
+  function applyReport(report: Report, closeOwnModal: () => void, retry?: () => void): Report {
+    if (!report.keepsModalOpen) closeOwnModal();
+    if (report.target === "last-admin-modal") setLastAdminOpen(true);
+    if (report.target === "banner" && report.message && report.tone) {
+      setBanner({ tone: report.tone, msg: report.message, retry: report.offersRetry ? retry : undefined });
+    }
+    return report;
+  }
+
+  // WHERE an add failure is reported is decided by `resolveAddReport`, not here
+  // — this function only reads the wire and applies the answer.
+  //
+  // Phase 1 closed the modal on a provisioning failure and made the banner's
+  // `Ponów` the single retry, so that leaving the form open would not offer a
+  // competing second one. That reasoning was sound while the invite mail had
+  // already gone out: closing the modal was the signal that something
+  // irreversible HAD happened. Two things retired it. Phase 7 collapsed the copy
+  // to `Spróbuj ponownie.`, an instruction to retry issued after the form the
+  // admin would retry in had been taken away; and phase 8 stopped sending any
+  // mail on create, so a failed create is now fully retryable in place with
+  // nothing delivered. The duplication did not disappear — it inverted, and
+  // phase 9 resolves it the other way: the MODAL owns every add failure, its
+  // submit button is the single retry, and the typed values stay on screen.
+  //
+  // Which also fixed the arm that reported nowhere at all. A thrown `fetch` used
+  // to set a banner and leave the modal open, so the message painted behind
+  // `ModalShell`'s overlay — the most common failure, and the one case where the
+  // typed values are still perfectly good, was invisible.
+  async function addEmployee(values: { full_name: string; email: string }): Promise<Report> {
+    const closeAddModal = () => {
+      setAddOpen(false);
+    };
     setAddBusy(true);
     setBanner(null);
     try {
@@ -478,25 +632,51 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
+      let outcome: AddOutcome;
       if (res.status === 201 || res.status === 200) {
-        const body = (await res.json().catch(() => null)) as { member?: StaffMember } | null;
+        const body = (await res.json().catch(() => null)) as {
+          member?: StaffMember;
+          activationMail?: "sent" | "failed" | "not_needed";
+        } | null;
         const member = body?.member;
         if (member) setStaff((rows) => [...rows.filter((r) => r.id !== member.id), member]);
-        setAddOpen(false);
-        return;
+        // The activation-mail outcome is keyed off the member the server just
+        // returned, so its banner names the button THAT row renders: a repair can
+        // land on either password-less state, and `deriveStaffStatus` has already
+        // decided which.
+        outcome = { kind: "ok", activationMail: body?.activationMail ?? null, status: member?.status ?? "created" };
+      } else if (res.status === 409) {
+        outcome = { kind: "http", httpStatus: 409 };
+      } else {
+        // The route marks a provisioning failure with a machine-readable `code`;
+        // an unhandled 500 carries Astro's HTML body and has none.
+        const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+        outcome = { kind: "http", httpStatus: res.status, code: failure?.code ?? null };
       }
-      if (res.status === 409) {
-        return { dupEmail: true };
-      }
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
+      return applyReport(resolveAddReport(outcome), closeAddModal);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void addEmployee(values) });
+      return applyReport(resolveAddReport({ kind: "network" }), closeAddModal);
     } finally {
       setAddBusy(false);
     }
   }
 
-  async function removeEmployee(member: StaffMember, confirmEmail: string) {
+  // THE PHASE-10 DEFECT, half one. Both failure arms used to set the roster
+  // banner and leave `RemoveModal` open — and `RemoveModal` is `fixed inset-0`
+  // while the banner sits in the flow at the top of a document the admin has
+  // scrolled. Measured 2026-08-21 at 390×844: banner top `-1033`,
+  // `elementFromPoint` at its centre `null`, and `toBeVisible()` green. Scroll up
+  // to it and the second failure takes over — `ModalShell`'s `z-[60]` overlay is
+  // then what answers the hit test. There was no scroll position that showed the
+  // message legibly while the dialog was open.
+  //
+  // Both now report in the modal, whose `Usuń` is the retry with the typed
+  // confirmation still in the field. The 200 and 409 arms are deliberately
+  // untouched: the row really went, or the refusal is a different screen.
+  async function removeEmployee(member: StaffMember, confirmEmail: string): Promise<Report> {
+    const closeRemoveModal = () => {
+      setRemoveFor(null);
+    };
     setBusyId(member.id);
     setBanner(null);
     try {
@@ -507,35 +687,64 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       });
       if (res.status === 200) {
         setStaff((rows) => rows.filter((r) => r.id !== member.id));
-        setRemoveFor(null);
-        return;
       }
-      if (res.status === 409) {
-        // last admin — swap to the refusal modal
-        setRemoveFor(null);
-        setLastAdminOpen(true);
-        return;
-      }
-      setBanner({ kind: "error", msg: COPY.mutationError });
+      return applyReport(resolveRemoveReport({ kind: "http", httpStatus: res.status }), closeRemoveModal);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError });
+      return applyReport(resolveRemoveReport({ kind: "network" }), closeRemoveModal);
     } finally {
       setBusyId(null);
     }
   }
 
-  async function resetPassword(member: StaffMember) {
+  // Step 2 of the two-step add. Offered for BOTH password-less states, so this
+  // one call covers a first send and a resend; GoTrue invalidates the previous
+  // link on a resend, so there is never more than one live token per person.
+  // On success the row moves DODANY → ZAPROSZONY off the server's own
+  // `invited_at`, not a locally-guessed timestamp.
+  // THE PHASE-10 DEFECT, half two — and the half with no modal to move into.
+  // These two are triggered from a per-row control reachable at any scroll
+  // depth, and their SUCCESS messages are load-bearing: a resend changes nothing
+  // else on screen (the badge is already ZAPROSZONY), so `inviteSent` is the
+  // only feedback there is. A success banner the admin never sees fails that job
+  // exactly as completely as a failure banner does. §3's answer is not to
+  // relocate them but to make the banner itself reachable — see its `sticky`
+  // placement below.
+  //
+  // `noModal` reads as ceremony for one line, and is deliberate: it says these
+  // arms own no modal, which is why the banner is the only surface they can use
+  // and why §3 had to be a layout decision rather than a routing one.
+  const noModal = () => {
+    /* row actions open no modal — nothing to close */
+  };
+
+  async function sendInvite(member: StaffMember): Promise<Report> {
+    const retry = () => void sendInvite(member);
+    setBusyId(member.id);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/staff/${member.id}/invite`, { method: "POST" });
+      if (res.status === 200) {
+        const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
+        const invitedAt = body?.invitedAt ?? new Date().toISOString();
+        setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
+      }
+      return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: res.status }), noModal, retry);
+    } catch {
+      return applyReport(resolveRowActionReport("invite", { kind: "network" }), noModal, retry);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function resetPassword(member: StaffMember): Promise<Report> {
+    const retry = () => void resetPassword(member);
     setBusyId(member.id);
     setBanner(null);
     try {
       const res = await fetch(`/api/staff/${member.id}/reset-password`, { method: "POST" });
-      if (res.status === 200) {
-        setBanner({ kind: "success", msg: COPY.resetSent });
-      } else {
-        setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void resetPassword(member) });
-      }
+      return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: res.status }), noModal, retry);
     } catch {
-      setBanner({ kind: "error", msg: COPY.mutationError, retry: () => void resetPassword(member) });
+      return applyReport(resolveRowActionReport("reset", { kind: "network" }), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -617,12 +826,31 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
       {/* ── Content (grey) ─────────────────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
-        {/* Mutation banner (§3.12) — above the filter card */}
+        {/* Mutation banner (§3.12, §8.6) — above the filter card, and PINNED.
+
+            `sticky top-4 z-20` is phase 10 §3's answer for the row actions,
+            which have no modal to report into. The element and every one of its
+            dimensions are unchanged; what changed is that it no longer sits at a
+            document offset the admin has scrolled away from. Measured
+            2026-08-21 at 390×844: without it, top `-1033` and `elementFromPoint`
+            `null` at its own centre — outside the viewport, while
+            `toBeVisible()` passed. With it, top `16`, in viewport, topmost.
+
+            This also restores the design's own behaviour rather than inventing
+            one: `EsShell` in `employee-states.jsx` puts the banner OUTSIDE the
+            scrolling region (`flex: 1; overflow: auto` is on the table body
+            alone), so only the list scrolls and the banner is permanently on
+            screen. The app built the same screen as a document that scrolls
+            whole. Sticky is the local way back to the intended behaviour without
+            restructuring the app shell.
+
+            At scrollY 0 it renders byte-identically to before, so §11's existing
+            baselines still hold — sticky only engages once the page has moved. */}
         {banner && (
           <div
             className={cn(
-              "mb-5 flex items-center justify-between gap-3 rounded-lg border px-5 py-3.5",
-              banner.kind === "error"
+              "sticky top-4 z-20 mb-5 flex items-center justify-between gap-3 rounded-lg border px-5 py-3.5",
+              banner.tone === "error"
                 ? "border-destructive/30 bg-[var(--flota-danger-soft)]"
                 : "border-success/30 bg-[var(--flota-success-soft)]",
             )}
@@ -630,29 +858,52 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
             <span
               className={cn(
                 "flex items-center gap-2.5 text-sm font-[540]",
-                banner.kind === "error" ? "text-destructive" : "text-success",
+                banner.tone === "error" ? "text-destructive" : "text-success",
               )}
             >
-              {banner.kind === "error" ? (
+              {banner.tone === "error" ? (
                 <AlertTriangle className="size-4 shrink-0" />
               ) : (
                 <ShieldCheck className="size-4 shrink-0" />
               )}
               {banner.msg}
             </span>
-            {banner.kind === "error" && banner.retry && (
-              <Button
-                variant="outline"
-                className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
+            <span className="flex shrink-0 items-center gap-2">
+              {banner.tone === "error" && banner.retry && (
+                <Button
+                  variant="outline"
+                  className="bg-card h-9 shrink-0 px-4 text-[13px] font-[650]"
+                  onClick={() => {
+                    const r = banner.retry;
+                    setBanner(null);
+                    r?.();
+                  }}
+                >
+                  {COPY.retry}
+                </Button>
+              )}
+              {/* The exit pinning takes away. Scrolling past the banner used to
+                  be how it went away — which IS phase 10's defect, and was
+                  simultaneously the only dismissal the design had. Sticky
+                  removes it, so §3 owes a replacement: an explicit control on
+                  both tones, chosen over auto-clearing the success tone because
+                  an error that vanishes on a timer is worse than one that
+                  persists, and because proving a timer without a sleep is a
+                  cost `e2e-rules.md` should not have to carry. Geometry and
+                  label are `ModalShell`'s shipped ✕ (`:264`), minus its absolute
+                  positioning; `setBanner(null)` on the next mutation is
+                  unchanged and still fires. */}
+              <button
+                type="button"
+                aria-label={COPY.close}
                 onClick={() => {
-                  const r = banner.retry;
                   setBanner(null);
-                  r?.();
                 }}
+                className="bg-card text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-full"
               >
-                {COPY.retry}
-              </Button>
-            )}
+                <X className="size-4" />
+              </button>
+            </span>
           </div>
         )}
 
@@ -749,15 +1000,40 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
-                              disabled={busyId === m.id}
-                              onClick={() => resetPassword(m)}
-                            >
-                              <KeyRound className="size-3.5" />
-                              {COPY.reset}
-                            </Button>
+                            {/* ONE action per state (design-contract §10 entry 2).
+                                `Resetuj hasło` sends a RECOVERY link, which is the
+                                wrong journey — and the wrong promise — for someone
+                                who has never had a password. */}
+                            {m.status === "active" ? (
+                              <Button
+                                variant="outline"
+                                className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
+                                disabled={busyId === m.id}
+                                onClick={() => resetPassword(m)}
+                              >
+                                <KeyRound className="size-3.5" />
+                                {COPY.reset}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
+                                disabled={busyId === m.id}
+                                onClick={() => sendInvite(m)}
+                              >
+                                {busyId === m.id ? (
+                                  <>
+                                    <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    {COPY.sending}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className="size-3.5" />
+                                    {COPY.sendInvite(m.status)}
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="icon"
@@ -798,11 +1074,9 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                       </div>
                       <div className="text-muted-foreground mt-0.5 truncate text-sm">{m.email}</div>
                       <div className="mt-1 flex items-center gap-1.5 text-[13px]">
-                        <span
-                          className={cn("size-1.5 rounded-full", m.status === "active" ? "bg-success" : "bg-warning")}
-                        />
-                        <span className={cn("font-[540]", m.status === "active" ? "text-success" : "text-warning")}>
-                          {m.status === "active" ? COPY.statusActiveMobile : COPY.statusInvitedMobile}
+                        <span className={cn("size-1.5 rounded-full", STATUS_TONE[m.status].dot)} />
+                        <span className={cn("font-[540]", STATUS_TONE[m.status].text)}>
+                          {STATUS_TONE[m.status].mobile}
                         </span>
                         <span className="text-muted-foreground" suppressHydrationWarning>
                           · {formatLastActive(m, nowMs, { invitePrefix: false })}
@@ -810,16 +1084,34 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                       </div>
                     </div>
                     <div className="ml-auto flex flex-col gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="text-foreground size-11 rounded-xl"
-                        disabled={busyId === m.id}
-                        aria-label={COPY.resetAria}
-                        onClick={() => resetPassword(m)}
-                      >
-                        <KeyRound className="size-4" />
-                      </Button>
+                      {/* Same one-action-per-state rule as the desktop table. */}
+                      {m.status === "active" ? (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-foreground size-11 rounded-xl"
+                          disabled={busyId === m.id}
+                          aria-label={COPY.resetAria}
+                          onClick={() => resetPassword(m)}
+                        >
+                          <KeyRound className="size-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-foreground size-11 rounded-xl"
+                          disabled={busyId === m.id}
+                          aria-label={COPY.sendInvite(m.status)}
+                          onClick={() => sendInvite(m)}
+                        >
+                          {busyId === m.id ? (
+                            <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <Send className="size-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="icon"

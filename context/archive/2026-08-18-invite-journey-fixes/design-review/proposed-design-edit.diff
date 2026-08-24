@@ -1,0 +1,108 @@
+# PROPOSED edit to the Claude Design project `Rental car company`
+# (352d78a6-84fd-49a2-8b38-2fe289691fc3). NOT applied — draft for review.
+# Implements design-contract §9.2 copy and §10's mutually-exclusive row actions.
+
+--- a/shared.jsx   (STR.EN — S-08 employees block)
++++ b/shared.jsx
+@@
+     invitedS: 'Invited',
+     activeS: 'Active',
++    createdS: 'Added',
+     resetPassword: 'Reset password',
+@@
+     sendInvite: 'Send invite',
++    addConfirm: 'Add',
+@@
+-    emptyRosterSub: 'Add your first teammate and we'll email them an activation link.',
++    emptyRosterSub: 'Add your first teammate — you'll send the invite in the next step.',
+
+--- a/shared.jsx   (STR.PL — S-08 employees block)
++++ b/shared.jsx
+@@
+     invitedS: 'Zaproszony',
+     activeS: 'Aktywny',
++    createdS: 'Dodany',
+     resetPassword: 'Resetuj hasło',
+@@
+     sendInvite: 'Wyślij zaproszenie',
++    addConfirm: 'Dodaj',
+@@
+-    emptyRosterSub: 'Dodaj pierwszą osobę — wyślemy jej link aktywacyjny e-mailem.',
++    emptyRosterSub: 'Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.',
+
+--- a/desktop-screens.jsx   (EmpStatusBadge, :739)
++++ b/desktop-screens.jsx
+@@
+ function EmpStatusBadge({ status, t }) {
+-  const active = status === 'active';
++  // Three states since the two-step add: DODANY (created, nothing sent yet) is
++  // neutral grey — not a success, not a problem, and not waiting on the hire.
++  // Additive: 'active' and 'invited' render byte-identically to before.
++  const tone = status === 'active'
++    ? { bg: tokens.greenSoft, fg: tokens.green, label: t.activeS }
++    : status === 'created'
++      ? { bg: tokens.greySoft, fg: tokens.grey, label: t.createdS }
++      : { bg: tokens.amberSoft, fg: tokens.amber, label: t.invitedS };
+   return (
+     <span style={{
+       display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 9px', borderRadius: 6,
+-      background: active ? tokens.greenSoft : tokens.amberSoft,
+-      color: active ? tokens.green : tokens.amber,
++      background: tone.bg,
++      color: tone.fg,
+       fontSize: 11, fontWeight: 600, letterSpacing: 0.1, textTransform: 'uppercase',
+     }}>
+-      <span style={{ width: 5, height: 5, borderRadius: 99, background: active ? tokens.green : tokens.amber }} />
+-      {active ? t.activeS : t.invitedS}
++      <span style={{ width: 5, height: 5, borderRadius: 99, background: tone.fg }} />
++      {tone.label}
+     </span>
+   );
+ }
+
+--- a/employee-states.jsx
++++ b/employee-states.jsx
+@@ ES_TEAM / ES_LAST
+   { id: 5, name: 'Karolina Mazur', email: 'karolina.mazur@flota.pl', role: 'employee', status: 'invited', init: 'KM' },
++  { id: 6, name: 'Robert Zieliński', email: 'robert.zielinski@flota.pl', role: 'employee', status: 'created', init: 'RZ' },
+ ];
+-const ES_LAST = { 1: 'przed chwilą', 2: '12 min temu', 3: '2 godz. temu', 4: 'wczoraj', 5: '2 dni temu' };
++// id 6 has never been invited, so there is no activity to report — an em dash,
++// not a fabricated timestamp.
++const ES_LAST = { 1: 'przed chwilą', 2: '12 min temu', 3: '2 godz. temu', 4: 'wczoraj', 5: '2 dni temu', 6: '—' };
+
+@@ EsShell — filter pills (lifecycle order: most-progressed first)
+-              {[[t.allEmp, ES_TEAM.length, true, tokens.ink], [t.activeS, 4, false, tokens.green], [t.invitedS, 1, false, tokens.amber], [t.roleAdmin, 1, false, tokens.accent]].map(([l, n, active, fill], i) => (
++              {[[t.allEmp, ES_TEAM.length, true, tokens.ink], [t.activeS, 4, false, tokens.green], [t.invitedS, 1, false, tokens.amber], [t.createdS, 1, false, tokens.grey], [t.roleAdmin, 1, false, tokens.accent]].map(([l, n, active, fill], i) => (
+
+@@ EsShell — avatar overflow count was hardcoded
+-              <div style={{ ... }}>+1</div>
++              <div style={{ ... }}>+{ES_TEAM.length - 4}</div>
+
+@@ EsRow — the row actions become mutually exclusive
+       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+-        <button style={{ height: 32, ... }}><Icon.key s={13} c={tokens.ink2} /> {t.resetPassword}</button>
++        {/* ONE action per state. "Reset password" for a password-less person
++            sends a RECOVERY link and recovery copy — the wrong journey for a
++            hire who has never had a password. See design-contract §10. */}
++        {e.status === 'active' ? (
++          <button style={{ height: 32, ... }}><Icon.key s={13} c={tokens.ink2} /> {t.resetPassword}</button>
++        ) : (
++          <button style={{ height: 32, ... }}><Icon.message s={13} c={tokens.ink2} /> {t.sendInvite}</button>
++        )}
+
+@@ EtRow — same rule at tablet width
+-        <button style={{ height: 38, ... }}><Icon.key s={14} c={tokens.ink2} /> {t.resetPassword}</button>
++        {active ? (
++          <button style={{ height: 38, ... }}><Icon.key s={14} c={tokens.ink2} /> {t.resetPassword}</button>
++        ) : (
++          <button style={{ height: 38, ... }}><Icon.message s={14} c={tokens.ink2} /> {t.sendInvite}</button>
++        )}
+
+@@ ScreenEmpAdd — the modal CTA stops promising an email
+-        <EsBtns t={t} confirmLabel={<><Icon.message s={15} c={dup ? tokens.muted : '#fff'} /> {t.sendInvite}</>} confirmDisabled={dup} wide />
++        <EsBtns t={t} confirmLabel={<><Icon.plus s={15} c={dup ? tokens.muted : '#fff'} /> {t.addConfirm}</>} confirmDisabled={dup} wide />
+
+@@ ScreenEmpTablet — filter pills, same fifth entry as EsShell
+-            {[[t.allEmp, ES_TEAM.length, true, tokens.ink], [t.activeS, 4, false, tokens.green], [t.invitedS, 1, false, tokens.amber], [t.roleAdmin, 1, false, tokens.accent]].map(([l, n, act, fill], i) => (
++            {[[t.allEmp, ES_TEAM.length, true, tokens.ink], [t.activeS, 4, false, tokens.green], [t.invitedS, 1, false, tokens.amber], [t.createdS, 1, false, tokens.grey], [t.roleAdmin, 1, false, tokens.accent]].map(([l, n, act, fill], i) => (
