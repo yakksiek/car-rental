@@ -638,31 +638,31 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Unit tests pass: `npm test`
-- [x] 1.4 Integration tests pass: `npm run test:integration`
-- [x] 1.5 The triple asserts 401 / 403 / 200 distinctly, and the 200 body carries exactly 7 keys per vehicle
+- [x] 1.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — a75a2ab
+- [x] 1.2 Linting passes: `npm run lint` — a75a2ab
+- [x] 1.3 Unit tests pass: `npm test` — a75a2ab
+- [x] 1.4 Integration tests pass: `npm run test:integration` — a75a2ab
+- [x] 1.5 The triple asserts 401 / 403 / 200 distinctly, and the 200 body carries exactly 7 keys per vehicle — a75a2ab
 
 #### Manual
 
-- [x] 1.6 `curl` returns 401 signed-out and 200 signed-in as staff
-- [x] 1.7 The 200 payload is visibly smaller than `listFleet`'s (no `photos` array)
+- [x] 1.6 `curl` returns 401 signed-out and 200 signed-in as staff — a75a2ab
+- [x] 1.7 The 200 payload is visibly smaller than `listFleet`'s (no `photos` array) — a75a2ab
 
 ### Phase 2: Quick-action menu components
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Unit tests pass, including the 4 merge cases: `npm test`
-- [ ] 2.4 No remaining importers of `NewReservationButton`
+- [x] 2.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Unit tests pass, including the 4 merge cases: `npm test`
+- [x] 2.4 No remaining importers of `NewReservationButton`
 
 #### Manual
 
-- [ ] 2.5 Circle opens the sheet; "Nowa rezerwacja" spins, then the modal opens with a populated picker
-- [ ] 2.6 Repeated opens issue exactly one `/api/vehicles` request
-- [ ] 2.7 With every vehicle deactivated, the sheet still opens and "Dodaj pojazd" still works
+- [x] 2.5 Circle opens the sheet; "Nowa rezerwacja" spins, then the modal opens with a populated picker
+- [x] 2.6 Repeated opens issue exactly one `/api/vehicles` request
+- [x] 2.7 With every vehicle deactivated, the sheet still opens and "Dodaj pojazd" still works
 
 ### Phase 3: `StaffShell` header restructure (desktop)
 
