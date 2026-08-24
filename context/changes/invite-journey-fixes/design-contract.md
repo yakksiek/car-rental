@@ -141,19 +141,21 @@ rather than against Tailwind's stock scale.
 
 ## 6. Screen inventory
 
-| Mockup reference                               | App surface                                               | Phase |
-| ---------------------------------------------- | --------------------------------------------------------- | ----- |
-| `19-admin-desktop-employees.png`               | `/dashboard/staff` → `src/components/staff/StaffList.tsx` | 1, 3  |
-| `25-admin-mobile-employees.jpg`                | same, below `lg`                                          | 1, 3  |
-| `design-review/boards-after/emp-roster.png`    | same — third badge + one-action-per-state rows (desktop)  | 8     |
-| `design-review/boards-after/emp-tablet.png`    | same, tablet card list                                    | 8     |
-| `design-review/boards-after/emp-add.png`       | add modal — `Dodaj` CTA + rewritten subtitle              | 8     |
-| `auth-authed-{d,m}.png`                        | `src/pages/auth/link-conflict.astro`                      | 5     |
-| `auth-inapp-{d,m}.png`                         | `src/pages/auth/reset-password.astro` (R12)               | 5     |
-| `auth-nolink-{d,m}.png`                        | `src/pages/auth/reset-password.astro` (R13)               | 5     |
-| `auth-expired-{d,m}.png`                       | `src/pages/auth/reset-password.astro` (R5)                | 5     |
-| `auth-success-{d,m}.png`                       | `src/pages/auth/reset-password.astro` (R4)                | 5     |
-| `auth-set-{d,m}.png` · `auth-invite-{d,m}.png` | `src/pages/auth/reset-password.astro` (form)              | 5     |
+| Mockup reference                               | App surface                                                  | Phase |
+| ---------------------------------------------- | ------------------------------------------------------------ | ----- |
+| `19-admin-desktop-employees.png`               | `/dashboard/staff` → `src/components/staff/StaffList.tsx`    | 1, 3  |
+| `25-admin-mobile-employees.jpg`                | same, below `lg`                                             | 1, 3  |
+| `design-review/boards-after/emp-roster.png`    | same — third badge + one-action-per-state rows (desktop)     | 8     |
+| `design-review/boards-after/emp-tablet.png`    | same, tablet card list                                       | 8     |
+| `design-review/boards-after/emp-add.png`       | add modal — `Dodaj` CTA + rewritten subtitle                 | 8     |
+| `17-admin-desktop-fleet-management.png`        | `/dashboard/vehicles` → `src/components/fleet/FleetList.tsx` | 11    |
+| `23-admin-mobile-fleet-management.jpg`         | same, below `md` (the card list)                             | 11    |
+| `auth-authed-{d,m}.png`                        | `src/pages/auth/link-conflict.astro`                         | 5     |
+| `auth-inapp-{d,m}.png`                         | `src/pages/auth/reset-password.astro` (R12)                  | 5     |
+| `auth-nolink-{d,m}.png`                        | `src/pages/auth/reset-password.astro` (R13)                  | 5     |
+| `auth-expired-{d,m}.png`                       | `src/pages/auth/reset-password.astro` (R5)                   | 5     |
+| `auth-success-{d,m}.png`                       | `src/pages/auth/reset-password.astro` (R4)                   | 5     |
+| `auth-set-{d,m}.png` · `auth-invite-{d,m}.png` | `src/pages/auth/reset-password.astro` (form)                 | 5     |
 
 ## 7. Shared elements
 
@@ -445,6 +447,112 @@ What **is** unchanged at rest is the positioning: `sticky` does not engage until
 block has scrolled past `top`, so the banner still sits in flow above the filter card with its
 `mb-5` intact (measured: `top` 163 at desktop, gap to the filter card 20px, `stuck: false`).
 
+### 8.7 Fleet restore banner + pin and dismiss — phase 11
+
+**This is a SECOND banner on a SECOND screen, and §8.1's values do not apply to it.** The plan says
+so and the measurement confirms it: `/dashboard/vehicles`'s banner (`FleetList.tsx`) shipped with
+S-04 and shares only a background token with the roster's. Both sides measured on the running app
+with a restore forced, 2026-08-24:
+
+| Dimension     | Roster banner (§8.1)   | Fleet banner (this entry)         | Same? |
+| ------------- | ---------------------- | --------------------------------- | ----- |
+| Background    | `rgb(251,228,225)`     | `rgb(251,228,225)`                | ✅    |
+| Text colour   | `rgb(180,54,56)`       | `rgb(180,54,56)`                  | ✅    |
+| Radius        | `16px` (`rounded-lg`)  | **`20px`** (`rounded-xl`)         | ❌    |
+| Padding       | `14px 20px`            | **`12px 16px`**                   | ❌    |
+| Border        | `1px` `destructive/30` | **none — `0px`**                  | ❌    |
+| Message ramp  | `14px / 540`           | **`14px / 400`**, `lh 20px`       | ❌    |
+| Leading icon  | `AlertTriangle size-4` | **absent**                        | ❌    |
+| Retry control | `Ponów` button         | **absent** — the row is the retry | ❌    |
+| Tones         | error + success        | **error only**                    | ❌    |
+
+Seven differences, so this entry specifies the fleet element in full rather than inheriting. **No value
+below was changed by phase 11** — they are transcribed as measured so a future edit has a baseline
+that is a check rather than a restatement of the code (the §12.7 trap).
+
+| Property      | Exact value (measured `getComputedStyle`, 2026-08-24)                   |
+| ------------- | ----------------------------------------------------------------------- |
+| Wrapper       | `mt-4 rounded-xl bg-[var(--flota-danger-soft)] px-4 py-3 text-sm`       |
+| Radius        | `20px` — `--flota-radius-xl`                                            |
+| Padding       | `12px 16px`                                                             |
+| Block spacing | `margin-top: 16px` (`mt-4`) — after the show-retired toggle             |
+| Background    | `rgb(251, 228, 225)` — `--flota-danger-soft`                            |
+| Border        | none                                                                    |
+| Text          | `text-destructive` → `rgb(180, 54, 56)`; `14px / 400`, line-height 20px |
+| Width         | 992px at 1280×900 · 358px at 390×844                                    |
+
+**What phase 11 ADDS is exactly what phase 10 §3 decided, and nothing else** — the pin and the exit
+it owes. Both are inherited-exact from §8.6, which is the point of ordering this phase second:
+
+| Property             | Exact value                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pinning              | `sticky top-4 z-20` — measured `position: sticky`, `top: 16px`, `z-index: 20`                                                               |
+| Layout               | `flex items-center justify-between gap-3` — measured `display: flex`, `gap: 12px`                                                           |
+| Dismiss control      | `bg-card text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-full`, glyph `X size-4`       |
+| Dismiss `aria-label` | `Zamknij` — the same shipped word `StaffList.tsx` and `ModalShell` use                                                                      |
+| Message span         | `min-w-0` — no visual effect at the one string this banner renders; it lets the message shrink instead of overflowing if one is ever longer |
+
+Measured on the control itself: **32×32**, `border-radius` pill, background `rgb(255,255,255)`
+(`bg-card`), colour `rgb(148,163,184)` (`text-muted-foreground`), glyph **16px**. Byte-for-byte the
+roster's ✕. **No new component, no new token, no new glyph, no new string.**
+
+`top-4` and `z-20` are §8.6's values, not re-derived: 16px matches the content column's own inset,
+and `z-20` sits above the list and below the two fixed layers it must not fight — `RetireDialog` at
+`z-[60]` and the mobile tab bar at `z-30`.
+
+**The defect, measured — and it is the reason the pin is here at all.** `/dashboard/vehicles`, admin
+session, one retired row at the bottom of the list, "Pokaż wycofane" on, `Przywróć` failing
+(2026-08-24):
+
+| Viewport | Max scroll | Banner top, un-pinned | In viewport | Hit at its centre | `toBeVisible()` | Banner top, pinned |
+| -------- | ---------- | --------------------- | ----------- | ----------------- | --------------- | ------------------ |
+| 390×844  | **1186**   | **−879**              | **no**      | `null`            | **passes**      | **16**             |
+| 1280×900 | 213        | 113                   | yes         | itself            | passes          | 101 (inert)        |
+
+**The desktop row is not a pass, it is an absence of the precondition.** At 1280×900 nine rows scroll
+213px and the banner's own top at maximum scroll is 113 — it never leaves the viewport, so the defect
+cannot be reproduced there and neither can its fix be disproved. That is why the e2e spec is pinned
+to 390×844 and why the desktop reading stays a manual gate, the same split phase 10 §6 took. `sticky`
+is correspondingly **inert** at desktop on this fixture — top 101, not 16, because the element has
+not yet reached its `top` offset. That is correct behaviour, not a partial fix.
+
+**At rest the placement is unchanged and the HEIGHT is not — re-baselined, not zero-delta.** Same
+shape as §8.6's finding on the roster, and stated here rather than left for the vision-diff to
+discover. Measured at scrollY 0 both ways — the shipped element with the ✕ stripped and the wrapper
+returned to `display: block`, then the phase-11 element:
+
+| Viewport | Height before | Height after | Top | Message column | Lines | Why                                  |
+| -------- | ------------- | ------------ | --- | -------------- | ----- | ------------------------------------ |
+| 1280×900 | 44            | **56**       | 386 | 254 → 254      | 1 → 1 | the ✕'s 32px now sets the row height |
+| 390×844  | 44            | **56**       | 367 | 254 → 254      | 1 → 1 | as desktop                           |
+
+**No wrap cost here, unlike the roster.** §8.6 accepted the ✕ narrowing the 390px message column from
+227px to 187px and taking its failure string from 3 lines to 4. `Coś poszło nie tak. Spróbuj ponownie.`
+is short enough to sit on one line at 254px, and the available column at 390px is 282px, so the ✕ costs
+12px of height and no reflow. **And that string is the only one this banner can ever render**, which
+is why the claim is exact rather than lucky: `restore` is the sole writer of `setBanner`, and
+`set_vehicle_active`'s restore arm has no guard — `has_active_reservations` is reachable only when
+retiring (`20260625120000_fleet_management.sql:85-105`), and that arm reports in the dialog. So
+`hasReservations`, the longer string, can never reach this element. `document.scrollWidth === clientWidth` at both viewports — no horizontal
+overflow.
+
+**A pinned banner overlaps the list while the page is scrolled**, exactly as on the roster, and for
+the same reason it is acceptable: the banner is a transient report with an opaque background
+(`rgb(251,228,225)`), the list is persistent content, and the message now has an explicit exit.
+
+**What that overlap actually costs, measured at the gate rather than asserted.** At 390×844 scrolled,
+the banner lands on a vehicle card and covers its **name line and the top half of its status chip** —
+what remains legible below the banner's edge is the spec line, the rate, and the lower half of a green
+`Aktywny` pill. A half-cut chip under an opaque band is the one untidy moment in this change. Accepted:
+it is transient, the row stays reachable, and the alternative — a scrim, a fade, or a taller inset —
+would be a fleet-specific variant of §8.6, which entry 5 exists to refuse. Recorded so a future
+fidelity pass reads it as a known cost rather than a finding.
+
+A second consequence of `top-4` with no scrim: the previous card's rounded bottom edge and its
+`Edytuj` / `Wycofaj` buttons show through the 16px gutter **above** the banner and slide under it, so
+the element reads as a floating pill over a thin white band. Identical to §8.6's roster treatment —
+a convention, not a regression.
+
 ## 9. Verbatim Polish copy
 
 All strings live in `src/lib/staff-report.ts`'s `COPY` block. Phase 10 moved the last three out of
@@ -670,6 +778,30 @@ where the admin is for those.
 **No new string for a failed row-action send.** Unchanged from §9.3 and §9.4: invite and reset keep
 `mutationError` + `Ponów`, because they have no form to report into. Phase 10 does not change
 **where** those go — it changes whether the admin can see where they went.
+
+### 9.6 Phase 11 — **no new string was authored**
+
+Recorded as its own subsection precisely because "we added nothing" is the claim most easily
+asserted and least easily checked later.
+
+| Key     | String    | Where                                    |
+| ------- | --------- | ---------------------------------------- |
+| `close` | `Zamknij` | the fleet banner's ✕ (`aria-label`) only |
+
+`Zamknij` is not new to the app or to this contract: it is `StaffList.tsx`'s shipped `COPY.close`
+(§8.6's dismiss label) and `ModalShell`'s ✕ label. Phase 11 adds the key to `FleetList.tsx`'s own
+`COPY` block because that block is this screen's copy source — the fleet's strings live there, not in
+`staff-report.ts`, and deliberately so (see §10 entry 5, decision 1).
+
+**Everything else on this surface is the shipped S-04 copy, untouched**: `genericError`
+(`Coś poszło nie tak. Spróbuj ponownie.`) is what the pinned banner renders, and `hasReservations`
+(`Pojazd ma aktywne rezerwacje — najpierw je anuluj.`) stays in the retire dialog. Neither was
+reworded. In particular the fleet banner gets **no** `Ponów`: the row's own `Przywróć` is the retry,
+so exactly one retry control is on screen for one failure — the §9.4 invariant, satisfied here by the
+element that already existed rather than by a new one.
+
+**And `restore` still has no success string.** That is a decision, not an omission — §10 entry 5,
+decision 3.
 
 ## 10. Deviations register
 
@@ -935,6 +1067,98 @@ on three of its four states and narrows the 390px message column from 227px to 1
 failure string from three lines to four. §8.6 carries the measured before/after table. This is the
 accepted cost of the dismissal §3 owed — not a regression to be renegotiated at review time.
 
+### Entry 5 — The same defect on the fleet roster — `deviation(applies entry 4's answer to a second consumer)`
+
+**Not a new design decision, and that is the entry's whole point.** Entry 4 chose this app's answer to
+"feedback from a control that is reachable at any scroll depth": pin the banner, and give it the exit
+pinning takes away. `/dashboard/vehicles` is the second surface with that shape, so phase 11 applies
+that answer rather than taking it again. **A fleet-specific variant would have been a failure of this
+phase, not a refinement** — two answers to one question is the outcome ordering phase 11 after phase
+10 exists to prevent.
+
+**The defect, measured the way entry 4's was.** `Przywróć` is per-row; `restore`'s banner is anchored
+above the list. Admin session, one retired row at the bottom, "Pokaż wycofane" on (2026-08-24):
+
+| Viewport | Max scroll | Banner top | In viewport | Hit at its centre | `toBeVisible()` |
+| -------- | ---------- | ---------- | ----------- | ----------------- | --------------- |
+| 390×844  | 1186       | **−879**   | **no**      | `null`            | **passes**      |
+| 1280×900 | 213        | 113        | yes         | itself            | passes          |
+
+The desktop row is the **absence of the precondition**, not evidence of health — see §8.7. And the
+seed understates it further: exactly one vehicle is retired (`Fiat Ducato (wycofany)`), which sorts
+FIRST by name, so today's single `Przywróć` sits near the top of the list and its banner happens to be
+in view. That is a property of the fixture, not of the design — the gap grows with every retired
+vehicle below the first. `e2e/fixtures/booking.ts`'s `createRetiredVehicle` exists to stop a spec
+resting on it.
+
+**Half of entry 4's problem was already absent here**, which is why this is the smaller entry: the
+retire confirmation reports **inside its dialog** (`setDialogError` → `RetireDialog`'s `error` prop),
+which is the shape phase 9 had to build for the staff add modal. Fleet got the modal arm right and the
+row arm wrong. Only the row arm moved; `e2e/fleet-admin.spec.ts`'s second test pins the modal arm so a
+future edit cannot quietly relocate it.
+
+**Values.** §8.7 specifies the fleet banner in full rather than inheriting §8.1 — the two elements
+agree on the background and text tokens and disagree on seven dimensions (radius, padding, border,
+message ramp, leading icon, retry control, and the tone set), so "inherited-exact" would have been the
+§12.7 mistake made a second time. What phase 11 **adds** is inherited-exact from §8.6: `sticky top-4 z-20`, and the ✕ byte-for-byte. **No new
+component, no new token, no new glyph, no new string** (§9.6).
+
+**Three decisions, recorded — because an unstated omission is what produced this phase.**
+
+1. **No shared module** (plan §2). Entry 4's answer is **presentational** — a `sticky` and a ✕ — so
+   this change is presentational. `staff-report.ts` exists because the roster's _routing_ was provably
+   wrong and had to be gated by a unit test; the fleet's two failure arms are already resolved inside
+   one function (`postActive`) and its copy is local. Porting the module across the slice boundary, or
+   widening its `Outcome` union with vehicle arms, would buy symmetry and nothing testable. What **was**
+   shared is the measurement: `isInViewport` / `isTopmostAtItsOwnCentre` / `scrollToBottom` moved from
+   `staff-admin.spec.ts` to `e2e/support/reachability.ts`, because two copies of the definition of
+   "readable" can drift into two definitions.
+
+2. **The vanishing anchor is moot, not solved.** Retiring with "Pokaż wycofane" unchecked does drop the
+   row out of `filtered`, so a **row-anchored** report would inherit entry 4's constraint on the same
+   terms. Sticky is not row-anchored, so the constraint never binds — and that asymmetry is one of the
+   reasons option (c) lost on the roster. Restated, not re-decided.
+
+3. **`restore` gets no success feedback, and is not carried as a follow-up either.** Entry 4 treated
+   `inviteSent` as load-bearing because a resend changes **nothing** on screen — the badge is already
+   ZAPROSZONY, so the banner is the only signal. The fleet is the opposite case, and it was **measured
+   rather than reasoned** (390×844, one fixture row, restore succeeding, 2026-08-24 — the card read
+   before and after):
+
+   |        | Badge      | Row action | Row present | Banner |
+   | ------ | ---------- | ---------- | ----------- | ------ |
+   | before | `Wycofany` | `Przywróć` | yes         | none   |
+   | after  | `Aktywny`  | `Wycofaj`  | yes         | none   |
+
+   Two of the row's three affordances change, in place, on the row the admin just clicked. A restored
+   row also cannot vanish — it passes `filtered` at any toggle state, unlike the roster's
+   `created → invited` flip on the DODANI tab. Adding a banner would be a second signal for a change
+   already visible at the point of the click. **This is the decision the plan asked for as "in-scope
+   or follow-up": neither — it is declined, with the asymmetry as the reason.**
+
+   (Note the case: the fleet's badges are sentence-case `Aktywny` / `Wycofany`, not the roster's
+   upper-case `AKTYWNY` / `ZAPROSZONY`. Two badge sets, two conventions — recorded here because an
+   earlier draft of this entry quoted them upper-case from memory.)
+
+**Where this screen's contract lives, stated rather than annexed.** `/dashboard/vehicles` belongs to
+**S-04 fleet-management**, whose change folder (`context/archive/2026-06-17-fleet-management/`)
+predates the `design-contract.md` convention and carries none — its canonical design is catalog rows
+**17** (`17-admin-desktop-fleet-management.png`) and **23** (`23-admin-mobile-fleet-management.jpg`).
+So §8.7 and this entry deliberately scope themselves to **the one dimension phase 11 changed** plus the
+element's measured baseline; they are **not** a contract for the fleet screen and must not be read as
+one. Everything else on that screen — pills, toggle, table, cards, dialog — is out of scope and
+unmeasured here. §12.8 carries the gap.
+
+**Vision-diff gate.** §11's four phase-11 rows. The at-rest banner is **re-baselined, not zero-delta**:
+`sticky` is inert at scrollY 0, but the ✕ raises the element from 44px to 56px at both breakpoints.
+Unlike §8.6 there is **no wrap cost** — the fleet string sits on one line at a 254px message column
+either way.
+
+**Both halves of the spec were proved to bite** by deliberately reintroducing each defect, per
+`e2e/e2e-rules.md`: un-pinning the banner turns the first test red on "banner is outside the
+viewport", and routing the retire dialog's failure back to the banner turns the second red. Neither
+break was committed.
+
 ### Inherited — entry 14 of the S-14 contract may go stale
 
 `…/2026-08-11-auth-surface-hardening/design-contract.md` §10 entry 14 names Bug 1's population as one
@@ -964,6 +1188,10 @@ artboards into `design-system.md` should carry the correction forward.
 | `/dashboard/staff`, scrolled, banner pinned (desktop)   | `design-review/rendered/sticky-{error,success}-desktop.png`                                 | Banner at `top: 16`, in viewport, topmost; §8.6 values match                                                                       |
 | `/dashboard/staff`, scrolled, banner pinned (mobile)    | `design-review/rendered/sticky-{error,success}-mobile.png`                                  | Same at 390px; failure wraps to 4 lines at a 187px message column (§8.6, accepted)                                                 |
 | `/dashboard/staff`, banner at scrollY 0                 | the phase-1 banner rows above                                                               | Placement zero-delta (`sticky` is inert at rest); the ✕ raises three of four heights per §8.6's table — **re-baselined, not zero** |
+| `/dashboard/vehicles`, scrolled, banner pinned (mobile) | `design-review/rendered/fleet-sticky-scrolled-mobile.png`                                   | Banner at `top: 16`, in viewport, topmost; §8.7 values match                                                                       |
+| `/dashboard/vehicles`, scrolled, banner set (desktop)   | `design-review/rendered/fleet-sticky-scrolled-desktop.png`                                  | `sticky` is **inert** here — top 101 at max scroll (213px); §8.7 values match                                                      |
+| `/dashboard/vehicles`, banner at scrollY 0 (mobile)     | `design-review/rendered/fleet-sticky-atrest-mobile.png`                                     | Placement zero-delta; the ✕ raises the height 44 → 56 per §8.7 — **re-baselined, not zero**                                        |
+| `/dashboard/vehicles`, banner at scrollY 0 (desktop)    | `design-review/rendered/fleet-sticky-atrest-desktop.png`                                    | Same at 1280px; message column 254px, one line, no wrap cost                                                                       |
 | `/auth/link-conflict`                                   | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                                                                       |
 | `/auth/reset-password` × 6 states                       | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                                                                       |
 
@@ -1214,3 +1442,77 @@ and silently converges one way is the outcome this entry exists to prevent.
 **Scope note.** Only the banner is compared here. The rows, badges, filter pills and add modal were
 reconciled in §12.2a/§12.2b and match. The three states with genuinely no artboard — the two
 form-level modal errors and the sticky banner — are §10 entries 3 and 4, which are unaffected.
+
+### 12.8 `/dashboard/vehicles` has no design contract — **OPEN, recorded by phase 11**
+
+S-04 fleet-management (`context/archive/2026-06-17-fleet-management/`) predates the
+`design-contract.md` convention, so the screen phase 11 just edited has no per-slice contract. Its
+canonical design is catalog rows **17** (desktop) and **23** (admin · mobile), both screenshot-only —
+row 23 is a `.jpg` export with no recoverable JSX, and row 17 comes from `desktop-screens.jsx`.
+
+§8.7 and §10 entry 5 measure exactly **one element** on that screen, because that is the one this
+change touched. Everything else — the category pills, the show-retired toggle, the desktop table, the
+mobile cards, `RetireDialog` — is unspecified in this repo at exact values, so the next slice to edit
+that screen has the same starting point phase 11 had: measure it, or invent it.
+
+**Not fixed here, deliberately.** Writing a contract for a screen this change edits in one place would
+mean measuring and transcribing five surfaces at two breakpoints and reconciling them against an
+un-pulled artboard — the §12.7 exercise, on a screen with no open questions. Recorded so it is a known
+gap rather than a silent one, alongside §12.6's finding that board 23's sibling (`am-team`) had drifted
+four points behind the app unnoticed for the same reason.
+
+**And the gap is not hypothetical — phase 11's vision-diff gate enumerated it.** The gate compared the
+app renders to catalog 17 / 23 and reported the banner clean on every §8.7 value (Group A), then listed
+what follows as out-of-scope drift (Group B). **None of it was introduced by this change**, and none of
+it should be "fixed" by a future pass without a design-owner decision — the §12.7 rule. Grouped by
+kind:
+
+_Content the app does not render at all_
+
+- The **KPI stat row** above the filters (`DOSTĘPNE` / `WYNAJĘTE` / `SERWIS` / `PO TERMINIE`, each with
+  a delta chip) — absent.
+- Three **table columns**: registration plate (monospace), utilization (bar + %), and next reservation.
+  Desktop is `POJAZD | STATUS | STAWKA | actions` against a canonical seven.
+- The mobile card's **plate** and its labelled `WYKORZYSTANIE` row with progress bar.
+- **Vehicle thumbnails**: the design shows line-art illustrations; seven of nine seeded rows render a
+  blank grey tile (a fixture-data gap, not a layout one).
+
+_Different structure or vocabulary_
+
+- **The title renders twice** on desktop — `StaffShell`'s page bar and the island's own heading block —
+  and the design's **view-mode toggle** and inline search do not exist; search is a full-width row.
+- **Status chips**: design `• RENTED` / `• AVAILABLE` / `• MAINTENANCE`, uppercase with a leading dot,
+  pink/green/amber. App: sentence-case `Aktywny` / `Wycofany`, no dot, green/grey. A different state
+  set, not a restyle.
+- **Row actions**: design is two compact icon buttons with a **red** ✕; the app uses a ghost pencil plus
+  a muted **text label** (`Wycofaj` / `Przywróć`). Mobile: design pairs a wide `Edit` with a narrow
+  icon-only ✕; the app renders two equal-width labelled buttons.
+- **Rate cell**: design stacks `320 zł` over `6800 zł/mies`; the app puts them side by side and adds
+  `/doba`.
+- **Sidebar**: the active item is a dark filled pill in the design and a light mint pill in the app;
+  the app carries seven nav items with two numeric badges against the design's six unbadged, and adds
+  a bordered account card plus a `Wyloguj` link the design has no counterpart for.
+- **Mobile tab bar**: four items with the active item's label visible, against the app's seven with an
+  icon-only active item.
+- **Row density**: ~50px canonical vs ~73px shipped, so the app fits fewer rows per screen.
+
+_Additions that post-date the design_
+
+- The `Pokaż wycofane` checkbox row, the mobile search field, and the wrapped chip set (~150px of
+  chrome before the first mobile card) all arrived with S-04 and have no canonical counterpart.
+
+**Two caveats on the baselines themselves, so the next pass does not rediscover them.**
+`17-admin-desktop-fleet-management.png` is a 2640×1640 canvas with the screen in its top-left region
+and **the top edge clipped** — the title row and the sidebar logo are cut off at `y=0`, so anything
+above the title is unverifiable from the repo's copy. And the canonical mockups **mix English and
+Polish** (`Dispatch`, `Fleet management`, `Edit`, `Active` beside Polish column headers): that is the
+prototype being inconsistent, not app drift. The app is fully Polish and **must not** be moved toward
+the English strings — `design-system.md`'s Polish-first rule governs.
+
+**One environment artefact in the rendered baselines**, noted so it is not read as design: both
+`fleet-sticky-*` PNGs carry `Layout.astro`'s missing-config strip (`Uwaga: Resend nie jest
+skonfigurowany…`) across the top — 45px at desktop, 87px at mobile — which shifts everything below it
+down. It comes from `config-status.ts` against the local `.dev.vars`, not from this change.
+
+**Also inherited by that screen: §12.5.** `RetireDialog` shares the modal idiom whose `body` scroll
+lock is deferred, and §12.5 already names it in scope when that follow-up is picked up.

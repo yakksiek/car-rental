@@ -117,6 +117,64 @@ export async function createBookedVehicle(): Promise<BookedVehicle> {
 }
 
 /**
+ * A RETIRED vehicle that lands at the BOTTOM of `/dashboard/vehicles`.
+ *
+ * `listFleet` orders by `name` ascending, and the one retired vehicle in the seed
+ * (`Fiat Ducato (wycofany)`) therefore sorts FIRST — so its `Przywróć` sits near
+ * the top of the list and its banner happens to be in view. That is a property of
+ * the fixture, not of the design (invite-journey-fixes plan, phase 11: "what the
+ * seed understates"), and a spec resting on it would pass whether or not the fix
+ * exists. The `Ż` prefix puts this row last under the DB's collation, which is
+ * what puts the control below the fold and the banner off-screen without it.
+ *
+ * Retired rather than active because `Przywróć` is only rendered for a retired
+ * row, and `is_active: false` additionally keeps the row out of
+ * `getCategoryCounts` (active-only) and out of the public catalog — so it cannot
+ * move a pill count or a listing another spec reads under `fullyParallel`.
+ *
+ * Tear down with `deleteVehicle`.
+ */
+export async function createRetiredVehicle(): Promise<{ vehicleId: string; name: string }> {
+  const db = serviceClient();
+  // Timestamp AND a random tail. `plate` is unique, and `Date.now()` alone
+  // collides when two tests start inside the same millisecond — which they do
+  // under `fullyParallel`, observed while proving these specs bite.
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const name = `Żuk E2E Wycofany ${stamp}`;
+
+  const { data: vehicle, error } = await db
+    .from("vehicles")
+    .insert({
+      name,
+      plate: `E2E ${stamp}`,
+      category: "cargo_van",
+      make: "E2E",
+      model: "Retired",
+      production_year: 2024,
+      fuel_type: "diesel",
+      payload_capacity_kg: 1000,
+      cargo_length_cm: 400,
+      cargo_width_cm: 170,
+      cargo_height_cm: 190,
+      photos: [],
+      daily_rate: 200,
+      monthly_rate: 5000,
+      deposit: 1500,
+      per_extra_km_rate: 1.0,
+      km_limit: 300,
+      seats: 3,
+      transmission: "manual",
+      is_active: false,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    throw new Error(`fixture: retired vehicle insert failed — ${error.message}`);
+  }
+  return { vehicleId: vehicle.id, name };
+}
+
+/**
  * Tear down a fixture vehicle and everything hanging off it. Safe to call twice
  * and safe to call on a vehicle that was never created — an `afterEach` running
  * after a mid-test failure must not raise a second, masking error.
