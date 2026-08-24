@@ -5,6 +5,7 @@ import { AlertTriangle, KeyRound, Plus, Search, Send, ShieldCheck, User, X } fro
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import { cn } from "../../lib/utils";
@@ -562,15 +563,24 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 {COPY.titleMobile}
               </h1>
             </div>
-            <Button
-              className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full"
-              aria-label={COPY.add}
-              onClick={() => {
-                setAddOpen(true);
+            {/* Absorbed into the quick-action sheet (S-12b): one `＋` per screen,
+                with this board's own action promoted to the crimson first row.
+                `employee` is a NEW key, so the sheet is 3 rows with exactly one
+                divider (after row 1 — the rule is positional, not structural).
+                The promoted action opens a dialog rather than navigating, so it
+                carries `onPick` instead of an `href`. */}
+            <QuickAddButton
+              mode="mobile"
+              promoted={{
+                key: "employee",
+                icon: User,
+                label: COPY.add,
+                desc: "Zaproś do zespołu",
+                onPick: () => {
+                  setAddOpen(true);
+                },
               }}
-            >
-              <Plus className="size-5" />
-            </Button>
+            />
           </div>
         </div>
       </header>
