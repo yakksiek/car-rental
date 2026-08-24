@@ -106,14 +106,14 @@ The gaps that follow from that:
 
 ### 3. Alignment — every canonical surface has a phase, every phase has a design
 
-| Surface                                   | Phase | Design reference                                               | Verdict                                        |
-| ----------------------------------------- | ----- | -------------------------------------------------------------- | ---------------------------------------------- |
-| Roster mutation banner (3 new strings)    | 1, 3  | catalog 19 / 25 + in-repo §3.12 element                        | `deviation(no artboard — copy-only)`           |
-| Roster ACTIVE/INVITED badge               | 3     | catalog 19 / 25                                                | `exact` — element unchanged, input fixed       |
-| `link-conflict.astro` (R11)               | 5     | `auth-authed-{d,m}.png`                                        | `exact` — comment-only edit, zero render delta |
-| `reset-password.astro` R14 branch         | 5     | — (inherited no-artboard card)                                 | `exact` — re-sourced, zero render delta        |
-| `reset-password.astro` R12/R13/R5/R4      | 5     | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` | `exact` — zero render delta                    |
-| `reset-password.astro` form + account box | 5     | `auth-set-{d,m}.png` · `auth-invite-{d,m}.png`                 | `exact` — zero render delta                    |
+| Surface                                   | Phase | Design reference                                                | Verdict                                        |
+| ----------------------------------------- | ----- | --------------------------------------------------------------- | ---------------------------------------------- |
+| Roster mutation banner (3 new strings)    | 1, 3  | `boards-canonical/emp-error.png` (pulled §12.1) + §3.12 element | `deviation(copy-only; element diverges §12.7)` |
+| Roster ACTIVE/INVITED badge               | 3     | catalog 19 / 25                                                 | `exact` — element unchanged, input fixed       |
+| `link-conflict.astro` (R11)               | 5     | `auth-authed-{d,m}.png`                                         | `exact` — comment-only edit, zero render delta |
+| `reset-password.astro` R14 branch         | 5     | — (inherited no-artboard card)                                  | `exact` — re-sourced, zero render delta        |
+| `reset-password.astro` R12/R13/R5/R4      | 5     | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success`  | `exact` — zero render delta                    |
+| `reset-password.astro` form + account box | 5     | `auth-set-{d,m}.png` · `auth-invite-{d,m}.png`                  | `exact` — zero render delta                    |
 
 **No plan phase contradicts a canonical design, and no canonical surface lacks a phase.** Phase group
 B touches six auth surfaces without changing any of them: the token-lookup RPC exists precisely so
@@ -673,7 +673,7 @@ where the admin is for those.
 
 ## 10. Deviations register
 
-### Entry 1 — Roster provisioning-failure banner — `deviation(no artboard — copy-only variant of a shipped element)`
+### Entry 1 — Roster provisioning-failure banner — `deviation(copy-only variant of a shipped element; the artboard exists and the shipped element diverges from it — §12.7)`
 
 **The defect.** `src/components/staff/StaffList.tsx:491` routes every unexpected response from
 `POST /api/staff` to `COPY.mutationError` — `Nie udało się zapisać zmiany. Sprawdź połączenie i
@@ -681,9 +681,22 @@ spróbuj ponownie.` — which blames the network for a failure that has already 
 mail. The add modal also stays open (`setAddOpen(false)` runs only on the success arm at `:485`),
 reinforcing "nothing happened". Evidence: `research.md` §1.3; plan phase 1.
 
-**Why it is a deviation.** The canonical roster artboards (catalog 19 and 25) show the healthy
-roster only — they carry no banner state at all, error or success. So there is no artboard to diff
-against for this state, exactly as there was none for the R14 card that `auth-followups` shipped.
+**Why it is a deviation — CORRECTED 2026-08-24. The previous claim was false and is not preserved
+as a strikethrough, because it was a statement of fact rather than a decision that changed.** This
+paragraph read: _"The canonical roster artboards (catalog 19 and 25) show the healthy roster only —
+they carry no banner state at all, error or success. So there is no artboard to diff against for
+this state."_ The first sentence is true; the conclusion never followed from it. **`emp-error` is a
+banner artboard, it is current, and it has existed throughout.** §1's second correction and §12.1
+both said so; this entry was simply never updated to match, and the gap survived because the board
+was un-pulled and therefore invisible from the repo — the exact failure mode §12.3 names.
+
+It is now pulled (`design-review/boards-canonical/emp-error.png`, §12.1) and diffable. Doing that
+diff is what surfaced §12.7: **the shipped banner and the artboard disagree on six dimensions**, and
+have since before this change. So the deviation is real but its grounds are the opposite of what was
+recorded — not "no artboard to compare against" but "an artboard the shipped element already
+diverges from". §8.1's values were transcribed from the **shipped element** on the strength of the
+false premise; they are still the values this change built to, and §12.7 carries the reconciliation
+as a decision for the design owner rather than resolving it here.
 
 **Every dimension is inherited-exact, not invented.** The banner element itself already ships and is
 already governed by contract §3.12: wrapper, tone classes, icon set, message type ramp, retry button
@@ -704,8 +717,15 @@ than left to the implementer.
 
 **Vision-diff gate.** Render `/dashboard/staff` with each banner state forced, at both breakpoints,
 and diff against catalog 19 / 25 **excluding the banner region** — the assertion is that adding the
-banner disturbs nothing else on the screen. The banner region itself is diffed against the shipped
-`mutationError` banner, where the only permitted delta is the string.
+banner disturbs nothing else on the screen.
+
+The banner region itself was to be diffed "against the shipped `mutationError` banner, where the
+only permitted delta is the string" — i.e. against the app comparing to itself, which can only ever
+pass. With `emp-error.png` pulled there is a real baseline, and the honest statement of the gate is:
+the banner region diffs against `boards-canonical/emp-error.png`, **and is expected to differ on the
+six dimensions §12.7 tabulates plus phase 10's two additions**. That is a known, recorded
+non-conformance, not a passing diff — do not re-flag it, and do not "fix" it toward the artboard
+without taking §12.7's decision first.
 
 ### Entry 2 — Roster third state + one-action-per-state rows — `deviation(the artboard encodes a journey defect)`
 
@@ -1058,6 +1078,26 @@ review: the diff never touched that line, and nothing flagged it. It surfaced on
 before believing a copy change is complete — a stale promise one line above your edit is invisible in
 a diff.**
 
+**A fifth, added 2026-08-24, and it is the sharpest yet — because the un-pulled asset did not just
+hide a stale copy, it produced a false statement in the contract that then shaped a gate.** §10 entry
+1 asserted "there is no artboard to diff against for this state" and wrote a vision-diff gate that
+compared the banner **to itself**. `emp-error` existed the whole time, and six dimensions drifted
+unseen behind that gate (§12.7).
+
+**And the audit had already caught it.** §1's second correction, written 2026-08-21, says in as many
+words: _"§10 entry 1's `deviation(no artboard — copy-only)` rests on a false premise: there IS an
+artboard for this element"_ — and names the remedy: _"Pull it into `design-review/` before phase 7
+rewrites the copy."_ Phase 7 then shipped, and phases 8, 9 and 10 after it, without the pull
+happening and without entry 1 being amended. So this is not a detection failure at all. It is a
+**follow-through failure**: the finding was correct, recorded, and actionable, and it sat inert in a
+different section from the entry it invalidated.
+
+So the lesson gains a third clause, and it is not about auditing harder: **a correction that
+invalidates a decision elsewhere in the document has to be applied at the decision, not filed next to
+it.** A note in §1 saying entry 1 is wrong does not stop anyone building on entry 1. Corollary, from
+the same wreck: a gate that compares the implementation to itself is not a gate — §8.1's
+"inherited-exact from the shipped element" is a spec, not a check.
+
 ### 12.4 Record the `EsShell` scroll-region divergence in the design source — **DONE 2026-08-24**
 
 `EsShell` now carries a comment on the `{banner}` slot stating that the banner sitting **outside**
@@ -1117,3 +1157,60 @@ status pill and to the filter chips; make the row action mutually exclusive on `
 using `t.resendInvite` / `t.sendInvite`; change the sheet CTA to `t.addConfirm`; and default a newly
 added member to `status: 'created'`. Then re-export `am-team.png` — its artboard is 390×844, so
 780×1688 at 2×.
+
+### 12.7 The roster banner diverges from its artboard on six dimensions — **OPEN, found 2026-08-24**
+
+Found by doing the diff §10 entry 1 said could not be done. That entry claimed there was no banner
+artboard; `emp-error` has existed throughout, and §12.1 has now pulled it into the repo, so the
+shipped element and the artboard can be compared for the first time in this change.
+
+**§1 called this on 2026-08-21 and the instruction was not carried out.** Its second correction says
+entry 1 "rests on a false premise: there IS an artboard for this element", and directs: "Pull it into
+`design-review/` before phase 7 rewrites the copy." Phase 7 shipped without it, as did 8, 9 and 10.
+Had the pull happened when instructed, this drift would have surfaced three phases earlier and while
+the banner copy was already open. Recorded plainly because the interesting failure here is the
+follow-through, not the detection — see §12.3.
+
+They disagree. Both sides measured, not read off the source — the design board rendered from the
+project's own JSX and read with `getComputedStyle`, the app measured on `/dashboard/staff` with a
+banner forced (2026-08-24):
+
+| Dimension    | Design `emp-error`                                | App (§8.1)                                       | Same?           |
+| ------------ | ------------------------------------------------- | ------------------------------------------------ | --------------- |
+| Background   | `rgb(251,228,225)`                                | `rgb(251,228,225)`                               | ✅              |
+| Radius       | `12px`                                            | **`16px`** (`rounded-lg`)                        | ❌              |
+| Padding      | `12px 16px`                                       | **`14px 20px`**                                  | ❌              |
+| Border       | `1px solid #B43638`                               | **`destructive/30`** (30% α)                     | ❌              |
+| Icon         | `18px`                                            | **`16px`** (`size-4`)                            | ❌              |
+| Message      | `13px / 600`                                      | **`14px / 540`**                                 | ❌              |
+| Retry button | `h32`, `0 14px`, `12.5px / 650`, solid-red border | **`h36`, `px-4`, `13px / 650`**, outline variant | ❌              |
+| Dismiss ✕    | absent                                            | present                                          | phase 10 — §8.6 |
+| Positioning  | `static`                                          | `sticky top-4 z-20`                              | phase 10 — §8.6 |
+
+**The colour is the tell.** `--flota-danger-soft` matches exactly, so this is not a palette drift or
+a port that missed a token — it is six geometry/type values that were never reconciled. The last two
+rows are phase 10's deliberate additions and are **not** part of this finding.
+
+**This predates the change and was not introduced by it.** §8.1's values are marked "inherited-exact
+from the shipped element, not invented" — which was the correct call given entry 1's premise that no
+artboard existed. The premise was wrong, so "inherit from the app" quietly became "diverge from the
+design" for six values, and nothing could see it because the board was un-pulled. §12.3 already
+names this failure mode; this is a fourth instance of it, and the most concrete.
+
+**Not resolved here, deliberately.** Which side moves is a design-owner decision with real
+consequences either way:
+
+- **Design moves to the app** — cheapest and my recommendation. The app's values are what shipped,
+  what §8.1 specifies, what §11's rows are baselined against, and what phases 1/3/7/9/10 all built
+  to. Moving the design is a `ScreenEmpError` edit plus one re-export, and no app code or test
+  changes. The counter-argument is that it ratifies drift by fiat.
+- **App moves to the design** — touches a shipped element on a screen under active change, forces a
+  re-baseline of every §11 banner row, and would land mid-phase-11. It also has to answer why 16px
+  radius is wrong when `rounded-lg` is the project's card radius everywhere else on this surface.
+
+**Do not "fix" either side without taking this decision.** A future fidelity pass that sees the diff
+and silently converges one way is the outcome this entry exists to prevent.
+
+**Scope note.** Only the banner is compared here. The rows, badges, filter pills and add modal were
+reconciled in §12.2a/§12.2b and match. The three states with genuinely no artboard — the two
+form-level modal errors and the sticky banner — are §10 entries 3 and 4, which are unaffected.
