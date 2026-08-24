@@ -92,7 +92,7 @@ export type CreateEmployeeResult =
   // system-health signal: `provision_rolled_back` → the auth user is gone;
   // `provision_orphaned` → the compensating delete ALSO failed and a role-less
   // auth user survives, and re-adding takes the `existing` repair arm.
-  // The roster renders one sentence for both (`lib/staff-banner.ts`, phase 7).
+  // The roster renders one sentence for both (`lib/staff-report.ts`, phase 7).
   | { status: "provision_rolled_back" }
   | { status: "provision_orphaned" }
   | { status: "unauthorized" };

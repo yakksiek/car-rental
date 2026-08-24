@@ -186,6 +186,7 @@ to this element and changes no dimension.
 | Icon (success)    | `ShieldCheck`, `size-4 shrink-0`                                                                       |
 | Retry button      | `variant="outline"` + `bg-card h-9 shrink-0 px-4 text-[13px] font-[650]`                               |
 | Placement         | Inside `mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6`, above the filter card                        |
+| Positioning       | **Phase 10: `sticky top-4 z-20` + a dismiss ✕ — see §8.6.** Every row above is unchanged.              |
 
 **Tone assignment for the new states:** both use `kind: "error"` (`AlertTriangle`, destructive).
 The "repaired but mail not sent" case is a partial success, but it needs the admin to act, and the
@@ -343,9 +344,112 @@ Measured, no overflow at either breakpoint: box 400×39 (desktop) / 342×39 (mob
 connection string, 400×19.5 / 342×19.5 for the one-line provisioning string;
 `document.scrollWidth === clientWidth` in all four.
 
+### 8.5 Remove-modal form-level error — phase 10
+
+**The same state §8.4 specified, on a sibling surface — inherited-exact, and the claim was
+verified rather than asserted.** Rendered `/dashboard/staff` with `RemoveModal` open and
+`POST /api/staff/:id/deactivate` stubbed, `getComputedStyle` + `getBoundingClientRect`, 2026-08-21:
+
+| Element                 | Exact value                                                  | Source                 |
+| ----------------------- | ------------------------------------------------------------ | ---------------------- |
+| Wrapper                 | `text-destructive mt-5 flex items-start gap-1.5 text-[13px]` | §8.4 verbatim          |
+| Glyph                   | `AlertTriangle`, `mt-0.5 size-3.5 shrink-0`                  | §8.4 verbatim          |
+| `role`                  | `alert`                                                      | §8.4 verbatim          |
+| Placement               | Between the confirm input and the button row                 | **measured here**      |
+| Clears on               | edit of the typed-confirm field                              | §8.4's rule, one field |
+| Confirm button while up | stays **enabled** — it is the retry                          | §8.4 verbatim          |
+
+**`mt-5` is the one value this section owns, and it is a measurement, not an inheritance.** §8.4's
+`mt-5` is the add modal's field-group rhythm; here the slot lands between a bare input (`mt-1.5`
+above it, `:462`) and the button row, so the rhythm had to be re-measured rather than re-asserted.
+The rendered `RemoveModal` measures **body→label 16px, label→input 6px, input→actions 20px**. The
+slot lands inside that 20px gap, so a `mt-5` above it with the button row's existing `mt-5` below
+gives **20px / 20px** — the gap it replaces, split without changing the modal's block rhythm, and
+coincidentally the same 20/20 §8.4 measured. Verified after the edit: `gapAboveSlot` 20,
+`gapBelowSlot` 20 at both breakpoints.
+
+**Why the rest transfers unverified-to-verified.** The remove modal's content column measures
+**400px desktop / 342px mobile** — byte-identical to the add modal's, because both sit inside the
+same `ModalShell` (`md:max-w-md`, `p-6`). So the wrap behaviour §8.4 derived transfers exactly, and
+the measurements confirm it: `iconMid` **9px** on every arm (the glyph leads the first line, not the
+line boundary), box **400×39 / 342×39** for the two-line connection string and **400×20** for the
+one-line desktop refusal string. One difference worth recording: at 390px the refusal string wraps
+to two lines as well (**342×39**), where its desktop twin is one — a consequence of the narrower
+column, not of a different spec.
+
+Measured, no overflow at either breakpoint.
+
+### 8.6 Sticky mutation banner + dismiss — phase 10
+
+**The element is unchanged; its POSITIONING is the deviation.** §8.1's table still describes every
+dimension of this banner. Phase 10 adds three utilities and one control, and nothing else:
+
+| Property             | Exact value                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Pinning              | `sticky top-4 z-20` — measured `position: sticky`, `top: 16px`, `z-index: 20`                                                         |
+| Dismiss control      | `bg-card text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-full`, glyph `X size-4` |
+| Dismiss `aria-label` | `Zamknij` — the shipped `COPY.close`, reused                                                                                          |
+| Controls wrapper     | `flex shrink-0 items-center gap-2` around `Ponów` + ✕                                                                                 |
+| Everything else      | §8.1 verbatim — wrapper, tones, icons, message ramp, `Ponów`, placement                                                               |
+
+**`top-4` and `z-20` are not eyeballed.** `top-4` (16px) matches the content column's own
+`px-4`/`py-6` rhythm and clears the viewport edge by the same 16px the column insets by at mobile.
+`z-20` sits above the roster's non-positioned content and **below** two shipped fixed layers it must
+not fight: `ModalShell`'s overlay at `z-[60]` and the mobile tab bar at `z-30`. Nothing sets a
+banner while a modal is open — that is `staff-report.test.ts`'s first invariant — so the ordering is
+belt-and-braces rather than load-bearing.
+
+**The dismiss control is inherited-exact from `ModalShell`'s ✕** (`StaffList.tsx:264`), minus its
+`absolute top-4 right-4` positioning, which does not apply in flow. Same `size-8`, same
+`rounded-full`, same `bg`/`text`/`hover` triple, same `X size-4` glyph, same label. **No new
+component, no new token, no new glyph.**
+
+**Measured, both tones, both breakpoints, with the roster scrolled to the bottom** (2026-08-21):
+
+| State              | Banner  | Message column | Lines | ✕   | `Ponów` | Pinned at | In viewport | Topmost |
+| ------------------ | ------- | -------------- | ----- | --- | ------- | --------- | ----------- | ------- |
+| Failure · 1280×900 | 976×66  | 498px          | 1     | 32  | 77      | top 16    | yes         | yes     |
+| Success · 1280×900 | 976×62  | 174px          | 1     | 32  | —       | top 16    | yes         | yes     |
+| Failure · 390×844  | 358×110 | **187px**      | **4** | 32  | 77      | top 16    | yes         | yes     |
+| Success · 390×844  | 358×62  | 174px          | 1     | 32  | —       | top 16    | yes         | yes     |
+
+`document.scrollWidth === clientWidth` in all four — no horizontal overflow.
+
+**Two costs, accepted, and neither is hidden.**
+
+1. **The ✕ narrows the message column at 390px from 227px (§8.1) to 187px, taking the failure
+   string from 3 lines to 4** and the banner from 70px to 110px — 13.0% of an 844px viewport. This
+   is the worst state on the screen. It is accepted because it is dismissible, because it only
+   occurs on a failure the admin must act on anyway, and because the alternative (auto-clearing)
+   was rejected for the success tone only — see §10 entry 4.
+2. **A pinned banner overlaps the filter card while the page is scrolled.** By design: the banner
+   is a transient report, the filter row is persistent chrome, and the banner's backgrounds are
+   opaque (`rgb(251,228,225)` / `rgb(227,245,236)`), so nothing shows through.
+
+**At scrollY 0 the PLACEMENT is unchanged, but the element is NOT pixel-identical — the ✕ changes
+its height, and §11's existing banner rows are re-baselined accordingly.** An earlier draft of this
+section claimed byte-identity at rest; that was wrong and is corrected here rather than left to be
+discovered at the vision-diff gate. Measured both ways — the shipped element with the ✕ stripped,
+then the phase-10 element — at scrollY 0, 2026-08-21:
+
+| State                        | Height before | Height after | Message column | Why                                                       |
+| ---------------------------- | ------------- | ------------ | -------------- | --------------------------------------------------------- |
+| Failure + `Ponów` · 1280×900 | 66            | **66**       | 498 → 498      | unchanged — `Ponów`'s 36px already set the row height     |
+| Success · 1280×900           | 50            | **62**       | 174 → 174      | the ✕'s 32px now sets it                                  |
+| Failure + `Ponów` · 390×844  | 90            | **110**      | **227 → 187**  | the ✕ narrows the column, so the string wraps 3 → 4 lines |
+| Success · 390×844            | 50            | **62**       | 174 → 174      | as desktop                                                |
+
+`repairedMailFailed` is an error tone with **no** retry, so it follows the success row: 50 → 62.
+
+What **is** unchanged at rest is the positioning: `sticky` does not engage until the containing
+block has scrolled past `top`, so the banner still sits in flow above the filter card with its
+`mb-5` intact (measured: `top` 163 at desktop, gap to the filter card 20px, `stuck: false`).
+
 ## 9. Verbatim Polish copy
 
-All strings live in `StaffList.tsx`'s `COPY` block beside `mutationError` (`:68`).
+All strings live in `src/lib/staff-report.ts`'s `COPY` block. Phase 10 moved the last three out of
+the island (`mutationError`, `inviteSent`, `resetSent`), so the outcome→surface table now owns every
+arm's words rather than owning some of them.
 
 ### 9.1 Shipped in phases 1 and 3 — superseded, kept as the record
 
@@ -531,6 +635,42 @@ beside it.
 actions keep `mutationError` + `Ponów`, because they have no form to report into — the banner is
 where the admin is for those.
 
+### 9.5 Phase 10 — approved 2026-08-21
+
+| Key                   | String                                                                                        | Where               |
+| --------------------- | --------------------------------------------------------------------------------------------- | ------------------- |
+| `removeFailed`        | `Nie udało się usunąć pracownika. Spróbuj ponownie.`                                          | remove modal, form  |
+| `removeRequestFailed` | `Nie udało się usunąć pracownika. Sprawdź połączenie i spróbuj ponownie.`                     | remove modal, form  |
+| `mutationError`       | **unchanged, moved** — `Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.` | banner, row actions |
+| `inviteSent`          | **unchanged, moved** — `Wysłano zaproszenie.`                                                 | banner, row actions |
+| `resetSent`           | **unchanged, moved** — `Wysłano e-mail do resetu hasła.`                                      | banner, row actions |
+| ✕ label               | **unchanged, reused** — `Zamknij` (`COPY.close`)                                              | banner dismiss      |
+
+**Why this Polish:**
+
+- **The remove pair is §9.4's construction applied to a second modal.** Identical
+  state-of-the-world lead, differing only in the remedy; the connection arm keeps
+  `Sprawdź połączenie` because that is the one failure the admin can act on directly.
+  `staff-report.test.ts` pins the shared lead, so an edit to one that does not touch the other goes
+  red rather than quietly splitting the family.
+- **`usunąć pracownika` over `zapisać zmiany`.** Same argument §9.4 made for `utworzyć konta`: the
+  shipped `mutationError` has to cover invite, reset **and** remove from one banner, so it says
+  "change". Inside a modal titled `Usunąć tego pracownika?`, naming the person immediately above the
+  field, the specific verb is available and truer. A test asserts the remove strings do **not** fall
+  back to `mutationError`.
+- **Neither names the person.** Same reversal §9.4 argued for the address: the modal's own body
+  already carries `<b>{fullName}</b>` two rows above, so repeating it is redundancy, not disclosure.
+- **The three moved strings are not new copy.** Byte-identical to what shipped; they moved out of
+  the island so the routing table owns every arm's string. Same words, same surfaces, same
+  behaviour.
+- **The ✕ authors no word at all.** It reuses `COPY.close` — the label `ModalShell`'s own close
+  control already carries — rather than introducing a second Polish word for one affordance.
+- **Impersonal `nie udało się`**, two sentences, `—`/`…` conventions, gender-neutral: all as §9.3.
+
+**No new string for a failed row-action send.** Unchanged from §9.3 and §9.4: invite and reset keep
+`mutationError` + `Ponów`, because they have no form to report into. Phase 10 does not change
+**where** those go — it changes whether the admin can see where they went.
+
 ## 10. Deviations register
 
 ### Entry 1 — Roster provisioning-failure banner — `deviation(no artboard — copy-only variant of a shipped element)`
@@ -680,6 +820,101 @@ There is deliberately no `both` target: one failure, one message.
 The assertion is that the error slot matches §8.4 exactly and **every other element of the modal is
 zero-delta** against `boards-after/emp-add.png` — the slot is additive.
 
+### Entry 4 — The roster banner is unreachable from the row that sets it — `deviation(restores the design's own behaviour in a layout the app diverged on)`
+
+**The defect.** Three of the four controls that set the roster banner are **per-row** and reachable
+at any scroll depth; the banner is anchored to the top of the document flow. So the message lands
+outside the viewport. Measured against the running app with `getBoundingClientRect` +
+`elementFromPoint` at the banner's own centre, 2026-08-21:
+
+| Trigger                             | Viewport | scrollY | Banner top | In viewport | Hit at its centre    | `toBeVisible()` |
+| ----------------------------------- | -------- | ------- | ---------- | ----------- | -------------------- | --------------- |
+| `resetPassword` success             | 1280×900 | 258     | **−95**    | no          | `null`               | **passes**      |
+| `resetPassword` success             | 390×844  | 689     | **−424**   | no          | `null`               | **passes**      |
+| `removeEmployee` failure            | 1280×900 | 258     | **−95**    | no          | `null`               | **passes**      |
+| `removeEmployee` failure            | 390×844  | 1298    | **−1033**  | no          | `null`               | **passes**      |
+| …the same, after scrolling up to it | either   | 0       | 163 / 265  | yes         | the `z-[60]` overlay | **passes**      |
+
+A `null` hit means the point is **not covered by something** — it is outside the viewport entirely,
+which is the half phase 9's `isTopmostAtItsOwnCentre` could not see. The remove case compounds both
+failures: off-screen while scrolled, and under `ModalShell`'s overlay once scrolled up to, because
+`body` keeps `overflow: visible` and the page really does scroll behind an open dialog.
+
+**Why phase 9 did not cover it.** Phase 9's scope was `POST /api/staff`, and the add modal escaped
+the scroll half by accident — `Dodaj pracownika` sits in a **non-sticky** header, so the admin is
+necessarily at the top of the page when it opens. Its banner was covered, never off-screen. The ✕,
+`Wyślij zaproszenie` and `Resetuj hasło` are per-row and carry no such guarantee.
+
+**Why it is a deviation — and an unusual one: the design never had this bug.** `EsShell` in the
+design source (`employee-states.jsx`) places the banner and the filter card **outside** the
+scrolling region: `flex: 1; overflow: auto` sits on the table body alone, so only the list scrolls
+and the banner is permanently on screen. The app built the same screen as a document that scrolls
+whole. **This is a divergence from an existing design decision, not a new design decision** —
+which is why the fix is a positioning change rather than a new surface, and why the shipped
+appearance at rest is unchanged. `sticky top-4 z-20` is the local way back to the intended behaviour
+without restructuring the app shell; §12.4 records the design-source note.
+
+**Every dimension is inherited-exact, and §8.5/§8.6 transcribe them with their measurements.** The
+remove modal's error slot is §8.4's element verbatim with one re-measured value (`mt-5`, justified
+there); the banner keeps every §8.1 dimension and gains three positioning utilities plus a dismiss
+control taken from `ModalShell`'s shipped ✕. **No new component, no new token, no new glyph.**
+
+**§3's surface — the decision, recorded** (owner, 2026-08-21). Option (a), sticky. Option (b),
+scroll-into-view, was rejected on a measured cost: it fixes the message by moving the admin
+**258px at desktop and 689px at mobile**, every time, and the realistic admin task is repetitive
+(working down the DODANI tab inviting people one at a time). It also walks into the trap the plan
+named — a scroll-into-view can fire while a modal is open. Option (c), row-anchored, was rejected on
+the vanishing anchor: a successful invite optimistically flips `created` → `invited`, dropping the
+row out of `filtered` on the DODANI tab at the exact moment `inviteSent` needs to render. Sticky
+additionally makes reachability a **property** rather than a moment — the message stays reachable if
+the admin scrolls after it appears, where (b) guarantees only the instant it is set.
+
+**§3's dismissal — the decision, recorded.** An explicit ✕ on **both** tones. Pinning removes the
+only exit the design had (scrolling past it, which is simultaneously this phase's defect), so §3
+owed a replacement. Auto-clearing was rejected for two reasons: an error message that vanishes on a
+timer is worse than one that persists — the admin may still be reading the row it refers to — and
+proving a timer without `page.waitForTimeout()` is a cost `e2e-rules.md` should not have to carry
+for a control an explicit ✕ makes deterministic. `setBanner(null)` on the next mutation is unchanged
+and still fires, so the ✕ is an addition to the exits, not a replacement for them.
+
+**§5's body scroll lock — recorded as a FOLLOW-UP, not in scope** (see §12.5). Three reasons, and
+the phase states them rather than implying them: locking does not fix this defect on its own (the
+banner is already off-screen when the modal opens); sticky **dissolves the coupling** the plan's
+overview flagged, because a pinned banner is reachable even from a page scrolled behind a dialog, so
+`repairedMailFailed` is no longer "safe only from the top of the page"; and locking `body` overflow
+removes the desktop scrollbar, shifting content ~15px, which is a real layout change that would
+touch every modal's §11 row and needs its own measurement pass.
+
+**§1's shape and module name — the decisions, recorded.** `staff-banner.ts` → **`staff-report.ts`**,
+a mechanical rename plus import updates (one importer, two comment references), taken as its own
+step. The module owns three surfaces now and the banner is one of them. Shape: **three sibling
+resolvers over one `Report`**, not one `resolveMutationReport` over a widened union — written out
+arm by arm first, as the plan asked, and the union collapses on inspection, because `409` means
+"duplicate e-mail" for add and "last administrator" for remove and they resolve to different
+surfaces. What genuinely generalises — the `Report` shape, the constructors, the invariant sweep —
+is shared.
+
+**What the unit layer can and cannot prove — recorded, because a criterion no layer can fail is
+worse than no criterion.** `staff-report.test.ts` gates **which surface** an arm targets
+(`ALLOWED_TARGETS`, and `remove` excluding `banner` is the clause with teeth). It cannot gate
+**reachability**, which depends on scroll position and on the overlay — neither visible to a pure
+function over outcomes. That half is `e2e/staff-admin.spec.ts`, asserting in-viewport **and**
+topmost-at-its-own-centre at 390×844. Both halves were proved to bite by deliberately reintroducing
+the defect: un-pinning the banner turns both e2e specs red on "banner is outside the viewport", and
+routing remove's failure back to the banner turns 7 unit tests and the remove e2e red.
+
+**Polish copy** is §9.5 verbatim.
+
+**Vision-diff gate.** §11's five phase-10 rows. The remove modal's error state matches §8.5 at both
+breakpoints with **every other element zero-delta** against `emp-remove.png`, and the scrolled
+roster shows the banner pinned at `top: 16`.
+
+**The at-rest banner is re-baselined, not zero-delta**, and the entry says so rather than letting
+the gate discover it: `sticky` is inert at scrollY 0, but the ✕ raises the banner from 50px to 62px
+on three of its four states and narrows the 390px message column from 227px to 187px, taking the
+failure string from three lines to four. §8.6 carries the measured before/after table. This is the
+accepted cost of the dismissal §3 owed — not a regression to be renegotiated at review time.
+
 ### Inherited — entry 14 of the S-14 contract may go stale
 
 `…/2026-08-11-auth-surface-hardening/design-contract.md` §10 entry 14 names Bug 1's population as one
@@ -694,18 +929,23 @@ artboards into `design-system.md` should carry the correction forward.
 
 ## 11. Vision-diff gate (for `/10x-implement` and `/10x-impl-review`)
 
-| Surface                                                | Baseline                                                                                    | Assertion                                                                           |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `/dashboard/staff`, banner forced                      | `19-admin-desktop-employees.png` (desktop)                                                  | Only the banner region differs; §8.1 values match exactly                           |
-| `/dashboard/staff`, banner forced                      | `25-admin-mobile-employees.jpg` (mobile)                                                    | Same, reflowed at the shared breakpoint                                             |
-| `/dashboard/staff`, healthy                            | catalog 19 / 25                                                                             | **Zero** delta — the badge fix changes inputs, not pixels                           |
-| `/dashboard/staff`, DODANY row present (desktop)       | `design-review/boards-after/emp-roster.png`                                                 | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta |
-| `/dashboard/staff`, DODANY row present (tablet/mobile) | `design-review/boards-after/emp-tablet.png`                                                 | Same rule reflowed; the ✕ and every other element unchanged                         |
-| `/dashboard/staff`, add modal                          | `design-review/boards-after/emp-add.png`                                                    | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                               |
-| `/dashboard/staff`, add modal + form error (desktop)   | `design-review/rendered/modal-form-error-{d,provision-d}.png`                               | Error slot matches §8.4 exactly; every other element zero-delta vs `emp-add.png`    |
-| `/dashboard/staff`, add modal + form error (mobile)    | `design-review/rendered/modal-form-error-{m,provision-m}.png`                               | Same reflowed at 390px; glyph on the first line, no overflow                        |
-| `/auth/link-conflict`                                  | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                        |
-| `/auth/reset-password` × 6 states                      | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                        |
+| Surface                                                 | Baseline                                                                                    | Assertion                                                                                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard/staff`, banner forced                       | `19-admin-desktop-employees.png` (desktop)                                                  | Only the banner region differs; §8.1 values match exactly                                                                          |
+| `/dashboard/staff`, banner forced                       | `25-admin-mobile-employees.jpg` (mobile)                                                    | Same, reflowed at the shared breakpoint                                                                                            |
+| `/dashboard/staff`, healthy                             | catalog 19 / 25                                                                             | **Zero** delta — the badge fix changes inputs, not pixels                                                                          |
+| `/dashboard/staff`, DODANY row present (desktop)        | `design-review/boards-after/emp-roster.png`                                                 | Third badge + one action per row match §8.3; the four unchanged rows are zero-delta                                                |
+| `/dashboard/staff`, DODANY row present (tablet/mobile)  | `design-review/boards-after/emp-tablet.png`                                                 | Same rule reflowed; the ✕ and every other element unchanged                                                                        |
+| `/dashboard/staff`, add modal                           | `design-review/boards-after/emp-add.png`                                                    | `Dodaj` CTA + `addSubtitle` only; geometry zero-delta                                                                              |
+| `/dashboard/staff`, add modal + form error (desktop)    | `design-review/rendered/modal-form-error-{d,provision-d}.png`                               | Error slot matches §8.4 exactly; every other element zero-delta vs `emp-add.png`                                                   |
+| `/dashboard/staff`, add modal + form error (mobile)     | `design-review/rendered/modal-form-error-{m,provision-m}.png`                               | Same reflowed at 390px; glyph on the first line, no overflow                                                                       |
+| `/dashboard/staff`, remove modal + form error (desktop) | `design-review/rendered/remove-error-{net,srv}-d.png`                                       | Error slot matches §8.5 exactly; every other element zero-delta vs `emp-remove.png`                                                |
+| `/dashboard/staff`, remove modal + form error (mobile)  | `design-review/rendered/remove-error-{net,srv}-m.png`                                       | Same reflowed at 390px; glyph on the first line, no overflow                                                                       |
+| `/dashboard/staff`, scrolled, banner pinned (desktop)   | `design-review/rendered/sticky-{error,success}-desktop.png`                                 | Banner at `top: 16`, in viewport, topmost; §8.6 values match                                                                       |
+| `/dashboard/staff`, scrolled, banner pinned (mobile)    | `design-review/rendered/sticky-{error,success}-mobile.png`                                  | Same at 390px; failure wraps to 4 lines at a 187px message column (§8.6, accepted)                                                 |
+| `/dashboard/staff`, banner at scrollY 0                 | the phase-1 banner rows above                                                               | Placement zero-delta (`sticky` is inert at rest); the ✕ raises three of four heights per §8.6's table — **re-baselined, not zero** |
+| `/auth/link-conflict`                                   | `auth-authed-{d,m}.png`                                                                     | **Zero** delta after phase 5                                                                                                       |
+| `/auth/reset-password` × 6 states                       | `auth-inapp` / `auth-nolink` / `auth-expired` / `auth-success` / `auth-set` / `auth-invite` | **Zero** delta after phase 5                                                                                                       |
 
 The zero-delta rows are the load-bearing ones: phase group B's whole claim is that it re-sources six
 auth surfaces without changing any of them. A non-zero diff on any of them is a phase-5 defect, not a
@@ -780,3 +1020,37 @@ review: the diff never touched that line, and nothing flagged it. It surfaced on
 **freshness-audit against the live design project rather than the repo's copy, and render the board
 before believing a copy change is complete — a stale promise one line above your edit is invisible in
 a diff.**
+
+### 12.4 Record the `EsShell` scroll-region divergence in the design source — **OPEN**
+
+Phase 10 found that the design already answers "where does feedback from a per-row control go":
+`EsShell` in `employee-states.jsx` puts `{banner}` and the filter card **outside** the scrolling
+region (`flex: 1; overflow: auto` is on the table body alone), so only the list scrolls and the
+banner is permanently on screen. The app renders the same screen as a document that scrolls whole,
+which is what put the banner off-viewport.
+
+Nothing in the design source records that the app diverged here, so the next person to read
+`EsShell` cannot tell that its scroll structure is load-bearing rather than incidental. The hunk,
+when someone picks this up: a comment on `EsShell`'s body `<div>` naming the constraint — the banner
+must remain reachable from a per-row control at any scroll depth, and an app that scrolls the
+document instead must pin it. **Deliberately not applied mid-phase**, on §12.2b's own principle:
+the design source should follow a confirmed decision rather than race it, and §12.2a's re-export is
+still outstanding, so this should land in the same pass.
+
+No board changes with it. The sticky banner is invisible at rest — it only differs from the shipped
+element once the page has scrolled — so there is no new artboard to draw, and the evidence renders
+live in `design-review/rendered/sticky-*.png`.
+
+### 12.5 Lock `body` scroll under an open modal — **OPEN, deferred from phase 10 §5**
+
+`getComputedStyle(document.body).overflow` is `visible` while `ModalShell` is open, so the page
+scrolls behind every dialog on this screen. Confirmed 2026-08-21; a real defect in its own right and
+a contributing cause of entry 4's measurement.
+
+Deferred rather than fixed, with the reasoning stated in entry 4: locking does not fix phase 10's
+defect on its own, sticky removes the coupling that made it urgent, and locking `body` overflow
+removes the desktop scrollbar and shifts content ~15px — a layout change that would touch every
+modal's §11 row and needs its own measurement pass and its own scrollbar-compensation decision.
+
+Scope when picked up: all three modals on `/dashboard/staff` (`AddModal`, `RemoveModal`,
+`LastAdminModal`) plus `RetireDialog` on `/dashboard/vehicles`, which shares the shell idiom.
