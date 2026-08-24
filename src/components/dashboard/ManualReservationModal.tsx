@@ -29,7 +29,7 @@ import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useVehicleBusyRanges } from "../hooks/useVehicleBusyRanges";
-import type { Vehicle } from "../../types";
+import type { PickerVehicle } from "../../types";
 
 // The manual-reservation modal (S-12): desktop-centered / mobile bottom sheet,
 // ported from the design source `manual-reservation.jsx` (MrD_FormOk /
@@ -83,7 +83,7 @@ const COPY = {
 } as const;
 
 /** `"Renault Master"`, falling back to the fleet name when make/model are absent. */
-function vehicleTitle(vehicle: Vehicle): string {
+function vehicleTitle(vehicle: PickerVehicle): string {
   return [vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.name;
 }
 
@@ -187,7 +187,7 @@ function DonePanel({
 }: {
   reference: string;
   customerName: string;
-  vehicle: Vehicle;
+  vehicle: PickerVehicle;
   pickup: string;
   returnDate: string;
   onClose: () => void;
@@ -240,7 +240,7 @@ function DonePanel({
 
 // ── the modal ────────────────────────────────────────────────────────────────
 
-export function ManualReservationModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () => void }) {
+export function ManualReservationModal({ vehicles, onClose }: { vehicles: PickerVehicle[]; onClose: () => void }) {
   const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id ?? "");
   const [pickup, setPickup] = React.useState("");
   const [returnDate, setReturnDate] = React.useState("");

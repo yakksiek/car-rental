@@ -7,6 +7,7 @@ import { ArrowRight, Calendar, Check, ChevronLeft, Mail, Phone, Truck, User } fr
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import QuickAddButton from "./QuickAddButton";
 import { ReasonSheet, ResultOverlay } from "./ReservationDecision";
 
 // others
@@ -648,6 +649,12 @@ export default function PendingQueue({
         <p className="text-muted-foreground mt-1 text-sm">
           {count} {COPY.awaitingDecision}
         </p>
+      </div>
+      {/* Quick-add (S-12b), absolutely placed at the right edge for the same
+          reason the back button is: a flex sibling would push the centred title
+          off-centre. This board owns no create action, so no `promoted`. */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2">
+        <QuickAddButton mode="mobile" />
       </div>
     </header>
   );
