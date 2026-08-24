@@ -19,11 +19,22 @@ interface Props {
   children?: ReactNode;
 }
 
-// Set-password form (S-08, designs R3/R9 recovery + R6/R10 invite-accept). The
-// recovery session is already established (cookie) by the /auth/callback exchange,
-// so this posts natively to /api/auth/reset-password → updateUser({ password }).
-// The enforced minimum is the config.toml policy (6); the "10 chars / number or
-// symbol" checklist in the design is an illustrative hint, not a policy change.
+// Set-password form (S-08, designs R3/R9 recovery + R6/R10 invite-accept).
+//
+// THERE IS NO SESSION WHILE THIS RENDERS. It used to say the opposite — that
+// /auth/callback had already exchanged the link into a cookie — and that stopped
+// being true at invite-journey-fixes. The GET now only validates, resolves and
+// stamps the token, minting nothing (callback.ts:23-26), and any visitor who DOES
+// hold a session is redirected to /auth/link-conflict instead (callback.ts:50-52).
+//
+// The exchange happens at step (f) of the POST — reset-password.ts:128-133 — as
+// one operation with the password set. That ordering is why a typo'd confirmation
+// leaves the link usable: the token is spent only once validation has passed.
+//
+// So this posts natively to /api/auth/reset-password, which does
+// verifyOtp → updateUser({ password }). The enforced minimum is the config.toml
+// policy (6); the "10 chars / number or symbol" checklist in the design is an
+// illustrative hint, not a policy change.
 export default function ResetPasswordForm({ mode, serverError, children }: Props) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");

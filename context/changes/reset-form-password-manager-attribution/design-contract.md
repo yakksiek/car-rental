@@ -181,3 +181,21 @@ Every attribute is load-bearing; none is decorative. Sources in research §2.4.
 **Caveat carried forward, not introduced here**: a vision-diff of R3/R6 against the _design source_
 (rather than these rendered baselines) will surface the missing password-strength checklist — see audit
 gap 3. That is a pre-existing S-14 divergence, not damage from this change.
+
+**Gate result — measured 2026-08-24, not asserted.** The scope note above says the delta is zero "by
+construction rather than by measurement". It was measured anyway, because "no layout box" is a claim
+about what the browser does and the cheapest way to be wrong about it is to never look. Method: render
+the real surface in headless Chromium, full-page screenshot, remove the anchor node from the live DOM,
+screenshot again, compare the two PNGs byte for byte. Identical bytes at every surface and breakpoint:
+
+| Surface                          | 1280×900           | 390×844            |
+| -------------------------------- | ------------------ | ------------------ |
+| `/auth/reset-password`, invite   | identical, 67982 B | identical, 54459 B |
+| `/auth/reset-password`, recovery | identical, 65479 B | identical, 53025 B |
+| `/dashboard/account/password`    | identical, 64829 B | identical, 43633 B |
+
+The same run asserted the anchor's own attributes against the field list above — `type="text"`, `id`,
+**no `name` attribute**, the expected address as `value`, `autocomplete="username"`, `readonly`,
+`display: none`, zero client rects, `input.form` resolving to the posting `<form>`, and the node
+preceding every password field. This covers the plan's DOM-check rows, not its password-manager-bubble
+rows: the bubble is browser chrome and no page-level probe can see it.
