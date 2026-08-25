@@ -3,7 +3,7 @@ change_id: staff-quick-actions
 title: Staff quick-action menu in the shell header — manual reservation + add vehicle
 status: implemented
 created: 2026-08-21
-updated: 2026-08-24
+updated: 2026-08-25
 archived_at: null
 ---
 
