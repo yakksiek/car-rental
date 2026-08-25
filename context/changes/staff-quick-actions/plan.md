@@ -876,11 +876,11 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 7.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 7.2 Linting passes: `npm run lint`
-- [x] 7.3 Unit tests pass: `npm test`
+- [x] 7.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — 9a747a8
+- [x] 7.2 Linting passes: `npm run lint` — 9a747a8
+- [x] 7.3 Unit tests pass: `npm test` — 9a747a8
 
 #### Manual
 
-- [x] 7.4 The task header's title starts at the same x as the shell band's, on `new` and `edit`
-- [x] 7.5 Below md the header is unchanged
+- [x] 7.4 The task header's title starts at the same x as the shell band's, on `new` and `edit` — 9a747a8
+- [x] 7.5 Below md the header is unchanged — 9a747a8
