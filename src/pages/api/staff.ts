@@ -21,6 +21,11 @@ const MSG = {
   forbidden: "Brak uprawnień.",
   duplicateEmail: "Pracownik z tym adresem e-mail już istnieje.",
   unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
+  // The invite mail went out but the profiles row did not land. The roster island
+  // renders its own §9 copy off `code`, so this string is for non-browser callers
+  // and logs; the two outcomes share it because the remedy differs only in the
+  // island's wording.
+  provisionFailed: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -68,9 +73,29 @@ export const POST: APIRoute = async (context) => {
     case "created":
       return json(201, { member: result.member });
     case "reactivated":
-      return json(200, { member: result.member });
+      // Still 200: the account really was repaired and really does belong on the
+      // roster. The activation-mail outcome rides in the BODY, not the status —
+      // the two-systems house pattern (`services/email-delivery.ts:57-77`,
+      // `api/return-protocols/[id]/pdf.ts:18-21`).
+      return json(200, { member: result.member, activationMail: result.activationMail });
     case "duplicate_active":
       return json(409, { errors: { email: MSG.duplicateEmail } });
+    // Provisioning half-succeeded: 500 is the honest class (our write failed),
+    // and `code` is what makes it distinguishable from an unhandled 500 — those
+    // carry Astro's HTML body with no `code`, so the island falls back to the
+    // network banner exactly as before.
+    //
+    // KEEP BOTH CODES. As of phase 7 the roster island renders one identical
+    // sentence for the two (`lib/staff-report.ts`), so this looks like a
+    // distinction with no consumer — it is not. `provision_orphaned` means the
+    // compensating `deleteUser` ALSO failed and a role-less auth user survives;
+    // that is a system-health signal for logs and monitoring, and it is the only
+    // place it is emitted. The collapse is a UI decision about what helps an
+    // admin act; the seam for it is the island, not this route or the service.
+    case "provision_rolled_back":
+      return json(500, { error: MSG.provisionFailed, code: "provision_rolled_back" });
+    case "provision_orphaned":
+      return json(500, { error: MSG.provisionFailed, code: "provision_orphaned" });
     case "unauthorized":
       // A null admin client here means the service-role key is unconfigured.
       return json(403, { error: MSG.unconfigured });

@@ -10,10 +10,11 @@
 
 const MAILPIT = process.env.MAILPIT_URL ?? "http://127.0.0.1:54324";
 
-/** Wipe the mailbox so a spec only sees mail it triggered. */
-export async function clearMailbox(): Promise<void> {
-  await fetch(`${MAILPIT}/api/v1/messages`, { method: "DELETE" });
-}
+// There is deliberately NO `clearMailbox` helper. Mailpit's DELETE is global, so
+// wiping the box destroys mail a concurrently-running spec is still waiting for
+// (`fullyParallel` is on) — shared state between tests, which e2e-rules.md
+// forbids. Isolation comes from the unique per-test recipient instead: every
+// fixture address carries a timestamp, and the search below is scoped `to:` it.
 
 interface MailpitListItem {
   ID: string;

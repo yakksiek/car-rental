@@ -125,3 +125,113 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   with two pending requests. The tenth duplicated `.length` read this adds is deliberate — it keeps
   the badge honest today and is replaced together with the other nine by the
   `count_pending_reservations` RPC in `context/changes/service-read-projections/`.
+
+## Auth session cookies carry a 400-day `Max-Age`
+
+- **Symptom:** `Set-Cookie` on the `sb-<ref>-auth-token*` cookies carries `Max-Age=34560000` — 400
+  days, the browser's ceiling. Found 2026-08-17 while adding `Secure` in S-14 Phase 5.
+- **Cause:** `@supabase/ssr`'s `DEFAULT_COOKIE_OPTIONS` (`utils/constants.js`) sets
+  `maxAge: 400 * 24 * 60 * 60`. Passing `cookieOptions` does **not** reach it: the library merges
+  caller options over the defaults and then **re-pins `maxAge` to its own default on every write**
+  (`dist/main/cookies.js:202-206`, `:357-361`), so the value is unreachable through the documented
+  knob. S-14 passes `cookieOptions` for `secure` only.
+- **Scope:** Cookie lifetime is **not** session lifetime — the access token expires in an hour
+  (`config.toml` `jwt_expiry = 3600`) and refresh-token rotation is on
+  (`enable_refresh_token_rotation = true`, `refresh_token_reuse_interval = 10`), so a stolen cookie is
+  bounded by GoTrue's refresh-token validity, not by `Max-Age`. What the 400 days actually buys is a
+  long-lived _refresh_ token sitting in the browser profile on a shared rental-desk workstation.
+  S-14's `signOut({ scope: "global" })` on a password set (R1) revokes it server-side.
+- **Decision:** Accepted, not fixed in S-14 — the cookie is already `Secure`, `SameSite=Lax` and
+  server-revocable, and the fix has to fight the library.
+- **If it ever needs fixing:** clamp it in **our** `setAll` handler (`src/lib/supabase.ts`), which is
+  the last hop before `cookies.set` and the only place the library's re-pin can't override —
+  `cookies.set(name, value, { ...options, maxAge: Math.min(options.maxAge ?? MAX, MAX) })`. Verify by
+  reading `Set-Cookie` under `npm run preview`, not by reading the option back.
+
+## No rate limit on the password-update path
+
+- **Symptom:** `/api/auth/reset-password` and `/api/auth/change-password` accept unbounded POSTs;
+  nothing throttles `updateUser({ password })` at the app or the GoTrue layer.
+- **Cause:** `[auth.rate_limit]` in `supabase/config.toml` has buckets for email sends
+  (`email_sent = 2`/h), sign-in/sign-up (`sign_in_sign_ups = 30`/5min), OTP verification
+  (`token_verifications = 30`/5min) and refresh (`token_refresh = 150`/5min) — **no bucket covers
+  `PUT /user`**. Neither route adds one of its own, and no Cloudflare rate-limiting binding is wired
+  up.
+- **Scope:** Narrower than it sounds, and **not** a credential-guessing oracle. `change-password`'s
+  reauth goes through `signInWithPassword`, which _is_ covered by the `sign_in_sign_ups` bucket, so
+  password guessing there is throttled. `reset-password` needs a link-minted session **and** the
+  one-shot marker **and** a staff role, and spends the marker on success. What is unthrottled is the
+  update itself, by a caller who already holds the right session — so the exposure is request volume,
+  not authentication bypass.
+- **Decision:** Deferred to its own slice (agreed at S-14 planning; explicitly out of scope there).
+  Fix: a Cloudflare rate-limiting rule or WAF rule keyed on the two paths, in front of the Worker —
+  cheaper and harder to bypass than an in-handler counter, which would need durable state anyway.
+
+## `signin` / `signout` / `signup` rely on Astro's `security.checkOrigin` default for CSRF
+
+- **Symptom:** Those three POST routes carry no in-handler origin check, unlike every auth route S-08
+  and S-14 touched (`reset-password.ts:61-64`, `change-password.ts`, `forgot-password.ts:13-16`),
+  which all compare `origin` to `context.url.origin` themselves.
+- **Cause:** `astro.config.mjs` never sets `security.checkOrigin`, and Astro 6.3.1 defaults it to
+  `true` (`node_modules/astro/dist/core/config/schemas/base.js:52`), so an internal middleware 403s
+  cross-site form POSTs before ours runs. Two limits are worth knowing:
+  `SAFE_METHODS = GET / HEAD / OPTIONS` are exempt (which is exactly why `/auth/callback` needed its
+  own guard in S-14 Phase 2 — R3), and a POST is only rejected when its `Content-Type` is form-like
+  (`application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain`) **or absent**
+  (`node_modules/astro/dist/core/app/middlewares.js`). A cross-site POST declaring
+  `application/json` passes the check.
+- **Scope:** **Not currently exploitable.** All three routes read `formData()`, so a real attack has
+  to send a form-like content type and gets 403'd; the JSON hole is unreachable from a browser
+  anyway, since that request preflights and we send no CORS headers. The gap is that the protection
+  is a framework default plus a content-type heuristic, not something these routes assert.
+- **Decision:** Left as-is in S-14 — adding checks there widens the diff onto routes the slice
+  otherwise doesn't touch, for no live exposure. **Re-open immediately** if `security.checkOrigin` is
+  ever set to `false`, if the adapter changes, or if any of the three starts accepting a JSON body:
+  then copy the explicit four-line check from `reset-password.ts`.
+
+## No CSP or `X-Frame-Options` — compounding `httpOnly: false` on the auth cookies
+
+- **Symptom:** No `Content-Security-Policy`, `X-Frame-Options`, or `Strict-Transport-Security` on any
+  response. There is no header-setting middleware and no `public/_headers`.
+- **Cause:** Never built. Astro sets none by default and `@astrojs/cloudflare` adds none.
+- **Compounding factor — this is why the two are one entry.** The Supabase auth cookies are written
+  `httpOnly: false` (`@supabase/ssr`'s default, deliberately kept in S-14 Phase 5) because
+  `src/components/protocol/storage.ts:15-19` needs `createBrowserClient` to read the JWT out of
+  `document.cookie`: the issue-protocol island uploads photos **straight to Supabase Storage**, since
+  the Worker cannot proxy image bytes (10 ms CPU cap, body limits). So any successful XSS reads the
+  session token directly rather than merely riding the cookie — and with no CSP, nothing narrows the
+  injection surface that would get it there.
+- **Scope:** Two independent gaps that multiply. No known injection point today (Astro and React both
+  escape by default, and S-14 closed the one place attacker-supplied text reached a styled alert —
+  F6, `?error=` is now a closed code whitelist).
+- **Decision:** Deferred; own slice. Both were explicitly out of scope for S-14.
+- **If it ever needs fixing:** CSP first — it is additive and needs no app redesign (mind Astro's
+  inline styles/scripts and the Google Fonts origins). Flipping the cookies to `httpOnly: true` is
+  **not** a flag flip: it breaks the direct-to-Storage upload path, so the prerequisite is another
+  way to authorize that upload — most likely a short-lived signed upload URL minted server-side in an
+  admin-gated route. Do that first, then flip.
+
+## The auth link journey depends on `auth.one_time_tokens`, a GoTrue-internal table
+
+- **Symptom (if it ever fires):** every invite and recovery link lands on
+  `/auth/forgot-password?expired=1` ("Link wygasł") immediately after a GoTrue upgrade, for
+  everyone — including links minted seconds earlier.
+- **Cause:** `invite-journey-fixes` moved the token exchange off the `/auth/callback` GET and onto
+  the set-password POST, so the link becomes idempotent and no session is minted before a password
+  exists. To keep the R14 role refusal ("Konto jest nieaktywne") running _before_ the form, the GET
+  resolves the link's target through `public.resolve_link_token`, which reads
+  `auth.one_time_tokens` — a **GoTrue-internal table with no stability contract**. The app now
+  depends on its `token_hash`, `token_type` and `user_id` columns, and on
+  `auth.users.confirmation_sent_at` / `recovery_sent_at` for the expiry window (the token table has
+  **no** expiry column, and GoTrue deletes a token on _use_, not on expiry).
+- **Scope:** Probed against **GoTrue v2.188.1 on 2026-08-20/21**: the `hashed_token` the admin
+  `generateLink` API returns is byte-identical to `token_hash`; an invite's `token_type` is
+  `confirmation_token` (shared with signup, exactly as `verifyOtp` treats them) and a recovery's is
+  `recovery_token`; both `*_sent_at` columns land within ~8ms of the token row's `created_at`. That
+  is when the assumption was last true.
+- **Decision:** Accepted, because the function **fails closed** — no row means refuse — so a GoTrue
+  change that renames or restructures these columns breaks the **role gate**, not the flow: the
+  symptom is a refused link, never an open one. `tests/integration/resolve-link-token.test.ts` holds
+  every clause against real GoTrue-minted tokens, so an upgrade that moves the ground reds the suite
+  before it reaches production. If it does fire, the fix is to re-probe the table and update the
+  migration's clauses — not to loosen them.

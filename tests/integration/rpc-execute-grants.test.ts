@@ -6,11 +6,19 @@ import { anonClient } from "../helpers/clients";
 
 // RPC EXECUTE-grant hardening regression guard (rpc-execute-grant-hardening).
 //
-// Pins the grant layer BENEATH the in-function current_app_role() gates. The four
+// Pins the grant layer BENEATH the in-function current_app_role() gates. The
 // staff RPCs are granted only to `authenticated` (anon revoked in migration
-// 20260714120000); the four intentionally-public RPCs keep their explicit `anon`
-// grant for the booking funnel. This suite proves both sides so a future migration
-// can neither silently re-open a staff RPC to anon nor lock anon out of a public one.
+// 20260714120000, and re-revoked per recreation); the four intentionally-public
+// RPCs keep their explicit `anon` grant for the booking funnel. This suite proves
+// both sides so a future migration can neither silently re-open a staff RPC to
+// anon nor lock anon out of a public one.
+//
+// `list_staff`, `deactivate_staff` and `mark_password_set` were added to the
+// refused block by invite-journey-fixes: 20260821100000_password_set_signal
+// DROPs and recreates `list_staff` to add an OUT column, and a drop resets the
+// ACL to Supabase's default (EXECUTE to PUBLIC + anon). That is exactly the
+// regression 20260731212650 had to fix forward on list_pending_reservations —
+// which was caught only because that RPC was in this suite and list_staff was not.
 //
 // WHY THIS EXISTS: `grant execute ... to authenticated` alone is a no-op against
 // the default PUBLIC/anon grants (lessons.md -> "Revoke EXECUTE before granting
@@ -82,6 +90,21 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
       });
       expect(isPermissionDenied(res.error)).toBe(true);
     });
+
+    it("list_staff -> permission denied", async () => {
+      const res = await anonClient().rpc("list_staff");
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("deactivate_staff -> permission denied", async () => {
+      const res = await anonClient().rpc("deactivate_staff", { target: MISSING_VEHICLE });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("mark_password_set -> permission denied", async () => {
+      const res = await anonClient().rpc("mark_password_set");
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -89,7 +112,22 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
   // The read-only three should return cleanly; create_reservation_request must
   // not be a permission error (it returns a business outcome for a missing vehicle).
   // -------------------------------------------------------------------------
-  describe("anon still executes the four public RPCs", () => {
+  describe("anon still executes the public RPCs", () => {
+    // invite-journey-fixes: intentionally public (lessons.md carve-out (a)).
+    // `/auth/callback` runs with no session, so a revoked grant here would take
+    // the whole invite + recovery journey down. Asserted as ADMITTED, not refused.
+    it("resolve_link_token -> executes (no permission error)", async () => {
+      const res = await anonClient().rpc("resolve_link_token", {
+        p_token_hash: "no-such-token-hash-value",
+        p_type: "recovery",
+      });
+      expect(isPermissionDenied(res.error)).toBe(false);
+      expect(res.error).toBeNull();
+      // A hash nobody holds resolves to nothing — the grant is intact, the lookup
+      // still fails closed.
+      expect(res.data).toEqual([]);
+    });
+
     it("available_vehicles -> no permission error", async () => {
       const res = await anonClient().rpc("available_vehicles", { p_pickup: "2026-07-01", p_return: "2026-07-05" });
       expect(res.error).toBeNull();
