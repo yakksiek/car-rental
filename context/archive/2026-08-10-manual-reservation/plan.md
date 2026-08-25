@@ -356,6 +356,295 @@ when `source === 'manual'`.
 
 ---
 
+## Phase 5: Review fixes — modal correctness + design radii
+
+### Overview
+
+Three modal fixes from the implementation review (`reviews/impl-review.md` F1, F2, F6). The radii are
+verified against the **design source** (`manual-reservation.jsx`, pulled via DesignSync), not the screenshots.
+
+### Changes Required:
+
+#### 1. A conflict invalidates the availability panel (F1)
+
+**File**: `src/components/hooks/useManualReservation.ts` + `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: After a 409 the modal currently shows the green "Termin wolny" panel **and** the red
+"Termin został właśnie zajęty" banner at once, and `canCreate` stays true so the button re-arms for an
+identical retry. `useAvailability` derives only from (vehicle, pickup, return), so the POST's answer never
+reaches it.
+
+**Contract**: `useAvailability` returns the state plus a `markConflict()` that sets `resolved` to
+`{state:"conflict"}`. `ManualReservationModal.submit()` calls it in the `conflict` and `unavailable`
+branches (`:236-243`) before setting the banner. No extra clearing is needed — the render-phase input-key
+reset (`useManualReservation.ts:54-59`) already drops it the moment any of vehicle/pickup/return changes.
+`canCreate` then falls false through the existing `canCreateReservation` path; do not add new gating logic.
+
+#### 2. Button + chevron radii match the design source (F2)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: `rounded-xl` is **20px** in this project (`src/styles/global.css:71` → `:162`), not Tailwind's
+stock 12px. The source has `mrBtnPrimary`/`mrBtnGhost` at `borderRadius: 12` and the chevron span at
+`{ width: 30, height: 30, borderRadius: 8 }`.
+
+**Contract**: `:450` (footer submit), `:177` and `:184` (done-panel ghost + primary) `rounded-xl` →
+`rounded-md` (`--flota-radius-md` = 12px). `:312` chevron `rounded-lg` → `rounded-sm` (8px). **No other
+radius changes** — `rounded-t-[26px]`, `md:rounded-[20px]` and `rounded-[22px]` were verified exact against
+the source and must stay.
+
+#### 3. Close affordances guard on `busy` (F6)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: Closing mid-POST unmounts the modal while the request completes — the booking is created and the
+customer emailed, but the employee never sees the reference and may re-enter it into a 409.
+
+**Contract**: scrim `:263` and X button `:286` → `onClick={busy ? undefined : onClose}`; add
+`disabled={busy}` on the X so it reads as inert. The submit button is already guarded (`:447`).
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- A lost race (create against a range taken meanwhile) flips the panel to "Termin zajęty" and disables the submit button; editing a date re-checks.
+- Clicking the scrim or X during a create does nothing until the request settles.
+
+---
+
+## Phase 6: Review fixes — endpoint response + RPC date-order hardening
+
+### Overview
+
+Endpoint hygiene and the one data-layer gap the review found (F8, F10, F9).
+
+### Changes Required:
+
+#### 1. Drop the unused `token` from the manual create response (F8)
+
+**File**: `src/pages/api/reservations/manual.ts` + `tests/integration/manual-reservation-api.test.ts`
+
+**Intent**: The 201 body returns the customer's secret `/r/<token>` credential, but nothing consumes it
+(`useManualReservation.ts:124-127` reads only `reference`; `DonePanel` links to `/dashboard/calendar`). It
+was copied from the public `POST /api/reservations`, which needs it for its redirect.
+
+**Contract**: `:89` → `json(201, { reference: result.reference })`. Update the assertion at
+`manual-reservation-api.test.ts:100`. `ManualReservationResult` keeps `token` (it mirrors the RPC's shape);
+only the wire response narrows.
+
+#### 2. JSON 500 on an RPC throw (F10)
+
+**File**: `src/pages/api/reservations/manual.ts`
+
+**Intent**: `createConfirmedReservation` throws on RPC error (`src/lib/services/reservations.ts:110-112`) —
+e.g. the migration's deliberate `raise` after 3 `unique_violation` retries — yielding Astro's 500 HTML where
+the island expects JSON. The sibling route shipped in the same phase already handles this.
+
+**Contract**: wrap the call at `:77` in try/catch; on throw `return json(500, { error: MSG.serverError })`,
+adding `serverError` to the route's local `MSG`. Mirror `src/pages/api/availability.ts:63-75`.
+
+#### 3. Date-order guard in **both** create RPCs (F9)
+
+**File**: `supabase/migrations/20260810140000_reservation_date_order_guard.sql` (new)
+
+**Intent**: `reserved_period` is `tsrange(pickup_date + 14:00, return_date + 10:00)`
+(`20260603155136_booking_integrity_data.sql:104-105`) while `reservations_dates_ordered` only requires
+`return_date >= pickup_date` (`:109`). So `p_return = p_pickup` inverts the range → a `data_exception`
+caught by neither exception arm, and the RPC errors instead of returning a typed tag. Unreachable through the
+endpoints (the zod schema requires start < end via `catalog-filters.ts:135-136`) but reachable directly
+through PostgREST — by any employee for `create_confirmed_reservation`, and by **anon** for
+`create_reservation_request`. The design source treats a same-day range as valid, so it is a shape people try.
+
+**Contract**: `create or replace function` for **both** `public.create_confirmed_reservation(uuid, date,
+date, text, text, text)` and the live 10-arg `public.create_reservation_request(...)`
+(`20260613090000_reservation_b2b_fields.sql`), each gaining an early guard before the vehicle lookup:
+`if p_return <= p_pickup then return query select 'unavailable'::text, …; return; end if;`.
+**Use `create or replace`, never `drop` + `create`** — replace preserves existing privileges, so the
+revoke/grant pairs stay intact; a drop+create would silently re-open the built-in PUBLIC execute grant (see
+the "Revoke EXECUTE before granting it" lesson). `create_reservation_request` keeps its intentional anon
+grant. No signature change → **no `database.types.ts` regen needed**.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Migration applies cleanly against local Supabase
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Integration tests pass (`npm run test:integration`): both RPCs return `unavailable` (not an error) for `p_return = p_pickup` and for an inverted range; `POST /api/reservations/manual` returns `201 {reference}` with no `token` key; `rpc-execute-grants.test.ts` still passes unchanged (privileges survive `create or replace`).
+
+#### Manual Verification:
+
+- None beyond the automated suite.
+
+---
+
+## Phase 7: Design-contract corrections
+
+### Overview
+
+Doc-only. The review's design-source pull found the **contract** wrong in three places and the code right;
+recording that is what lets the Phase 8 vision-diff converge instead of re-flagging exact ports (F3, F4, F5).
+
+### Changes Required:
+
+#### 1. Record the three deviations
+
+**File**: `context/changes/manual-reservation/design-contract.md`
+
+**Contract**:
+
+- **`:114` (F3)** — "Select via `ui/select.tsx` (replaces the mockup's native `<select>` overlay)" →
+  `deviation(native-select)`: the shipped transparent-`<select>`-over-card is the source's own affordance
+  (`position:absolute; inset:0; opacity:0`, `aria-label="Pojazd"`, whole card as hit target) and keeps the
+  native mobile picker + screen-reader behaviour.
+- **`:90` (D6) and `:98` (F4)** — the source has `borderTopLeftRadius/borderTopRightRadius: 26` and **no drag
+  handle** on this modal (the handle belongs to the quick-action sheet, which is out of scope). Record the
+  mobile top radius as **exact 26px** and delete the "reuse `rounded-t-[28px]`" claim and the drag-handle bar.
+- **`:127` and the verbatim list at `:167` (F5)** — the shipped string is
+  "Data zwrotu musi być późniejsza niż data odbioru."; record
+  `deviation(same-day-rejected)`: the source treats `ret == pick` as valid, our stack rejects it because
+  `tsrange(pickup+14:00, return+10:00)` inverts, so the source's "jest wcześniejsza niż odbiór" is false for
+  the equal-dates case. Add the four states/strings the contract never defined —
+  `avError` ("Nie udało się sprawdzić dostępności.") and the three create-failure banners
+  (`ManualReservationModal.tsx:48, :55-57`).
+
+#### 2. Record the confirmed-exact lines
+
+**File**: same
+
+**Intent**: Stop the vision-diff re-litigating values already verified against the source.
+
+**Contract**: note as `exact` — `mrFieldCap` and the footer left label `letterSpacing: 0.3`; the Ręczna badge
+at `10` (done panel) / `9.5` (header); the done panel at `22` mobile / `20` desktop; the desktop shell at
+`560px` / radius `20`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- None (documentation only).
+
+#### Manual Verification:
+
+- Every value in `ManualReservationModal.tsx` maps to an `exact` line or a recorded `deviation(reason)` in the contract.
+
+---
+
+## Phase 8: Manual verification + vision-diff gate
+
+### Overview
+
+Close the gates the epilogue commit (`757d2aa`) left open (F7). Runs **after** Phases 5 and 7, so the diff
+compares corrected code against a corrected contract.
+
+### Changes Required:
+
+#### 1. Run every outstanding manual gate
+
+**File**: `context/changes/manual-reservation/plan.md` (Progress) + `context/changes/manual-reservation/change.md`
+
+**Contract**: execute Progress items 1.5, 2.5, 3.4–3.7, 4.4 and 4.5 and check them off with evidence. Then run
+**3.8**, the rendered vision-diff: render the modal's form / available / conflict / done states at desktop and
+mobile and hand the screenshots plus the canonical mockups to a vision subagent (mockups on disk at
+`context/changes/manual-reservation/design-review/*.png`; same set live at
+`exports/manual-reservation/` in the Design project `352d78a6-84fd-49a2-8b38-2fe289691fc3`). Iterate the
+punch-list to empty apart from the deviations recorded in Phase 7. Finally set `change.md` `status:` past
+`implementing`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Full suite green: `npx astro check`, `npm run lint`, `npm run build`, `npm test`, `npm run test:integration`
+
+#### Manual Verification:
+
+- All Progress checkboxes for Phases 1–7 are `[x]` with evidence.
+- The vision-diff punch-list is empty apart from recorded deviations.
+
+---
+
+## Phase 9: Review fixes — in-flight form freeze + stale conflict banner
+
+### Overview
+
+A post-Phase-8 review pass (`reviews/impl-review-2.md`) found two residual instances of the problems
+Phase 5 set out to fix. **F11**: the `busy` guard stops at the submit button, the scrim and the X, so the
+vehicle picker and the five customer/date inputs stay live for the whole POST while the done panel and
+`markConflict()` read **current** state rather than what was submitted. **F12**: `banner` outlives the range
+it describes, so F1's green-panel-over-red-banner pairing is still reachable — with no race at all, just by
+following what the banner tells the employee to do. Both reproduced against the running app on 2026-08-18.
+
+### Changes Required:
+
+#### 1. Freeze the form while `busy` (F11)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: Two symptoms, one root. **(a)** `DonePanel` is handed `pickup`/`returnDate`/`customerName` from
+live state (`:263-266`), so editing **Zwrot** during the POST makes the confirmation print a range that was
+never booked — the row and the customer's e-mail keep the submitted one, and nothing on screen contradicts
+the wrong dates. **(b)** editing a date mid-flight clears `resolved` (`useManualReservation.ts:67-70`) and
+schedules a debounced GET; the 409 then pins `markConflict()` (`:247`) onto a range nobody checked, and
+~420ms later that GET overwrites it with `available` (`useManualReservation.ts:89`) — a green panel under the
+red "Termin został właśnie zajęty" banner, the exact pairing F1 removed. The window is not microscopic: the
+endpoint awaits the confirmation e-mail (`api/reservations/manual.ts:102`) before answering.
+
+**Contract**: add `disabled={busy}` to the vehicle `<select>` (`:334`) and to the five inputs — pickup
+(`:364`), return (`:382`), name (`:406`), phone (`:416`), e-mail (`:426`). **No other mechanism**: with the
+inputs frozen, the state at `setCreated` is by construction the state that was POSTed, so (a) and (b) close
+together and no payload snapshot is needed. **No styling change** — unlike the X (`:302`), the fields keep
+their normal look; the pending state is already carried by the submit button's spinner, and the design source
+draws no disabled-field state. Extend the existing `deviation(busy-guard)` line in
+`design-contract.md` (Surface 1) to cover the fields rather than adding a new deviation.
+
+#### 2. The conflict banner dies with the range it describes (F12)
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: `banner` is set at `:248` / `:253` / `:256` and cleared in exactly one place — `:237`, the top of
+the _next_ `submit()`. Nothing clears it when the inputs change, so it outlives the range it is talking
+about. The path needs no race and no mid-flight editing: a lost create shows "Termin został właśnie zajęty.
+**Wybierz inny termin.**", the employee does exactly that, the panel resolves **Termin wolny** and submit
+re-arms — and the red banner is still on screen telling them to pick another date. That is F1's original
+complaint verbatim, with the staleness moved from the panel to the banner. Phase 5 fixed the panel; this
+fixes the other half.
+
+**Contract**: clear `banner` on the same trigger that already drops the availability answer — a change to
+(vehicle, pickup, return). Mirror the hook's documented render-phase reset (`useManualReservation.ts:62-70`)
+inside `ManualReservationModal`: track the same `${vehicleId}|${pickup}|${returnDate}` key in state and
+`setBanner(null)` when it differs, so the banner disappears in the same render the input changed rather than
+a paint later. It must **not** clear on a customer-field edit (name/phone/e-mail are not part of the key) and
+must not disturb the banner `submit()` just set — the key is unchanged at that point, so it does not.
+Considered and rejected: storing the banner as `{key, text}` and rendering it only while `key` matches. It
+needs no reset logic at all, but duplicates the key derivation that today lives inside the hook.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro check`
+- Linting passes: `npm run lint`
+- Build passes: `npm run build`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- With the manual-create response held open (console `fetch` wrapper, `reviews/impl-review-2.md` F11), the vehicle picker and all five fields refuse input while the button reads "Tworzenie…", and the done panel's dates/name match the row written to `reservations`.
+- Editing a date is impossible mid-flight, so the panel can no longer end up green beneath the conflict banner.
+- After a lost create, changing to a free range clears the conflict banner as the panel turns green; editing only the customer fields leaves it up.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -409,53 +698,119 @@ generated file** (a stale regen would drop the other slice's `source` column / R
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly against local Supabase
-- [ ] 1.2 Type checking passes: `npx astro check`
-- [ ] 1.3 Linting passes: `npm run lint`
-- [ ] 1.4 Integration: RPC creates confirmed/manual + reference + email cols; conflict on overlap; unauthorized non-staff; unavailable inactive vehicle; anon cannot execute recreated calendar RPC
+- [x] 1.1 Migration applies cleanly against local Supabase — 4cc2bb8
+- [x] 1.2 Type checking passes: `npx astro check` — 4cc2bb8
+- [x] 1.3 Linting passes: `npm run lint` — 4cc2bb8
+- [x] 1.4 Integration: RPC creates confirmed/manual + reference + email cols; conflict on overlap; unauthorized non-staff; unavailable inactive vehicle; anon cannot execute recreated calendar RPC — 4cc2bb8
 
 #### Manual
 
-- [ ] 1.5 Existing rows read `source='public'`; a hand-run RPC yields `manual`/`confirmed`
+- [x] 1.5 Existing rows read `source='public'`; a hand-run RPC yields `manual`/`confirmed` (psql 2026-08-21: 10 pre-existing rows read source='public' (2 pending / 8 confirmed) and 4 rows read manual/confirmed from RPC runs; column default is 'public'::reservation_source, NOT NULL)
 
 ### Phase 2: Service wrapper + shared email helper + endpoints
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression
+- [x] 2.1 Type checking passes: `npx astro check` — d96357b
+- [x] 2.2 Linting passes: `npm run lint` — d96357b
+- [x] 2.3 Build passes: `npm run build` — d96357b
+- [x] 2.4 Integration: POST creates + logs email_deliveries; conflict 409; CSRF 403; auth/role 401/403; validation 400; GET availability staff/anon; [id].ts email regression — d96357b
 
 #### Manual
 
-- [ ] 2.5 Same-origin calls create a booking; dev adapter logs the confirmation
+- [x] 2.5 Same-origin calls create a booking; dev adapter logs the confirmation (driven 2026-08-21, no stubs: POST /api/reservations/manual → 201, and email_deliveries carries template=reservation_confirmed status=sent recipient=k.dabrowski+778990@example.pl)
 
 ### Phase 3: Manual-reservation modal + entry point
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check` — 4176fdb
+- [x] 3.2 Linting passes: `npm run lint` — 4176fdb
+- [x] 3.3 Build passes: `npm run build` — 4176fdb
 
 #### Manual
 
-- [ ] 3.4 Button opens the modal (desktop-centered / mobile sheet)
-- [ ] 3.5 Availability resolves live; submit enables only when available + name/email/phone valid
-- [ ] 3.6 Create → done panel (reference + Ręczna); booking appears confirmed on the calendar
-- [ ] 3.7 Customer receives the confirmation email
-- [ ] 3.8 Vision-diff of form/available/conflict/done (desktop + mobile) clean apart from deviations
+- [x] 3.4 Button opens the modal (desktop-centered / mobile sheet) (driven 2026-08-21: the Nowa rezerwacja button mounts the modal, Termin trigger visible; desktop-centred at 1320px and bottom-sheet at 390px both captured for the 7.12 vision-diff)
+- [x] 3.5 Availability resolves live; submit enables only when available + name/email/phone valid (driven 2026-08-21: submit disarmed with nothing filled; armed only with a resolved-available range plus all three customer fields; disarmed again when the panel flips to conflict)
+- [x] 3.6 Create → done panel (reference + Ręczna); booking appears confirmed on the calendar (driven 2026-08-21: done panel shows R-10EC + the RĘCZNA chip, name and "30 sie – 31 sie"; the row reads source=manual status=confirmed 2026-08-30→31; the booking appears as a green confirmed bar on the Iveco Daily calendar row)
+- [x] 3.7 Customer receives the confirmation email (verified in email_deliveries for R-10EC: reservation_confirmed / sent. Resend is unconfigured locally, so the dev adapter logs to the server — the banner on every page says so)
+- [x] 3.8 Vision-diff of form/available/conflict/done (desktop + mobile) clean apart from deviations (SCOPED, 2026-08-21 — see 8.3 for why. Done panel diffed directly against desktop-05-created: structure, ordering and treatments all match (check disc, title, subtitle, reference + RĘCZNA chip, name, vehicle, range, ghost + crimson buttons); only fixture data differs. Form/available/conflict surfaces other than Termin were diffed under S-12a 7.12 with an empty punch-list; the Termin block itself is covered there against the CURRENT source)
 
 ### Phase 4: "Ręczna" on the calendar
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check` — 65078c9
+- [x] 4.2 Linting passes: `npm run lint` — 65078c9
+- [x] 4.3 Build passes: `npm run build` — 65078c9
 
 #### Manual
 
-- [ ] 4.4 A manual confirmed booking shows a Ręczna chip in its calendar detail; a public one shows none
-- [ ] 4.5 No change to calendar colors or the 2-item legend
+- [x] 4.4 A manual confirmed booking shows a Ręczna chip in its calendar detail; a public one shows none (driven 2026-08-21: the manual booking's detail reads "R-10EC | POTWIERDZONA | Ręczna | Krzysztof Dąbrowski 778990 | Iveco Daily | ODBIÓR 30 sie · 14:00 | ZWROT 31 sie · 10:00"; a public booking's detail has 0 occurrences of Ręczna)
+- [x] 4.5 No change to calendar colors or the 2-item legend (driven 2026-08-21: the legend reads exactly ["Oczekujące","Potwierdzone"] — two swatches, no third for Ręczna; bars stay amber/green and the manual booking draws as an ordinary green confirmed bar)
+
+### Phase 5: Review fixes — modal correctness + design radii
+
+#### Automated
+
+- [x] 5.1 Type checking passes: `npx astro check` — aa98711
+- [x] 5.2 Linting passes: `npm run lint` — aa98711
+- [x] 5.3 Build passes: `npm run build` — aa98711
+- [x] 5.4 Unit tests pass: `npm test` — aa98711
+
+#### Manual
+
+- [x] 5.5 F1 — a lost race flips the panel to "Termin zajęty" and disables submit; editing a date re-checks (driven 2026-08-21 with a held-open create answered 409: banner=true and panel reads Termin zajęty; changing the range clears both and the panel resolves green)
+- [x] 5.6 F2 — submit + both done-panel buttons render 12px, the chevron 8px (no other radius changed) (measured 2026-08-21: submit 12px, Zobacz w kalendarzu 12px, Gotowe 12px, vehicle chevron 8px — matching --flota-radius-md 12px / -sm 8px)
+- [x] 5.7 F6 — scrim and X are inert while a create is in flight (driven 2026-08-21: with the create held open the X is disabled and the scrim's onClick is undefined; covered by the same freeze verified for 9.5)
+
+### Phase 6: Review fixes — endpoint response + RPC date-order hardening
+
+#### Automated
+
+- [x] 6.1 Migration applies cleanly against local Supabase — 3ab8a62
+- [x] 6.2 Type checking passes: `npx astro check` — 3ab8a62
+- [x] 6.3 Linting passes: `npm run lint` — 3ab8a62
+- [x] 6.4 Build passes: `npm run build` — 3ab8a62
+- [x] 6.5 Integration: both RPCs return `unavailable` for same-day and inverted ranges; manual POST 201 body has no `token`; `rpc-execute-grants.test.ts` unchanged and green — 3ab8a62
+
+### Phase 7: Design-contract corrections
+
+#### Automated
+
+- [x] 7.1 (none — documentation only) — d0a4322
+
+#### Manual
+
+- [x] 7.2 F3 — `:114` records `deviation(native-select)` (verified in the contract: D8 `deviation(native-select)` records the transparent native <select> over the card as the source's own affordance)
+- [x] 7.3 F4 — D6 `:90` / `:98` record mobile top radius `exact 26px` and drop the drag-handle clause (verified: D6 records `exact` 26px `rounded-t-[26px]` and states there is NO drag handle — the only one in the source belongs to the out-of-scope quick-action sheet)
+- [x] 7.4 F5 — `:127` / `:167` record `deviation(same-day-rejected)` + the four undocumented states/strings (verified: D9 `deviation(same-day-rejected)` records the copy and why the source's wording is false for ret == pick)
+- [x] 7.5 Confirmed-exact lines recorded (tracking 0.3; badge 10 / 9.5; done panel 22 / 20; shell 560 / 20) (verified present in the contract: tracking-[0.3px], badge 10/9.5, done panel rounded-[22px]/md:rounded-[20px], shell md:w-[560px]/md:rounded-[20px])
+
+### Phase 8: Manual verification + vision-diff gate
+
+#### Automated
+
+- [x] 8.1 Full suite green: `astro check`, `lint`, `build`, `npm test`, `test:integration` — 864c60f
+
+#### Manual
+
+- [x] 8.2 Progress items 1.5, 2.5, 3.4–3.7, 4.4, 4.5 executed and checked with evidence (all nine closed 2026-08-21 with driven or psql evidence recorded on each row)
+- [x] 8.3 3.8 vision-diff run against the 10 canonical mockups; punch-list empty apart from Phase 7 deviations (SCOPED rather than a straight 10-board diff, deliberately. 4 of the 10 are out of scope by D4 — the quick-action menu (desktop-01/mobile-01) and the calendar-cell confirm (desktop-02/mobile-02) were never shipped. 4 more (desktop-03/04, mobile-03/04) are recorded SUPERSEDED by S-12a's freshness audit: they draw two native date inputs where the source and the app now have one Termin button, so diffing them would manufacture findings across that whole block. The 2 created boards are current and were diffed directly. PUNCH-LIST EMPTY; every difference is fixture data or an already-recorded deviation)
+- [x] 8.4 `change.md` status moved past `implementing` (set to implemented 2026-08-21 once every row above closed)
+
+### Phase 9: Review fixes — in-flight form freeze + stale conflict banner
+
+#### Automated
+
+- [x] 9.1 Type checking passes: `npx astro check` (2026-08-21: 0 errors, 0 warnings)
+- [x] 9.2 Linting passes: `npm run lint` (2026-08-21: 0 errors, 2 pre-existing RHF warnings)
+- [x] 9.3 Build passes: `npm run build` (2026-08-21: Complete)
+- [x] 9.4 Unit tests pass: `npm test` (2026-08-21: 327/327 across 27 files)
+
+#### Manual
+
+- [x] 9.5 F11(a) — with the create held open, the picker and all five fields refuse input; the done panel's dates + name match the `reservations` row (driven 2026-08-21 with the create held open: vehicle select, Termin trigger, name, phone and e-mail all disabled=true, 0 day cells rendered (picker unmounted), button reads Tworzenie…)
+- [x] 9.6 F11(b) — a date cannot be edited mid-flight, so the panel never ends up green beneath the conflict banner (driven 2026-08-21: a FORCED programmatic click on the frozen Termin trigger produced 0 day cells)
+- [x] 9.7 `design-contract.md` Surface 1 `deviation(busy-guard)` extended to the form fields (verified: the busy-guard line records the widening to the vehicle <select>, the Termin field and the three Klient inputs)
+- [x] 9.8 F12 — a lost create's banner clears when the range changes (panel green ⇒ no stale banner) and survives a customer-field edit (driven 2026-08-21: after a 409 the banner persists through a phone-field edit, then clears on a range change while the panel resolves Termin wolny)

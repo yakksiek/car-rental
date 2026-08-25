@@ -10,6 +10,7 @@ function reservation(overrides: Partial<CalendarReservation> = {}): CalendarRese
     id: "11111111-1111-1111-1111-111111111111",
     reference: "R-0001",
     status: "pending",
+    source: "public",
     customer_name: "Jan Kowalski",
     vehicle_id: "22222222-2222-2222-2222-222222222222",
     vehicle_make: "Volkswagen",

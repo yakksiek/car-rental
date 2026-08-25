@@ -1,10 +1,11 @@
 // core
 import * as React from "react";
-import { Pencil, Plus, RotateCcw, Search, Truck, X } from "lucide-react";
+import { Pencil, RotateCcw, Search, Truck, X } from "lucide-react";
 
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import { cn } from "../../lib/utils";
@@ -311,34 +312,31 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
 
   return (
     <div>
-      {/* Header: eyebrow count, title, primary add action */}
+      {/* Header: eyebrow count, title, primary add action.
+          The title block is `md:hidden` since S-12b: at md+ the shell's band
+          already renders "Zarządzanie flotą", so drawing it here too put the
+          page title on screen twice — a defect the band's new right-hand pill
+          sits directly above. Below md there is no shell header, so it stays. */}
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 md:hidden">
           <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             {filtered.length} {COPY.eyebrow}
           </div>
-          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
-            {COPY.title}
-          </h1>
+          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">{COPY.title}</h1>
         </div>
-        {/* Dark button at md+, dark circular FAB below md */}
-        <Button
-          asChild
-          className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 px-4 md:inline-flex"
-        >
-          <a href="/dashboard/vehicles/new">
-            <Plus className="size-4" />
-            {COPY.add}
-          </a>
-        </Button>
-        <Button
-          asChild
-          className="bg-foreground text-background hover:bg-foreground/90 shadow-accent flex size-12 shrink-0 rounded-full md:hidden"
-        >
-          <a href="/dashboard/vehicles/new" aria-label={COPY.add}>
-            <Plus className="size-5" />
-          </a>
-        </Button>
+        {/* No md+ button since Phase 6: `Dodaj pojazd` is reached through the
+            shell's `＋ Nowe` menu at every breakpoint, where this page's action is
+            the promoted crimson row. Keeping it here as well rendered the same
+            action twice on this one board. */}
+        {/* Below md this board's own create action is ABSORBED into the
+            quick-action sheet as its promoted (crimson) first row, so the screen
+            carries a single `＋` and manual reservation stays reachable from here.
+            `vehicle` collides with a canonical key, so the sheet is 2 rows with no
+            duplicate. Size 48 → 40 per the settled reconciliation, with the
+            design's own shadow (replacing `shadow-accent`). */}
+        <div className="md:hidden">
+          <QuickAddButton mode="mobile" promoted="vehicle" />
+        </div>
       </div>
 
       {/* Search */}
