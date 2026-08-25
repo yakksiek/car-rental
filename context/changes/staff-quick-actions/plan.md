@@ -578,6 +578,149 @@ at the boards' breakpoints, plus both absorb boards, and diff each against its c
 
 ---
 
+## Phase 6: Desktop full absorb — one create affordance per screen
+
+### Overview
+
+**Reverses the v5 desktop-coexistence decision (owner, 2026-08-25).** The quick-add menu becomes the
+_only_ create path on desktop as well: the page-owned `Dodaj pojazd` / `Dodaj pracownika` buttons are
+retired and both actions are reached through `＋ Nowe`. This makes the model identical at every
+breakpoint — one `＋` per screen, the page's own action promoted to the crimson first row.
+
+**What forced the reversal into view:** measured on the running app, `Dodaj pojazd` renders _twice_ on
+`/dashboard/vehicles` at md+ (page button **and** menu row), while `Dodaj pracownika` renders _once_ on
+`/dashboard/staff` (page button only — it is not a canonical row). So today's desktop is both redundant
+on one board and inconsistent between the two.
+
+**This necessarily deletes E12.** `Dodaj pracownika` exists only as a `promoted` row, and the desktop
+branch deliberately ignores `promoted`. Retiring the page button therefore requires plumbing `promoted`
+into the desktop popover — the exact thing E12 forbids. E12 is superseded here, not worked around; its
+consequence (the crimson primary row is stable on desktop, varies on mobile) is superseded with it, so
+**D9 now applies to both breakpoints**.
+
+### Changes Required:
+
+#### 1. Plumb `promoted` through the desktop branch
+
+**File**: `src/components/dashboard/QuickAddButton.tsx`
+
+**Intent**: One code path for both modes. The `mode === "desktop" ? undefined : promoted` guard that
+implements E12 is removed, so the popover absorbs exactly as the sheet does.
+
+**Contract**: `buildQuickActions(promoted)` in both modes. `QuickActionMenu`, the merge, the row spec
+and the fetch path are untouched — only the guard goes. The trigger's own geometry is unchanged.
+
+#### 2. Retire the Flota page button
+
+**File**: `src/components/fleet/FleetList.tsx`
+
+**Intent**: With the menu carrying `Dodaj pojazd` on every page, the page button is the duplicate.
+
+**Contract**: the `hidden … md:inline-flex` "Dodaj pojazd" `Button` is removed. The mobile
+`QuickAddButton` stays exactly as Phase 4 left it, and its `PROMOTED_VEHICLE` constant is now passed at
+both breakpoints (the desktop mount lives in `StaffShell`, so the page supplies it via #4).
+
+#### 3. Retire the Zespół page button
+
+**File**: `src/components/staff/StaffList.tsx`
+
+**Intent**: Same, for `Dodaj pracownika`.
+
+**Contract**: the `hidden … md:inline-flex` "Dodaj pracownika" `Button` is removed from the page action
+row; the search input remains and takes the full row width. The mobile promoted row is unchanged. The
+add-employee dialog is now reached only through the menu, whose `onPick` already calls `setAddOpen(true)`.
+
+#### 4. Let a page declare its promoted action to the shell
+
+**File**: `src/components/shell/StaffShell.astro`, `src/pages/dashboard/vehicles.astro`,
+`src/pages/dashboard/staff.astro`
+
+**Intent**: The desktop pill is mounted once, inside the shell — so a page that owns a create action
+needs a way to hand it to that mount.
+
+**Contract**: `StaffShell` gains an optional `promotedAction?: "vehicle" | "employee"` prop, forwarded to
+the desktop `QuickAddButton`. A **key, not an object**: Astro props cross the island boundary as JSON, so
+a `LucideIcon` and an `onPick` closure cannot be passed. The island resolves the key to its row through a
+lookup in `quick-actions.ts`. `vehicles.astro` passes `"vehicle"`, `staff.astro` passes `"employee"`; the
+other five pages pass nothing and keep the canonical 2-row menu.
+
+**Zespół's dialog across the island boundary**: `StaffList` owns `setAddOpen`, and the pill lives in a
+_different_ island, so `onPick` cannot reach it directly. Resolve with a DOM `CustomEvent` the list
+listens for — the smallest seam that does not hoist staff state into the shell. Record the mechanism in
+the component comment.
+
+#### 5. Contract + change-log updates
+
+**File**: `context/changes/staff-quick-actions/design-contract.md`, `change.md`
+
+**Intent**: A reversal of a decision recorded as settled must be recorded, not silently applied.
+
+**Contract**: E12 is marked **superseded (2026-08-25)** with the reasoning above; D9's scope widens to
+both breakpoints; a new **D11 `deviation(reach)`** records that the desktop boards
+(`desktop-fleet-mgmt-with-quickadd.png`, `qa-v5`) still draw a page action this build no longer renders,
+so the Phase 7 vision-diff must not re-flag it. `change.md` gains the reversal entry beside the v6 one.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro sync && npx tsc --noEmit`
+- Linting passes: `npm run lint`
+- Unit tests pass: `npm test`
+- Integration + e2e suites still pass (`staff-admin.spec.ts` drives the add-employee flow, whose entry
+  point moves in #3 — expect to update its opening step)
+
+#### Manual Verification:
+
+- At md+, `/dashboard/vehicles` shows `Dodaj pojazd` exactly **once**, in the menu
+- At md+, `/dashboard/staff` shows `Dodaj pracownika` exactly **once**, in the menu, and picking it
+  opens the add-employee dialog
+- The other five staff pages still show the canonical 2-row menu
+- Mobile is unchanged on all seven
+
+---
+
+## Phase 7: Task-header alignment
+
+### Overview
+
+`/dashboard/vehicles/new` and `/dashboard/vehicles/[id]/edit` draw their own header (they pass
+`showHeader={false}`), and its content is inset **44px** relative to every other staff page's band.
+
+### Changes Required:
+
+#### 1. Match the shell band's horizontal rule
+
+**File**: `src/components/fleet/VehicleForm.tsx`
+
+**Intent**: The header strip's own comment already claims it is "a full-bleed white strip matching the
+dashboard chrome (StaffShell header)" — it is not. The strip spans, but its inner container is capped
+`mx-auto max-w-[1080px]` with `px-4 sm:px-6`, so at 1440 its title starts at **x=316** where every other
+page's starts at **x=272**.
+
+**Contract**: the header's inner container drops `mx-auto max-w-[1080px]` and adopts the band's own
+`px-8`, matching `StaffShell.astro:180`. **The form body keeps `max-w-[1080px]`** — no page in the app
+aligns its header to its body (bodies run 768 / 980 / 1024 / 1080 / 1152 / 1280 / 1440 with no
+convention, while the header rule is uniform), so leaving the body alone is what makes this page behave
+like the other nine rather than an exception. No design specifies the 1080 cap: it was introduced in
+S-04's implementation (`14db20a`) and `design-system.md` carries no row for this screen.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type checking passes: `npx astro sync && npx tsc --noEmit`
+- Linting passes: `npm run lint`
+- Unit tests pass: `npm test`
+
+#### Manual Verification:
+
+- At 1440, the task header's title starts at the same x as the shell band's title on `/dashboard/vehicles`
+  (measured, not eyeballed), on both `new` and `edit`
+- Below md the header is unchanged — no regression at 390px
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -712,3 +855,32 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 - [x] 5.4 Vision-diff punch-list is empty except the contract's recorded deviations — 66032a4
 - [x] 5.5 Both absorb boards match their canonical renders — 66032a4
 - [x] 5.6 The desktop popover never shows a promoted row on any page — 66032a4
+
+### Phase 6: Desktop full absorb
+
+#### Automated
+
+- [x] 6.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
+- [x] 6.2 Linting passes: `npm run lint`
+- [x] 6.3 Unit tests pass: `npm test`
+- [x] 6.4 Integration + e2e suites pass (incl. the moved add-employee entry point)
+
+#### Manual
+
+- [x] 6.5 `/dashboard/vehicles` at md+ shows `Dodaj pojazd` exactly once, in the menu
+- [x] 6.6 `/dashboard/staff` at md+ shows `Dodaj pracownika` exactly once, and it opens the add dialog
+- [x] 6.7 The other five staff pages still show the canonical 2-row menu
+- [x] 6.8 Mobile unchanged on all seven
+
+### Phase 7: Task-header alignment
+
+#### Automated
+
+- [x] 7.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
+- [x] 7.2 Linting passes: `npm run lint`
+- [x] 7.3 Unit tests pass: `npm test`
+
+#### Manual
+
+- [x] 7.4 The task header's title starts at the same x as the shell band's, on `new` and `edit`
+- [x] 7.5 Below md the header is unchanged

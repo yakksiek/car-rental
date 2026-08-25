@@ -12,7 +12,7 @@ import { QuickActionMenu } from "./QuickActionMenu";
 // others
 import { cn } from "../../lib/utils";
 import { useFleetPicker } from "../hooks/useFleetPicker";
-import { buildQuickActions, type QuickActionItem, type ResolvedQuickAction } from "./quick-actions";
+import { buildQuickActions, PROMOTED_ACTIONS, type PromotedActionKey, type ResolvedQuickAction } from "./quick-actions";
 
 // The quick-action trigger (S-12b) — the design's `QuickAddButton`, ported at
 // the geometry in design-contract.md Surfaces 1–4.
@@ -25,10 +25,15 @@ import { buildQuickActions, type QuickActionItem, type ResolvedQuickAction } fro
 // (already `md:hidden`), so the two containers are mutually exclusive in CSS —
 // only one is ever visible and no second copy of an open menu can exist.
 //
-// E12 (load-bearing): `mode="desktop"` IGNORES `promoted` entirely, matching the
-// source, where the desktop branch calls `<QuickMenuList onPick={pick} />` with
-// no `promoted`. That is what keeps the crimson primary row stable on desktop
-// while it varies by screen on mobile (D9).
+// E12 IS SUPERSEDED (Phase 6, owner 2026-08-25). The design source's desktop
+// branch passes no `promoted`, and this component honoured that until the
+// measured consequence surfaced: `Dodaj pojazd` rendered TWICE on
+// `/dashboard/vehicles` at md+ (page button + menu row) while `Dodaj pracownika`
+// rendered once and was absent from the menu. Desktop now absorbs exactly as
+// mobile does — one create affordance per screen at every breakpoint — so the
+// page-owned buttons are retired and `promoted` is honoured in BOTH modes.
+// Consequence, accepted: D9 (the crimson primary row moves by screen) now
+// applies to desktop too; it is no longer fixed there.
 //
 // BOTH OVERLAYS ARE PORTALLED TO `document.body`. Several mount sites wrap the
 // circle in `-translate-y-1/2` to keep a centred title centred, and a transform
@@ -47,8 +52,13 @@ const COPY = {
 
 interface QuickAddButtonProps {
   mode: "desktop" | "mobile";
-  /** Mobile-only page action promoted to the crimson first row (absorb). */
-  promoted?: QuickActionItem;
+  /**
+   * The page's own create action, promoted to the crimson first row. Passed as a
+   * KEY, not an object: the desktop pill is mounted from `StaffShell.astro` and
+   * Astro serializes island props to JSON, which a `LucideIcon` and an `onPick`
+   * closure cannot survive. Resolved through `PROMOTED_ACTIONS`.
+   */
+  promoted?: PromotedActionKey;
 }
 
 export default function QuickAddButton({ mode, promoted }: QuickAddButtonProps) {
@@ -57,7 +67,7 @@ export default function QuickAddButton({ mode, promoted }: QuickAddButtonProps) 
   const { vehicles, state, load } = useFleetPicker();
 
   const emptyFleet = state === "ready" && vehicles?.length === 0;
-  const items = buildQuickActions(mode === "desktop" ? undefined : promoted);
+  const items = buildQuickActions(promoted ? PROMOTED_ACTIONS[promoted] : undefined);
 
   const disabledKeys: Record<string, { hint?: string; pending?: boolean }> = {};
   if (state === "loading") {

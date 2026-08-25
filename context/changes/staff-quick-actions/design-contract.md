@@ -38,7 +38,7 @@
 | No **loading** state drawn for the reservation row                                                                                          | `deviation(async-affordance)` — spinner per the project's async-button rule (D4) |
 | No **hover / focus-visible** state defined on the pill or rows (the source declares hover only as an inline `onMouseEnter` background swap) | `deviation(a11y)` — adopt the shared `Button` states (D5)                        |
 | No **error** state for a failed fetch                                                                                                       | `deviation(error-state)` — retryable message (D6)                                |
-| Desktop popover has **no `promoted` branch**                                                                                                | Not a gap — deliberate. Preserved verbatim (E12).                                |
+| Desktop popover has **no `promoted` branch**                                                                                                | Superseded 2026-08-25 — desktop absorbs too (E12 → D11).                         |
 
 ### 3. Alignment — every canonical surface has a phase, and vice-versa
 
@@ -143,22 +143,27 @@ slot at the same `gap: 12`.
 
 ## Surface 2 — Desktop popover (open)
 
-| Property      | Value                                        | Mark              |
-| ------------- | -------------------------------------------- | ----------------- |
-| position      | `absolute`, `top: 44px`, `right: 0`          | `exact`           |
-| width         | `278px`                                      | `exact`           |
-| background    | `tokens.card` → `bg-card`                    | `exact`           |
-| border-radius | `16px`                                       | `exact`           |
-| box-shadow    | `tokens.shadow3` → `shadow-overlay`          | `exact`           |
-| padding       | `8px`                                        | `exact`           |
-| z-index       | `41` (click-catcher `40`)                    | `exact`           |
-| click-catcher | `position: fixed`, `inset: 0`                | `exact`           |
-| rows          | canonical `MR_MENU` only — **no `promoted`** | `exact` → **E12** |
+| Property      | Value                                                                         | Mark                                                 |
+| ------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
+| position      | `absolute`, `top: 44px`, `right: 0`                                           | `exact`                                              |
+| width         | `278px`                                                                       | `exact`                                              |
+| background    | `tokens.card` → `bg-card`                                                     | `exact`                                              |
+| border-radius | `16px`                                                                        | `exact`                                              |
+| box-shadow    | `tokens.shadow3` → `shadow-overlay`                                           | `exact`                                              |
+| padding       | `8px`                                                                         | `exact`                                              |
+| z-index       | `41` (click-catcher `40`)                                                     | `exact`                                              |
+| click-catcher | `position: fixed`, `inset: 0`                                                 | `exact`                                              |
+| rows          | the page's promoted row first (if any), then the canonical rows de-duplicated | `deviation(reach)` → **E12 superseded**, see **D11** |
 
-**E12 (exact, load-bearing)** — the source's desktop branch calls `<QuickMenuList onPick={pick} />`
-with no `promoted` argument, so desktop can never absorb a page action. Preserve this: `QuickAddButton`
-in `mode="desktop"` ignores `promoted` entirely. This is what makes the crimson primary row _stable_ on
-desktop while it varies by screen on mobile (see D9).
+**E12 — SUPERSEDED 2026-08-25 (owner decision, Phase 6).** It read: _the source's desktop branch calls
+`<QuickMenuList onPick={pick} />` with no `promoted` argument, so desktop can never absorb a page
+action._ Ported faithfully in Phase 2 and verified in Phase 5 — then measured against the shipped app,
+which showed the cost: at md+ `Dodaj pojazd` rendered **twice** on `/dashboard/vehicles` (page button +
+menu row) while `Dodaj pracownika` rendered **once** on `/dashboard/staff` and was absent from the menu.
+Redundant on one board, inconsistent between the two. Desktop now absorbs exactly as mobile does — one
+create affordance per screen at every breakpoint — so `promoted` is honoured in both modes and the
+page-owned buttons are retired. **Consequence, accepted: D9 now applies to desktop too**; the crimson
+primary row is no longer fixed there. The design source is unchanged and still draws the v5 shape — D11.
 
 Implementation note: `radix-ui` `Popover` (`src/components/ui/popover.tsx`) portals its content, so the
 source's absolute `top: 44 / right: 0` maps to `align="end"` + a `sideOffset` yielding a 44px top offset
@@ -228,18 +233,21 @@ generalize this to "between every pair".
 
 ### Row set and order
 
-| Context                                                                      | Rows (in order)                                       | Primary            |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------ |
-| Desktop, every page                                                          | `Nowa rezerwacja`, `Dodaj pojazd`                     | `Nowa rezerwacja`  |
-| Mobile — no page create action (Pulpit, Wnioski, Wydania, Zwroty, Kalendarz) | `Nowa rezerwacja`, `Dodaj pojazd`                     | `Nowa rezerwacja`  |
-| Mobile — Flota                                                               | `Dodaj pojazd`, `Nowa rezerwacja`                     | `Dodaj pojazd`     |
-| Mobile — Zespół                                                              | `Dodaj pracownika`, `Nowa rezerwacja`, `Dodaj pojazd` | `Dodaj pracownika` |
+| Context                                                                       | Rows (in order)                                       | Primary            |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------ |
+| Desktop — no page create action (Pulpit, Wnioski, Wydania, Zwroty, Kalendarz) | `Nowa rezerwacja`, `Dodaj pojazd`                     | `Nowa rezerwacja`  |
+| Desktop — Flota                                                               | `Dodaj pojazd`, `Nowa rezerwacja`                     | `Dodaj pojazd`     |
+| Desktop — Zespół                                                              | `Dodaj pracownika`, `Nowa rezerwacja`, `Dodaj pojazd` | `Dodaj pracownika` |
+| Mobile — no page create action (Pulpit, Wnioski, Wydania, Zwroty, Kalendarz)  | `Nowa rezerwacja`, `Dodaj pojazd`                     | `Nowa rezerwacja`  |
+| Mobile — Flota                                                                | `Dodaj pojazd`, `Nowa rezerwacja`                     | `Dodaj pojazd`     |
+| Mobile — Zespół                                                               | `Dodaj pracownika`, `Nowa rezerwacja`, `Dodaj pojazd` | `Dodaj pracownika` |
 
 Flota yields 2 rows because the promoted key `vehicle` collides with a canonical row and is
 de-duplicated; Zespół yields 3 because `employee` is a new key. Both come from one code path.
 
 **D9 `deviation(context-primary)`** — the crimson `accentSoft` tile marks _the most likely action_, not
-a fixed one, so on mobile it moves between rows by screen while on desktop it never moves. This is the
+a fixed one, so it moves between rows by screen. **Scope widened 2026-08-25**: this now holds on
+desktop as well, since E12 is superseded and the popover absorbs too. This is the
 source's own semantics (`primary: true` is a per-context flag), not an inconsistency. Recorded so the
 vision-diff does not re-flag it. Rejected alternatives: pinning crimson to `Nowa rezerwacja` (would make
 the loudest row not the first one); dropping crimson from the menu (consistent, but discards the accent
@@ -249,16 +257,18 @@ for no gain).
 
 ## Deviations register
 
-| ID      | Mark                          | Scope              | Rationale                                                                                                                                                                                                                                                                               |
-| ------- | ----------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **D3**  | `deviation(empty-state)`      | Menu               | No bookable vehicles → `Nowa rezerwacja` renders disabled with a hint. The design draws no empty state, and S-12's whole-component `return null` would erase the affordance console-wide — taking `Dodaj pojazd`, the action that fixes an empty fleet, with it.                        |
-| **D4**  | `deviation(async-affordance)` | Reservation row    | The row triggers a fetch, so it shows a pending state (`animate-spin` ring, per the project's async-button rule). The design's menu is synchronous and draws none.                                                                                                                      |
-| **D5**  | `deviation(a11y)`             | Pill, circle, rows | Source defines no hover/active/focus-visible and no accessible name for the icon-only circle. Use the shared `Button` primitive and an `aria-label`. Default cursor retained per project decision.                                                                                      |
-| **D6**  | `deviation(error-state)`      | Reservation row    | A failed fetch surfaces a retryable message rather than opening an empty modal. Not drawn.                                                                                                                                                                                              |
-| **D7**  | `deviation(scope)`            | Band cluster       | The 38×38 calendar icon button is not added console-wide — out of scope per `staff-global-search/plan.md`.                                                                                                                                                                              |
-| **D8**  | `deviation(reach)`            | Mobile Pulpit      | The design omits the affordance on `ScreenWorkerDash` because `Dyspozytornia` (273px, unbreakable, at `fontSize: 40`) already clips its avatar at 390px. Our title is `Pulpit`, so the constraint does not transfer; we add the circle, with the 360px fit as a hard success criterion. |
-| **D9**  | `deviation(context-primary)`  | Menu tiles         | The crimson primary tile moves between rows by screen on mobile. Source semantics; see above.                                                                                                                                                                                           |
-| **D10** | `deviation(scope)`            | Task screens       | No quick-add on `vehicles/new`, `vehicles/[id]/edit`, `protocols/[id]`, `pickups/[reservationId]`, `returns/[reservationId]`. Their headers own back/close/submit over unsaved state. The design likewise gives protocol/detail flows a `close` right slot, never a create action.      |
+| ID      | Mark                          | Scope                | Rationale                                                                                                                                                                                                                                                                                                                              |
+| ------- | ----------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D3**  | `deviation(empty-state)`      | Menu                 | No bookable vehicles → `Nowa rezerwacja` renders disabled with a hint. The design draws no empty state, and S-12's whole-component `return null` would erase the affordance console-wide — taking `Dodaj pojazd`, the action that fixes an empty fleet, with it.                                                                       |
+| **D4**  | `deviation(async-affordance)` | Reservation row      | The row triggers a fetch, so it shows a pending state (`animate-spin` ring, per the project's async-button rule). The design's menu is synchronous and draws none.                                                                                                                                                                     |
+| **D5**  | `deviation(a11y)`             | Pill, circle, rows   | Source defines no hover/active/focus-visible and no accessible name for the icon-only circle. Use the shared `Button` primitive and an `aria-label`. Default cursor retained per project decision.                                                                                                                                     |
+| **D6**  | `deviation(error-state)`      | Reservation row      | A failed fetch surfaces a retryable message rather than opening an empty modal. Not drawn.                                                                                                                                                                                                                                             |
+| **D7**  | `deviation(scope)`            | Band cluster         | The 38×38 calendar icon button is not added console-wide — out of scope per `staff-global-search/plan.md`.                                                                                                                                                                                                                             |
+| **D8**  | `deviation(reach)`            | Mobile Pulpit        | The design omits the affordance on `ScreenWorkerDash` because `Dyspozytornia` (273px, unbreakable, at `fontSize: 40`) already clips its avatar at 390px. Our title is `Pulpit`, so the constraint does not transfer; we add the circle, with the 360px fit as a hard success criterion.                                                |
+| **D9**  | `deviation(context-primary)`  | Menu tiles           | The crimson primary tile moves between rows by screen on mobile. Source semantics; see above.                                                                                                                                                                                                                                          |
+| **D11** | `deviation(reach)`            | Desktop page actions | Phase 6 retires the page-owned `Dodaj pojazd` / `Dodaj pracownika` buttons at md+; both live in the quick-add menu. The canonical desktop boards still draw the page action beside the pill, so a vision-diff **will** see a button the app no longer renders. Deliberate — do not re-flag. Supersedes v5 coexistence and E12.         |
+| **D12** | `deviation(scope)`            | Vehicle-form header  | Phase 7 drops the form header's `mx-auto max-w-[1080px]` cap for the band's own `sm:px-8`, so its content starts at the same x as every other staff header (measured 316 → 272 at 1440). The body keeps its 1080 column: no page aligns header to body, and no design ever specified this screen (cap introduced in S-04's `14db20a`). |
+| **D10** | `deviation(scope)`            | Task screens         | No quick-add on `vehicles/new`, `vehicles/[id]/edit`, `protocols/[id]`, `pickups/[reservationId]`, `returns/[reservationId]`. Their headers own back/close/submit over unsaved state. The design likewise gives protocol/detail flows a `close` right slot, never a create action.                                                     |
 
 **Carried forward from S-12, still in force:** D4 of
 `context/archive/2026-08-10-manual-reservation/design-contract.md:84-85` covered _both_ the quick-action

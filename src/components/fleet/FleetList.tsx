@@ -1,6 +1,6 @@
 // core
 import * as React from "react";
-import { Pencil, Plus, RotateCcw, Search, Truck, X } from "lucide-react";
+import { Pencil, RotateCcw, Search, Truck, X } from "lucide-react";
 
 // components
 import { Badge } from "../ui/badge";
@@ -8,7 +8,6 @@ import { Button } from "../ui/button";
 import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
-import type { QuickActionItem } from "../dashboard/quick-actions";
 import { cn } from "../../lib/utils";
 import { categoryLabelPl, formatPln, fuelLabelPl, transmissionLabelPl } from "../../lib/format";
 import type { CategoryCounts } from "../../lib/services/vehicles";
@@ -57,17 +56,6 @@ import type { Vehicle, VehicleCategory } from "../../types";
 //      also cannot vanish either; it passes `filtered` at any toggle state. Out
 //      of scope, and not carried as a follow-up; adding a banner would be a
 //      second signal for a change already visible at the point of the click.
-
-// This board's own create action, as the quick-action sheet's promoted first row
-// on mobile. Its key collides with the canonical `vehicle` row, so
-// `buildQuickActions` de-duplicates and the sheet renders 2 rows, not 3.
-const PROMOTED_VEHICLE: QuickActionItem = {
-  key: "vehicle",
-  icon: Truck,
-  label: "Dodaj pojazd",
-  desc: "Nowy pojazd do floty",
-  href: "/dashboard/vehicles/new",
-};
 
 const COPY = {
   eyebrow: "pojazdów",
@@ -336,16 +324,10 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
           </div>
           <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">{COPY.title}</h1>
         </div>
-        {/* Dark button at md+, dark circular FAB below md */}
-        <Button
-          asChild
-          className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 px-4 md:inline-flex"
-        >
-          <a href="/dashboard/vehicles/new">
-            <Plus className="size-4" />
-            {COPY.add}
-          </a>
-        </Button>
+        {/* No md+ button since Phase 6: `Dodaj pojazd` is reached through the
+            shell's `＋ Nowe` menu at every breakpoint, where this page's action is
+            the promoted crimson row. Keeping it here as well rendered the same
+            action twice on this one board. */}
         {/* Below md this board's own create action is ABSORBED into the
             quick-action sheet as its promoted (crimson) first row, so the screen
             carries a single `＋` and manual reservation stays reachable from here.
@@ -353,7 +335,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
             duplicate. Size 48 → 40 per the settled reconciliation, with the
             design's own shadow (replacing `shadow-accent`). */}
         <div className="md:hidden">
-          <QuickAddButton mode="mobile" promoted={PROMOTED_VEHICLE} />
+          <QuickAddButton mode="mobile" promoted="vehicle" />
         </div>
       </div>
 

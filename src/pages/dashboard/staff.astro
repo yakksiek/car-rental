@@ -33,6 +33,7 @@ const adminCount = staff.filter((s) => s.role === "admin").length;
     active="staff"
     title="Pracownicy"
     subtitle={staffCountLabel(staff.length, adminCount)}
+    promotedAction="employee"
     user={user}
     role={role}
     pendingCount={pending.length}

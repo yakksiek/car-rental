@@ -1,5 +1,5 @@
 // core
-import { CalendarDays, Truck, type LucideIcon } from "lucide-react";
+import { CalendarDays, Truck, User, type LucideIcon } from "lucide-react";
 
 // The quick-action menu's canonical rows and the absorb merge (S-12b), kept out
 // of any component so the merge — the piece three mount sites depend on — is
@@ -57,3 +57,42 @@ export function buildQuickActions(promoted?: QuickActionItem): ResolvedQuickActi
     ...QUICK_ACTIONS.filter((item) => item.key !== promoted.key).map((item) => ({ ...item, primary: false })),
   ];
 }
+
+// ---------------------------------------------------------------------------
+// Promoted page actions (S-12b Phase 6 — desktop full absorb)
+// ---------------------------------------------------------------------------
+//
+// A page that owns a create action hands it to the menu by KEY, never as an
+// object: the desktop pill is mounted from `StaffShell.astro`, and Astro props
+// cross the island boundary as JSON — a `LucideIcon` and an `onPick` closure
+// cannot survive that trip. Both mount styles therefore pass a string and the
+// island resolves it here.
+
+export type PromotedActionKey = "vehicle" | "employee";
+
+/**
+ * Zespół's action opens a dialog owned by `StaffList` — a DIFFERENT island — so
+ * `onPick` cannot call its `setAddOpen` directly. This event is the seam;
+ * `StaffList` listens for it. Deliberately smaller than the alternative, which
+ * would be hoisting staff state up into the shell for one button.
+ */
+export const ADD_EMPLOYEE_EVENT = "flota:add-employee";
+
+export const PROMOTED_ACTIONS: Record<PromotedActionKey, QuickActionItem> = {
+  vehicle: {
+    key: "vehicle",
+    icon: Truck,
+    label: "Dodaj pojazd",
+    desc: "Nowy pojazd do floty",
+    href: "/dashboard/vehicles/new",
+  },
+  employee: {
+    key: "employee",
+    icon: User,
+    label: "Dodaj pracownika",
+    desc: "Zaproś do zespołu",
+    onPick: () => {
+      window.dispatchEvent(new CustomEvent(ADD_EMPLOYEE_EVENT));
+    },
+  },
+};

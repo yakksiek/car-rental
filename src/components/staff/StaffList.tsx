@@ -6,6 +6,7 @@ import { AlertTriangle, KeyRound, Plus, Search, Send, ShieldCheck, User, X } fro
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import QuickAddButton from "../dashboard/QuickAddButton";
+import { ADD_EMPLOYEE_EVENT } from "../dashboard/quick-actions";
 
 // others
 import { cn } from "../../lib/utils";
@@ -539,6 +540,20 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
   const [addOpen, setAddOpen] = React.useState(false);
+
+  // The quick-add menu is a SEPARATE island (the desktop pill is mounted inside
+  // `StaffShell`, the mobile circle inside this board's header), so its promoted
+  // "Dodaj pracownika" row cannot call `setAddOpen` directly. It dispatches
+  // `ADD_EMPLOYEE_EVENT` on `window` instead and this listener opens the dialog.
+  React.useEffect(() => {
+    const open = () => {
+      setAddOpen(true);
+    };
+    window.addEventListener(ADD_EMPLOYEE_EVENT, open);
+    return () => {
+      window.removeEventListener(ADD_EMPLOYEE_EVENT, open);
+    };
+  }, []);
   const [removeFor, setRemoveFor] = React.useState<StaffMember | null>(null);
   const [lastAdminOpen, setLastAdminOpen] = React.useState(false);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -778,18 +793,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 divider (after row 1 — the rule is positional, not structural).
                 The promoted action opens a dialog rather than navigating, so it
                 carries `onPick` instead of an `href`. */}
-            <QuickAddButton
-              mode="mobile"
-              promoted={{
-                key: "employee",
-                icon: User,
-                label: COPY.add,
-                desc: "Zaproś do zespołu",
-                onPick: () => {
-                  setAddOpen(true);
-                },
-              }}
-            />
+            <QuickAddButton mode="mobile" promoted="employee" />
           </div>
         </div>
       </header>
@@ -813,15 +817,8 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
               className="border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
             />
           </div>
-          <Button
-            className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 shrink-0 px-4 md:inline-flex"
-            onClick={() => {
-              setAddOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            {COPY.add}
-          </Button>
+          {/* No md+ button since Phase 6 — `Dodaj pracownika` is reached through
+              the shell's `＋ Nowe` menu, where it is this page's promoted row. */}
         </div>
 
         {/* Mutation banner (§3.12, §8.6) — above the filter card, and PINNED.
