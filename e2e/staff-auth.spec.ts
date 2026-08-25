@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 
 // others
 import { fillHydrated, waitForIslands } from "./support/hydration";
-import { clearMailbox, waitForCallbackLink } from "./support/mailpit";
+import { waitForCallbackLink } from "./support/mailpit";
 import { createActiveEmployee, deleteStaffUser, inviteEmployee } from "./fixtures/staff";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +41,12 @@ test("self-service reset: forgot password → emailed link → new password → 
   const newPassword = "Fl0ta-E2E-New-2026!";
   const { id, email } = await createActiveEmployee(oldPassword);
   cleanupId = id;
-  await clearMailbox();
+  // No mailbox wipe. `waitForCallbackLink` searches by this unique recipient, so
+  // a clear buys nothing — and Mailpit's DELETE is GLOBAL, so it was destroying
+  // mail that a concurrently-running spec was still waiting for (`fullyParallel`
+  // is on). That is shared state between tests, which e2e-rules.md forbids; it
+  // went unnoticed while only one other spec read mail, and surfaced as soon as
+  // the phase-8 two-step add spec became a third reader.
 
   // Request the reset from the forgot-password form.
   await page.goto("/auth/forgot-password");
@@ -90,7 +95,7 @@ test("invite-accept: admin invite → emailed link → first password → sign i
   await page.waitForURL(/\/auth\/reset-password\?mode=invite/);
   await waitForIslands(page);
   await expect(page.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(page.getByText("Witaj w Flocie")).toBeVisible();
+  await expect(page.getByText("Witaj we Flocie")).toBeVisible();
 
   // Set the first password.
   await fillHydrated(page.getByRole("textbox", { name: "Nowe hasło" }), password);

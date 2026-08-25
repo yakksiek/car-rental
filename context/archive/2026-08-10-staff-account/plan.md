@@ -200,8 +200,8 @@ danger row). Render a mobile "Profil" heading in-content (the shell has no mobil
 pass `title="Profil"`, `subtitle="Twoje konto pracownika"` for the desktop header.
 
 **Contract**: Route `/dashboard/account` (gated employee+ by the existing `/dashboard` prefix in
-`ROUTE_ROLES`). Own-profile read: `supabase.from("profiles").select("full_name, role,
-created_at").eq("user_id", user.id).maybeSingle()` (tolerant — a missing row degrades to no `full_name`
+`ROUTE_ROLES`). Own-profile read: `supabase.from("profiles").select("full_name").eq("user_id",
+user.id).maybeSingle()` (tolerant — a missing row degrades to no `full_name`
 i.e. the `staffIdentity(email)` fallback, rather than `.single()` throwing a 500). `StaffShell active="me" title="Profil"
 subtitle="Twoje konto pracownika" user={user} role={role} pendingCount={…} overdueCount={…}`.
 Card structure and copy per `design-contract.md` (SpIdentity / SpCard / SpRow analogues).
@@ -350,44 +350,44 @@ None — no schema change, no data migration, no RPC.
 
 #### Automated
 
-- [ ] 1.1 Type checking passes: `npx astro check`
-- [ ] 1.2 Linting passes: `npm run lint`
-- [ ] 1.3 Build passes: `npm run build`
+- [x] 1.1 Type checking passes: `npx astro check` — 346bb3c
+- [x] 1.2 Linting passes: `npm run lint` — 346bb3c
+- [x] 1.3 Build passes: `npm run build` — 346bb3c
 
 #### Manual
 
-- [ ] 1.4 Desktop account chip is a link to `/dashboard/account` with an active state
-- [ ] 1.5 Mobile Profil tab appears in the floating bar and navigates/highlights
-- [ ] 1.6 No regression to existing nav items, badges, or the desktop sign-out button
+- [x] 1.4 Desktop account chip is a link to `/dashboard/account` with an active state — 4a3eaaa
+- [x] 1.5 Mobile Profil tab appears in the floating bar and navigates/highlights — 4a3eaaa
+- [x] 1.6 No regression to existing nav items, badges, or the desktop sign-out button — 4a3eaaa
 
 ### Phase 2: Account view page (`/dashboard/account`)
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
+- [x] 2.1 Type checking passes: `npx astro check` — 3a7aa37
+- [x] 2.2 Linting passes: `npm run lint` — 3a7aa37
+- [x] 2.3 Build passes: `npm run build` — 3a7aa37
 
 #### Manual
 
-- [ ] 2.4 Page renders under `StaffShell active="me"` (desktop + mobile) per the design contract, trims absent
-- [ ] 2.5 Name = `full_name` else humanized email; email + role correct
-- [ ] 2.6 Zmień hasło navigates to the sub-route; Wyloguj się signs out (with pending feedback), incl. mobile
-- [ ] 2.7 Vision-diff against `staff-profile.jsx` clean apart from recorded deviations
+- [x] 2.4 Page renders under `StaffShell active="me"` (desktop + mobile) per the design contract, trims absent — 4a3eaaa
+- [x] 2.5 Name = `full_name` else humanized email; email + role correct — 4a3eaaa
+- [x] 2.6 Zmień hasło navigates to the sub-route; Wyloguj się signs out (with pending feedback), incl. mobile — 4a3eaaa
+- [x] 2.7 Vision-diff against `staff-profile.jsx` clean apart from recorded deviations — 4a3eaaa
 
 ### Phase 3: In-session password change (`/dashboard/account/password` + endpoint)
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Integration test: wrong-current rejected + unchanged; correct-current updates (`npm run test:integration`)
+- [x] 3.1 Type checking passes: `npx astro check` — 8d0c54c
+- [x] 3.2 Linting passes: `npm run lint` — 8d0c54c
+- [x] 3.3 Build passes: `npm run build` — 8d0c54c
+- [x] 3.4 Integration test: wrong-current rejected + unchanged; correct-current updates (`npm run test:integration`) — 8d0c54c
 
 #### Manual
 
-- [ ] 3.5 Happy path: change succeeds, success panel, re-login with new password works
-- [ ] 3.6 Wrong current password → Nieprawidłowe obecne hasło, no change, session intact
-- [ ] 3.7 Mismatch / too-short → correct field error, no side effects
-- [ ] 3.8 Submit shows spinner + Zapisywanie… through the redirect
-- [ ] 3.9 Vision-diff of the sub-page against the contract clean apart from recorded deviations
+- [x] 3.5 Happy path: change succeeds, success panel, re-login with new password works — 4a3eaaa
+- [x] 3.6 Wrong current password → Nieprawidłowe obecne hasło, no change, session intact — 4a3eaaa
+- [x] 3.7 Mismatch / too-short → correct field error, no side effects — 4a3eaaa
+- [x] 3.8 Submit shows spinner + Zapisywanie… through the redirect — 4a3eaaa
+- [x] 3.9 Vision-diff of the sub-page against the contract clean apart from recorded deviations — 4a3eaaa

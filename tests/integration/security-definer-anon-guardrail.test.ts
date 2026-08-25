@@ -36,6 +36,12 @@ const ANON_EXECUTABLE_ALLOWLIST = new Set<string>([
   "get_vehicle_busy_ranges", // public catalog: busy ranges for one vehicle
   "get_reservation_status", // customer self-service: status by token
   "create_reservation_request", // public booking funnel: submit a request
+  // invite-journey-fixes: /auth/callback is the app's one deliberately
+  // unauthenticated route and has no session to gate on, so the token lookup
+  // behind it must be anon-callable. Lookup-only (it never spends the token) and
+  // it returns NOTHING without a valid token_hash, whose entropy — not the grant
+  // — is what resists enumeration.
+  "resolve_link_token",
 ]);
 
 interface FnRow {

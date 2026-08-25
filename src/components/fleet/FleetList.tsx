@@ -20,6 +20,43 @@ import type { Vehicle, VehicleCategory } from "../../types";
 // Edit links out to the form route; the red × opens the guarded retire confirm,
 // which POSTs /api/vehicles/[id]/active and maps the 409 (active reservations)
 // to an inline message. Retired rows offer restore. Polish copy is canonical.
+//
+// ── PHASE 11 of invite-journey-fixes: the row arm's feedback ─────────────────
+//
+// This screen already got HALF of that change right before it was written: the
+// retire confirmation reports INSIDE its dialog (`setDialogError` → `RetireDialog`'s
+// `error` prop), which is the shape phase 9 had to build for the staff add modal.
+// The row arm was the wrong half — `restore`'s banner sat above the list while
+// `Przywróć` is per-row, so the message landed off-screen. Fixed by applying phase
+// 10 §3's answer verbatim; see the banner's own comment below.
+//
+// THREE DECISIONS RECORDED HERE, because an unstated omission is what produced
+// this phase (plan §2, §3; design-contract §10 entry 5):
+//
+//   1. NO SHARED MODULE. `staff-report.ts` exists because the staff roster's
+//      routing was provably wrong and had to be gated by a unit test. Phase 10
+//      §3's answer is PRESENTATIONAL — a `sticky` and a ✕ — so this change is
+//      presentational too. Fleet's two failure arms are already resolved inside
+//      `postActive` and its copy is local (`genericError` / `hasReservations`).
+//      Porting the module across the slice boundary, or widening its `Outcome`
+//      union with vehicle arms, would buy symmetry and nothing testable.
+//
+//   2. THE VANISHING ANCHOR IS MOOT, not solved. Retiring with "Pokaż wycofane"
+//      unchecked does drop the row out of `filtered`, so a ROW-ANCHORED report
+//      would inherit phase 10 §3's constraint. Sticky is not row-anchored, so
+//      the constraint never binds — and that asymmetry is one of the reasons
+//      option (c) lost on the staff roster. Restated, not re-decided.
+//
+//   3. `restore` STILL HAS NO SUCCESS FEEDBACK, and that is deliberate — not the
+//      same omission phase 10 closed with `inviteSent`. There, a resend changes
+//      NOTHING on screen (the badge is already ZAPROSZONY), so the banner was the
+//      only signal. Here the row itself answers: `is_active` flips, so the badge
+//      goes `Wycofany` → `Aktywny` and the action goes `Przywróć` → `Wycofaj`, on
+//      the row the admin just clicked — verified against the running app at
+//      390×844, 2026-08-24, reading the card before and after. A restored row
+//      also cannot vanish either; it passes `filtered` at any toggle state. Out
+//      of scope, and not carried as a follow-up; adding a banner would be a
+//      second signal for a change already visible at the point of the click.
 
 // This board's own create action, as the quick-action sheet's promoted first row
 // on mobile. Its key collides with the canonical `vehicle` row, so
@@ -53,6 +90,10 @@ const COPY = {
   retireConfirm: "Wycofaj",
   hasReservations: "Pojazd ma aktywne rezerwacje — najpierw je anuluj.",
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
+  // The dismiss control phase 11 owes the pinned banner. Same shipped Polish as
+  // `StaffList.tsx`'s `close` and as `ModalShell`'s ✕ — one word, reused, not a
+  // new string to approve.
+  close: "Zamknij",
   empty: "Brak pojazdów",
   emptyHint: "Zmień filtry lub dodaj nowy pojazd do floty.",
 } as const;
@@ -256,6 +297,9 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
     }
   }
 
+  // The row's own state IS the success report — see decision 3 in the header
+  // comment. Only the failure arm has anything to say, and it says it in a
+  // banner that is now pinned.
   async function restore(vehicle: Vehicle) {
     setBusyId(vehicle.id);
     setBanner(null);
@@ -365,8 +409,45 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
         <span className="text-foreground font-[540]">{COPY.showRetired}</span>
       </label>
 
+      {/* Restore-failure banner — PINNED, phase 11 of invite-journey-fixes.
+
+          `Przywróć` is per-row and reachable at any scroll depth; this banner is
+          anchored above the list. So the message landed outside the viewport
+          exactly as the roster's did — measured 2026-08-24 at 390×844 with a
+          retired row at the bottom of the list: the page scrolls 1186px, and at
+          that depth the banner sat at top **-879** with `elementFromPoint`
+          answering `null` at its own centre, while `toBeVisible()` passed.
+
+          `sticky top-4 z-20` is phase 10 §3's answer for the staff roster
+          (design-contract §8.6 / §10 entry 4), applied here rather than
+          re-decided — the whole point of ordering this phase after phase 10 is
+          that the app gets ONE answer to "feedback from a per-row control".
+
+          The ELEMENT is this screen's own, not §8.1's: `rounded-xl`, `px-4 py-3`,
+          `text-sm`, no icon, no border, no retry. Only the positioning and the ✕
+          are inherited. Design-contract §8.7 measures both.
+
+          `z-20` sits above the list and below the two fixed layers it must not
+          fight — `RetireDialog` at `z-[60]` and the mobile tab bar at `z-30`. */}
       {banner && (
-        <div className="text-destructive mt-4 rounded-xl bg-[var(--flota-danger-soft)] px-4 py-3 text-sm">{banner}</div>
+        <div className="text-destructive sticky top-4 z-20 mt-4 flex items-center justify-between gap-3 rounded-xl bg-[var(--flota-danger-soft)] px-4 py-3 text-sm">
+          <span className="min-w-0">{banner}</span>
+          {/* The exit pinning takes away. Scrolling past the banner used to be
+              how it went away — which IS this defect — and `setBanner(null)`
+              otherwise fires only at the start of the next restore. Geometry and
+              label are the staff roster's ✕ (§8.6), itself `ModalShell`'s
+              shipped control minus its absolute positioning. */}
+          <button
+            type="button"
+            aria-label={COPY.close}
+            onClick={() => {
+              setBanner(null);
+            }}
+            className="bg-card text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-full"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       )}
 
       {filtered.length === 0 ? (
