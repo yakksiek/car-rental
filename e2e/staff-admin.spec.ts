@@ -1,5 +1,5 @@
 // core
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 // others
 import { fillHydrated, waitForIslands } from "./support/hydration";
@@ -30,6 +30,20 @@ import { createActiveEmployee, createPendingEmployee, deleteStaffByEmail, delete
 
 test.use({ storageState: "playwright/.auth/admin.json" });
 
+/**
+ * Open the add-employee dialog.
+ *
+ * S-12b Phase 6 retired this page's own "Dodaj pracownika" button: the action is
+ * now the promoted first row of the shell's `＋ Nowe` quick-add menu, and reaches
+ * the roster island through a `CustomEvent` (the pill is a different island). The
+ * entry point moved; the dialog and everything past it did not — which is why
+ * this is one helper rather than a change to five tests.
+ */
+async function openAddEmployee(page: Page) {
+  await page.getByRole("button", { name: "Nowe" }).click();
+  await page.getByRole("button", { name: /Dodaj pracownika/ }).click();
+}
+
 const SEED_ADMIN_EMAIL = "admin@fleetrent.test";
 
 test("admin adds an employee → a DODANY row appears, and the row's only action is to invite", async ({ page }) => {
@@ -42,7 +56,7 @@ test("admin adds an employee → a DODANY row appears, and the row's only action
     await page.goto("/dashboard/staff");
     await waitForIslands(page);
 
-    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await openAddEmployee(page);
     await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     // The modal's CTA stopped promising an email when the add stopped sending one.
@@ -74,7 +88,7 @@ test("admin sends the invitation → the row becomes ZAPROSZONY and the emailed 
     await page.goto("/dashboard/staff");
     await waitForIslands(page);
 
-    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await openAddEmployee(page);
     await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Robert Zieliński");
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();
@@ -226,7 +240,7 @@ test("a dropped connection reports inside the add modal, on top of the overlay �
     await page.goto("/dashboard/staff");
     await waitForIslands(page);
 
-    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await openAddEmployee(page);
     await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();
@@ -268,7 +282,7 @@ test("a provisioning failure reports inside the add modal, keeping the form the 
     await page.goto("/dashboard/staff");
     await waitForIslands(page);
 
-    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await openAddEmployee(page);
     await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();
@@ -300,7 +314,7 @@ test("a duplicate still reports inline under the e-mail field, unchanged", async
     await page.goto("/dashboard/staff");
     await waitForIslands(page);
 
-    await page.getByRole("button", { name: "Dodaj pracownika" }).click();
+    await openAddEmployee(page);
     await fillHydrated(page.getByLabel("IMIĘ I NAZWISKO"), "Nowy Pracownik");
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();

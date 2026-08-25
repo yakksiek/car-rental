@@ -25,6 +25,12 @@ interface Props {
   overdueCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
+  // The page's own create action, promoted to the quick-add menu's first row
+  // (Phase 6). A KEY, not an object: island props are serialized to JSON, so an
+  // icon component and a click handler cannot cross this boundary — the island
+  // resolves the key through `PROMOTED_ACTIONS`. Omitted on the five pages that
+  // own no create action, which then show the canonical 2-row menu.
+  promotedAction?: "vehicle" | "employee";
   // "This page has a normal title header" — and therefore, since S-12b, "this
   // page gets the quick-add pill". The task screens (add/edit vehicle, protocol)
   // draw their own back/close/submit header over unsaved form state, which is
@@ -33,7 +39,17 @@ interface Props {
   showHeader?: boolean;
 }
 
-const { active, title, subtitle, pendingCount = 0, overdueCount = 0, user, role, showHeader = true } = Astro.props;
+const {
+  active,
+  title,
+  subtitle,
+  pendingCount = 0,
+  overdueCount = 0,
+  user,
+  role,
+  showHeader = true,
+  promotedAction,
+} = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
@@ -189,7 +205,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
               lands in this same cluster. Gap 12 per the design. */}
           <div class="flex items-center gap-3">
             <slot name="header-actions" />
-            <QuickAddButton client:load mode="desktop" />
+            <QuickAddButton client:load mode="desktop" promoted={promotedAction} />
           </div>
         </header>
       )

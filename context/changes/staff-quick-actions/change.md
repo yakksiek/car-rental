@@ -233,3 +233,43 @@ Three notes for whoever picks this up next:
 **Follow-up spotted, not fixed** (per the standing rule on not patching ad hoc): `AddModal` in
 `StaffList.tsx` renders no `role="dialog"` / `aria-modal`, so the add-employee overlay is not
 announced as a dialog. Pre-existing, out of this change's scope.
+
+**REVERSED AGAIN 2026-08-25 (owner) — desktop absorbs too. "One `＋` per screen" is now universal.**
+
+v5's desktop coexistence is out. The page-owned `Dodaj pojazd` / `Dodaj pracownika` buttons are retired
+at md+ and both actions are reached through `＋ Nowe`, with the page's own action promoted to the crimson
+first row — the same rule mobile has had since Phase 4.
+
+**What made the case, measured on the shipped app rather than argued:** at md+ `Dodaj pojazd` rendered
+**twice** on `/dashboard/vehicles` (page button + menu row), while `Dodaj pracownika` rendered **once**
+on `/dashboard/staff` and was absent from the menu entirely. So the v5 shape was redundant on one board
+and inconsistent between the two — a state neither the boards nor the plan had anticipated, because the
+menu's canonical rows and the pages' own buttons were designed separately.
+
+**This deletes E12**, which was recorded as load-bearing. `Dodaj pracownika` exists only as a `promoted`
+row, so retiring its button _required_ plumbing `promoted` into the desktop popover — the precise thing
+E12 forbade. Recorded as superseded in `design-contract.md`, not quietly dropped. Its consequence goes
+with it: **D9 now applies to desktop**, so the crimson row varies by screen at every breakpoint.
+
+**Standing verdicts that survive this reversal:** v2 contextual suppression and v3 hierarchy-only remain
+rejected for the reasons already recorded. What changed is only v5.
+
+**Two implementation seams worth knowing:**
+
+- **Promoted actions cross the island boundary as a KEY, never an object.** The desktop pill is mounted
+  from `StaffShell.astro` and Astro serializes island props to JSON, so a `LucideIcon` and an `onPick`
+  closure cannot survive the trip. `StaffShell` takes `promotedAction?: "vehicle" | "employee"` and the
+  island resolves it through `PROMOTED_ACTIONS` in `quick-actions.ts`.
+- **Zespół's dialog is reached by `CustomEvent`.** `setAddOpen` lives in `StaffList`; the pill is a
+  different island. `PROMOTED_ACTIONS.employee.onPick` dispatches `flota:add-employee` on `window` and
+  the roster listens. Chosen over hoisting staff state into the shell for one button.
+
+**Also fixed 2026-08-25 — the vehicle-form header was inset 44px.** `/dashboard/vehicles/new` and
+`/edit` draw their own header (`showHeader={false}`); its strip spanned full width but its _content_ was
+capped `mx-auto max-w-[1080px] px-4 sm:px-6`, so at 1440 it started at **x=316** where every other staff
+header starts at **272**. Now `sm:px-8`, matching `StaffShell.astro:180` exactly — measured delta 0.
+The form **body** deliberately keeps its 1080 column: no page in this app aligns its header to its body
+(bodies run 768 / 980 / 1024 / 1080 / 1152 / 1280 / 1440 with no convention, while the header rule is
+uniform), so matching only the header is what makes this screen behave like the other nine. No design
+ever specified the cap — it was introduced in S-04's `14db20a` and `design-system.md` has no row for
+this screen at all.
