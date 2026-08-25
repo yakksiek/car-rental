@@ -2,6 +2,7 @@
 // components
 import Layout from "../../layouts/Layout.astro";
 import StaffShell from "../../components/shell/StaffShell.astro";
+import QuickAddButton from "../../components/dashboard/QuickAddButton";
 import ReservationCalendar from "../../components/dashboard/ReservationCalendar";
 
 // others
@@ -60,10 +61,17 @@ const reservations = await listReservationsForCalendar(supabase, isoDate(windowS
     overdueCount={overdueCount}
   >
     <main class="mx-auto w-full max-w-6xl px-4 py-6">
-      {/* Mobile centered header (the desktop topbar carries this at md+) */}
-      <header class="mb-4 text-center md:hidden">
+      {
+        /* Mobile centered header (the desktop topbar carries this at md+). The
+          quick-add circle is absolutely placed rather than a flex sibling, so the
+          title stays optically centred (S-12b). */
+      }
+      <header class="relative mb-4 text-center md:hidden">
         <h1 class="text-foreground text-xl font-bold tracking-tight">Kalendarz</h1>
         <p class="text-muted-foreground mt-1 text-sm">Oś czasu rezerwacji według pojazdów</p>
+        <div class="absolute top-1/2 right-0 -translate-y-1/2">
+          <QuickAddButton client:load mode="mobile" />
+        </div>
       </header>
       <ReservationCalendar
         client:only="react"

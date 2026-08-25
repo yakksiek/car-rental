@@ -6,8 +6,9 @@ import { z } from "zod";
 // others
 import { isRoleSufficient } from "../../../lib/access";
 import type { Database } from "../../../db/database.types";
-import { reservationConfirmedEmail, reservationRejectedEmail } from "../../../lib/email/templates";
+import { reservationRejectedEmail } from "../../../lib/email/templates";
 import { sendTracked } from "../../../lib/services/email-delivery";
+import { notifyReservationConfirmed, vehicleLabel } from "../../../lib/services/reservation-email";
 import { decideReservation } from "../../../lib/services/reservations";
 import type { DecisionEmailPayload } from "../../../types";
 
@@ -49,21 +50,15 @@ function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-/** Display label for the vehicle, e.g. `"Mercedes-Benz Sprinter (2022)"`. */
-function vehicleLabel(email: DecisionEmailPayload): string {
-  return [
-    [email.vehicle_make, email.vehicle_model].filter(Boolean).join(" "),
-    email.vehicle_production_year ? `(${email.vehicle_production_year})` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
 /**
  * Compose and send the confirm/reject email, recording the outcome in
  * `email_deliveries`. Best-effort: `sendTracked` never throws, so a send failure
  * never rolls back the committed decision — but it is no longer silent either.
  * S-05 replaced this function's own try/catch with that call.
+ *
+ * The CONFIRMED branch delegates to the shared `notifyReservationConfirmed`
+ * (S-12) so this route and the manual-reservation endpoint send byte-identical
+ * confirmations; only the reject branch, which has no second caller, stays here.
  */
 async function notifyCustomer(
   client: SupabaseClient<Database> | null,
@@ -74,32 +69,26 @@ async function notifyCustomer(
   note: string | undefined,
   origin: string,
 ): Promise<void> {
+  if (status === "confirmed") {
+    await notifyReservationConfirmed(client, email, origin, reservationId);
+    return;
+  }
+
   const statusUrl = new URL(`/r/${email.access_token}`, origin).href;
-  const content =
-    status === "confirmed"
-      ? reservationConfirmedEmail({
-          reference: email.reference,
-          statusUrl,
-          vehicle: vehicleLabel(email),
-          pickup: email.pickup_date,
-          return: email.return_date,
-          dailyRate: email.vehicle_daily_rate,
-          deposit: email.vehicle_deposit,
-        })
-      : reservationRejectedEmail({
-          reference: email.reference,
-          statusUrl,
-          vehicle: vehicleLabel(email),
-          // A committed reject always carried a valid reason through the zod
-          // gate; default defensively so the template never receives undefined.
-          reason: reason ?? "other",
-          note,
-        });
+  const content = reservationRejectedEmail({
+    reference: email.reference,
+    statusUrl,
+    vehicle: vehicleLabel(email),
+    // A committed reject always carried a valid reason through the zod gate;
+    // default defensively so the template never receives undefined.
+    reason: reason ?? "other",
+    note,
+  });
 
   await sendTracked(client, email.customer_email, content, {
     entityType: "reservation",
     entityId: reservationId,
-    template: status === "confirmed" ? "reservation_confirmed" : "reservation_rejected",
+    template: "reservation_rejected",
   });
 }
 

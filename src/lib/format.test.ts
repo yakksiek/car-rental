@@ -10,6 +10,7 @@ import {
   formatDuration,
   formatPayloadKg,
   formatPln,
+  formatPlnAmount,
   fuelLabelPl,
   pluralPl,
   rentalDays,
@@ -40,6 +41,18 @@ describe("formatPln", () => {
 
   it("falls back to zero for an unparseable value", () => {
     expect(formatPln("abc")).toBe("0 zł");
+  });
+});
+
+describe("formatPlnAmount", () => {
+  it("formats the number exactly as formatPln does, minus the currency", () => {
+    for (const value of ["320.00", 249, "5900.00", 10800, "1.20", 1.2, "abc"] as const) {
+      expect(formatPlnAmount(value)).toBe(formatPln(value).replace(" zł", ""));
+    }
+  });
+
+  it("keeps the non-breaking thousands separator", () => {
+    expect(formatPlnAmount(3000)).toBe(`3${NBSP}000`);
   });
 });
 

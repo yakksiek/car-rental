@@ -51,6 +51,13 @@
   --flota-neutral: #64748b;
   --flota-neutral-soft: #eef1f5;
 
+  /* Busy calendar cells (S-12a). The staff picker fills a taken half-day with
+     the design source's own `#D7DCE3` and draws a divider along the diagonal —
+     materially darker than the public calendar's `--muted` (#EEF1F5), which is
+     left alone here rather than restyled inside a staff slice (D14). */
+  --flota-busy: #d7dce3;
+  --flota-busy-divider: #a9b2be;
+
   /* Typography */
   /* Resolve to Astro-managed, self-hosted families (see astro.config.mjs
      `fonts` + <Font> in Layout.astro); literal name + system fonts as fallback. */
@@ -238,6 +245,43 @@
 @utility cell-return-only {
   /* pickup day of an existing booking: afternoon taken → grey the lower-right */
   background-image: linear-gradient(135deg, transparent 0 50%, var(--muted) 50%);
+}
+
+/* Busy cells for the manual-reservation picker (S-12a), transcribed from the
+   design source's `DayCell`. Same 135deg diagonal as the utilities above, but
+   the source's darker `--flota-busy` fill plus a 1.2px `--flota-busy-divider`
+   line along the split. The line is the gradient's own boundary widened to a
+   band — specified in px, so it stays 1.2px at any cell size (the source's
+   `vector-effect: non-scaling-stroke`). Applied to the day button, where the
+   selected/in-range background paints over it. */
+@utility cell-busy-am {
+  /* return day of an existing booking: morning taken → fill the upper-left */
+  background-image: linear-gradient(
+    135deg,
+    var(--flota-busy) 0 calc(50% - 0.6px),
+    var(--flota-busy-divider) calc(50% - 0.6px) calc(50% + 0.6px),
+    transparent calc(50% + 0.6px)
+  );
+}
+@utility cell-busy-pm {
+  /* pickup day of an existing booking: afternoon taken → fill the lower-right */
+  background-image: linear-gradient(
+    135deg,
+    transparent 0 calc(50% - 0.6px),
+    var(--flota-busy-divider) calc(50% - 0.6px) calc(50% + 0.6px),
+    var(--flota-busy) calc(50% + 0.6px)
+  );
+}
+@utility cell-busy-full {
+  /* interior day, or a day that is both a return and a pickup: fully taken */
+  background-color: var(--flota-busy);
+}
+
+/* The calendar legend's half-swatch. The source clips a plain `--flota-busy`
+   fill to the lower-right triangle and draws NO divider — the divider belongs to
+   the day cells only, so this cannot reuse `cell-busy-pm`. */
+@utility legend-busy-half {
+  background-image: linear-gradient(135deg, transparent 0 50%, var(--flota-busy) 50%);
 }
 
 /* Reservation calendar — today's column marker (S-03 follow-up L10). @ilamy

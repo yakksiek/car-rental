@@ -69,9 +69,24 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
     });
 
     it("list_reservations_for_calendar -> permission denied", async () => {
+      // S-12 drops + recreates this function to add `source`, which re-grants
+      // PUBLIC/anon by default. This case is the guard that the revoke was
+      // re-issued in that migration (20260810120000_manual_reservation.sql).
       const res = await anonClient().rpc("list_reservations_for_calendar", {
         p_start: "2026-07-01",
         p_end: "2026-07-31",
+      });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("create_confirmed_reservation -> permission denied", async () => {
+      const res = await anonClient().rpc("create_confirmed_reservation", {
+        p_vehicle_id: MISSING_VEHICLE,
+        p_pickup: "2026-08-01",
+        p_return: "2026-08-05",
+        p_customer_name: "Grant Guard",
+        p_customer_email: "grant.guard@example.com",
+        p_customer_phone: "+48600000000",
       });
       expect(isPermissionDenied(res.error)).toBe(true);
     });

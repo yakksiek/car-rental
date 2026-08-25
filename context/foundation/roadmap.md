@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-08-18
+updated: 2026-08-21
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -42,7 +42,7 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01       | FR-003 reuse; post-v1                | done    |
 | S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | done    |
 | S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | done    |
-| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | backlog |
+| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | done    |
 | S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
 | S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | done    |
 
@@ -304,7 +304,57 @@ Foundations below assume these are present and do NOT re-scaffold them.
   "Odbiór od 14:00 · zwrot do 10:00" window and deposit/rate math match the existing model. Design Alignment
   Audit against `manual-reservation.jsx`; Polish copy canonical (Nowa rezerwacja, Ręczna, Utwórz rezerwację,
   Termin wolny/zajęty, kaucja).
-- **Status:** backlog
+- **Status:** done
+
+### S-12a: Availability-aware date picker in the manual reservation modal (refinement)
+
+- **Outcome:** In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced
+  by the same range calendar the public booking widget already gives customers — the selected vehicle's taken
+  days greyed, changeover days half-available — so an employee on the phone with a customer sees availability
+  **while** picking instead of being told "Termin zajęty" after the fact.
+- **Change ID:** manual-reservation-date-picker
+- **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
+- **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
+- **Parallel with:** S-11, S-13.
+- **Status:** **done** — 7 phases shipped 2026-08-21 (`847ad96`, `1097951`, `571df4a`, `4b57ea7`, `daf47a6`,
+  `83721c1`, `f8ade37`, then Phase 7 `d933d17` + `ccc862f`), each with its vision-diff closed. Phases 1–5 delivered the picker; **Phase 6 reopened
+  the slice the same day** after driving the result, for three surface changes already made in the design
+  source: the next-free date hint is retired (it read as a claim about the range being booked once D10 dropped
+  its `· kolejna rez.` anchor, and went silent on the legal same-day 10:00/14:00 changeover), the two `Termin`
+  fields collapse to one now that the picker sets both ends, and the mobile picker becomes a sheet over the
+  form instead of an in-flow block. Phase 6 also fixed a page-scroll leak inherited from S-12 — the modal never
+  locked `document.body`, so the dashboard scrolled behind the scrim.
+- **Blockers:** ~~the design source needs updating first~~ ~~the six boards must be exported~~ **none — both
+  resolved.** A DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
+  `MrD_Pick`/`MrM_Pick`; the `Termin` fields are `mrDateBtn` buttons, not native date inputs). The source was
+  updated after S-12's screenshots were exported, so the stale artifact was the **S-12 contract**, which recorded
+  the native inputs `exact`. Corrected in `context/changes/manual-reservation-date-picker/design-contract.md`.
+  The six boards then landed in the change's `design-review/` by rendering the canonical source through the
+  design project's own `export-shot.html` harness (provenance in that contract), and the gate ran to an empty
+  punch-list after two real fixes.
+- **Follow-up (not this slice):** the public `BookingWidget` still fills busy half-days with the lighter
+  `--muted` (`#EEF1F5`) and draws no divider, while the staff picker uses the design source's `--flota-busy`
+  (`#D7DCE3`) + `--flota-busy-divider` (`#A9B2BE`). Recorded as **D14**; reconciling the two treatments is a
+  separate change.
+- **Unknowns:**
+  - **No client-reachable busy-ranges endpoint.** The public path fetches server-side per vehicle page
+    (`fleet/[id]/[...slug].astro`) because the vehicle is fixed by the URL; the modal switches vehicle
+    client-side, so it needs `GET /api/vehicles/[id]/busy-ranges`, staff-gated, mirroring `api/availability.ts`.
+    `get_vehicle_busy_ranges(uuid)` is already granted to `anon, authenticated` → no migration. Block: no.
+  - Whether the debounced `/api/availability` boolean survives alongside the calendar or `checkRangeBookable`
+    becomes the pre-submit gate. The `EXCLUDE` constraint is the authority either way. Block: no.
+  - The source's own **D2** affordances — the "Pojazd wolny do … · kolejna rez. …" hint and the
+    clashing-booking card — become computable from busy ranges once the endpoint exists. In or out? Block: no.
+- **Risk:** Mostly assembly. `dayAvailabilityMap` / `checkRangeBookable` (`src/lib/availability.ts:116,157`)
+  are pure and unit-tested, `ui/calendar` + react-day-picker v10 are already dependencies, and
+  `BookingWidget.tsx:217-260` is a working reference including the half-day turnaround modifiers (return
+  10:00 / pickup 14:00). Net-new is one staff-gated GET route plus the modal surface swap. The real cost is
+  design: it corrects a contract line recorded `exact` against a source that had already moved on, so it needs
+  its own Design Alignment Audit and vision-diff gate, and the mobile sheet has to absorb a calendar without
+  losing the footer (the source's collapsed date buttons handle that at rest).
+- **Status (superseded — see the Status line at the top of this item):** this line was written at plan time and
+  read "planned — 5 phases"; the slice shipped as 7. S-12's Phase 9 (F11/F12) was absorbed and delivered in
+  Phase 1 (`847ad96`), so S-12 carried no unimplemented work by the end.
 
 ### S-13: Staff global search
 
@@ -429,3 +479,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-10: The public **landing** (`/`) and **fleet** (`/fleet`) pages are restyled and made fully responsive (mobile / tablet / desktop) against the Claude Design mockups, and the landing's **"Wybierz typ pojazdu"** section becomes an interactive **type explorer**. On desktop, **hovering** a vehicle-type pill previews that type's models in the **Popularne** strip below — swapping the three cards, the type badge (*Furgony → Busy osobowe → …*), and the "Wszystkie" link target; on mobile there is no hover, so **tapping** a pill selects it. From the section a visitor reaches the catalog two ways: **Cała flota** (by the section heading) opens the **full** catalog (`/fleet`), and **Wszystkie** (by the Popularne strip) opens the catalog **pre-filtered to the active type** (`/fleet?category=<type>`). On desktop, **clicking** a type pill itself also opens that pre-filtered category screen (hover previews, click navigates).** — Archived 2026-08-18 → `context/archive/2026-08-02-landing-fleet-restyle/`. Lesson: —.
 - **S-11: A logged-in employee opens their own **Profil** screen (desktop + mobile), sees their contact and work details, **changes their own password while signed in** (no email round-trip), and can log out. Read-only identity display + password change — not a full profile editor.** — Archived 2026-08-18 → `context/archive/2026-08-10-staff-account/`. Lesson: —.
 - **S-14: `/auth/reset-password` sets a password only for a session that actually came from a recovery or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from `?error=`, and Supabase's English error strings stop reaching a Polish UI.** — Archived 2026-08-18 → `context/archive/2026-08-11-auth-surface-hardening/`. Lesson: —.
+- **S-12: A logged-in employee creates a **confirmed** reservation by hand for a phone-in customer — pick vehicle + dates/times, enter customer name/phone/email, with a **live availability check** — and the slot is blocked in the calendar and the customer is emailed a confirmation. The booking is tagged **"Ręczna"** (manual).** — Archived 2026-08-21 → `context/archive/2026-08-10-manual-reservation/`. Lesson: —.
+- **S-12a: In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced by the same range calendar the public booking widget already gives customers — the selected vehicle's taken days greyed, changeover days half-available — so an employee on the phone with a customer sees availability **while** picking instead of being told "Termin zajęty" after the fact.** — Archived 2026-08-21 → `context/archive/2026-08-18-manual-reservation-date-picker/`. Lesson: —.

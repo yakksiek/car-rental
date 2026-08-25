@@ -5,10 +5,12 @@ import { AlertTriangle, KeyRound, Plus, Search, Send, ShieldCheck, User, X } fro
 // components
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import QuickAddButton from "../dashboard/QuickAddButton";
+import { ADD_EMPLOYEE_EVENT } from "../dashboard/quick-actions";
 
 // others
 import { cn } from "../../lib/utils";
-import { formatLastActive, plForm, staffCountLabel, staffInitials } from "../../lib/staff-format";
+import { formatLastActive, plForm, staffInitials } from "../../lib/staff-format";
 import {
   type AddOutcome,
   type Report,
@@ -538,6 +540,20 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
   const [addOpen, setAddOpen] = React.useState(false);
+
+  // The quick-add menu is a SEPARATE island (the desktop pill is mounted inside
+  // `StaffShell`, the mobile circle inside this board's header), so its promoted
+  // "Dodaj pracownika" row cannot call `setAddOpen` directly. It dispatches
+  // `ADD_EMPLOYEE_EVENT` on `window` instead and this listener opens the dialog.
+  React.useEffect(() => {
+    const open = () => {
+      setAddOpen(true);
+    };
+    window.addEventListener(ADD_EMPLOYEE_EVENT, open);
+    return () => {
+      window.removeEventListener(ADD_EMPLOYEE_EVENT, open);
+    };
+  }, []);
   const [removeFor, setRemoveFor] = React.useState<StaffMember | null>(null);
   const [lastAdminOpen, setLastAdminOpen] = React.useState(false);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -755,61 +771,41 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
   return (
     <div>
-      {/* ── Header band (full-width white, flush top — aligned with other sections) ── */}
-      <header className="bg-card border-border border-b">
-        <div className="mx-auto w-full max-w-[1024px] px-4 py-5 md:px-6">
+      {/* ── Mobile page header (below md) ──────────────────────────────
+          At md+ the shell's own band carries the title and the count subtitle
+          (S-12b) — this island no longer draws a second one. Below md there is
+          no shell header at all, so the board keeps its own, matching the
+          canonical mobile board (eyebrow + `Zespół` + one right-hand action). */}
+      <header className="bg-card border-border border-b md:hidden">
+        <div className="mx-auto w-full max-w-[1024px] px-4 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase md:hidden">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {COPY.eyebrowMobileWord(total)}
               </div>
-              <div className="text-muted-foreground hidden text-xs font-semibold tracking-wide uppercase md:block">
-                {staffCountLabel(total, adminCount)}
-              </div>
-              <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight md:text-[32px]">
-                <span className="md:hidden">{COPY.titleMobile}</span>
-                <span className="hidden md:inline">{COPY.title}</span>
+              <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">
+                {COPY.titleMobile}
               </h1>
             </div>
-
-            <div className="flex items-center gap-3">
-              {/* Search inline only at lg+ (moves to its own row below on tablet/mobile) */}
-              <div className="relative hidden w-64 lg:block">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                  }}
-                  placeholder={COPY.searchPlaceholder}
-                  className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
-                />
-              </div>
-              {/* Add employee — labeled dark button at md+ (tablet + desktop), circular FAB below md */}
-              <Button
-                className="bg-foreground text-background hover:bg-foreground/90 hidden h-11 px-4 md:inline-flex"
-                onClick={() => {
-                  setAddOpen(true);
-                }}
-              >
-                <Plus className="size-4" />
-                {COPY.add}
-              </Button>
-              <Button
-                className="bg-foreground text-background hover:bg-foreground/90 flex size-12 shrink-0 rounded-full md:hidden"
-                aria-label={COPY.add}
-                onClick={() => {
-                  setAddOpen(true);
-                }}
-              >
-                <Plus className="size-5" />
-              </Button>
-            </div>
+            {/* Absorbed into the quick-action sheet (S-12b): one `＋` per screen,
+                with this board's own action promoted to the crimson first row.
+                `employee` is a NEW key, so the sheet is 3 rows with exactly one
+                divider (after row 1 — the rule is positional, not structural).
+                The promoted action opens a dialog rather than navigating, so it
+                carries `onPick` instead of an `href`. */}
+            <QuickAddButton mode="mobile" promoted="employee" />
           </div>
+        </div>
+      </header>
 
-          {/* Search full-width — mobile + tablet (below lg) */}
-          <div className="relative mt-4 lg:hidden">
+      {/* ── Content (grey) ─────────────────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
+        {/* Page action row — search plus this page's own create action. It sits
+            on the grey field, in its own band below the shell's white one, which
+            is what lets it coexist with the quick-add pill without ambiguity
+            (design board `qa-v5`). */}
+        <div className="mb-5 flex items-center gap-3">
+          <div className="relative flex-1">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
             <input
               type="search"
@@ -818,14 +814,13 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 setSearch(e.target.value);
               }}
               placeholder={COPY.searchPlaceholder}
-              className="border-border bg-background text-foreground placeholder:text-muted-foreground h-12 w-full rounded-[10px] border pr-4 pl-11 text-sm outline-none"
+              className="border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-[10px] border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
             />
           </div>
+          {/* No md+ button since Phase 6 — `Dodaj pracownika` is reached through
+              the shell's `＋ Nowe` menu, where it is this page's promoted row. */}
         </div>
-      </header>
 
-      {/* ── Content (grey) ─────────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[1024px] px-4 py-6 md:px-6">
         {/* Mutation banner (§3.12, §8.6) — above the filter card, and PINNED.
 
             `sticky top-4 z-20` is phase 10 §3's answer for the row actions,

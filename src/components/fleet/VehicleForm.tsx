@@ -425,9 +425,17 @@ export default function VehicleForm({ mode, vehicle }: Props) {
     <form onSubmit={(e) => void handleSubmit(e)} className="w-full">
       {/* Header — a full-bleed white strip matching the dashboard chrome (StaffShell
           header), with back arrow + eyebrow + title (left) and the actions (right,
-          desktop only — mobile gets a bottom bar). */}
+          desktop only — mobile gets a bottom bar).
+          The strip always spanned, but its CONTENT used to be capped
+          `mx-auto max-w-[1080px]`, so at 1440 the title started at x=316 where every
+          other staff page's band starts at x=272 — this screen read as inset by 44px.
+          It now takes the band's own `sm:px-8` (`StaffShell.astro:180`). The body
+          below deliberately keeps its 1080 column: no page in this app aligns its
+          header to its body (bodies run 768…1440 with no convention, while the
+          header rule is uniform), so matching the header is what makes this screen
+          behave like the other nine. */}
       <div className="border-border bg-card border-b">
-        <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5">
           <div className="flex min-w-0 items-center gap-3">
             <a
               href="/dashboard/vehicles"
