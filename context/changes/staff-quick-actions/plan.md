@@ -860,17 +860,17 @@ S-12 an unmerged sibling branch is stale (S-12 and S-12a archived 2026-08-21).
 
 #### Automated
 
-- [x] 6.1 Type checking passes: `npx astro sync && npx tsc --noEmit`
-- [x] 6.2 Linting passes: `npm run lint`
-- [x] 6.3 Unit tests pass: `npm test`
-- [x] 6.4 Integration + e2e suites pass (incl. the moved add-employee entry point)
+- [x] 6.1 Type checking passes: `npx astro sync && npx tsc --noEmit` — 4764e8f
+- [x] 6.2 Linting passes: `npm run lint` — 4764e8f
+- [x] 6.3 Unit tests pass: `npm test` — 4764e8f
+- [x] 6.4 Integration + e2e suites pass (incl. the moved add-employee entry point) — 4764e8f
 
 #### Manual
 
-- [x] 6.5 `/dashboard/vehicles` at md+ shows `Dodaj pojazd` exactly once, in the menu
-- [x] 6.6 `/dashboard/staff` at md+ shows `Dodaj pracownika` exactly once, and it opens the add dialog
-- [x] 6.7 The other five staff pages still show the canonical 2-row menu
-- [x] 6.8 Mobile unchanged on all seven
+- [x] 6.5 `/dashboard/vehicles` at md+ shows `Dodaj pojazd` exactly once, in the menu — 4764e8f
+- [x] 6.6 `/dashboard/staff` at md+ shows `Dodaj pracownika` exactly once, and it opens the add dialog — 4764e8f
+- [x] 6.7 The other five staff pages still show the canonical 2-row menu — 4764e8f
+- [x] 6.8 Mobile unchanged on all seven — 4764e8f
 
 ### Phase 7: Task-header alignment
 
