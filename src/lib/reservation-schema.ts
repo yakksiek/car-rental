@@ -44,20 +44,37 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Postgres accepts any hex uuid; this only exists to fail fast on garbage.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// The vehicle + dates + customer fields both the public funnel and the staff
+// manual form share. Kept as one object so the two schemas below cannot drift
+// on what a valid name/e-mail/phone is.
+const bookingFields = {
+  vehicle_id: z.string(MSG.vehicleId).regex(UUID_RE, MSG.vehicleId),
+  pickup: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
+  return: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
+  customer_name: z.string(MSG.name).trim().min(1, MSG.name),
+  customer_email: z.email(MSG.email),
+  customer_phone: z
+    .string(MSG.phone)
+    .regex(PHONE_RE, MSG.phone)
+    .refine((value) => {
+      const digits = value.replace(/\D/g, "").length;
+      return digits >= PHONE_DIGITS_MIN && digits <= PHONE_DIGITS_MAX;
+    }, MSG.phone),
+} as const;
+
+// Reuse the catalog's date-range rule (past pickup / same-day / inverted) so no
+// booking path can disagree with the picker, the RPC, or the EXCLUDE constraint
+// about what a valid range is.
+function refineDateRange(value: { pickup: string; return: string }, ctx: z.RefinementCtx): void {
+  const result = validateDateRange(value.pickup, value.return);
+  if (!result.ok) {
+    ctx.addIssue({ code: "custom", message: result.error, path: ["return"] });
+  }
+}
+
 export const reservationRequestSchema = z
   .object({
-    vehicle_id: z.string(MSG.vehicleId).regex(UUID_RE, MSG.vehicleId),
-    pickup: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
-    return: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
-    customer_name: z.string(MSG.name).trim().min(1, MSG.name),
-    customer_email: z.email(MSG.email),
-    customer_phone: z
-      .string(MSG.phone)
-      .regex(PHONE_RE, MSG.phone)
-      .refine((value) => {
-        const digits = value.replace(/\D/g, "").length;
-        return digits >= PHONE_DIGITS_MIN && digits <= PHONE_DIGITS_MAX;
-      }, MSG.phone),
+    ...bookingFields,
     terms_accepted: z.literal(true, MSG.terms),
     // Optional B2B fields (Phase 5, desktop-2). Empty/omitted is valid; only an
     // over-long value is rejected. The service normalizes blanks to null.
@@ -69,14 +86,17 @@ export const reservationRequestSchema = z
     // schema runs, so a rejection here is defense-in-depth only.
     company_url: z.string().max(0, MSG.honeypot).optional().default(""),
   })
-  .superRefine((value, ctx) => {
-    // Reuse the catalog's date-range rule (past pickup / same-day / inverted)
-    // so the funnel cannot disagree with the picker, the RPC, or the EXCLUDE
-    // constraint about what a valid range is.
-    const result = validateDateRange(value.pickup, value.return);
-    if (!result.ok) {
-      ctx.addIssue({ code: "custom", message: result.error, path: ["return"] });
-    }
-  });
+  .superRefine(refineDateRange);
 
 export type ReservationRequestInput = z.infer<typeof reservationRequestSchema>;
+
+// The staff branch (S-12): the same booking fields WITHOUT `terms_accepted`,
+// the honeypot, or the B2B extras. An employee entering a phone-in booking is
+// not the customer accepting terms, so requiring the literal `true` would be a
+// lie in the data; the honeypot guards an anonymous public form, and this route
+// is role-gated. Name + e-mail + phone are all required (design contract D1).
+// This schema is the trust boundary for POST /api/reservations/manual and the
+// modal island mirrors it client-side.
+export const manualReservationSchema = z.object(bookingFields).superRefine(refineDateRange);
+
+export type ManualReservationSchemaInput = z.infer<typeof manualReservationSchema>;

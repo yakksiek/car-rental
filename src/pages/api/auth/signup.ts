@@ -6,7 +6,7 @@ import type { APIRoute } from "astro";
 // refusal (defense-in-depth alongside `enable_signup = false` in config.toml)
 // rather than deleted, so a stray POST gets correct UX instead of a raw error.
 export const POST: APIRoute = (context) => {
-  return context.redirect(
-    `/auth/signin?error=${encodeURIComponent("Rejestracja jest zarządzana przez administratora.")}`,
-  );
+  // The refusal copy itself now lives in the sign-in surface's code table
+  // (S-14, F6) — only the code travels in the URL.
+  return context.redirect("/auth/signin?error=signupClosed");
 };

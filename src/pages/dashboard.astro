@@ -4,6 +4,7 @@ import Layout from "../layouts/Layout.astro";
 import StaffShell from "../components/shell/StaffShell.astro";
 import NavIcon from "../components/shell/NavIcon.astro";
 import DispatchBoard from "../components/dashboard/DispatchBoard";
+import QuickAddButton from "../components/dashboard/QuickAddButton";
 
 // others
 import { countOverdueReturns, listDispatchToday, listReturnsToday } from "../lib/services/protocols";
@@ -70,14 +71,18 @@ const autoOpenSearch = Astro.url.searchParams.get("search") === "1";
     autoOpen={autoOpenSearch}
   >
     {
-      /* The greeting used to be a hand-rolled full-bleed band identical to the
-        shell's own. S-13 made the shell's top bar always-on, so the greeting moved
-        onto its title/subtitle slot and the calendar shortcut onto its action slot —
-        one band, not two. The shell draws the search field before this slot, giving
-        the design's field → calendar order. */
+      /* The greeting rides the shell's own band since S-12b — it reproduced that
+        band unit for unit, so keeping a hand-rolled copy would have meant two
+        right edges once the quick-add pill landed. The calendar button keeps its
+        place, now as the page's contribution to the band's action cluster, at the
+        design's gap 12 — between the search field the shell draws first and the
+        quick-add pill it draws last, which is `StaffTopbar`'s own
+        field → calendar → QuickAdd order (design-contract §A + D7).
+        `shrink-0` because the cluster now also holds a 520px field: without it
+        flexbox squeezes this 38px square at tablet widths. */
     }
     <a
-      slot="header-action"
+      slot="header-actions"
       href="/dashboard/calendar"
       aria-label="Kalendarz"
       class="border-border bg-card flex size-[38px] shrink-0 items-center justify-center rounded-[10px] border text-[var(--flota-ink-2)]"
@@ -87,18 +92,26 @@ const autoOpenSearch = Astro.url.searchParams.get("search") === "1";
 
     <main class="mx-auto w-full max-w-[1440px] px-4 py-6 lg:p-8">
       {
-        /* Mobile hero — date eyebrow, title, and the [magnifier, avatar] pair. The
-          magnifier is the app's ONLY mobile search entry (design `ScreenWorkerDash`;
-          the floating tab bar deliberately has none): a scoped icon in a section
-          header would read as "search this section". It carries
-          `data-search-trigger`, which StaffShell's binder wires to the island's
-          `flota:search-open` event. */
+        /* Mobile hero — date eyebrow, title, and the three-item action cluster the
+          design draws on the right (see the comment on that cluster below). */
       }
       <header class="flex items-start justify-between gap-4 md:hidden">
-        <div>
+        <div class="min-w-0">
           <p class="text-muted-foreground text-[12px] font-semibold tracking-[0.3px] uppercase">{dateEyebrow}</p>
           <h1 class="text-foreground mt-1 text-[40px] leading-none font-bold tracking-[-1px]">Pulpit</h1>
         </div>
+        {
+          /* The hero's action cluster — magnifier → quick-add → avatar at 44 / 40 / 44,
+            gap 10, exactly as `ScreenWorkerDash` now draws it (mock updated 2026-08-26,
+            which retires D8's `deviation(reach)`: the design draws all three itself).
+            At the 360px floor the cluster is 44+10+40+10+44 = 148px, leaving ~190px
+            for the 40px `Pulpit` h1.
+
+            The magnifier is the app's ONLY mobile search entry (the floating tab bar
+            deliberately has none): a scoped icon in a section header would read as
+            "search this section". It carries `data-search-trigger`, which StaffShell's
+            binder wires to the island's `flota:search-open` event. */
+        }
         <div class="flex shrink-0 items-center gap-2.5">
           <button
             type="button"
@@ -108,6 +121,7 @@ const autoOpenSearch = Astro.url.searchParams.get("search") === "1";
           >
             <NavIcon glyph="search" size={19} />
           </button>
+          <QuickAddButton client:load mode="mobile" />
           <span
             class="bg-primary text-primary-foreground shadow-accent flex size-11 shrink-0 items-center justify-center rounded-full text-[16px] font-medium tracking-[0.4px]"
           >

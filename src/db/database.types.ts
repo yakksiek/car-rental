@@ -72,6 +72,7 @@ export type Database = {
           created_at: string
           deactivated_at: string | null
           full_name: string | null
+          password_set_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
@@ -80,6 +81,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          password_set_at?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          password_set_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
@@ -267,6 +270,7 @@ export type Database = {
           rejection_reason: string | null
           reserved_period: unknown
           return_date: string
+          source: Database["public"]["Enums"]["reservation_source"]
           status: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at: string | null
           updated_at: string
@@ -288,6 +292,7 @@ export type Database = {
           rejection_reason?: string | null
           reserved_period?: unknown
           return_date: string
+          source?: Database["public"]["Enums"]["reservation_source"]
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
           updated_at?: string
@@ -309,6 +314,7 @@ export type Database = {
           rejection_reason?: string | null
           reserved_period?: unknown
           return_date?: string
+          source?: Database["public"]["Enums"]["reservation_source"]
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
           updated_at?: string
@@ -444,6 +450,31 @@ export type Database = {
       }
       base36_encode: { Args: { p_value: number }; Returns: string }
       count_overdue_returns: { Args: never; Returns: number }
+      create_confirmed_reservation: {
+        Args: {
+          p_customer_email: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_pickup: string
+          p_return: string
+          p_vehicle_id: string
+        }
+        Returns: {
+          access_token: string
+          customer_email: string
+          customer_name: string
+          id: string
+          pickup_date: string
+          reference: string
+          result: string
+          return_date: string
+          vehicle_daily_rate: number
+          vehicle_deposit: number
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_production_year: number
+        }[]
+      }
       create_protocol: {
         Args: {
           p_customer_ack: boolean
@@ -648,6 +679,7 @@ export type Database = {
           pickup_date: string
           reference: string
           return_date: string
+          source: Database["public"]["Enums"]["reservation_source"]
           status: Database["public"]["Enums"]["reservation_status"]
           vehicle_id: string
           vehicle_make: string
@@ -686,10 +718,12 @@ export type Database = {
           full_name: string
           invited_at: string
           last_sign_in_at: string
+          password_set_at: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }[]
       }
+      mark_password_set: { Args: never; Returns: undefined }
       record_email_delivery: {
         Args: {
           p_entity_id: string
@@ -700,6 +734,15 @@ export type Database = {
           p_template: string
         }
         Returns: undefined
+      }
+      resolve_link_token: {
+        Args: { p_token_hash: string; p_type: string }
+        Returns: {
+          email: string
+          full_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
       }
       search_staff: {
         Args: { p_query: string }
@@ -744,6 +787,7 @@ export type Database = {
         | "interior"
         | "dashboard"
       protocol_type: "issue" | "return"
+      reservation_source: "public" | "manual"
       reservation_status: "pending" | "confirmed" | "rejected" | "cancelled"
       transmission_type: "manual" | "automatic"
       vehicle_category:
@@ -893,6 +937,7 @@ export const Constants = {
         "dashboard",
       ],
       protocol_type: ["issue", "return"],
+      reservation_source: ["public", "manual"],
       reservation_status: ["pending", "confirmed", "rejected", "cancelled"],
       transmission_type: ["manual", "automatic"],
       vehicle_category: [

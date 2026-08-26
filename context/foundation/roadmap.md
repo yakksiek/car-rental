@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-08-10
+updated: 2026-08-21
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -40,10 +40,11 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 | S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                                                                                 | F-02, S-02       | FR-012                               | done    |
 | S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password                                                                        | F-02             | FR-013                               | done    |
 | S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01       | FR-003 reuse; post-v1                | done    |
-| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | backlog |
-| S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | backlog |
-| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | backlog |
+| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | done    |
+| S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | done    |
+| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | done    |
 | S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
+| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | done    |
 
 ## Streams
 
@@ -250,7 +251,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - **Fleet "Filtry" apply model.** The mockup shows a **deferred** filter bar (dates / payload / sort applied on a **Zastosuj** button), distinct from the instant type pills; the shipped `FilterBar` commits changes straight to the URL. Keep auto-apply or adopt the deferred "Zastosuj" model. Owner: user. Block: no.
   - **Data delivery for the swap.** For the hover/tap swap to be instant (no spinner), SSR the top-N per category into the type-explorer island once, vs. fetching per selection. Plan-time architecture call. Block: no.
 - **Risk:** The current `TypeSelector` is a **static** click-to-route Astro component — the `landing-redesign` slice explicitly **deferred** the hover-preview ("no hover-preview this slice — click-to-route only, deviation(scope)"); S-10 finishes that. It becomes a **React island** that forks behavior by input: **desktop hover = preview** (swap the Popularne cards + badge + the "Wszystkie" target), **desktop click = navigate** (`/fleet?category=<type>`), **mobile tap = select** (swap; no hover). The interaction-heavy parts are that hover/tap fork, keeping the pill and "Wszystkie" targets as **real anchors** (SEO + no-JS fallback + view-transitions), and swapping the Popularne strip without a flash. Extract the per-category "top-N" grouping as a **pure, Vitest-tested helper** — the empty/thin-category edges live there, and no UI test runner ships on the public pages. The **fleet restyle** is mostly visual (lower risk), but the type-pill-bar reconciliation touches the **deep-link contract** the landing's pre-filter buttons depend on — get the URL/`category` behavior right or those links break. Built over existing tokens + data (no `global.css` edit expected) and the shipped fonts; **Polish copy is canonical**, ported verbatim from the mockup ("Wybierz typ pojazdu.", "Popularne", "Wszystkie", "Cała flota", the badges _Furgony / Busy osobowe / Autolawety / Chłodnie / Skrzyniowe_, and the hint _"Najedź, aby podejrzeć modele poniżej · kliknij, aby otworzyć ekran kategorii"_). Design Alignment Audit runs against `customer-desktop.jsx` (`ScreenDesktopHome` / `DesktopTypeExplorer`, `ScreenDesktopFleet` / `ScreenTabletFleet` / `ScreenMobileFleet`, `ScreenMobileHome`) per `context/foundation/lessons.md`.
-- **Status:** backlog
+- **Status:** done
 
 ### S-11: Staff self-service account (My account)
 
@@ -275,7 +276,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   over `App.Locals.user`. The only shell edit is making the existing account chip (`StaffShell.astro:121-134`)
   a link and/or adding the pre-declared "Profil" nav entry (`StaffShell.astro:14-15`). Design Alignment Audit
   runs against `staff-profile.jsx`; Polish copy canonical (Profil, Kontakt, Praca, Konto, Zmień hasło, Wyloguj się).
-- **Status:** backlog
+- **Status:** done
 
 ### S-12: Manual reservation (staff-created confirmed booking)
 
@@ -303,7 +304,57 @@ Foundations below assume these are present and do NOT re-scaffold them.
   "Odbiór od 14:00 · zwrot do 10:00" window and deposit/rate math match the existing model. Design Alignment
   Audit against `manual-reservation.jsx`; Polish copy canonical (Nowa rezerwacja, Ręczna, Utwórz rezerwację,
   Termin wolny/zajęty, kaucja).
-- **Status:** backlog
+- **Status:** done
+
+### S-12a: Availability-aware date picker in the manual reservation modal (refinement)
+
+- **Outcome:** In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced
+  by the same range calendar the public booking widget already gives customers — the selected vehicle's taken
+  days greyed, changeover days half-available — so an employee on the phone with a customer sees availability
+  **while** picking instead of being told "Termin zajęty" after the fact.
+- **Change ID:** manual-reservation-date-picker
+- **PRD refs:** reuses **FR-004** (reservation), **FR-005** (overlap), **FR-014** (calendar availability); adds no new FR.
+- **Prerequisites:** **S-12** (the modal), **S-02a** (the half-availability day model) — S-02a done, S-12 implemented.
+- **Parallel with:** S-11, S-13.
+- **Status:** **done** — 7 phases shipped 2026-08-21 (`847ad96`, `1097951`, `571df4a`, `4b57ea7`, `daf47a6`,
+  `83721c1`, `f8ade37`, then Phase 7 `d933d17` + `ccc862f`), each with its vision-diff closed. Phases 1–5 delivered the picker; **Phase 6 reopened
+  the slice the same day** after driving the result, for three surface changes already made in the design
+  source: the next-free date hint is retired (it read as a claim about the range being booked once D10 dropped
+  its `· kolejna rez.` anchor, and went silent on the legal same-day 10:00/14:00 changeover), the two `Termin`
+  fields collapse to one now that the picker sets both ends, and the mobile picker becomes a sheet over the
+  form instead of an in-flow block. Phase 6 also fixed a page-scroll leak inherited from S-12 — the modal never
+  locked `document.body`, so the dashboard scrolled behind the scrim.
+- **Blockers:** ~~the design source needs updating first~~ ~~the six boards must be exported~~ **none — both
+  resolved.** A DesignSync pull found `manual-reservation.jsx` already draws the calendar (`MrCalendarPopover` +
+  `MrD_Pick`/`MrM_Pick`; the `Termin` fields are `mrDateBtn` buttons, not native date inputs). The source was
+  updated after S-12's screenshots were exported, so the stale artifact was the **S-12 contract**, which recorded
+  the native inputs `exact`. Corrected in `context/changes/manual-reservation-date-picker/design-contract.md`.
+  The six boards then landed in the change's `design-review/` by rendering the canonical source through the
+  design project's own `export-shot.html` harness (provenance in that contract), and the gate ran to an empty
+  punch-list after two real fixes.
+- **Follow-up (not this slice):** the public `BookingWidget` still fills busy half-days with the lighter
+  `--muted` (`#EEF1F5`) and draws no divider, while the staff picker uses the design source's `--flota-busy`
+  (`#D7DCE3`) + `--flota-busy-divider` (`#A9B2BE`). Recorded as **D14**; reconciling the two treatments is a
+  separate change.
+- **Unknowns:**
+  - **No client-reachable busy-ranges endpoint.** The public path fetches server-side per vehicle page
+    (`fleet/[id]/[...slug].astro`) because the vehicle is fixed by the URL; the modal switches vehicle
+    client-side, so it needs `GET /api/vehicles/[id]/busy-ranges`, staff-gated, mirroring `api/availability.ts`.
+    `get_vehicle_busy_ranges(uuid)` is already granted to `anon, authenticated` → no migration. Block: no.
+  - Whether the debounced `/api/availability` boolean survives alongside the calendar or `checkRangeBookable`
+    becomes the pre-submit gate. The `EXCLUDE` constraint is the authority either way. Block: no.
+  - The source's own **D2** affordances — the "Pojazd wolny do … · kolejna rez. …" hint and the
+    clashing-booking card — become computable from busy ranges once the endpoint exists. In or out? Block: no.
+- **Risk:** Mostly assembly. `dayAvailabilityMap` / `checkRangeBookable` (`src/lib/availability.ts:116,157`)
+  are pure and unit-tested, `ui/calendar` + react-day-picker v10 are already dependencies, and
+  `BookingWidget.tsx:217-260` is a working reference including the half-day turnaround modifiers (return
+  10:00 / pickup 14:00). Net-new is one staff-gated GET route plus the modal surface swap. The real cost is
+  design: it corrects a contract line recorded `exact` against a source that had already moved on, so it needs
+  its own Design Alignment Audit and vision-diff gate, and the mobile sheet has to absorb a calendar without
+  losing the footer (the source's collapsed date buttons handle that at rest).
+- **Status (superseded — see the Status line at the top of this item):** this line was written at plan time and
+  read "planned — 5 phases"; the slice shipped as 7. S-12's Phase 9 (F11/F12) was absorbed and delivered in
+  Phase 1 (`847ad96`), so S-12 carried no unimplemented work by the end.
 
 ### S-13: Staff global search
 
@@ -335,6 +386,36 @@ Foundations below assume these are present and do NOT re-scaffold them.
   Zwroty, Klienci, Pojazdy, Zobacz wszystkie wyniki).
 - **Status:** backlog
 
+### S-14: Auth surface hardening (recovery-session gate + error whitelist)
+
+- **Outcome:** `/auth/reset-password` sets a password only for a session that actually came from a recovery
+  or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from
+  `?error=`, and Supabase's English error strings stop reaching a Polish UI.
+- **Change ID:** auth-surface-hardening
+- **PRD refs:** — (hardening of **F-02** auth/role, done). Adds no new FR.
+- **Prerequisites:** **S-08** (employee account management, done) — this is its surface. **S-11**
+  (staff-account) is the slice whose implementation review surfaced both findings; full write-up with a
+  scripted reproduction lives at `context/changes/staff-account/follow-ups/review-fixes.md`.
+- **Parallel with:** anything; touches no shared UI shell.
+- **Blockers:** none.
+- **Unknowns:**
+  - Whether local GoTrue populates the JWT `amr` claim usefully for the recovery exchange, or whether
+    `/auth/callback` must stamp its own one-shot marker. Owner: implementer. Block: no — both viable.
+  - Whether `secure_password_change = true` is a shortcut. Probably not: it would demand a
+    `current_password` from the recovery and invite flows, which by definition don't have one. Block: no.
+- **Risk:** Medium. **F1 is a reproduced critical**: an ordinary password sign-in followed by one POST to
+  `/api/auth/reset-password` changes the password with no current password supplied — which bypasses the
+  reauthentication gate S-11 built at `src/pages/api/auth/change-password.ts`. The code change is small but
+  sits on the invite-acceptance path, where a wrong gate locks new employees out of setting their first
+  password, so `e2e/staff-auth.spec.ts`'s invite + recovery specs are the real gate and must be green.
+  **Run those two specs with the dev server on port 4321** — `supabase/config.toml`'s
+  `additional_redirect_urls` allow-lists only `localhost:4321`, so GoTrue silently discards a `redirectTo`
+  on any other port and falls back to `site_url`; the emailed link then points at whatever is serving 4321
+  (verified 2026-08-10 — a run on :4331 was driving a different worktree's server, which is the whole reason
+  those two specs looked broken). F6 (the `?error=` whitelist) is warning-severity and rides along because it
+  shares the file set.
+- **Status:** done
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                   | Suggested issue title                                            | Ready for `/10x-plan` | Notes                                                                                                                                                                                                                                                                                                                                                                |
@@ -355,6 +436,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-11       | staff-account               | Staff self-service account + in-session password change          | yes                   | Net-new (post-v1); extends F-02 (done). Mockup `staff-profile.jsx` (live). Trim the notifications/branch rows (no v1 backing). Parallel; run `/10x-new staff-account` → `/10x-plan staff-account`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                             |
 | S-12       | manual-reservation          | Staff-created confirmed reservation (phone-in)                   | yes                   | Needs S-02/S-03 (done). Mockup `manual-reservation.jsx` (live). New `create_confirmed_reservation` definer RPC; reuses overlap rule + confirmed-email. Parallel; run `/10x-new manual-reservation`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                            |
 | S-13       | staff-global-search         | Header ⌘K omnisearch (reservations/returns/vehicles/customers)   | yes                   | Needs S-02/S-03/S-04/S-05/S-06 (done). Mockup `search-flow.jsx` (live). New role-gated search RPC + `StaffShell` restructure — **sequence last**. Run `/10x-new staff-global-search`. Frame: `context/changes/staff-ops-features/frame.md`.                                                                                                                          |
+| S-14       | auth-surface-hardening      | Gate the recovery set-password route + whitelist auth `?error=`  | yes                   | **Contains a reproduced critical**: an ordinary password session can POST `/api/auth/reset-password` and change the password with no current password, bypassing S-11's reauth gate. Problem statement + scripted repro: `context/changes/staff-account/follow-ups/review-fixes.md`. Run `/10x-new auth-surface-hardening`.                                          |
 
 ## Open Roadmap Questions
 
@@ -394,3 +476,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-07: see overdue returns flagged automatically on the dashboard** — Archived 2026-07-23 → `context/archive/2026-07-23-overdue-returns-dashboard/`. Lesson: —.
 - **S-08: An admin can add and remove employee accounts; employees can self-service reset their own password via email.** — Archived 2026-07-24 → `context/archive/2026-07-23-employee-account-management/`. Lesson: —.
 - **S-09: A visitor can open three public content pages from the site nav — O nas (`/about`), FAQ (`/faq`), and Cennik (`/pricing`) — each rendered in the existing public shell over the live tokens/fonts. O nas and FAQ are static content; Cennik renders prices dynamically from the fleet data so the rates shown never drift from the catalog. SiteHeader and SiteFooter nav gain links to the three pages.** — Archived 2026-08-02 → `context/archive/2026-08-01-public-info-pages/`. Lesson: —.
+- **S-10: The public **landing** (`/`) and **fleet** (`/fleet`) pages are restyled and made fully responsive (mobile / tablet / desktop) against the Claude Design mockups, and the landing's **"Wybierz typ pojazdu"** section becomes an interactive **type explorer**. On desktop, **hovering** a vehicle-type pill previews that type's models in the **Popularne** strip below — swapping the three cards, the type badge (*Furgony → Busy osobowe → …*), and the "Wszystkie" link target; on mobile there is no hover, so **tapping** a pill selects it. From the section a visitor reaches the catalog two ways: **Cała flota** (by the section heading) opens the **full** catalog (`/fleet`), and **Wszystkie** (by the Popularne strip) opens the catalog **pre-filtered to the active type** (`/fleet?category=<type>`). On desktop, **clicking** a type pill itself also opens that pre-filtered category screen (hover previews, click navigates).** — Archived 2026-08-18 → `context/archive/2026-08-02-landing-fleet-restyle/`. Lesson: —.
+- **S-11: A logged-in employee opens their own **Profil** screen (desktop + mobile), sees their contact and work details, **changes their own password while signed in** (no email round-trip), and can log out. Read-only identity display + password change — not a full profile editor.** — Archived 2026-08-18 → `context/archive/2026-08-10-staff-account/`. Lesson: —.
+- **S-14: `/auth/reset-password` sets a password only for a session that actually came from a recovery or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from `?error=`, and Supabase's English error strings stop reaching a Polish UI.** — Archived 2026-08-18 → `context/archive/2026-08-11-auth-surface-hardening/`. Lesson: —.
+- **S-12: A logged-in employee creates a **confirmed** reservation by hand for a phone-in customer — pick vehicle + dates/times, enter customer name/phone/email, with a **live availability check** — and the slot is blocked in the calendar and the customer is emailed a confirmation. The booking is tagged **"Ręczna"** (manual).** — Archived 2026-08-21 → `context/archive/2026-08-10-manual-reservation/`. Lesson: —.
+- **S-12a: In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced by the same range calendar the public booking widget already gives customers — the selected vehicle's taken days greyed, changeover days half-available — so an employee on the phone with a customer sees availability **while** picking instead of being told "Termin zajęty" after the fact.** — Archived 2026-08-21 → `context/archive/2026-08-18-manual-reservation-date-picker/`. Lesson: —.

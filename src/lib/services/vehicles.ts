@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // others
 import type { Database } from "../../db/database.types";
-import type { Vehicle, VehicleCategory, VehicleFilters } from "../../types";
+import type { PickerVehicle, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
 import type { VehicleInput } from "../vehicle-schema";
 import { categoryLabelPl } from "../format";
 
@@ -380,6 +380,35 @@ export async function listFleet(
   query = query.order("name", { ascending: true });
 
   const { data, error } = await query;
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * Bookable-fleet read for the quick-action manual-reservation picker (S-12b).
+ * Deliberately narrow: exactly the seven columns `ManualReservationModal`
+ * renders (`id`, `name`, `make`, `model`, `plate`, `daily_rate`, `deposit`) —
+ * measured 1183 B vs `listFleet`'s 4906 B on the seeded 7-vehicle fleet, since
+ * this one fires on demand from the browser rather than during SSR.
+ *
+ * `listFleet` is left alone on purpose: `/dashboard/vehicles` genuinely renders
+ * the full row. Projection precedent: `getCategoryCounts` above. Only active
+ * vehicles are bookable, so `is_active = true` is unconditional (unlike
+ * `listFleet`'s `includeRetired`). Ordered by `name` to match the fleet screen.
+ * Degrades a `null` client to `[]`.
+ */
+export async function listFleetForPicker(client: CatalogClient | null): Promise<PickerVehicle[]> {
+  if (!client) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("vehicles")
+    .select("id, name, make, model, plate, daily_rate, deposit")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
   if (error) {
     throw error;
   }

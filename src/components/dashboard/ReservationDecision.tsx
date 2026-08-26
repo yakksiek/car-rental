@@ -36,6 +36,7 @@ export const DECISION_COPY = {
   return: "Zwrot",
   confirmedBadge: "POTWIERDZONA",
   pendingBadge: "PENDING",
+  manualBadge: "Ręczna",
   genericError: "Coś poszło nie tak. Spróbuj ponownie.",
   alreadyHandled: "Ten wniosek został już rozpatrzony przez kogoś innego.",
 } as const;
@@ -232,6 +233,11 @@ export function CalendarDecision({
             <Badge className="text-warning bg-[var(--flota-warning-soft)]">{DECISION_COPY.pendingBadge}</Badge>
           ) : (
             <Badge className="text-success bg-[var(--flota-success-soft)]">{DECISION_COPY.confirmedBadge}</Badge>
+          )}
+          {/* Origin marker (S-12): staff-entered bookings say so. Only "Ręczna"
+              is shown — a public booking is the default and needs no chip. */}
+          {reservation.source === "manual" && (
+            <Badge className="text-success bg-[var(--flota-success-soft)]">{DECISION_COPY.manualBadge}</Badge>
           )}
         </div>
         <div className="text-foreground mt-1.5 text-lg font-bold tracking-tight">{reservation.customer_name}</div>
