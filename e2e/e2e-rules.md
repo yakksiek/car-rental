@@ -70,6 +70,16 @@ These are not generic advice — each one cost us a red test or a false green.
   lowest role that clears the `/dashboard` gate, so a test that silently needs
   admin fails instead of passing by over-permission.
 
+- **Never click sign-out while running as a shared `storageState` identity.**
+  `/api/auth/signout` calls `supabase.auth.signOut()` with no scope, and
+  supabase-js defaults that to **`global`** — it revokes _every_ session for that
+  user, not just this browser's. Clicking it as `employee` therefore invalidates
+  `playwright/.auth/employee.json` for every spec that starts afterwards, and the
+  suite fails or passes on worker-ordering luck (found 2026-08-14 building
+  `auth-hardening.spec.ts`; the run went green while leaving the stored state
+  dead). If a test needs a signed-out browser, open a fresh context with
+  `browser.newContext({ storageState: { cookies: [], origins: [] } })` instead.
+
 - **`/dashboard`'s `<h1>` is `md:hidden`.** Do not assert on it — it passes or
   fails by viewport. The "Wyloguj" button renders at every breakpoint.
 

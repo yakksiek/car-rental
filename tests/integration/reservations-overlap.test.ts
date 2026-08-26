@@ -141,4 +141,17 @@ describe("reservations overlap constraint (#2)", () => {
     const result = await createReservationRequest(anonClient(), booking("2030-03-05", "2030-03-12"));
     expect(result.status).toBe("created");
   });
+
+  it("(e) a same-day or inverted range is a typed `unavailable`, not a raw error", async () => {
+    // `reservations_dates_ordered` only requires return >= pickup, but
+    // reserved_period is tsrange(pickup + 14:00, return + 10:00) — so ret == pick
+    // inverts the range and raises a data_exception the RPC's exception block
+    // does not catch. This path is ANON-reachable through PostgREST, hence the
+    // guard added in S-12 Phase 6.
+    const sameDay = await createReservationRequest(anonClient(), booking("2030-04-01", "2030-04-01"));
+    expect(sameDay.status).toBe("unavailable");
+
+    const inverted = await createReservationRequest(anonClient(), booking("2030-04-10", "2030-04-05"));
+    expect(inverted.status).toBe("unavailable");
+  });
 });

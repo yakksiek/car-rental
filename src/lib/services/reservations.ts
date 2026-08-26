@@ -8,6 +8,8 @@ import type {
   CreateReservationInput,
   CreateReservationResult,
   DecideReservationResult,
+  ManualReservationInput,
+  ManualReservationResult,
   PendingReservation,
   RejectionReason,
   ReservationStatusView,
@@ -72,6 +74,60 @@ export async function createReservationRequest(
       return { status: "unavailable" };
     default:
       throw new Error(`create_reservation_request returned an unexpected result: ${JSON.stringify(data)}`);
+  }
+}
+
+/**
+ * Create a staff-entered CONFIRMED reservation via the `create_confirmed_reservation`
+ * definer RPC (S-12). Unlike `decideReservation` — which flips a pending row that
+ * already holds its slot — this INSERTS into the `reservations_no_overlap` EXCLUDE
+ * set, so a lost race surfaces as the typed `conflict` tag rather than a 23P01
+ * throw. The live availability GET the modal runs is advisory; this is the
+ * TOCTOU-safe authority.
+ *
+ * On `created` the RPC's 11 email columns are split out as a `DecisionEmailPayload`
+ * so the caller can hand them straight to the shared confirmed-email helper.
+ *
+ * A `null` client (or malformed vehicle id) degrades to `unauthorized` — the
+ * caller cannot create anything, which the endpoint surfaces as a 403.
+ */
+export async function createConfirmedReservation(
+  client: ReservationClient | null,
+  input: ManualReservationInput,
+): Promise<ManualReservationResult> {
+  if (!client || !UUID_RE.test(input.vehicle_id)) {
+    return { status: "unauthorized" };
+  }
+
+  const { data, error } = await client.rpc("create_confirmed_reservation", {
+    p_vehicle_id: input.vehicle_id,
+    p_pickup: input.pickup,
+    p_return: input.return,
+    p_customer_name: input.customer_name,
+    p_customer_email: input.customer_email,
+    p_customer_phone: input.customer_phone,
+  });
+  if (error) {
+    throw error;
+  }
+
+  // The RPC always returns exactly one row with a result tag.
+  const row = data.at(0);
+  switch (row?.result) {
+    case "created": {
+      // Strip the two non-email columns; what remains is exactly the shape
+      // `decide_reservation` returns, i.e. a DecisionEmailPayload.
+      const { result, id, ...email } = row;
+      return { status: "created", id, reference: email.reference, token: email.access_token, email };
+    }
+    case "conflict":
+      return { status: "conflict" };
+    case "unavailable":
+      return { status: "unavailable" };
+    case "unauthorized":
+      return { status: "unauthorized" };
+    default:
+      throw new Error(`create_confirmed_reservation returned an unexpected result: ${JSON.stringify(data)}`);
   }
 }
 
@@ -223,26 +279,35 @@ export async function listReservationsForCalendar(
  * Fetch the date bounds of a vehicle's blocking reservations (pending +
  * confirmed) via the PII-safe `get_vehicle_busy_ranges` definer RPC. The
  * booking calendar SSRs these in and greys the taken dates so a visitor never
- * picks an unavailable range (S-02 Phase 6). Returns `[]` for a `null`/
- * misconfigured client, a malformed id, OR an RPC error — the greying is
- * advisory UX sugar, so its failure must never 500 the (otherwise working)
- * detail page; the calendar simply greys nothing and the EXCLUDE constraint
- * remains the atomic backstop. (Unlike the write/status reads, which ARE the
- * point of their page and so propagate errors.)
+ * picks an unavailable range (S-02 Phase 6).
+ *
+ * REPORTS ITS FAILURES (S-12a Phase 2). It answers `{ ok, ranges }`, with
+ * `ok: false` and `ranges: []` for a `null`/misconfigured client, a malformed id
+ * or an RPC error. It used to swallow all three into a bare `[]`, which was
+ * right while the greying was advisory sugar on a page whose real check lived
+ * elsewhere — but an empty list is indistinguishable from a genuinely free
+ * vehicle, and from S-12a Phase 3 this read IS the manual-reservation modal's
+ * availability authority: a failed read would otherwise paint an empty calendar
+ * under a green "Termin wolny" and arm the submit button.
+ *
+ * Callers choose their own default. The public detail page keeps the deliberate
+ * "grey nothing and carry on" behaviour by reading `.ranges` and ignoring `.ok`
+ * — its failure must never 500 an otherwise working page, and the EXCLUDE
+ * constraint remains the atomic backstop. The staff route fails closed on `.ok`.
  */
 export async function getVehicleBusyRanges(
   client: ReservationClient | null,
   vehicleId: string,
-): Promise<VehicleBusyRange[]> {
+): Promise<{ ok: boolean; ranges: VehicleBusyRange[] }> {
   if (!client || !UUID_RE.test(vehicleId)) {
-    return [];
+    return { ok: false, ranges: [] };
   }
 
   const { data, error } = await client.rpc("get_vehicle_busy_ranges", { p_vehicle_id: vehicleId });
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[getVehicleBusyRanges] RPC failed; calendar greys nothing this load:", error);
-    return [];
+    return { ok: false, ranges: [] };
   }
-  return data;
+  return { ok: true, ranges: data };
 }

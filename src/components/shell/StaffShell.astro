@@ -3,6 +3,7 @@
 import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
 import GlobalSearch from "../search/GlobalSearch";
+import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import type { AppRole } from "../../types";
@@ -13,11 +14,11 @@ import { countReturnsDueToday } from "../../lib/services/protocols";
 // a left sidebar with a user chip at md+, a floating dark tab bar below md —
 // wrapping every staff page so the queue and calendar are reachable without
 // bouncing through /dashboard. Source: design `staff-desktop.jsx` StaffShell +
-// `shared.jsx` TabBar. Future tabs (Flota S-04, Profil S-08, Po terminie S-07)
-// are intentionally omitted until those slices land.
+// `shared.jsx` TabBar. Profil (S-11) hangs off the account chip and a mobile
+// tab rather than the Operacje nav list — matching the design.
 
 interface Props {
-  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff";
+  active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff" | "me";
   title: string;
   subtitle?: string;
   pendingCount?: number;
@@ -26,10 +27,18 @@ interface Props {
   overdueCount?: number;
   user: { email?: string } | null;
   role: AppRole | null;
-  // The desktop top bar itself is ALWAYS rendered — it is what gives every staff
-  // page one consistent title/action band. `showHeader` governs only its LEFT
-  // slot — pages whose island already renders a title in context (e.g. the
-  // protocol view's card header) suppress it to avoid a duplicate heading.
+  // The page's own create action, promoted to the quick-add menu's first row
+  // (Phase 6). A KEY, not an object: island props are serialized to JSON, so an
+  // icon component and a click handler cannot cross this boundary — the island
+  // resolves the key through `PROMOTED_ACTIONS`. Omitted on the five pages that
+  // own no create action, which then show the canonical 2-row menu.
+  promotedAction?: "vehicle" | "employee";
+  // "This page has a normal title header" — and therefore, since S-12b, "this
+  // page gets the quick-add pill". The task screens (add/edit vehicle, protocol)
+  // draw their own back/close/submit header over unsaved form state, which is
+  // both a duplicate heading and no place for a create action (design contract
+  // D10). Keep the two coupled: do NOT add a second opt-out prop. It does NOT
+  // gate the <GlobalSearch> island — see the render comment on the band.
   showHeader?: boolean;
   // Render the desktop search FIELD? Pulpit only (design `StaffTopbar` takes
   // `search` and only `ScreenStaffDash` passes it). The <GlobalSearch> island is
@@ -56,6 +65,7 @@ const {
   user,
   role,
   showHeader = true,
+  promotedAction,
   search = false,
   autoOpen = false,
   searchHotkey = true,
@@ -71,17 +81,9 @@ const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 const today = new Date().toISOString().slice(0, 10);
 const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 
-// The top bar draws only when something goes in it. Every staff page satisfies this
-// except `protocols/[id]`, which suppresses its title (its island renders one in the
-// card header), passes no action, and — since search became Pulpit-only — carries no
-// field either. Left slot empty + right slot empty = `px-8 py-[22px]` of nothing above
-// a `border-b`. Until the field went away it filled the right slot on every page, which
-// is what made an always-on bar safe in the first place.
-const showBar = showHeader || search || Astro.slots.has("header-action");
-
 // Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
-// on all 10 pages whether or not the bar draws — it owns the ⌘K listener and the mobile
-// overlay, and gating it with the bar would kill both on the one page that hides it.
+// on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
+// overlay, and gating it with the band would kill both on the three pages that hide it.
 const searchProps = {
   pendingCount,
   overdueCount,
@@ -92,7 +94,7 @@ const searchProps = {
   hotkey: searchHotkey,
 };
 
-type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users";
+type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
@@ -179,8 +181,21 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     </nav>
 
     <div class="mt-auto w-full">
-      <div
-        class="bg-background lg:bg-background flex items-center rounded-lg md:justify-center md:bg-transparent md:p-0 lg:justify-start lg:gap-2.5 lg:p-3"
+      {
+        /* The chip is the desktop entry point to Profil (S-11) — the design reaches
+        the account screen from here rather than from an Operacje nav row. */
+      }
+      <a
+        href="/dashboard/account"
+        aria-current={active === "me" ? "page" : undefined}
+        aria-label={`Profil — ${displayName}`}
+        title="Profil"
+        class:list={[
+          "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
+          active === "me"
+            ? "bg-background ring-foreground/15 ring-2"
+            : "bg-background lg:bg-background md:hover:bg-background md:bg-transparent",
+        ]}
       >
         <span
           class="bg-foreground text-background flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
@@ -191,7 +206,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <span class="text-foreground block truncate text-[12px] font-[650] tracking-tight">{displayName}</span>
           <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · Warszawa</span>
         </span>
-      </div>
+      </a>
       <form method="POST" action="/api/auth/signout" class="mt-2 w-full" data-signout>
         <button
           type="submit"
@@ -220,31 +235,38 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   <div class="flex min-w-0 flex-1 flex-col">
     {
       /* Desktop top bar — the one consistent title/action band across the staff
-        pages that have anything to put in it (`showBar`). Two slots: the
-        title/subtitle block on the left (only when `showHeader`) and, on the right,
-        the search island followed by an optional page action — that order, because
-        the design's `StaffTopbar` draws field → calendar → QuickAdd. Pages that used
-        to hand-roll their own full-bleed `border-b` band migrated onto these slots —
-        there must never be a second band stacked under this one.
+        pages that carry a normal title (`showHeader`). Pages that used to hand-roll
+        their own full-bleed `border-b` band migrated onto its slots — there must
+        never be a second band stacked under this one.
 
-        When the bar does NOT draw, the island still mounts (see `searchProps`): with
-        `field` false it emits no box of its own — the cmdk root is `display: contents`
-        and its only child is an `sr-only` label — so the page starts at its content. */
+        *** The `showHeader={false}` branch is NOT "render nothing". *** <GlobalSearch>
+        owns the ⌘K registration and the mobile overlay's `flota:search-open` listener,
+        so the island has to mount on all 10 staff pages, band or no band. With `field`
+        false it emits no box of its own — the cmdk root is `display: contents` and its
+        only child is an `sr-only` label — so those pages still start at their own
+        content. Collapsing this ternary to a bare `showHeader && …` fails SILENTLY:
+        no type error, no failing test, just no ⌘K on `protocols/[id]` and no mobile
+        search overlay on any of the three headerless screens. */
     }
     {
-      showBar ? (
+      showHeader ? (
         <header class="border-border bg-card hidden items-center justify-between gap-3 border-b px-8 py-[22px] md:flex">
           <div class="min-w-0">
-            {showHeader && (
-              <>
-                <div class="text-foreground text-[21px] font-bold tracking-tight">{title}</div>
-                {subtitle && <div class="text-muted-foreground mt-0.5 text-[13px]">{subtitle}</div>}
-              </>
-            )}
+            <div class="text-foreground text-[21px] leading-[1.1] font-bold tracking-[-0.5px]">{title}</div>
+            {subtitle && <div class="text-muted-foreground mt-[3px] text-[13px]">{subtitle}</div>}
           </div>
+          {/* The band's right cluster, in the design's own (`StaffTopbar`) order:
+              field → the page's control → QuickAdd, gap 12. <GlobalSearch> is first
+              and draws its 520px field only where `search` is set (Pulpit); a page
+              contributes its own controls through `header-actions`; the quick-add
+              pill is the unconditional last child, so it rides onto every page with
+              a normal header. `min-w-0` on BOTH sides: the field's 520px flex basis
+              would otherwise refuse to shrink and crush the title at md, where the
+              content column is only ~696px wide. */}
           <div class="flex min-w-0 items-center justify-end gap-3">
             <GlobalSearch client:load {...searchProps} />
-            <slot name="header-action" />
+            <slot name="header-actions" />
+            <QuickAddButton client:load mode="desktop" promoted={promotedAction} />
           </div>
         </header>
       ) : (
@@ -258,16 +280,16 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
 
   {/* ── Floating tab bar (below md) ───────────────────────────────── */}
   {
-    /* DENSITY (`deviation(density)`, re-measured): search is no longer a tab-bar
-      entry, so the admin pill is back to 7 — which the original sizing (size-10 +
-      gap-1 + p-1.5) already fits at the 360px floor: 40·7 + 4·6 + 12 = 316px. The
-      `sm`-down tightening (size-9 + gap-0.5 + p-1) is KEPT as headroom rather than
-      reverted: S-11's "Profil" tab takes the pill to 8 entries, i.e. exactly 360px
-      at the original sizing — the floor with zero margin. From `sm` up the original
-      sizing is restored either way. */
+    /* The pill grows with the nav: an admin is at 8 items (7 + Profil) = 360px,
+    exactly a 360px viewport's width. Cap it to the viewport and let it scroll
+    rather than clip — same idiom as FleetTypeScroll's dark pill. Items are
+    `shrink-0` so they keep their 40px hit target instead of squeezing. Search
+    appends NO ninth tab: it is reached from Pulpit's hero magnifier and ⌘K only
+    (an icon inherits its container's scope, so a magnifier in the global nav
+    would promise global search from a screen that cannot serve it). */
   }
   <nav
-    class="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 gap-0.5 rounded-full bg-[#0A0A0F] p-1 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] sm:gap-1 sm:p-1.5 md:hidden"
+    class="fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-24px)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
   >
     {
       /* Icon-only so the pill stays compact regardless of item count (the active
@@ -280,7 +302,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           aria-current={active === n.id ? "page" : undefined}
           aria-label={n.label}
           class:list={[
-            "relative flex size-9 items-center justify-center rounded-full transition-colors sm:size-10",
+            "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
             active === n.id ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
           ]}
         >
@@ -297,6 +319,26 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         </a>
       ))
     }
+    {
+      /* Profil (S-11) — appended after NAV rather than added to it, so it stays
+         out of the desktop Operacje sidebar (the chip is that entry point) and
+         gives mobile its only account + sign-out affordance. Icon-only, no badge,
+         and the pill's last entry: nothing follows it (S-13 adds no tab). */
+    }
+    <a
+      href="/dashboard/account"
+      aria-current={active === "me" ? "page" : undefined}
+      aria-label="Profil"
+      class:list={[
+        // `shrink-0` for the same reason as the NAV items above — without it this
+        // is the pill's ONLY shrinkable child, so at the 360px floor it absorbs
+        // the whole 24px overflow alone and collapses to a 16px hit target.
+        "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
+        active === "me" ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
+      ]}
+    >
+      <NavIcon glyph="user" size={18} />
+    </a>
   </nav>
 </div>
 

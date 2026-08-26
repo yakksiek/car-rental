@@ -11,7 +11,7 @@ import { GET as calendarGET } from "../../src/pages/api/reservations/calendar";
 import { POST as returnCreatePOST } from "../../src/pages/api/return-protocols";
 import { POST as returnPdfPOST } from "../../src/pages/api/return-protocols/[id]/pdf";
 import { POST as returnResendPOST } from "../../src/pages/api/return-protocols/[id]/resend-email";
-import { POST as vehicleCreatePOST } from "../../src/pages/api/vehicles";
+import { GET as vehicleListGET, POST as vehicleCreatePOST } from "../../src/pages/api/vehicles";
 import { PATCH as vehicleUpdatePATCH } from "../../src/pages/api/vehicles/[id]";
 import { POST as vehicleActivePOST } from "../../src/pages/api/vehicles/[id]/active";
 import { serviceClient } from "../helpers/clients";
@@ -241,6 +241,43 @@ describe("API authz matrix (#4)", () => {
         }),
       );
       expect(res.status).toBe(200);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /api/vehicles — staff read for the quick-action picker (S-12b). No
+  // Origin (CSRF) check; the 401/403 split is asserted distinctly because this
+  // handler is the ONLY barrier: `vehicles_select_authenticated` is
+  // `using (true)`, so there is no RLS backstop behind it (a "employee → 200"
+  // test alone would pass with the hole wide open — how the reservations PII
+  // leak survived).
+  // -------------------------------------------------------------------------
+  describe("GET /api/vehicles (staff picker read)", () => {
+    const path = "/api/vehicles";
+    // The seven columns `listFleetForPicker` projects — asserted as an exact
+    // set so the projection cannot silently widen back to `select("*")`.
+    const PICKER_KEYS = ["id", "name", "make", "model", "plate", "daily_rate", "deposit"];
+
+    it("anon → 401 (auth gate fires before the role gate)", async () => {
+      const res = await vehicleListGET(anonContext({ method: "GET", path }));
+      expect(res.status).toBe(401);
+    });
+
+    it("norole → 403 (authenticated, but no profiles row)", async () => {
+      const res = await vehicleListGET(await asContext("norole", { method: "GET", path }));
+      expect(res.status).toBe(403);
+    });
+
+    it("employee → 200 with exactly the 7 projected keys per vehicle", async () => {
+      const res = await vehicleListGET(await asContext("employee", { method: "GET", path }));
+      expect(res.status).toBe(200);
+
+      const body = (await res.json()) as { vehicles: Record<string, unknown>[] };
+      expect(Array.isArray(body.vehicles)).toBe(true);
+      expect(body.vehicles.length).toBeGreaterThan(0);
+      for (const vehicle of body.vehicles) {
+        expect(Object.keys(vehicle).sort()).toEqual([...PICKER_KEYS].sort());
+      }
     });
   });
 

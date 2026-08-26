@@ -1,5 +1,5 @@
 // core
-import type { APIContext } from "astro";
+import type { APIContext, AstroCookieSetOptions } from "astro";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 // others
@@ -15,9 +15,10 @@ import { anonClient, as, type SeededRole } from "./clients";
 //
 // The handlers read ONLY `context.request` (Origin header + `.json()`),
 // `context.url` (`.origin`, `.searchParams`), `context.locals` (`.supabase`,
-// `.user`, `.role`) and `context.params` (`.id`). A minimal object covers all of
-// them; the single `as unknown as APIContext` cast below is the one type escape
-// (Astro's real `APIContext` is far larger than any handler uses).
+// `.user`, `.role`), `context.params` (`.id`) and — since S-14's session-origin
+// gate — `context.cookies`. A minimal object covers all of them; the single
+// `as unknown as APIContext` cast below is the one type escape (Astro's real
+// `APIContext` is far larger than any handler uses).
 //
 // ROLE CONSISTENCY: `buildApiContext` keeps no invariant on its own — a caller
 // could pass a mismatched client/role. Prefer the `asContext` / `anonContext`
@@ -55,24 +56,101 @@ export interface BuildApiContextOptions {
    */
   rawBody?: string;
   /**
+   * Form-encoded request body, for the routes fed by a native `<form method="POST">`
+   * (the auth endpoints read `request.formData()`, not `request.json()`). Sent as
+   * `application/x-www-form-urlencoded`. Takes precedence over `body`/`rawBody`.
+   */
+  formBody?: Record<string, string>;
+  /**
    * `Origin` header. Defaults to the same origin as `path` (passes the CSRF
    * check). Pass a foreign origin to test a cross-site POST, or `null` to send
    * no Origin header at all.
    */
   origin?: string | null;
+  /**
+   * Incoming cookies, name → value. Backed by a Map the handler also writes
+   * through, so a `set` / `delete` it performs is observable afterwards via
+   * `context.cookies.get(name)` — which is how the S-14 one-shot marker
+   * (spent on success, kept on a validation failure) is asserted. The attributes
+   * of those writes are observable too, via `cookieOptions(context, name)`.
+   */
+  cookies?: Record<string, string>;
+}
+
+// Attribute side-channel for the cookie double (auth-followups, F7). The double
+// used to drop its third argument entirely, so `path` — called "load-bearing" in
+// auth-session.ts, because an `/auth`-scoped marker is invisible to the handler
+// at `/api/auth/reset-password` — and `secure` were unassertable at this layer.
+//
+// A SECOND map rather than a `{ value, options }` jar entry, for two reasons:
+//   - the value jar must stay live-cookies-only, so a `delete` really removes
+//     the key and `get`/`has` answer exactly as they do today. An entry recording
+//     a delete's options would leave the key present and turn
+//     `reset-password.test.ts`'s "marker is spent" assertion red.
+//   - `buildApiContext` returns `... as unknown as APIContext`, so a test sees
+//     Astro's `AstroCookies`, whose `get()` yields `{ value, json(), … }` and has
+//     no `options` member — `get(X)?.options` would not type-check under
+//     `astro check` / the type-aware lint rules. Going through the exported
+//     function below needs no cast.
+//
+// Keyed by the double itself, so it is reachable from a plain `APIContext`.
+const COOKIE_OPTIONS = new WeakMap<object, Map<string, AstroCookieSetOptions | undefined>>();
+
+/**
+ * The options a handler passed to `cookies.set` / `cookies.delete` for `name` —
+ * the LAST write wins, and `undefined` means either no write or a write that
+ * passed no options.
+ */
+export function cookieOptions(context: APIContext, name: string): AstroCookieSetOptions | undefined {
+  return COOKIE_OPTIONS.get(context.cookies)?.get(name);
+}
+
+/**
+ * Minimal `AstroCookies` stand-in over a Map. Covers the four members the
+ * handlers use — `get` (value only), `set`, `delete`, `has` — and nothing else;
+ * Astro's real class also does signing, JSON coercion and header serialization,
+ * none of which a route gate touches.
+ *
+ * Attributes go to the side map above, read back with `cookieOptions()`.
+ * `AstroCookieDeleteOptions` is `Omit<AstroCookieSetOptions, "expires" | "maxAge"
+ * | "encode">` and is not exported from `astro`, so both writers are typed with
+ * the set variant — every delete option is a member of it.
+ */
+function buildCookies(initial: Record<string, string>) {
+  const jar = new Map<string, string>(Object.entries(initial));
+  const options = new Map<string, AstroCookieSetOptions | undefined>();
+  const api = {
+    get: (key: string) => {
+      const value = jar.get(key);
+      return value === undefined ? undefined : { value };
+    },
+    set: (key: string, value: string, opts?: AstroCookieSetOptions) => {
+      jar.set(key, value);
+      options.set(key, opts);
+    },
+    delete: (key: string, opts?: AstroCookieSetOptions) => {
+      jar.delete(key);
+      options.set(key, opts);
+    },
+    has: (key: string) => jar.has(key),
+  };
+  COOKIE_OPTIONS.set(api, options);
+  return api;
 }
 
 /** Assemble the minimal `APIContext` the route handlers read. */
 export function buildApiContext(opts: BuildApiContextOptions): APIContext {
   const url = new URL(opts.path, BASE_ORIGIN);
 
-  // `rawBody` wins over `body`: it carries a (possibly malformed) string verbatim.
-  const hasBody = opts.rawBody !== undefined || opts.body !== undefined;
-  const serializedBody = opts.rawBody ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
+  // Precedence: `formBody` (urlencoded) > `rawBody` (verbatim, possibly malformed)
+  // > `body` (JSON-serialized).
+  const form = opts.formBody !== undefined ? new URLSearchParams(opts.formBody).toString() : undefined;
+  const hasBody = form !== undefined || opts.rawBody !== undefined || opts.body !== undefined;
+  const serializedBody = form ?? opts.rawBody ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined);
 
   const headers = new Headers();
   if (hasBody) {
-    headers.set("content-type", "application/json");
+    headers.set("content-type", form !== undefined ? "application/x-www-form-urlencoded" : "application/json");
   }
   // `origin: null` → send no Origin header; otherwise default to same-origin.
   if (opts.origin !== null) {
@@ -89,6 +167,11 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
     request,
     url,
     params: opts.params ?? {},
+    // Redirect-shaped routes (the native-<form> auth endpoints) answer with
+    // `context.redirect(...)`, which Astro injects at runtime. Mirror its default:
+    // a 302 carrying `Location`.
+    redirect: (path: string, status = 302) => new Response(null, { status, headers: { location: path } }),
+    cookies: buildCookies(opts.cookies ?? {}),
     locals: {
       supabase: opts.supabase,
       user: opts.user ?? null,
