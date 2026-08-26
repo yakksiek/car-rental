@@ -37,23 +37,33 @@ Values transcribed exactly; each line `exact` or `deviation(reason)`. Polish cop
 
 ### Alignment checklist (plan vs canonical)
 
-| Canonical surface                                                         | Plan phase       | Aligned?                          |
-| ------------------------------------------------------------------------- | ---------------- | --------------------------------- |
-| `ScreenStaffDash` topbar — the only desktop screen with a field           | Phase 3 (§B)     | ✓                                 |
-| `ScreenStaffRequests` — a staff topbar with no field                      | Phase 3 (§B)     | ✓                                 |
-| `ScreenWorkerDash` — 44×44 magnifier left of the avatar, no TabBar search | Phase 3 (§A)     | ✓                                 |
-| `SearchPanel` results — scrolls under a 460 cap, no "see all"             | Phase 2 (§D)     | ✓ already scrolls; footer changes |
-| `SearchPanel` footer — hints in every phase                               | Phase 2 (§D)     | ✓                                 |
-| `VehicleRow` — drawn for the first time                                   | Phase 4 (§C)     | ✓ (D9 shrinks)                    |
-| `ScreenSearchMobileLive` — list simply ends                               | Phase 2 (§D)     | ✓                                 |
-| Results page / mobile results page                                        | — (deleted)      | ✓ no phase should build them      |
-| UI phases carry a vision-diff criterion                                   | Phase 3, Phase 4 | ✓                                 |
+| Canonical surface                                               | Plan phase       | Aligned?                          |
+| --------------------------------------------------------------- | ---------------- | --------------------------------- |
+| `ScreenStaffDash` topbar — the only desktop screen with a field | Phase 3 (§B)     | ✓                                 |
+| `ScreenStaffRequests` — a staff topbar with no field            | Phase 3 (§B)     | ✓                                 |
+| `ScreenWorkerDash` — 44×44 magnifier, no TabBar search          | Phase 3 (§A)     | ✓ (re-pulled 2026-08-26 — §A)     |
+| `SearchPanel` results — scrolls under a 460 cap, no "see all"   | Phase 2 (§D)     | ✓ already scrolls; footer changes |
+| `SearchPanel` footer — hints in every phase                     | Phase 2 (§D)     | ✓                                 |
+| `VehicleRow` — drawn for the first time                         | Phase 4 (§C)     | ✓ (D9 shrinks)                    |
+| `ScreenSearchMobileLive` — list simply ends                     | Phase 2 (§D)     | ✓                                 |
+| Results page / mobile results page                              | — (deleted)      | ✓ no phase should build them      |
+| UI phases carry a vision-diff criterion                         | Phase 3, Phase 4 | ✓                                 |
 
 ### Verdict
 
 **PASS — implemented; the rendered vision-diff gate was skipped by decision.** 9 surfaces
 aligned; 3 repo design artifacts superseded; 5 deviations carried or added (N1–N3 plus the
 amended D9/D16, and D19 from Phase 5); 2 pre-existing deltas recorded below without a phase.
+
+> **Amended 2026-08-26 at the `main` (S-11 + S-12b) merge.** The design was re-pulled for the
+> two surfaces the merge touches. Net: **three deviations retired** — §A's hero cluster and
+> S-12b's **D8** (the design now draws the mobile quick-add itself), §B's order and **N1** (the
+> desktop cluster is now field → calendar → QuickAdd exactly, for the first time), and this
+> contract's **D10** (tab-bar density → main's scroll solution; search adds no tab). One
+> deviation added — **N4**, ⌘K off on `/dashboard/account/password`. One new pre-existing delta
+> recorded — item 3, Pulpit's greeting wrapping between 768 and ~1150. Note that this
+> contract's D10 and S-12b's D10 are **different rules that share a number**; neither has been
+> folded into the other.
 
 Exact values were transcribed from the code-backed JSX, so implementation was never blocked —
 only the gate was, and on 2026-08-17 the owner closed it unrun (Progress row 4.6). Full
@@ -69,21 +79,34 @@ pruned rather than replaced.
 
 ### A. Mobile entry — dashboard hero magnifier (`ScreenWorkerDash`)
 
-Right-hand group is `flex items-center gap-[10px]` → **[magnifier, avatar]**, in that order.
+Right-hand group is `flex items-center gap-[10px]` → **[magnifier, quick-add, avatar]**, in
+that order.
 
-| Element       | Exact value                         | App token                           |
-| ------------- | ----------------------------------- | ----------------------------------- |
-| Button box    | `44×44`, `borderRadius: 99`         | `size-11 rounded-full`              |
-| Background    | `tokens.card`                       | `bg-card`                           |
-| Border        | `1px solid tokens.hair`             | `border border-[var(--flota-hair)]` |
-| Shadow        | `tokens.shadow1`                    | `shadow-card`                       |
-| Padding       | `0`                                 | `p-0`                               |
-| Icon          | `Icon.search s={19} c={tokens.ink}` | `size-[19px] text-foreground`       |
-| Gap to avatar | `10`                                | `gap-2.5`                           |
+> **Re-pulled 2026-08-26** (`staff-screens.jsx`, `ScreenWorkerDash`). The cluster was
+> `[magnifier, avatar]` when this contract was written; the design now draws
+> `<QuickAddButton mode="mobile" />` between them. Three items at **44 / 40 / 44**, gap **10**.
+> See the D8 note under Deviations — this retires the S-12b divergence rather than creating
+> one here.
 
-`exact`. The avatar beside it is unchanged and already correct (`size-11`, `rounded-full`,
-`bg-primary`, `text-[16px] font-medium tracking-[0.4px]`, `shadow-accent`). Hero wrapper,
-eyebrow and `Pulpit` headline are unchanged and already correct.
+| Element    | Exact value                         | App token                           |
+| ---------- | ----------------------------------- | ----------------------------------- |
+| Button box | `44×44`, `borderRadius: 99`         | `size-11 rounded-full`              |
+| Background | `tokens.card`                       | `bg-card`                           |
+| Border     | `1px solid tokens.hair`             | `border border-[var(--flota-hair)]` |
+| Shadow     | `tokens.shadow1`                    | `shadow-card`                       |
+| Padding    | `0`                                 | `p-0`                               |
+| Icon       | `Icon.search s={19} c={tokens.ink}` | `size-[19px] text-foreground`       |
+| Gap (each) | `10`                                | `gap-2.5`                           |
+
+`exact`. The avatar at the end of the cluster is unchanged and already correct (`size-11`,
+`rounded-full`, `bg-primary`, `text-[16px] font-medium tracking-[0.4px]`, `shadow-accent`), as
+are the hero wrapper, eyebrow and `Pulpit` headline. The quick-add circle between them is
+S-12b's shipped `<QuickAddButton mode="mobile" />` at its own `40×40`, unchanged by this
+change.
+
+**Fit at the 360px floor** — measured, not computed: cluster `148px`
+(44 + 10 + 40 + 10 + 44), leaving `106px` of the `Pulpit` h1's 40px type on one line inside a
+360px viewport with no header overflow. `exact`.
 
 ### B. Desktop topbar right group (`StaffTopbar`)
 
@@ -96,9 +119,23 @@ Order is **field → calendar → QuickAdd**, `gap: 12`.
 | Calendar button | `38×38`, `borderRadius 10`, `1px solid tokens.hair`, `bg tokens.card`, icon `16` in `tokens.ink2` | already correct in `dashboard.astro` |
 | Bar padding     | `22px 32px`                                                                                       | `px-8 py-[22px]` — already correct   |
 
-`exact`. Two corrections against today's build: the field currently renders **after**
-`header-action` (so Pulpit draws calendar → field), and the group gap is `gap-4` (16) rather
-than 12. Both fixed in Phase 3 §1. QuickAdd belongs to S-12 (sibling branch) — not ours.
+`exact` — and, since the S-12b merge (2026-08-26), **shipped exactly** for the first time.
+Both original corrections landed (the field used to render _after_ `header-action`, so Pulpit
+drew calendar → field; the group gap was `gap-4`/16 rather than 12), and QuickAdd — which
+belonged to the S-12 sibling branch when this line was written — is now the cluster's
+unconditional last child. `StaffShell` renders the three in the design's own order:
+
+```astro
+<GlobalSearch client:load {...searchProps} />
+{/* field, Pulpit only */}
+<slot name="header-actions" />
+{/* the page's control — Pulpit's calendar */}
+<QuickAddButton client:load mode="desktop" promoted={promotedAction} />
+```
+
+Measured on Pulpit at 1280 and 1440: `field@w520 → calendar@w38 → quick-add@w102`, gaps 12.
+Below `1150` the field shrinks off its 520 (`max-w-full` inside a `min-w-0` cluster) rather
+than pushing the cluster out — 461px at 1150, 366px at 1024, 300px at 768. See known delta 3.
 
 Only `ScreenStaffDash` passes `search`. Every other staff screen renders the bar with no
 field — `ScreenStaffRequests` is the canonical example. `exact`.
@@ -155,19 +192,76 @@ Amended from the S-13 contract:
   Zwroty/Pojazdy row with the `↵` chip **beside** the retained chevron; we swap chevron for
   chip (owner-reported, `f00ffec`). Previously justified as "the mockup never draws this
   case" — it does now, so this is a deliberate divergence from a drawn state.
-- **D10** → re-measured. With the magnifier gone the admin pill carries **7** entries, which
-  fits the 360px floor at the original sizing (40·7 + 4·6 + 12 = **316px**). The `sm`-down
-  tightening is **kept** as headroom: S-11's "Profil" tab takes it to 8, i.e. exactly **360px**
-  — the floor with zero margin.
+- **D10** (this contract's D10 = **tab-bar density**; NOT the same D10 as
+  `context/archive/2026-08-21-staff-quick-actions/design-contract.md`, which is "no quick-add on
+  task screens" — do not merge the two) → **rewritten 2026-08-26 at the S-12b merge, and the
+  `deviation(density)` is retired.**
+
+  What this line used to say: with the magnifier gone the admin pill was back to **7** entries,
+  which the original sizing (`size-10` + `gap-1` + `p-1.5`) already fits at the 360px floor
+  (40·7 + 4·6 + 12 = **316px**) — so the `sm`-down tightening (`size-9` + `gap-0.5` + `p-1`)
+  was **kept as headroom** for S-11's "Profil" tab, which would take the pill to 8 entries =
+  exactly **360px**, the floor with zero margin.
+
+  Both halves of that rationale are now spent:
+  1. **S-11 has landed.** Profil is the eighth tab, so the headroom is no longer speculative —
+     it is being used, and there is nothing left to reserve.
+  2. **S-13 appends no ninth tab.** Search is reached from Pulpit's hero magnifier and ⌘K
+     only, never from the global nav (an icon inherits its container's scope, so a magnifier in
+     the tab bar would promise global search from a screen that cannot serve it). The "ninth"
+     the pill was being braced for never comes.
+
+  So the app takes **main's** solution wholesale and drops the `sm`-down tightening entirely:
+  keep every item at its full `size-10 shrink-0` hit target, cap the pill at
+  `max-w-[calc(100vw-24px)]`, and let it **scroll** rather than shrink — the same idiom as
+  `FleetTypeScroll`'s dark pill. `size-9…sm:size-10` → `size-10 shrink-0`,
+  `gap-0.5 sm:gap-1` → `gap-1`, `p-1 sm:p-1.5` → `p-1.5`, plus `overflow-x-auto` with
+  `[scrollbar-width:none]` / `[&::-webkit-scrollbar]:hidden`.
+
+  One fix on top of main's version: its Profil tab carried no `shrink-0`, which made it the
+  pill's **only** shrinkable child — flexbox handed it the entire 24px overflow and it
+  collapsed to a 16px hit target at 360px. `shrink-0` added.
+
+  Measured at 360×740 as an admin: 8 items, every one **40×40**, pill `336px` wide sitting at
+  `left 12 / right 348` (inside the viewport, no clip), `scrollWidth 360 > clientWidth 336`
+  with `overflow-x: auto`, and the last item (Profil) fully reachable by scrolling. `exact` —
+  the pill now matches `shared.jsx` `TabBar`'s own sizing at every width.
+
 - **D13**, **D14** → **deleted** with the results page.
+
+Amended from the S-12b contract (`context/archive/2026-08-21-staff-quick-actions/`) — recorded
+here because this is the change that lands the merged hero, not there:
+
+- **S-12b D8** (`deviation(reach)`, mobile Pulpit quick-add) → **no longer holds; now
+  `exact`.** Its premise was "the design OMITS the affordance on `ScreenWorkerDash` because
+  `Dyspozytornia` (273px, unbreakable, at `fontSize: 40`) already clips its avatar at 390px —
+  our title is `Pulpit`, so the constraint does not transfer; we add the circle." Re-pulled
+  2026-08-26: `ScreenWorkerDash` now draws `<QuickAddButton mode="mobile" />` itself, between
+  the magnifier and the avatar. The design no longer omits it, so there is nothing left to
+  deviate from — see §A. D8's hard success criterion (the 360px fit) still stands and still
+  passes at 148px of cluster.
 
 New:
 
-- **N1** `deviation(scope)` — QuickAddButton is not rendered beside the field. It belongs to
-  S-12 (`manual-reservation`, sibling branch), not this change.
-- **N2** `deviation(platform)` — the island stays mounted on all 10 staff pages while the
-  field renders on one. The design has no notion of mounting; this is what keeps ⌘K and the
-  mobile overlay alive off-Pulpit.
+- **N1** `deviation(scope)` → **retired 2026-08-26.** It read "QuickAddButton is not rendered
+  beside the field — it belongs to S-12 (`manual-reservation`, sibling branch), not this
+  change." S-12b has merged, so the pill is now the band cluster's unconditional last child and
+  §B is shipped exactly. Nothing is out of scope any more.
+- **N2** `deviation(platform)` — the island stays mounted on all staff pages while the field
+  renders on one. The design has no notion of mounting; this is what keeps ⌘K and the mobile
+  overlay alive off-Pulpit. **Still live, and load-bearing.** Post-merge the mount is the
+  `showHeader={false}` else-branch of `StaffShell`'s band ternary, so it covers 12 pages, not
+  10 (S-11 added `/dashboard/account` and `/dashboard/account/password`). Collapsing that
+  ternary to a bare `showHeader && …` would unmount the island on `protocols/[id]`,
+  `vehicles/new` and `vehicles/[id]/edit` — killing ⌘K on the first and the mobile overlay on
+  all three — and would fail silently: no type error, no failing test.
+- **N4** `deviation(no-design-state)` — `/dashboard/account/password` passes
+  `searchHotkey={false}` (owner decision, 2026-08-26). It is a form sub-screen reached only
+  from inside Profil, so S-13's own rule — "reached from the menu" keeps ⌘K, "reached from
+  inside a screen and holds a form" does not — puts it with the two vehicle-form screens. It
+  differs from them in keeping a normal shell header (and therefore the quick-add pill),
+  because unlike them it draws no header of its own. The design has no drawn state for either
+  account screen.
 - **N3** `deviation(no-design-state)` — at `md+` on a page with no field, ⌘K navigates to
   `/dashboard?search=1` and the dropdown opens on arrival. The design has no drawn state for
   this, though `useSX()` carries unrendered copy asserting ⌘K works "z dowolnego ekranu".
@@ -187,7 +281,34 @@ text-[11px] font-[650] bg-secondary text-[var(--flota-neutral)]` — square-ish 
 2. **Quick-jump row weight and icons.** Design labels are `550`, ours are `600`; the design's
    pending icon is `Icon.list`, ours is `Clock`.
 
-Both are cheap to fold into Phase 4 if you want them fixed — say so and I will add them.
+3. **Pulpit's greeting wraps to two lines between `768` and ~`1150`.** Found while verifying
+   the S-12b merge (2026-08-26), measured as an admin on `/dashboard`:
+
+   | viewport | field | title                              |
+   | -------- | ----- | ---------------------------------- |
+   | `768`    | `300` | `Dzień dobry, Admin` — **2 lines** |
+   | `900`    | `399` | **2 lines**                        |
+   | `1024`   | `366` | **2 lines**                        |
+   | `1150`   | `461` | 1 line                             |
+   | `1229`+  | `520` | 1 line                             |
+
+   The band's right cluster wants `684px` at rest (520 + 12 + 38 + 12 + 102); at `1024` the
+   content column is `720px` after `px-8`, so the title is left ~24px and wraps. The field
+   already shrinks as far as it can — the cluster is `min-w-0` on both sides and the field is
+   `max-w-full`, which is what keeps the calendar and pill at full size instead.
+
+   **Not introduced by the merge, and not a merge regression to undo.** The field alone already
+   wrapped the greeting below ~`1115`; main's quick-add pill (102 + 12) widens the affected
+   range to ~`1150`. `StaffTopbar` is drawn at desktop width only, so the design has no state
+   for this. Deliberately NOT fixed here — the plausible fixes (a `md`/`lg` step-down on the
+   field's `520`, or `truncate` on the title) both change values the contract marks `exact`,
+   which is a design decision, not a merge one.
+
+   Every other staff page is unaffected: their titles are short (`Pracownicy`, `Kalendarz`,
+   `Zwroty`) and only Pulpit passes `search`.
+
+Items 1 and 2 are cheap to fold into Phase 4 if you want them fixed — say so and I will add
+them. Item 3 needs an owner decision on which `exact` value gives way.
 
 ---
 
