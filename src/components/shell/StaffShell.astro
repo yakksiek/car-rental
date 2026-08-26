@@ -2,11 +2,13 @@
 // components
 import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
+import GlobalSearch from "../search/GlobalSearch";
 import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import type { AppRole } from "../../types";
 import { staffIdentity } from "../../lib/staff-identity";
+import { countReturnsDueToday } from "../../lib/services/protocols";
 
 // Shared staff app-shell (S-03 follow-up L1/L2/L6): a single responsive nav —
 // a left sidebar with a user chip at md+, a floating dark tab bar below md —
@@ -35,8 +37,23 @@ interface Props {
   // page gets the quick-add pill". The task screens (add/edit vehicle, protocol)
   // draw their own back/close/submit header over unsaved form state, which is
   // both a duplicate heading and no place for a create action (design contract
-  // D10). Keep the two coupled: do NOT add a second opt-out prop.
+  // D10). Keep the two coupled: do NOT add a second opt-out prop. It does NOT
+  // gate the <GlobalSearch> island — see the render comment on the band.
   showHeader?: boolean;
+  // Render the desktop search FIELD? Pulpit only (design `StaffTopbar` takes
+  // `search` and only `ScreenStaffDash` passes it). The <GlobalSearch> island is
+  // mounted regardless on every page: it owns the ⌘K listener and the mobile
+  // overlay, both of which have to work off-Pulpit.
+  search?: boolean;
+  // Ask the island to open its search surface on mount. Set by Pulpit when it was
+  // reached through ⌘K from a fieldless page (`/dashboard?search=1`).
+  autoOpen?: boolean;
+  // Claim ⌘K on this page? Default true. The two vehicle-form sub-screens pass
+  // false: search is a navigation affordance, and the desktop shortcut leaves the
+  // page — on a screen whose whole job is data entry that abandons the form. The
+  // line is "reached from the menu" (keeps it) vs "reached from inside a screen
+  // and holds a form" (doesn't). `protocols/[id]` is a read-only view, so it keeps it.
+  searchHotkey?: boolean;
 }
 
 const {
@@ -49,8 +66,33 @@ const {
   role,
   showHeader = true,
   promotedAction,
+  search = false,
+  autoOpen = false,
+  searchHotkey = true,
 } = Astro.props;
 const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+
+// The search dropdown's third quick-jump ("Dzisiejsze zwroty") needs a count no
+// page currently threads. It is read HERE rather than added to all 10 staff pages'
+// `Promise.all`s: one call site cannot drift, and the helper degrades to 0 instead
+// of throwing, so the shell can never take a page down. `today` is the server's UTC
+// calendar date — the same basis `dashboard.astro` / `returns.astro` use, and it is
+// handed to the island so its "dziś / wczoraj" wording survives hydration.
+const today = new Date().toISOString().slice(0, 10);
+const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
+
+// Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
+// on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
+// overlay, and gating it with the band would kill both on the three pages that hide it.
+const searchProps = {
+  pendingCount,
+  overdueCount,
+  dueTodayCount,
+  today,
+  field: search,
+  autoOpen,
+  hotkey: searchHotkey,
+};
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
@@ -192,22 +234,43 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
   {/* ── Content column ────────────────────────────────────────────── */}
   <div class="flex min-w-0 flex-1 flex-col">
     {
-      showHeader && (
-        <header class="border-border bg-card hidden items-center justify-between border-b px-8 py-[22px] md:flex">
-          <div>
+      /* Desktop top bar — the one consistent title/action band across the staff
+        pages that carry a normal title (`showHeader`). Pages that used to hand-roll
+        their own full-bleed `border-b` band migrated onto its slots — there must
+        never be a second band stacked under this one.
+
+        *** The `showHeader={false}` branch is NOT "render nothing". *** <GlobalSearch>
+        owns the ⌘K registration and the mobile overlay's `flota:search-open` listener,
+        so the island has to mount on all 10 staff pages, band or no band. With `field`
+        false it emits no box of its own — the cmdk root is `display: contents` and its
+        only child is an `sr-only` label — so those pages still start at their own
+        content. Collapsing this ternary to a bare `showHeader && …` fails SILENTLY:
+        no type error, no failing test, just no ⌘K on `protocols/[id]` and no mobile
+        search overlay on any of the three headerless screens. */
+    }
+    {
+      showHeader ? (
+        <header class="border-border bg-card hidden items-center justify-between gap-3 border-b px-8 py-[22px] md:flex">
+          <div class="min-w-0">
             <div class="text-foreground text-[21px] leading-[1.1] font-bold tracking-[-0.5px]">{title}</div>
             {subtitle && <div class="text-muted-foreground mt-[3px] text-[13px]">{subtitle}</div>}
           </div>
-          {/* The band's right cluster, which the design (`StaffTopbar`) draws and
-              this shell left empty. A page contributes its own controls through
-              `header-actions`; the quick-add pill is the unconditional last child,
-              so it rides onto every page with a normal header. S-13's SearchField
-              lands in this same cluster. Gap 12 per the design. */}
-          <div class="flex items-center gap-3">
+          {/* The band's right cluster, in the design's own (`StaffTopbar`) order:
+              field → the page's control → QuickAdd, gap 12. <GlobalSearch> is first
+              and draws its 520px field only where `search` is set (Pulpit); a page
+              contributes its own controls through `header-actions`; the quick-add
+              pill is the unconditional last child, so it rides onto every page with
+              a normal header. `min-w-0` on BOTH sides: the field's 520px flex basis
+              would otherwise refuse to shrink and crush the title at md, where the
+              content column is only ~696px wide. */}
+          <div class="flex min-w-0 items-center justify-end gap-3">
+            <GlobalSearch client:load {...searchProps} />
             <slot name="header-actions" />
             <QuickAddButton client:load mode="desktop" promoted={promotedAction} />
           </div>
         </header>
+      ) : (
+        <GlobalSearch client:load {...searchProps} />
       )
     }
     <div class="pb-28 md:pb-0">
@@ -217,10 +280,13 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
 
   {/* ── Floating tab bar (below md) ───────────────────────────────── */}
   {
-    /* The pill grows with the nav: an admin is at 8 items = 360px, exactly a
-    360px viewport's width, and S-13 appends a ninth. Cap it to the viewport and
-    let it scroll rather than clip — same idiom as FleetTypeScroll's dark pill.
-    Items are `shrink-0` so they keep their 40px hit target instead of squeezing. */
+    /* The pill grows with the nav: an admin is at 8 items (7 + Profil) = 360px,
+    exactly a 360px viewport's width. Cap it to the viewport and let it scroll
+    rather than clip — same idiom as FleetTypeScroll's dark pill. Items are
+    `shrink-0` so they keep their 40px hit target instead of squeezing. Search
+    appends NO ninth tab: it is reached from Pulpit's hero magnifier and ⌘K only
+    (an icon inherits its container's scope, so a magnifier in the global nav
+    would promise global search from a screen that cannot serve it). */
   }
   <nav
     class="fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-24px)] -translate-x-1/2 gap-1 overflow-x-auto rounded-full bg-[#0A0A0F] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.1)] [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
@@ -256,15 +322,18 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     {
       /* Profil (S-11) — appended after NAV rather than added to it, so it stays
          out of the desktop Operacje sidebar (the chip is that entry point) and
-         gives mobile its only account + sign-out affordance. Icon-only, no
-         badge: S-13 appends a second tab, so the pill has to stay lean. */
+         gives mobile its only account + sign-out affordance. Icon-only, no badge,
+         and the pill's last entry: nothing follows it (S-13 adds no tab). */
     }
     <a
       href="/dashboard/account"
       aria-current={active === "me" ? "page" : undefined}
       aria-label="Profil"
       class:list={[
-        "relative flex size-10 items-center justify-center rounded-full transition-colors",
+        // `shrink-0` for the same reason as the NAV items above — without it this
+        // is the pill's ONLY shrinkable child, so at the 360px floor it absorbs
+        // the whole 24px overflow alone and collapses to a 16px hit target.
+        "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
         active === "me" ? "bg-white text-[#0A0A0F]" : "text-white/70 hover:text-white",
       ]}
     >
@@ -291,4 +360,23 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     });
   }
   document.addEventListener("astro:page-load", bindSignout);
+
+  // The mobile search magnifier is Astro markup — it lives in the dashboard hero
+  // (Pulpit is the only mobile entry point) while the search UI is a React island,
+  // so the button asks for the overlay through a document event the island listens
+  // for. Bound here rather than on the page because the island is the shell's, and
+  // any future Astro trigger only has to carry `data-search-trigger`. Same
+  // per-element `dataset.bound` guard as above: this IS an element, unlike the
+  // island's document-level ⌘K listener, which needs a module-scoped singleton
+  // instead (see useGlobalSearchHotkey.ts).
+  function bindSearchTrigger() {
+    document.querySelectorAll<HTMLButtonElement>("button[data-search-trigger]").forEach((button) => {
+      if (button.dataset.bound) return;
+      button.dataset.bound = "1";
+      button.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("flota:search-open"));
+      });
+    });
+  }
+  document.addEventListener("astro:page-load", bindSearchTrigger);
 </script>

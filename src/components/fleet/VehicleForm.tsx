@@ -305,6 +305,57 @@ export default function VehicleForm({ mode, vehicle }: Props) {
   const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
   const formError = submitError ?? (hasFieldErrors ? COPY.fixFields : null);
 
+  // The values the form opened with, mirroring the `useState` initialisers above.
+  // Dirtiness is a comparison against this rather than a flag, so none of the ~18
+  // field handlers has to remember to set anything.
+  const pristine = React.useMemo(
+    () => ({
+      fields: initialStrings(vehicle),
+      category: vehicle?.category ?? "",
+      transmission: vehicle?.transmission ?? "",
+      photos: (vehicle?.photos ?? []).join("\n"),
+    }),
+    [vehicle],
+  );
+
+  const dirty =
+    category !== pristine.category ||
+    transmission !== pristine.transmission ||
+    photos !== pristine.photos ||
+    (Object.keys(pristine.fields) as StringFieldKey[]).some((key) => fields[key] !== pristine.fields[key]);
+
+  // Don't drop a part-filled form on a full navigation. The case that prompted this
+  // is ⌘K: on a page with no search field the shortcut runs
+  // `location.assign("/dashboard?search=1")`, which would otherwise discard ~18
+  // fields with no warning. A reload, a closed tab and an external link are covered
+  // too. NOT covered: an in-app link click — `<ClientRouter>` swaps the DOM without
+  // unloading the document, so nothing fires here. That needs its own
+  // `astro:before-preparation` guard.
+  //
+  // Disarming on `submitting` is load-bearing: the success path is
+  // `location.assign("/dashboard/vehicles")`, and leaving the handler attached would
+  // prompt the user on a save that worked. That only holds because `submitting` stays
+  // true through the redirect — `handleSubmit` resets it on the paths that return the
+  // user to the form (400, generic error, network throw) and never on success. It must
+  // not go back into a `finally`: the success branch `return`s from inside the `try`,
+  // so a `finally` would re-attach this listener while the redirect is in flight.
+  React.useEffect(() => {
+    if (!dirty || submitting) {
+      return;
+    }
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      // `preventDefault()` alone is the current spec and is what every browser we
+      // target honours. The old `event.returnValue = ""` companion is deprecated
+      // (and lints as an error here); it only ever mattered for Chrome <119 /
+      // Firefox <124. No browser displays a custom string either way.
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [dirty, submitting]);
+
   function setField(id: StringFieldKey, value: string) {
     setFields((prev) => ({ ...prev, [id]: value }));
     clearError(id);
@@ -382,12 +433,13 @@ export default function VehicleForm({ mode, vehicle }: Props) {
       if (res.status === 400 && body.errors) {
         setFieldErrors(body.errors);
         scrollToFirstError(body.errors);
+        setSubmitting(false);
         return;
       }
       setSubmitError(body.error ?? COPY.genericError);
+      setSubmitting(false);
     } catch {
       setSubmitError(COPY.genericError);
-    } finally {
       setSubmitting(false);
     }
   }
@@ -425,7 +477,10 @@ export default function VehicleForm({ mode, vehicle }: Props) {
     <form onSubmit={(e) => void handleSubmit(e)} className="w-full">
       {/* Header — a full-bleed white strip matching the dashboard chrome (StaffShell
           header), with back arrow + eyebrow + title (left) and the actions (right,
-          desktop only — mobile gets a bottom bar).
+          desktop only — mobile gets a bottom bar). This screen passes
+          `showHeader={false}`, so the shell draws NO band above it at any width and
+          this strip is the page's only header — it must stay opaque and full-bleed
+          at md+ too.
           The strip always spanned, but its CONTENT used to be capped
           `mx-auto max-w-[1080px]`, so at 1440 the title started at x=316 where every
           other staff page's band starts at x=272 — this screen read as inset by 44px.

@@ -36,6 +36,12 @@ const { id } = Astro.params;
 // it to 0 rather than treating it as unknown (known-issues.md). Fetching the
 // pending list only to read `.length` is the same duplication the other nine
 // pages carry; `service-read-projections` replaces all ten with a count RPC.
+//
+// `showHeader={false}` stays through S-13: the ProtocolView island's header is a
+// CARD inside the content area (not a full-bleed band), and it carries context the
+// shell's title slot cannot — reference · customer · vehicle · plate · time. This
+// page still keeps ⌘K, though — it is a read-only view, not a form — and the shell
+// mounts <GlobalSearch> on the `showHeader={false}` branch precisely for that.
 const [overdueCount, pending] = await Promise.all([countOverdueReturns(supabase), listPendingReservations(supabase)]);
 
 const protocol = id ? await getProtocol(supabase, id) : null;

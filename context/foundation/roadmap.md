@@ -3,7 +3,7 @@ project: FleetRent
 version: 1
 status: draft
 created: 2026-06-02
-updated: 2026-08-21
+updated: 2026-08-26
 prd_version: 1
 main_goal: speed
 top_blocker: capacity
@@ -27,24 +27,24 @@ Local commercial-vehicle rental operators run their fleet, reservations, and han
 
 ## At a glance
 
-| ID   | Change ID                   | Outcome (user can …)                                                                                                                       | Prerequisites    | PRD refs                             | Status  |
-| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------ | ------- |
-| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule                                                                 | —                | FR-005, Guardrails                   | done    |
-| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated                                                                   | —                | Access Control                       | done    |
-| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card                                                                              | F-01             | US-01, FR-001/002/003                | done    |
-| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit                                                                   | F-01, S-01       | US-01, FR-004/005                    | done    |
-| S-03 | reservation-approval        | view pending requests and accept or reject them                                                                                            | F-02, S-02       | US-01, FR-009/010                    | done    |
-| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)                                                                 | F-01, F-02       | FR-011                               | done    |
-| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed                                                                | F-02, S-03       | US-02, FR-006/008, NFR               | done    |
-| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed                                                                          | S-05             | US-02, FR-007/008, NFR               | done    |
-| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                                                                                 | F-02, S-02       | FR-012                               | done    |
-| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password                                                                        | F-02             | FR-013                               | done    |
-| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01       | FR-003 reuse; post-v1                | done    |
-| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | done    |
-| S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | done    |
-| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | done    |
-| S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | backlog |
-| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | done    |
+| ID   | Change ID                   | Outcome (user can …)                                                                                                                       | Prerequisites    | PRD refs                             | Status |
+| ---- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------ | ------ |
+| F-01 | booking-integrity-data      | (foundation) vehicle + reservation schema and the hotel-style overlap rule                                                                 | —                | FR-005, Guardrails                   | done   |
+| F-02 | employee-admin-roles        | (foundation) employee/admin role model on the existing auth, route-gated                                                                   | —                | Access Control                       | done   |
+| S-01 | public-fleet-catalog        | browse, filter by specs/dates, and view a vehicle detail card                                                                              | F-01             | US-01, FR-001/002/003                | done   |
+| S-02 | public-reservation-request  | submit a reservation request with no account; overlaps blocked on submit                                                                   | F-01, S-01       | US-01, FR-004/005                    | done   |
+| S-03 | reservation-approval        | view pending requests and accept or reject them                                                                                            | F-02, S-02       | US-01, FR-009/010                    | done   |
+| S-04 | fleet-management            | add, edit, and remove vehicles (deletion blocked with active reservations)                                                                 | F-01, F-02       | FR-011                               | done   |
+| S-05 | issue-protocol              | fill an issue protocol (mileage/fuel/damage/photos/signature), auto-emailed                                                                | F-02, S-03       | US-02, FR-006/008, NFR               | done   |
+| S-06 | return-protocol-comparison  | fill a return protocol; system auto-compares deltas; auto-emailed                                                                          | S-05             | US-02, FR-007/008, NFR               | done   |
+| S-07 | overdue-returns-dashboard   | see overdue returns flagged automatically on the dashboard                                                                                 | F-02, S-02       | FR-012                               | done   |
+| S-08 | employee-account-management | (admin) add/remove employee accounts; employees self-reset password                                                                        | F-02             | FR-013                               | done   |
+| S-09 | public-info-pages           | read About-us & FAQ, and a live (dynamic) pricing page from the public site                                                                | F-01, S-01       | FR-003 reuse; post-v1                | done   |
+| S-10 | landing-fleet-restyle       | browse a restyled, responsive landing + fleet; hover/tap a vehicle type to preview its Popularne models and open that pre-filtered catalog | S-01             | FR-001/002/003 reuse; US-01; post-v1 | done   |
+| S-11 | staff-account               | (employee) view your own profile and change your own password while signed in                                                              | F-02             | net-new; extends F-02                | done   |
+| S-12 | manual-reservation          | (staff) create a confirmed booking by hand for a phone-in customer; overlap-checked, customer emailed                                      | F-02, S-02, S-03 | FR-004/005/009 reuse                 | done   |
+| S-13 | staff-global-search         | (staff) search reservations / returns / vehicles / customers from a header ⌘K box                                                          | F-02, S-02, S-04 | net-new                              | done   |
+| S-14 | auth-surface-hardening      | (staff) a password can only be set from a real recovery/invite link; auth alerts stop echoing arbitrary text from the URL                  | F-02, S-08       | hardening; no new FR                 | done   |
 
 ## Streams
 
@@ -384,7 +384,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   settled shell. Client-side search patterns to mirror exist (`StaffList`/`FleetList`). Design Alignment Audit
   against `search-flow.jsx`; Polish copy canonical (Szukaj rezerwacji, pojazdu, rejestracji…, Rezerwacje,
   Zwroty, Klienci, Pojazdy, Zobacz wszystkie wyniki).
-- **Status:** backlog
+- **Status:** done
 
 ### S-14: Auth surface hardening (recovery-session gate + error whitelist)
 
@@ -481,3 +481,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-14: `/auth/reset-password` sets a password only for a session that actually came from a recovery or invite link — an ordinary password login is refused. Auth surfaces stop rendering arbitrary text from `?error=`, and Supabase's English error strings stop reaching a Polish UI.** — Archived 2026-08-18 → `context/archive/2026-08-11-auth-surface-hardening/`. Lesson: —.
 - **S-12: A logged-in employee creates a **confirmed** reservation by hand for a phone-in customer — pick vehicle + dates/times, enter customer name/phone/email, with a **live availability check** — and the slot is blocked in the calendar and the customer is emailed a confirmation. The booking is tagged **"Ręczna"** (manual).** — Archived 2026-08-21 → `context/archive/2026-08-10-manual-reservation/`. Lesson: —.
 - **S-12a: In the staff manual-reservation modal the two blind `<input type="date">` fields are replaced by the same range calendar the public booking widget already gives customers — the selected vehicle's taken days greyed, changeover days half-available — so an employee on the phone with a customer sees availability **while** picking instead of being told "Termin zajęty" after the fact.** — Archived 2026-08-21 → `context/archive/2026-08-18-manual-reservation-date-picker/`. Lesson: —.
+- **S-13: A logged-in employee searches across **reservations, returns, vehicles, and customers** from a **header ⌘K search box** — grouped live results in a dropdown, a resting state (recent searches + quick-jumps), a no-results state, and **Enter → a full results page** with filter chips. Desktop dropdown + mobile full-screen.** — Archived 2026-08-26 → `context/archive/2026-08-10-staff-global-search/`. Lesson: shipped narrower than this Outcome. `staff-search-dashboard-only` (archived 2026-08-26 → `context/archive/2026-08-11-staff-search-dashboard-only/`) cut the results page and the filter chips entirely and made search **Pulpit-only, dropdown-only** — ⌘K from any other staff page routes to Pulpit with the dropdown open. `Klienci` and recent searches were dropped by the design before build.
