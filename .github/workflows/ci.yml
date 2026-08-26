@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Manual trigger from the Actions tab. Added after a push-triggered run wedged
+  # in an unrecoverable state (2026-08-26, run #77): GitHub never allocated a
+  # hosted runner, and the run then reported `queued` to the runs API while
+  # answering "already completed" to cancel and "already running" to rerun — so it
+  # could neither be cancelled nor re-run, and re-running is the only remedy for a
+  # runner-acquisition failure. Without this, recovering meant manufacturing a
+  # commit just to trigger a fresh run.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
