@@ -61,6 +61,24 @@ results page, and mobile full-screen match the design contract on a vision-diff.
 - **No nav tab for search** — search is reached from the box/⌘K, not a nav item (an `active="search"` state highlights nothing in the nav).
 - **No search on the 2 full-screen protocol flows** — `pickups/[reservationId].astro` and `returns/[reservationId].astro` deliberately don't render `StaffShell` (focused task screens), so the header field + ⌘K are absent there. Accepted — "all staff pages" means the **10 `StaffShell` pages**. (If truly-global search is later wanted, hoist the ⌘K listener to `Layout.astro`.)
 
+> **Superseded 2026-08-17 by `staff-search-dashboard-only`** — two things this plan built were removed before
+> S-13 ever merged, so a reader of the shipped code will not find them. Recorded here rather than rewritten
+> above, because the Progress rows and their SHAs describe what actually landed at the time.
+>
+> - **No full results page.** `/dashboard/search` (Phase 4 below), `SearchResults.tsx`, the filter chips, the
+>   `header-title` slot and every route into them are deleted. Search resolves entirely in the dropdown: the
+>   grouped list scrolls, and clicking or `↵` on a row jumps straight to that item. "Zobacz wszystkie wyniki"
+>   no longer exists as a destination, and `search_staff`'s per-group cap rose 8 → 25 so the dropdown can
+>   carry the whole result set (`20260817120000_search_staff_widen_cap.sql`).
+> - **No per-screen entry points.** The desktop field renders on **Pulpit only** (the design's `StaffTopbar`
+>   takes `search`, and only `ScreenStaffDash` passes it), and the mobile magnifier moved from the floating
+>   tab bar to the dashboard hero. The island stays mounted on all 10 pages so ⌘K and the mobile overlay keep
+>   working off-Pulpit; at `md+` on a fieldless page ⌘K navigates to `/dashboard?search=1`. An icon inherits
+>   its scope from its container, so a magnifier in a section header would read as "search this section".
+>
+> Kept: the Phase 2 shell restructure. Its original justification (carrying the field on every page) is gone,
+> but it is now what gives every staff page one consistent title/action band.
+
 ## Implementation Approach
 
 Backend first (the RPC + endpoint), then the invasive shell restructure isolated in its own phase (so the
@@ -391,58 +409,58 @@ generated file** (a stale regen would drop the other slice's RPC / `source` addi
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly against local Supabase
-- [ ] 1.2 Type checking passes: `npx astro check`
-- [ ] 1.3 Linting passes: `npm run lint`
-- [ ] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q
+- [x] 1.1 Migration applies cleanly against local Supabase — 7ecbc37
+- [x] 1.2 Type checking passes: `npx astro check` — 7ecbc37
+- [x] 1.3 Linting passes: `npm run lint` — 7ecbc37
+- [x] 1.4 Integration: search_staff matches reservations/returns/vehicles; role-gated; GET /api/search grouped JSON + 403 anon + empty for short q — 7ecbc37
 
 #### Manual
 
-- [ ] 1.5 Hand-run `search_staff('krzy')` returns sensible grouped rows
+- [x] 1.5 Hand-run `search_staff('krzy')` returns sensible grouped rows — 7ecbc37
 
 ### Phase 2: StaffShell restructure + search entry (shared surface)
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx astro check`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 cmdk resolves and the island bundles (build green)
+- [x] 2.1 Type checking passes: `npx astro check` — 7e3b1df
+- [x] 2.2 Linting passes: `npm run lint` — 7e3b1df
+- [x] 2.3 Build passes: `npm run build` — 7e3b1df
+- [x] 2.4 cmdk resolves and the island bundles (build green) — 7e3b1df
 
 #### Manual
 
-- [ ] 2.5 Desktop search field on all 10 staff pages; the 5 custom-header pages migrated onto the shell slots (single header band, no right-slot clash)
-- [ ] 2.6 ⌘K/Ctrl+K opens/focuses from any page incl. post-view-transition; Esc closes; mobile tab-bar icon opens full-screen
-- [ ] 2.7 No regression to nav items/badges, sign-out, or S-11's Profil chip
-- [ ] 2.8 Mobile tab bar does not overflow/clip at 360px with Profil + search (+ admin Zespół); density fallback applied if needed
+- [x] 2.5 Desktop search field on all 10 staff pages; the 5 custom-header pages migrated onto the shell slots (single header band, no right-slot clash) — 7e3b1df
+- [x] 2.6 ⌘K/Ctrl+K opens/focuses from any page incl. post-view-transition; Esc closes; mobile tab-bar icon opens full-screen — 7e3b1df
+- [x] 2.7 No regression to nav items/badges, sign-out, or S-11's Profil chip — 7e3b1df
+- [x] 2.8 Mobile tab bar does not overflow/clip at 360px with Profil + search (+ admin Zespół); density fallback applied if needed — 7e3b1df
 
 ### Phase 3: Live dropdown results + keyboard nav + deep-links
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build passes: `npm run build`
-- [ ] 3.4 Unit: debounce/cancellation (or results-grouping mapper)
+- [x] 3.1 Type checking passes: `npx astro check` — 9aa5656
+- [x] 3.2 Linting passes: `npm run lint` — 9aa5656
+- [x] 3.3 Build passes: `npm run build` — 9aa5656
+- [x] 3.4 Unit: debounce/cancellation (or results-grouping mapper) — 9aa5656
 
 #### Manual
 
-- [ ] 3.5 Grouped live results with highlighting; ↑↓ + Enter select
-- [ ] 3.6 Each result type deep-links correctly (reservation→calendar focus; return→return flow; vehicle→edit)
-- [ ] 3.7 Resting quick-jumps counts + targets; no-results state; mobile full-screen parity
-- [ ] 3.8 Vision-diff dropdown (resting/results/no-results, desktop+mobile) clean apart from deviations
+- [x] 3.5 Grouped live results with highlighting; ↑↓ + Enter select — 9aa5656
+- [x] 3.6 Each result type deep-links correctly (reservation→calendar focus; return→return flow; vehicle→edit) — 9aa5656
+- [x] 3.7 Resting quick-jumps counts + targets; no-results state; mobile full-screen parity — 9aa5656
+- [x] 3.8 Vision-diff dropdown (resting/results/no-results, desktop+mobile) clean apart from deviations — ac1dde7
 
 ### Phase 4: Full results page (/dashboard/search)
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx astro check`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build passes: `npm run build`
+- [x] 4.1 Type checking passes: `npx astro check` — 6d31629
+- [x] 4.2 Linting passes: `npm run lint` — 6d31629
+- [x] 4.3 Build passes: `npm run build` — 6d31629
 
 #### Manual
 
-- [ ] 4.4 /dashboard/search?q= renders count + chips + sectioned results; deep-linked URL renders without hydration flash
-- [ ] 4.5 Chips filter groups; rows deep-link; Enter from the dropdown lands here
-- [ ] 4.6 Mobile results page (back + scrollable chips + card sections) matches the contract
-- [ ] 4.7 Vision-diff results page (desktop + mobile) clean apart from deviations
+- [x] 4.4 /dashboard/search?q= renders count + chips + sectioned results; deep-linked URL renders without hydration flash — 6d31629
+- [x] 4.5 Chips filter groups; rows deep-link; Enter from the dropdown lands here — 6d31629
+- [x] 4.6 Mobile results page (back + scrollable chips + card sections) matches the contract — ac1dde7
+- [x] 4.7 Vision-diff results page (desktop + mobile) clean apart from deviations — 6d31629

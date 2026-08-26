@@ -1,10 +1,10 @@
 ---
 change_id: staff-global-search
 title: Staff global search — header ⌘K omnisearch across reservations / returns / vehicles / customers
-status: planned
+status: archived
 created: 2026-08-10
-updated: 2026-08-10
-archived_at: null
+updated: 2026-08-26
+archived_at: 2026-08-26T14:43:33Z
 ---
 
 ## Notes
@@ -14,9 +14,14 @@ Roadmap slice **S-13** (`context/foundation/roadmap.md`). Framing cohort:
 
 A logged-in employee searches across **reservations, returns, vehicles, and
 customers** from a **header ⌘K search box** — grouped live results in a dropdown,
-a resting state (recent searches + quick-jumps), a no-results state, and
-**Enter → a full results page** with filter chips. Desktop dropdown + mobile
-full-screen. Full omnisearch as designed (owner decision).
+a resting state (recent searches + quick-jumps), and a no-results state. Desktop
+dropdown + mobile full-screen. Full omnisearch as designed (owner decision).
+
+> **Narrowed 2026-08-17, before merge, by `staff-search-dashboard-only`**: search
+> is reached from **Pulpit only** and resolves **entirely in the dropdown**. The
+> full results page (`/dashboard/search`) and the per-screen entry points are
+> gone; the RPC's per-group cap rose 8 → 25 so the scrolling dropdown carries the
+> whole result set. See `../staff-search-dashboard-only/change.md`.
 
 Design mockup: `search-flow.jsx` (live in Claude Design
 `352d78a6-84fd-49a2-8b38-2fe289691fc3`; pull via DesignSync).
