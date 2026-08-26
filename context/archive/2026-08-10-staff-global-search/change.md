@@ -1,10 +1,10 @@
 ---
 change_id: staff-global-search
 title: Staff global search — header ⌘K omnisearch across reservations / returns / vehicles / customers
-status: implemented
+status: archived
 created: 2026-08-10
-updated: 2026-08-10
-archived_at: null
+updated: 2026-08-26
+archived_at: 2026-08-26T14:43:33Z
 ---
 
 ## Notes
