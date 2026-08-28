@@ -19,15 +19,22 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-export type SeededRole = "admin" | "employee" | "norole";
+export type SeededRole = "admin" | "employee" | "norole" | "demo";
 
 // Seeded credentials (see supabase/seed.sql). `norole` is an authenticated user
 // with NO `profiles` row, so `current_app_role()` resolves to null (fail-closed)
 // — the sharpest probe for the F1 grant hole.
+//
+// `demo` is a SECOND admin, distinguished only by `profiles.is_demo` — the
+// published portfolio account. It is a separate seeded account precisely so the
+// demo-gate cases never touch `admin@`, whose password `e2e/auth.setup.ts` and
+// most of this suite sign in with. At the DB layer it is indistinguishable from
+// `admin`; the gate lives in the route handlers, not in RLS.
 export const SEEDED_CREDENTIALS: Record<SeededRole, { email: string; password: string }> = {
   admin: { email: "admin@fleetrent.test", password: "Fl33tRent-Admin_2026!" },
   employee: { email: "employee@fleetrent.test", password: "Fl33tRent-Employee_2026!" },
   norole: { email: "norole@fleetrent.test", password: "Fl33tRent-NoRole_2026!" },
+  demo: { email: "demo@fleetrent.test", password: "Fl33tRent-Demo_2026!" },
 };
 
 const sessionlessOptions = {

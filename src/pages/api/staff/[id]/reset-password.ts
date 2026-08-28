@@ -2,7 +2,7 @@
 import type { APIRoute } from "astro";
 
 // others
-import { requireRole } from "../../../../lib/access";
+import { isDemoAccount, requireRole } from "../../../../lib/access";
 import { createAdminClient } from "../../../../lib/supabase";
 import { getStaffEmail, resetStaffPassword } from "../../../../lib/services/staff";
 
@@ -11,7 +11,15 @@ import { getStaffEmail, resetStaffPassword } from "../../../../lib/services/staf
 // sends a GoTrue recovery email through the cookie client. Always 200 on success
 // — it neither confirms nor denies the account's state to the caller beyond
 // "sent".
-//   (a) CSRF, (b) auth+admin, (c) resolve email, (d) send recovery.
+//   (a) CSRF, (b) auth+admin, (b2) the demo gate, (c) resolve email,
+//   (d) send recovery.
+//
+// WHY (b2) EXISTS HERE. The recipient is not caller-supplied — it comes from
+// `getStaffEmail` — but this is a ONE-CLICK real send with no confirm step, so a
+// demo visitor can mail every listed staffer at will. The sibling
+// `[id]/invite.ts` is deliberately NOT gated: it refuses anyone whose
+// `password_set_at` is set, so it can only ever mail an already-listed,
+// password-less staffer.
 
 const MSG = {
   badOrigin: "Nieprawidłowe źródło żądania.",
@@ -20,6 +28,9 @@ const MSG = {
   forbidden: "Brak uprawnień.",
   notFound: "Nie znaleziono pracownika.",
   unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
+  // Shared verbatim with `api/staff.ts` and `deactivate.ts` — see the note on
+  // that entry there.
+  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
 } as const;
 
 function json(status: number, body: unknown): Response {
@@ -39,6 +50,14 @@ export const POST: APIRoute = async (context) => {
   }
   if (!requireRole(context.locals, "admin")) {
     return json(403, { error: MSG.forbidden });
+  }
+
+  // (b2) Demo gate — after the admin check, before the admin client is built, so
+  // no service-role client exists for a request that will be refused and no mail
+  // can leave as a result. `code` keeps the roster banner from calling this a
+  // bad-origin or unconfigured failure.
+  if (isDemoAccount(context.locals)) {
+    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
   }
 
   const id = context.params.id;

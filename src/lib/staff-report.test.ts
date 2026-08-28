@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 // others
 import {
   type AddOutcome,
+  DEMO_BLOCKED_CODE,
+  DEMO_BLOCKED_MESSAGE,
   PROVISION_FAILURE_CODES,
   type RemoveOutcome,
   type Report,
@@ -38,6 +40,7 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
       { name: "500 provision_orphaned", outcome: { kind: "http", httpStatus: 500, code: "provision_orphaned" } },
       { name: "500 unhandled (no code)", outcome: { kind: "http", httpStatus: 500, code: null } },
       { name: "403 forbidden", outcome: { kind: "http", httpStatus: 403 } },
+      { name: "403 demo_blocked", outcome: { kind: "http", httpStatus: 403, code: DEMO_BLOCKED_CODE } },
       { name: "400 bad body", outcome: { kind: "http", httpStatus: 400 } },
       { name: "fetch threw", outcome: { kind: "network" } },
     ] as { name: string; outcome: AddOutcome }[]
@@ -49,6 +52,7 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
       { name: "200 removed", outcome: { kind: "http", httpStatus: 200 } },
       { name: "409 last administrator", outcome: { kind: "http", httpStatus: 409 } },
       { name: "403 self / forbidden", outcome: { kind: "http", httpStatus: 403 } },
+      { name: "403 demo_blocked", outcome: { kind: "http", httpStatus: 403, code: DEMO_BLOCKED_CODE } },
       { name: "404 not found", outcome: { kind: "http", httpStatus: 404 } },
       { name: "400 confirm mismatch", outcome: { kind: "http", httpStatus: 400 } },
       { name: "500 unhandled", outcome: { kind: "http", httpStatus: 500 } },
@@ -69,6 +73,7 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
         { name: "404 not found", outcome: { kind: "http", httpStatus: 404 } },
         { name: "502 send failed", outcome: { kind: "http", httpStatus: 502 } },
         { name: "403 unconfigured", outcome: { kind: "http", httpStatus: 403 } },
+        { name: "403 demo_blocked", outcome: { kind: "http", httpStatus: 403, code: DEMO_BLOCKED_CODE } },
         { name: "fetch threw", outcome: { kind: "network" } },
       ] as { name: string; outcome: RowActionOutcome }[]
     ).map(({ name, outcome }) => ({
@@ -362,6 +367,105 @@ describe("resolveRowActionReport — the table, arm by arm (phase 10)", () => {
     expect(resolveRowActionReport("invite", { kind: "network" }).message).toBe(
       resolveRowActionReport("reset", { kind: "network" }).message,
     );
+  });
+});
+
+describe("the demo gate — one refusal, three resolvers (demo-account-gate)", () => {
+  // The three routes the gate covers, each on the surface its mutation owns:
+  // add and remove report in their modal (remove may not use the banner at all),
+  // reset on the row-action banner. `invite` is outside the gate and can never
+  // produce this outcome, but the resolver is shared, so it is asserted too —
+  // the resolver must not answer differently depending on which action asked.
+  const demo403 = { kind: "http", httpStatus: 403, code: DEMO_BLOCKED_CODE } as const;
+
+  it("names the demo account in the add modal's form slot", () => {
+    expect(resolveAddReport(demo403)).toMatchObject({
+      target: "modal",
+      slot: "form",
+      keepsModalOpen: true,
+      tone: "error",
+      message: DEMO_BLOCKED_MESSAGE,
+    });
+  });
+
+  it("names the demo account in the remove modal's form slot", () => {
+    expect(resolveRemoveReport(demo403)).toMatchObject({
+      target: "modal",
+      slot: "form",
+      keepsModalOpen: true,
+      tone: "error",
+      message: DEMO_BLOCKED_MESSAGE,
+    });
+  });
+
+  it("names the demo account on the row-action banner", () => {
+    for (const action of ["invite", "reset"] as const) {
+      expect(resolveRowActionReport(action, demo403)).toMatchObject({
+        target: "banner",
+        tone: "error",
+        message: DEMO_BLOCKED_MESSAGE,
+      });
+    }
+  });
+
+  // THE POINT OF THE GATE'S COPY. Every other failure in this module ends in
+  // "Spróbuj ponownie" or ships a `Ponów`; this one must do neither, because a
+  // demo caller retrying gets the identical 403 forever.
+  it("offers no retry control on any of the three — the refusal is permanent", () => {
+    expect(resolveAddReport(demo403).offersRetry).toBe(false);
+    expect(resolveRemoveReport(demo403).offersRetry).toBe(false);
+    expect(resolveRowActionReport("reset", demo403).offersRetry).toBe(false);
+  });
+
+  it("says nothing about trying again", () => {
+    for (const report of [
+      resolveAddReport(demo403),
+      resolveRemoveReport(demo403),
+      resolveRowActionReport("reset", demo403),
+    ]) {
+      expect(report.message).not.toMatch(/ponownie/i);
+    }
+  });
+
+  // THE CLAUSE WITH TEETH, and the reason the route carries a `code` at all. A
+  // bare 403 already means bad origin / missing role / unconfigured service key
+  // on all three routes — and on remove it also means the `self` refusal. If the
+  // code check were dropped, these would silently adopt the demo sentence and
+  // tell an admin with a real problem that they are on a demo account.
+  it("leaves a 403 WITHOUT the code meaning exactly what it meant before", () => {
+    expect(resolveAddReport({ kind: "http", httpStatus: 403 }).message).toBe(
+      "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.",
+    );
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 403 }).message).toBe(
+      "Nie udało się usunąć pracownika. Spróbuj ponownie.",
+    );
+    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 403 })).toMatchObject({
+      offersRetry: true,
+      message: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
+    });
+  });
+
+  // The code is matched by strict equality on the whole string, so a 403 that
+  // merely resembles it — or a non-403 that carries it — must not qualify.
+  it("matches the code exactly, and only on a 403", () => {
+    for (const code of ["demo", "demo_blocked_", "DEMO_BLOCKED", "__proto__", null]) {
+      expect(resolveAddReport({ kind: "http", httpStatus: 403, code }).message).not.toBe(DEMO_BLOCKED_MESSAGE);
+    }
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 500, code: DEMO_BLOCKED_CODE }).message).toBe(
+      "Nie udało się usunąć pracownika. Spróbuj ponownie.",
+    );
+  });
+
+  // One sentence, byte-identical everywhere it can surface — including the
+  // island's disabled controls, which import `DEMO_BLOCKED_MESSAGE` directly.
+  it("renders one byte-identical sentence across all three surfaces", () => {
+    expect(resolveAddReport(demo403).message).toBe(resolveRemoveReport(demo403).message);
+    expect(resolveRemoveReport(demo403).message).toBe(resolveRowActionReport("reset", demo403).message);
+    expect(DEMO_BLOCKED_MESSAGE).toBe("Ta akcja jest wyłączona na koncie demo.");
+  });
+
+  it("keeps the wire code stable — the three routes hard-code this literal", () => {
+    expect(DEMO_BLOCKED_CODE).toBe("demo_blocked");
   });
 });
 

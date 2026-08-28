@@ -13,6 +13,11 @@ import { anonClient } from "../helpers/clients";
 // both sides so a future migration can neither silently re-open a staff RPC to
 // anon nor lock anon out of a public one.
 //
+// `current_is_demo` (demo-account-gate) joins them: it is called from inside the
+// `profiles` write policies, and a policy helper executes as the QUERYING role,
+// so it needs its own `authenticated` grant — the exact carve-out in which it is
+// easiest to over-grant and never notice.
+//
 // `list_staff`, `deactivate_staff` and `mark_password_set` were added to the
 // refused block by invite-journey-fixes: 20260821100000_password_set_signal
 // DROPs and recreates `list_staff` to add an OUT column, and a drop resets the
@@ -103,6 +108,15 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
 
     it("mark_password_set -> permission denied", async () => {
       const res = await anonClient().rpc("mark_password_set");
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("current_is_demo -> permission denied", async () => {
+      // Added by demo-account-gate. It is an RLS POLICY helper, so like
+      // `current_app_role()` it must stay granted to `authenticated` or every
+      // profiles write policy errors — but anon has no policy to satisfy and no
+      // business reason to read the marker, so the revoke applies as usual.
+      const res = await anonClient().rpc("current_is_demo");
       expect(isPermissionDenied(res.error)).toBe(true);
     });
   });

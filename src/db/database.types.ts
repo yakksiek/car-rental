@@ -536,6 +536,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      current_is_demo: { Args: never; Returns: boolean }
       deactivate_staff: { Args: { target: string }; Returns: string }
       decide_reservation: {
         Args: {

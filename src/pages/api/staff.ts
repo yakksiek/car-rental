@@ -2,7 +2,7 @@
 import type { APIRoute } from "astro";
 
 // others
-import { requireRole } from "../../lib/access";
+import { isDemoAccount, requireRole } from "../../lib/access";
 import { createAdminClient } from "../../lib/supabase";
 import { createEmployee, employeeInviteSchema } from "../../lib/services/staff";
 
@@ -11,6 +11,9 @@ import { createEmployee, employeeInviteSchema } from "../../lib/services/staff";
 // (RLS bypass), so the in-handler admin gate IS the real boundary:
 //   (a) same-origin `Origin` check (CSRF),
 //   (b) auth (401) + admin role (403),
+//   (b2) the demo gate (403 `demo_blocked`) — this is the ONE staff route that
+//        takes a caller-supplied address and mails it, so the published demo
+//        account must not reach it,
 //   (c) zod body validation (shared employeeInviteSchema), 400 `{ errors }`,
 //   (d) the invite/reactivate, mapping the result tag to HTTP.
 
@@ -21,6 +24,10 @@ const MSG = {
   forbidden: "Brak uprawnień.",
   duplicateEmail: "Pracownik z tym adresem e-mail już istnieje.",
   unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
+  // Shared verbatim by the three guarded routes (deactivate, reset-password and
+  // this one). Duplicated rather than imported, following the four strings above
+  // it that are already duplicated across the same three files.
+  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
   // The invite mail went out but the profiles row did not land. The roster island
   // renders its own §9 copy off `code`, so this string is for non-browser callers
   // and logs; the two outcomes share it because the remedy differs only in the
@@ -45,6 +52,18 @@ export const POST: APIRoute = async (context) => {
   }
   if (!requireRole(context.locals, "admin")) {
     return json(403, { error: MSG.forbidden });
+  }
+
+  // (b2) Demo gate. AFTER the admin check so a refusal is attributed to the demo
+  // account rather than to a missing role, and BEFORE the body parse and the
+  // admin-client construction so a refused request does strictly less work than
+  // an accepted one — and no service-role client is built for it.
+  //
+  // `code` is load-bearing, not decoration: `lib/staff-report.ts` maps a bare 403
+  // to the bad-origin/unconfigured sentence, so without it the roster would name
+  // the wrong cause.
+  if (isDemoAccount(context.locals)) {
+    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
   }
 
   let payload: unknown;
