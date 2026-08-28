@@ -42,6 +42,11 @@ function stampFrom(row: unknown): string | null {
   return (row as { password_set_at?: string | null } | null)?.password_set_at ?? null;
 }
 
+/** `user_id` column of a service-role select, narrowed the same way. */
+function userIdsFrom(rows: unknown): string[] {
+  return ((rows as { user_id: string }[] | null) ?? []).map((row) => row.user_id);
+}
+
 /** `profiles.password_set_at` for a user — the owned "has a password" signal. */
 async function stampOf(userId: string): Promise<string | null> {
   const { data } = await svc.from("profiles").select("password_set_at").eq("user_id", userId).maybeSingle();
@@ -598,9 +603,23 @@ describe("deactivate_staff guards + RLS boundary (S-08)", () => {
     });
     expect(signIn.error).toBeNull();
 
-    // Make `target` the ONLY active admin: deactivate the caller and the seed admin.
+    // Make `target` the ONLY active admin. The set to silence is queried rather
+    // than hardcoded: the seed carries more than one admin (SEED_ADMIN plus the
+    // published demo admin), and hardcoding the pair silently turns this
+    // assertion into a no-op the moment another admin is seeded — which is
+    // exactly what happened when the demo account landed.
+    const { data: otherAdmins } = await svc
+      .from("profiles")
+      .select("user_id")
+      .eq("role", "admin")
+      .is("deactivated_at", null)
+      .neq("user_id", targetId);
+    const silenced = userIdsFrom(otherAdmins);
+    expect(silenced).toContain(callerId);
+    expect(silenced).toContain(SEED_ADMIN);
+
     const now = new Date().toISOString();
-    await svc.from("profiles").update({ deactivated_at: now }).in("user_id", [callerId, SEED_ADMIN]);
+    await svc.from("profiles").update({ deactivated_at: now }).in("user_id", silenced);
     try {
       const res = await callerClient.rpc("deactivate_staff", { target: targetId });
       expect(res.error).toBeNull();
@@ -614,7 +633,9 @@ describe("deactivate_staff guards + RLS boundary (S-08)", () => {
         .single();
       expect(targetProfile?.deactivated_at).toBeNull();
     } finally {
-      await svc.from("profiles").update({ deactivated_at: null }).eq("user_id", SEED_ADMIN);
+      // Restore exactly what was silenced (the caller is torn down by
+      // `createdIds`; every seeded admin has to come back active).
+      await svc.from("profiles").update({ deactivated_at: null }).in("user_id", silenced);
     }
   });
 });

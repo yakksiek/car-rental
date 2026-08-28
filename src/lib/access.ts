@@ -79,3 +79,16 @@ export function isRoleSufficient(userRole: AppRole | null, required: AppRole): b
 export function requireRole(locals: App.Locals, min: AppRole): boolean {
   return isRoleSufficient(locals.role, min);
 }
+
+// Is this request coming from the published demo account? Reads only the flag
+// middleware resolved from `profiles.is_demo`, so this stays pure and I/O-free
+// like the rest of the file.
+//
+// Deliberately independent of `role`: the flag DENIES the outward-reaching and
+// lockout-capable staff mutations, it never grants anything, so a demo employee
+// would be refused them too even though only a demo admin is ever provisioned.
+// Guarded routes call this AFTER their `requireRole` check, so a refusal is
+// attributed to the demo account rather than to a missing role.
+export function isDemoAccount(locals: App.Locals): boolean {
+  return locals.isDemo;
+}
