@@ -147,6 +147,7 @@ insert into reservations (
 --   admin@fleetrent.test    / Fl33tRent-Admin_2026!      -> role admin
 --   employee@fleetrent.test / Fl33tRent-Employee_2026!   -> role employee
 --   norole@fleetrent.test   / Fl33tRent-NoRole_2026!     -> role NULL (no profile)
+--   demo@fleetrent.test     / Fl33tRent-Demo_2026!       -> role admin, is_demo
 -- (Long/mixed dev-only passwords so Chrome's breached-password check stays quiet.)
 --
 -- Each account needs THREE things to sign in via email/password:
@@ -198,6 +199,15 @@ insert into auth.users (
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}', '{}',
     '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'd0000000-0000-0000-0000-0000000000de',
+    'authenticated', 'authenticated',
+    'demo@fleetrent.test', crypt('Fl33tRent-Demo_2026!', gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}', '{}',
+    '', '', '', ''
   );
 
 insert into auth.identities (
@@ -221,6 +231,12 @@ insert into auth.identities (
     'b0000000-0000-0000-0000-0000000000b0',
     '{"sub":"b0000000-0000-0000-0000-0000000000b0","email":"norole@fleetrent.test","email_verified":true,"phone_verified":false}',
     'email', now(), now(), now()
+  ),
+  (
+    'd0000000-0000-0000-0000-0000000000de',
+    'd0000000-0000-0000-0000-0000000000de',
+    '{"sub":"d0000000-0000-0000-0000-0000000000de","email":"demo@fleetrent.test","email_verified":true,"phone_verified":false}',
+    'email', now(), now(), now()
   );
 
 -- NOTE: norole@fleetrent.test (b0…b0) intentionally has NO profiles row below,
@@ -229,9 +245,17 @@ insert into auth.identities (
 -- real crypt() password above. These accounts never pass through
 -- api/auth/{reset,change}-password.ts, which is the only writer in the app, so
 -- without this they would read as password-less (ZAPROSZONY) on the roster.
-insert into profiles (user_id, role, full_name, password_set_at) values
-  ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik', now() - interval '2 hours'),
-  ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur', now() - interval '2 hours');
+--
+-- demo@fleetrent.test is the published portfolio account: a real admin whose
+-- profiles.is_demo is true, so the three outward-reaching / lockout-capable
+-- staff mutations refuse it while everything else in the cockpit stays live. It
+-- is a NEW account on purpose — the integration suite and e2e/auth.setup.ts sign
+-- in as admin@/employee@, so neither of those passwords may be rotated to make
+-- room for it.
+insert into profiles (user_id, role, full_name, password_set_at, is_demo) values
+  ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik', now() - interval '2 hours', false),
+  ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur', now() - interval '2 hours', false),
+  ('d0000000-0000-0000-0000-0000000000de', 'admin', 'Konto Demo', now() - interval '2 hours', true);
 
 -- ---------------------------------------------------------------------------
 -- staff roster (S-08) — extra employees so /dashboard/staff renders both the
