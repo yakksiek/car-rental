@@ -255,9 +255,13 @@ Publish the credentials on `/auth/signin` with a one-click prefill, without dist
 
 **Intent**: Carry the demo credentials as configuration rather than repo literals, so rotating them is a `wrangler secret` change and not a commit.
 
-**Contract**: `DEMO_EMAIL` and `DEMO_PASSWORD` added to `env.schema` as `envField.string({ context: "server", access: "public", optional: true })`.
+**Contract**: `DEMO_EMAIL` and `DEMO_PASSWORD` added to `env.schema` as ~~`access: "public"`~~ `envField.string({ context: "server", access: "secret", optional: true })`.
 
-`access: "public"` is deliberate and correct: the value is rendered into the page for anyone to read, and marking a deliberately-published value `secret` would misrepresent it to every future reader of the schema. Both `optional` — with either absent the card does not render, so local dev, CI and any other deployment stay unchanged.
+~~`access: "public"` is deliberate and correct: the value is rendered into the page for anyone to read, and marking a deliberately-published value `secret` would misrepresent it to every future reader of the schema.~~ **Superseded during Phase 3 (owner, 2026-08-28.)** The semantic argument was right and the mechanical consequence sank it: Astro **inlines `access: "public"` server vars into the build**. Verified by building with probe values — `probe-demo@example.test` and `Probe-Secret-1234` landed as literals in `dist/server/chunks/*.mjs`, and disappeared the moment the fields were declared `secret`, which emits a runtime import instead. So `public` would have made Migration Notes step 3 (`npx wrangler secret put`) a no-op: the secret would be set, the code would never read it, and the card would stay invisible on prod with nothing in any log to say why. `secret` is what makes the Intent above ("rotating them is a `wrangler secret` change and not a commit") actually true. That the value is deliberately published is now carried by a comment in `astro.config.mjs` rather than by the schema.
+
+Both `optional` — with either absent the card does not render, so local dev, CI and any other deployment stay unchanged.
+
+**Consequence for local work**: `secret` fields resolve from `.dev.vars` in dev (the adapter logs "Using secrets defined in .dev.vars") and **not** from the process environment, so the pair must sit in `.dev.vars` for the card to render locally, and in `.env.test` for the E2E spec's skip guard to clear. Exporting them into the dev server's environment does nothing.
 
 #### 2. Page wiring
 
@@ -420,7 +424,7 @@ None. The flag rides an existing indexed PK lookup — no new query, no new roun
 
 1. Signed in as the real admin, add the demo staffer through `/dashboard/staff`, then complete the invite to set its password.
 2. Promote and mark it: `update profiles set role = 'admin', is_demo = true where user_id = '<uuid>';`
-3. Set `DEMO_EMAIL` and `DEMO_PASSWORD` via `npx wrangler secret put`.
+3. Set `DEMO_EMAIL` and `DEMO_PASSWORD` via `npx wrangler secret put`. This works **because** both fields are declared `access: "secret"` (Phase 3 §1) — a Worker secret is a runtime binding, and only a `secret` field is read at runtime. If anyone ever "corrects" the schema to `access: "public"` on the grounds that the value is published anyway, this step silently stops working: the value gets inlined at build time instead, the secret is set but never read, and the card vanishes from prod with no error anywhere.
 
 Order matters — step 1 must happen **before** the account is marked, because Phase 2 blocks a demo caller from completing it.
 
@@ -459,38 +463,38 @@ Order matters — step 1 must happen **before** the account is marked, because P
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Integration tests pass: `npm run test:integration`
-- [x] 2.3 Type checking passes: `npx astro check`
-- [x] 2.4 Linting passes: `npm run lint`
-- [x] 2.9 DB gate migration applies cleanly from scratch: `npx supabase db reset`
-- [x] 2.10 Demo caller refused at the DB layer (RPC `demo` + profiles INSERT/UPDATE/DELETE), with a real-admin negative control
+- [x] 2.1 Unit tests pass: `npm test` — f91c1b9
+- [x] 2.2 Integration tests pass: `npm run test:integration` — f91c1b9
+- [x] 2.3 Type checking passes: `npx astro check` — f91c1b9
+- [x] 2.4 Linting passes: `npm run lint` — f91c1b9
+- [x] 2.9 DB gate migration applies cleanly from scratch: `npx supabase db reset` — f91c1b9
+- [x] 2.10 Demo caller refused at the DB layer (RPC `demo` + profiles INSERT/UPDATE/DELETE), with a real-admin negative control — f91c1b9
 
 #### Manual
 
-- [x] 2.5 Three roster controls render disabled with a visible reason for the demo admin
-- [x] 2.6 Direct `curl` to each guarded route returns 403 `demo_blocked`
-- [x] 2.7 `admin@fleetrent.test` can still perform all three actions
-- [x] 2.8 No mail arrives at Mailpit from any refused call
-- [x] 2.11 Direct PostgREST call with the published demo credentials cannot lock the owner out
+- [x] 2.5 Three roster controls render disabled with a visible reason for the demo admin — f91c1b9
+- [x] 2.6 Direct `curl` to each guarded route returns 403 `demo_blocked` — f91c1b9
+- [x] 2.7 `admin@fleetrent.test` can still perform all three actions — f91c1b9
+- [x] 2.8 No mail arrives at Mailpit from any refused call — f91c1b9
+- [x] 2.11 Direct PostgREST call with the published demo credentials cannot lock the owner out — f91c1b9
 
 ### Phase 3: Sign-in demo card
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx astro check`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Formatting clean: `npm run format`
-- [ ] 3.4 E2E passes: `npm run test:e2e`
-- [ ] 3.5 Production build succeeds: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Formatting clean: `npm run format`
+- [x] 3.4 E2E passes: `npm run test:e2e`
+- [x] 3.5 Production build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 3.6 Demo card authored into `staff-login.jsx` and re-exported to `design-review/auth-signin-{d,m}.png`
-- [ ] 3.7 Vision-diff of `/auth/signin` against canonical mockup passes at both breakpoints
-- [ ] 3.8 Card absent when env unset, with no layout shift
-- [ ] 3.9 Prefill fills both fields and submits to `/dashboard`
-- [ ] 3.10 Password manager autofill does not fight the prefill
+- [x] 3.6 Demo card authored into `staff-login.jsx` and re-exported to `design-review/auth-signin-{d,m}.png`
+- [x] 3.7 Vision-diff of `/auth/signin` against canonical mockup passes at both breakpoints
+- [x] 3.8 Card absent when env unset, with no layout shift
+- [x] 3.9 Prefill fills both fields and submits to `/dashboard`
+- [x] 3.10 Password manager autofill does not fight the prefill
 
 ### Phase 4 (deferrable): Nightly demo-data reset
 

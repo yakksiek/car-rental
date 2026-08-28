@@ -10,14 +10,26 @@ Canonical source: Claude Design project `Rental car company` (`352d78a6-84fd-49a
 
 ### 1. Freshness — repo vs canonical
 
-| Artifact            | Repo state                                                                | Canonical state                                                                            | Verdict     |
-| ------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
-| Sign-in screenshot  | **absent** — no `screenshots/*signin*` or `*login*` file exists           | `design-review/auth-signin-d.png`, `design-review/auth-signin-m.png`                       | **missing** |
-| Sign-in catalog row | **absent** — `design-system.md` catalog rows 01–29 contain no auth screen | 22 auth PNGs in `design-review/`, indexed under "Password reset & invite (S-08 · Phase 3)" | **missing** |
-| `staff-login.jsx`   | not in repo (by design — JSX removed 2026-06-18)                          | present, pulled 2026-08-28                                                                 | current     |
-| Live tokens         | `src/styles/global.css`                                                   | `tokens.css`                                                                               | current     |
+| Artifact            | Repo state                                                                | Canonical state                                                                               | Verdict     |
+| ------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------- |
+| Sign-in screenshot  | **pulled 2026-08-28** into `<change>/design-review/auth-signin-{d,m}.png` | `design-review/auth-signin-d.png`, `design-review/auth-signin-m.png` (re-exported 2026-08-28) | current     |
+| Sign-in catalog row | **absent** — `design-system.md` catalog rows 01–29 contain no auth screen | 22 auth PNGs in `design-review/`, indexed under "Password reset & invite (S-08 · Phase 3)"    | **missing** |
+| `staff-login.jsx`   | not in repo (by design — JSX removed 2026-06-18)                          | present, pulled 2026-08-28                                                                    | current     |
+| Live tokens         | `src/styles/global.css`                                                   | `tokens.css`                                                                                  | current     |
 
 **Finding beyond this slice:** the entire auth surface — sign-in, forgot, sent, set, expired, invite, already-authed, in-app, no-link, success, across desktop and mobile — is canonically designed and has **zero** representation in `context/foundation/design-system.md`. `signin.astro:8` cites `staff-login.jsx` as its source, but a reader of the catalog alone would conclude the screen was never designed. This is a pre-existing catalog gap, not caused by this change; it is recorded here rather than fixed, because widening the catalog is not this slice's job. Worth its own change.
+
+**Second finding beyond this slice — the sign-in field rows render at the wrong radius.** §1 below
+records the canonical `LoginField` input row at `12px`, marked `exact`. The app renders it at
+**`20px`**: `FormField.tsx` reaches for `rounded-xl`, and this project's scale is
+`--flota-radius-md: 12px` / `--flota-radius-lg: 16px` / `--flota-radius-xl: 20px`, so `rounded-xl`
+is one and a half steps past the designed value. Measured 2026-08-28 with `getComputedStyle` on
+`/auth/signin` (`borderTopLeftRadius: "20px"`, height `50px` as designed). It is **pre-existing** —
+this slice does not touch `FormField` — and it reaches every screen that reuses the component
+(`/auth/signin`, `/auth/forgot-password`, `/auth/reset-password`). Recorded, not fixed: the demo
+card was built to the contract's `12px` (`rounded-md`), which is why the card and the fields below
+it now differ visibly. Worth a one-line follow-up change; do not read it as demo-card drift in the
+vision-diff.
 
 ### 2. Quality — gaps in the canonical design itself
 
@@ -130,14 +142,41 @@ Line 2.9 is deliberate: it tells the visitor up front why three controls in the 
 
 ---
 
+## §3 — Resolved while authoring the mockup (2026-08-28, Phase 3)
+
+The table above fixes every **value**. Authoring `LoginDemoCard` into `staff-login.jsx` forced
+four decisions the table was silent on. Each is recorded here so the vision-diff converges
+instead of re-flagging them.
+
+| #   | Question                   | Resolution                                                                                                                                                                            | Mark                                                                                                                   |
+| --- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 3.1 | Credential row orientation | Label left, mono value right, one row per credential: `justify-between`, `align-items: baseline`, `10px` inter-column gap. The `4px` of line 2.5 is the gap **between** the two rows. | deviation(new — a stacked label-over-value pair would double the card's height for two short strings)                  |
+| 3.2 | Eyebrow casing in the DOM  | Text content is sentence-case `Konto demo`, uppercased in CSS. Renders as the contract's `KONTO DEMO`.                                                                                | exact (same pattern the app already uses for the canonical `Strefa pracownika` eyebrow in `signin.astro`)              |
+| 3.3 | Credential value selection | `select-all` — one click grabs the whole value.                                                                                                                                       | deviation(new — line 2.5 says "user-selectable"; these strings exist to be copied, and a password is easy to mis-drag) |
+| 3.4 | Mockup credential values   | The boards show `demo@flota.pl` / `demo-2026`. The app renders whatever `DEMO_EMAIL`/`DEMO_PASSWORD` carry.                                                                           | deviation(the values are configuration, not design — the vision-diff must not read the string difference as drift)     |
+
+**Board height.** `auth-signin-m` was re-exported at `390×940`, not the `844` the other 21 auth
+mobile boards use. The card adds ~200px, and an 844 frame clipped the submit button behind the
+pinned help footer — an artifact of the fixed phone frame, not of the design. Recorded in
+`export-shot.html` and in the project's `design-review/index.md`. The desktop board is unchanged
+at `1320×840`.
+
+---
+
 ## Verdict
 
-**Design Alignment Audit: BLOCKED (Phase 3 only) — 1 surface, 2 breakpoints, 2 repo designs missing, 14 deviations recorded.**
+**Design Alignment Audit: CLEARED (2026-08-28) — 1 surface, 2 breakpoints, 18 deviations recorded.**
 
 Phases 1, 2 and 4 are unblocked and touch no UI; they can be implemented immediately.
 
-**Phase 3 is gated on one precondition:** the demo card must be authored into `staff-login.jsx` in the Claude Design project and exported to `design-review/auth-signin-{d,m}.png`, so the rendered vision-diff at 3.6 has something to diff against. Every value it needs is already fixed in §2 above — the authoring is transcription, not design invention, and the project is writable (`canEdit: true`).
+~~**Phase 3 is gated on one precondition:**~~ **Precondition cleared 2026-08-28.** `LoginDemoCard`
+was authored into `staff-login.jsx`, its copy into `shared.jsx` (`STR.{EN,PL}.login.demo`), and
+both screens re-exported to `design-review/auth-signin-{d,m}.png` in the Claude Design project —
+rendered locally with the app's own self-hosted **variable** Inter / JetBrains Mono (`document.fonts.check`
+asserted for `650`, `540` and mono `600` before capture), so the boards and the app share typography.
+Copies pulled into `<change>/design-review/`. The rendered vision-diff at 3.7 now has a target.
 
-Until that export exists, building Phase 3 would mean tuning by eye, which is the exact failure this gate exists to prevent.
+Every value the card needed was already fixed in §2 — the authoring was transcription, not design
+invention. The four questions §2 was silent on are resolved in §3.
 
 **Recommended follow-up (separate change):** add the auth surfaces to the `design-system.md` screen catalog and pull the 22 `design-review/auth-*.png` files into `context/foundation/design/screenshots/`. The largest designed surface in the project is currently invisible to anyone reading the catalog.
