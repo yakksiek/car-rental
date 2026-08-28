@@ -1,7 +1,13 @@
 ---
+// core
+import { DEMO_EMAIL, DEMO_PASSWORD } from "astro:env/server";
+
+// components
 import Layout from "../../layouts/Layout.astro";
 import SignInForm from "../../components/auth/SignInForm";
 import Brand from "../../components/brand/Brand.astro";
+
+// others
 import { safeRedirectPath } from "../../lib/safe-redirect";
 import { resolveAuthError } from "../../lib/auth-messages";
 
@@ -15,6 +21,12 @@ import { resolveAuthError } from "../../lib/auth-messages";
 // link can no longer put words in the app's mouth on this URL.
 const error = resolveAuthError("signin", Astro.url.searchParams.get("error"));
 const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
+
+// Published demo credentials for the portfolio deployment (demo-account-gate).
+// Both halves or nothing: a half-configured pair renders no card rather than a
+// card missing the value it exists to publish. Absent locally and in CI, so the
+// page is byte-identical to before there.
+const demo = DEMO_EMAIL && DEMO_PASSWORD ? { email: DEMO_EMAIL, password: DEMO_PASSWORD } : undefined;
 ---
 
 <Layout title="Strefa pracownika — logowanie">
@@ -113,7 +125,7 @@ const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
         </div>
       </div>
 
-      <SignInForm serverError={error} redirectTo={redirectTo} client:load />
+      <SignInForm serverError={error} redirectTo={redirectTo} demo={demo} client:load />
 
       <div
         class="text-muted-foreground border-border/60 mt-auto flex items-center justify-center gap-1.5 border-t pt-[18px] text-[12.5px] md:mt-6"

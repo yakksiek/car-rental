@@ -113,3 +113,57 @@ test("invite-accept: admin invite → emailed link → first password → sign i
   await page.waitForURL("/dashboard");
   await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// DEMO SIGN-IN (demo-account-gate, plan Phase 3) — the recruiter path.
+//
+// Why a browser. The slice exists so a recruiter following a CV link can get
+// into the staff cockpit, and that path crosses every boundary at once: the
+// server resolving DEMO_EMAIL/DEMO_PASSWORD out of `astro:env/server`, the card
+// rendering them into the page, the React island hydrating, the prefill writing
+// both controlled inputs, the native POST to /api/auth/signin, and the
+// middleware gate on /dashboard. Nothing below the browser can prove the
+// published credentials actually open the door — a unit test of the click
+// handler would pass with the wrong values wired to the wrong fields.
+//
+// The credentials come from `process.env` (playwright.config.ts loads
+// `.env.test`), but the app under test reads `.dev.vars` — set the pair in BOTH,
+// pointed at the seeded `demo@fleetrent.test`. With either unset the card does
+// not render, and this spec skips rather than failing a machine that never
+// configured a demo account.
+// ---------------------------------------------------------------------------
+
+// Coerced to "" rather than left undefined so the assertions below need no
+// non-null assertion — the skip above is what proves both are really set.
+const DEMO_EMAIL = process.env.DEMO_EMAIL ?? "";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
+
+test("demo prefill: published credentials fill both fields in one click and sign in to /dashboard", async ({
+  page,
+}) => {
+  test.skip(!DEMO_EMAIL || !DEMO_PASSWORD, "DEMO_EMAIL/DEMO_PASSWORD unset — the demo card does not render");
+
+  await page.goto("/auth/signin");
+  await waitForIslands(page);
+
+  const email = page.getByRole("textbox", { name: "E-mail służbowy" });
+  const password = page.getByRole("textbox", { name: "Hasło" });
+
+  // The card is what publishes the credentials; without it there is nothing to
+  // click and the prefill assertion below would pass vacuously on empty fields.
+  await expect(page.getByText("Konto demo")).toBeVisible();
+  await expect(email).toHaveValue("");
+  await expect(password).toHaveValue("");
+
+  await page.getByRole("button", { name: "Wypełnij dane demo" }).click();
+
+  await expect(email).toHaveValue(DEMO_EMAIL);
+  await expect(password).toHaveValue(DEMO_PASSWORD);
+
+  // The assertion of record: the prefilled pair really signs in and clears the
+  // /dashboard gate. Fails if the card ever publishes credentials the app does
+  // not accept — the one way this slice can be broken and still look right.
+  await page.getByRole("button", { name: "Zaloguj się" }).click();
+  await page.waitForURL("/dashboard");
+  await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+});

@@ -60,6 +60,19 @@ export default defineConfig({
       // `/api/staff*` routes. Optional: with it missing, staff-management
       // mutations are unconfigured (createAdminClient() returns null).
       SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      // Published demo credentials for the portfolio deployment
+      // (demo-account-gate). The pair is deliberately PUBLIC in meaning — it is
+      // rendered into /auth/signin for anyone to read — but it is declared
+      // `secret` for a mechanical reason: `access: "public"` inlines the value
+      // into the build (verified 2026-08-28 — the literals landed in
+      // `dist/server/chunks/*.mjs`), so `wrangler secret put` would set
+      // something the code never reads and the card would silently stay hidden
+      // on prod. `secret` resolves at runtime, which is what makes rotating the
+      // demo password a secret change instead of a rebuild. Both optional —
+      // with either absent the card does not render, so local dev, CI and any
+      // other deployment stay unchanged.
+      DEMO_EMAIL: envField.string({ context: "server", access: "secret", optional: true }),
+      DEMO_PASSWORD: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

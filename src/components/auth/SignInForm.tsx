@@ -10,13 +10,23 @@ interface Props {
   // Validated internal path to land on after login (A1). Posted as a hidden
   // field so the signin endpoint honors the user's intended destination.
   redirectTo: string;
+  // Published demo credentials (demo-account-gate). Present only when the page
+  // resolved BOTH DEMO_EMAIL and DEMO_PASSWORD; absent everywhere else, and the
+  // card then emits no wrapper at all so the form is unchanged.
+  demo?: { email: string; password: string };
 }
 
 // Staff sign-in form ("Strefa pracownika"). The "forgot password" link now
 // routes to the S-08 self-service reset flow (/auth/forgot-password). The
 // designed "remember me" checkbox stays omitted — sessions persist via Supabase
 // cookies, so an inert control would read as broken.
-export default function SignInForm({ serverError, redirectTo }: Props) {
+//
+// The demo card above the <h1> is the portfolio deployment's front door: the
+// cockpit sits behind auth, so a recruiter following a CV link needs published
+// credentials. It renders only when the page resolved both DEMO_EMAIL and
+// DEMO_PASSWORD. Values transcribed from `design-contract.md` §2; the canonical
+// mockup is `staff-login.jsx` → `LoginDemoCard`.
+export default function SignInForm({ serverError, redirectTo, demo }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +70,49 @@ export default function SignInForm({ serverError, redirectTo }: Props) {
       noValidate
     >
       <input type="hidden" name="redirect" value={redirectTo} />
+
+      {demo ? (
+        <div className="bg-background border-border flex flex-col gap-2.5 rounded-md border p-3.5">
+          <p className="text-muted-foreground font-mono text-[10.5px] leading-none font-semibold tracking-[0.5px] uppercase">
+            Konto demo
+          </p>
+          <p className="text-[13px] leading-[1.45] font-[540] text-[var(--flota-ink-2)]">
+            To wersja demonstracyjna portfolio. Zaloguj się poniższymi danymi, aby obejrzeć panel pracownika.
+          </p>
+
+          <dl className="flex flex-col gap-1">
+            {[
+              { label: "E-mail", value: demo.email },
+              { label: "Hasło", value: demo.password },
+            ].map((row) => (
+              <div key={row.label} className="flex items-baseline justify-between gap-2.5">
+                <dt className="text-[11.5px] font-[650] tracking-[0.2px] text-[var(--flota-ink-2)]">{row.label}</dt>
+                {/* select-all so one click grabs the whole value — these exist to be copied. */}
+                <dd className="text-foreground font-mono text-[12.5px] font-semibold select-all">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* Fills both controlled inputs. Synchronous, so the project's
+              async-button pending-state rule does not apply; `type="button"`
+              keeps it from submitting the form it sits inside. */}
+          <button
+            type="button"
+            onClick={() => {
+              setEmail(demo.email);
+              setPassword(demo.password);
+              setErrors({});
+            }}
+            className="border-border bg-card text-foreground hover:bg-background h-[38px] w-full rounded-[10px] border text-[13px] font-[650] transition-colors"
+          >
+            Wypełnij dane demo
+          </button>
+
+          <p className="text-muted-foreground text-xs leading-[1.45]">
+            Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.
+          </p>
+        </div>
+      ) : null}
 
       <div>
         <h1 className="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">Zaloguj się</h1>
