@@ -6,14 +6,20 @@ import { anonClient, as, type SeededRole } from "../helpers/clients";
 
 // Connectivity smoke test — proves the whole harness wires up before any risk
 // assertion exists: env loads (setup.ts), the anon client reaches the REST API,
-// and every seeded role (incl. the fail-closed `norole`) signs in. No PII or
-// overlap assertions here — those live in the dedicated suites.
+// and every seeded role (incl. the fail-closed `norole` and the published
+// `demo` admin) signs in. No PII or overlap assertions here — those live in the
+// dedicated suites.
+//
+// `SEEDED_UIDS` is keyed by `SeededRole`, so a role added to the harness without
+// a uid here is a type error rather than a silently unexercised account — which
+// is how the `demo` account was caught.
 
 // Seeded auth.uid()s (see supabase/seed.sql).
 const SEEDED_UIDS: Record<SeededRole, string> = {
   admin: "a0000000-0000-0000-0000-0000000000ad",
   employee: "e0000000-0000-0000-0000-0000000000e0",
   norole: "b0000000-0000-0000-0000-0000000000b0",
+  demo: "d0000000-0000-0000-0000-0000000000de",
 };
 
 describe("harness connectivity", () => {
@@ -26,7 +32,7 @@ describe("harness connectivity", () => {
     expect(data?.[0].is_active).toBe(true);
   });
 
-  it.each<SeededRole>(["admin", "employee", "norole"])(
+  it.each<SeededRole>(["admin", "employee", "norole", "demo"])(
     "seeded role %s signs in with the expected auth.uid()",
     async (role) => {
       const client = await as(role);

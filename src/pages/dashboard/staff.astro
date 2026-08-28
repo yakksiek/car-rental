@@ -17,7 +17,11 @@ import { countOverdueReturns } from "../../lib/services/protocols";
 // count at md+ (the island kept only its mobile header), so the count is
 // computed here for the subtitle. Nav badge counts are loaded for parity with
 // the other staff pages.
-const { user, role, supabase } = Astro.locals;
+//
+// `isDemo` rides through to the island so the three demo-gated controls render
+// fenced rather than inviting a click the server will 403. The shell reads the
+// same flag off `Astro.locals` itself for the quick-add menu's promoted row.
+const { user, role, supabase, isDemo } = Astro.locals;
 
 const [staff, pending, overdueCount] = await Promise.all([
   listStaff(supabase),
@@ -39,6 +43,6 @@ const adminCount = staff.filter((s) => s.role === "admin").length;
     pendingCount={pending.length}
     overdueCount={overdueCount}
   >
-    <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} />
+    <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} isDemo={isDemo} />
   </StaffShell>
 </Layout>

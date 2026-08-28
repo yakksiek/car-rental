@@ -60,7 +60,7 @@ Verify by: signing in with the published credentials on prod, confirming the thr
 - **No `DEMO` badge in the staff roster.** It would need its own design-contract entry on a second surface for a signal only the owner would ever read.
 - **No gating of `/api/staff/[id]/invite` or the protocol resend-email routes** — see the Current State table for why each is not a relay.
 - **No new unauthenticated endpoint.** An earlier idea — a `/demo` route that mints a session server-side — is deliberately dropped: publishing credentials on the existing, already-hardened sign-in path adds strictly less surface than a new session-granting route.
-- **No changes to the `deactivate_staff` RPC guards.** The demo gate sits in the route; the RPC's `self`/`last_admin` guards stay as they are.
+- ~~**No changes to the `deactivate_staff` RPC guards.**~~ **Superseded during Phase 2 (owner, 2026-08-28.)** A route-only gate was probed and found bypassable: `profiles.is_demo` is not a JWT claim, the demo credentials are published, and the publishable anon key is serialized into the page HTML on the protocol screens — so a visitor can reach PostgREST directly. The RPC now carries a `demo` arm and the `profiles` write policies exclude demo callers. The `self`/`last_admin` guards themselves are untouched. See Phase 2 §6.
 - **No read-side restrictions.** A demo admin sees every page and every record a real admin sees. The seed data is fictional.
 
 ## Implementation Approach
@@ -192,6 +192,16 @@ Shared Polish copy across all three: `"Ta akcja jest wyłączona na koncie demo.
 **Intent**: A demo admin should see the roster and its actions, but not be invited to click three things that will be refused.
 
 **Contract**: The page passes `isDemo` from `Astro.locals` into the island as a prop. `StaffList` disables the "add employee" trigger and the remove / reset-password row actions when set, each carrying the shared sentence as its accessible explanation. The invite row action stays enabled — it is not gated. Buttons are disabled, not hidden: a recruiter should see that staff management exists and is deliberately fenced, which is the point of showing the slice at all.
+
+#### 6. DB-layer gate (added during implementation, owner-approved)
+
+**File**: `supabase/migrations/20260828140000_demo_account_write_gate.sql`
+
+**Intent**: Close the same three actions at the layer the route cannot reach. Added after probing the route-only gate and finding all four of these succeed for a demo caller holding nothing but published credentials + the publishable anon key: direct `update profiles` (the lockout), `update profiles set role`, `delete from profiles`, and `rpc deactivate_staff`.
+
+**Contract**: A `public.current_is_demo()` helper shaped exactly like `current_app_role()` (STABLE SECURITY DEFINER, `search_path = ''`, per-function revoke then grant to `authenticated` + `service_role`, coalescing a missing profile to `false` so an unknown caller is never locked out). The three `profiles` write policies gain `and not (select public.current_is_demo())` via `ALTER POLICY` in place; SELECT is untouched. `deactivate_staff` gains a `demo` arm after the admin check and before `self`, because SECURITY DEFINER bypasses RLS and is therefore a genuinely different door.
+
+Safe for every non-demo caller by construction: no app code writes `profiles` through the caller's own authenticated client — `services/staff.ts` uses the service-role client and `mark_password_set()` is a definer RPC, both of which bypass RLS.
 
 #### 4. Integration coverage
 
@@ -380,6 +390,8 @@ Deletes and re-inserts only reservation and protocol data from `seed.prod.sql`'s
 ### Integration Tests:
 
 - Each of the three guarded routes returns 403 `demo_blocked` for a demo admin (`tests/integration/staff.test.ts`)
+- The DB layer refuses the same caller with no route handler in the path: `deactivate_staff` returns `demo`, and direct `profiles` INSERT/UPDATE/DELETE are refused — each with a real-admin negative control (`tests/integration/staff.test.ts`)
+- `current_is_demo` is not anon-executable (`tests/integration/rpc-execute-grants.test.ts`)
 - Negative control: the same three calls succeed for a non-demo admin
 - Scope boundary: `/api/staff/[id]/invite` is **not** refused for a demo caller
 
@@ -414,7 +426,7 @@ Order matters — step 1 must happen **before** the account is marked, because P
 
 **Push the migration explicitly.** Merging to `main` auto-deploys the Worker but pushes **no** migrations. Deploying phases 1–2 without `supabase db push` leaves prod querying a column that does not exist, which fails the middleware profile lookup for **every** authenticated request — not just demo ones. Run `npx supabase migration list --linked` after the merge to confirm.
 
-**Rollback** is `alter table profiles drop column is_demo` plus reverting the guards; nothing depends on the column outside this slice.
+**Rollback** is `alter table profiles drop column is_demo` plus reverting the guards; nothing depends on the column outside this slice. The Phase 2 DB gate reverses symmetrically and in place: re-issue the three `ALTER POLICY` statements without the `current_is_demo` clause, `create or replace` `deactivate_staff` without its `demo` arm, then `drop function public.current_is_demo()`. Drop the column last — the policies reference it through the helper.
 
 ## References
 
@@ -433,31 +445,34 @@ Order matters — step 1 must happen **before** the account is marked, because P
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 Unit tests pass: `npm test`
-- [x] 1.3 Type checking passes: `npx astro check`
-- [x] 1.4 Linting passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 81babdd
+- [x] 1.2 Unit tests pass: `npm test` — 81babdd
+- [x] 1.3 Type checking passes: `npx astro check` — 81babdd
+- [x] 1.4 Linting passes: `npm run lint` — 81babdd
 
 #### Manual
 
-- [x] 1.5 `demo@fleetrent.test` signs in locally and reaches `/dashboard`
-- [x] 1.6 Existing `admin@` and `employee@` logins still work unchanged
+- [x] 1.5 `demo@fleetrent.test` signs in locally and reaches `/dashboard` — 81babdd
+- [x] 1.6 Existing `admin@` and `employee@` logins still work unchanged — 81babdd
 
 ### Phase 2: Guard the three mutation routes
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test`
-- [ ] 2.2 Integration tests pass: `npm run test:integration`
-- [ ] 2.3 Type checking passes: `npx astro check`
-- [ ] 2.4 Linting passes: `npm run lint`
+- [x] 2.1 Unit tests pass: `npm test`
+- [x] 2.2 Integration tests pass: `npm run test:integration`
+- [x] 2.3 Type checking passes: `npx astro check`
+- [x] 2.4 Linting passes: `npm run lint`
+- [x] 2.9 DB gate migration applies cleanly from scratch: `npx supabase db reset`
+- [x] 2.10 Demo caller refused at the DB layer (RPC `demo` + profiles INSERT/UPDATE/DELETE), with a real-admin negative control
 
 #### Manual
 
-- [ ] 2.5 Three roster controls render disabled with a visible reason for the demo admin
-- [ ] 2.6 Direct `curl` to each guarded route returns 403 `demo_blocked`
-- [ ] 2.7 `admin@fleetrent.test` can still perform all three actions
-- [ ] 2.8 No mail arrives at Mailpit from any refused call
+- [x] 2.5 Three roster controls render disabled with a visible reason for the demo admin
+- [x] 2.6 Direct `curl` to each guarded route returns 403 `demo_blocked`
+- [x] 2.7 `admin@fleetrent.test` can still perform all three actions
+- [x] 2.8 No mail arrives at Mailpit from any refused call
+- [x] 2.11 Direct PostgREST call with the published demo credentials cannot lock the owner out
 
 ### Phase 3: Sign-in demo card
 

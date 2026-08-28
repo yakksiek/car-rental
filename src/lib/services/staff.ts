@@ -98,7 +98,13 @@ export type CreateEmployeeResult =
   | { status: "unauthorized" };
 
 export interface DeactivateResult {
-  status: "ok" | "self" | "last_admin" | "not_found" | "unauthorized";
+  // `demo` is the RPC's own refusal of the published demo account
+  // (20260828140000_demo_account_write_gate.sql). Unreachable through
+  // `api/staff/[id]/deactivate.ts`, whose route guard answers first — it exists
+  // for the DIRECT caller, since SECURITY DEFINER bypasses the RLS that closes
+  // the same hole on plain table writes. Carried here so the tag has a home
+  // rather than falling off the union and reading as an unhandled string.
+  status: "ok" | "demo" | "self" | "last_admin" | "not_found" | "unauthorized";
 }
 
 // GoTrue ban durations: a 100-year ban to revoke sign-in, and "none" to lift it.

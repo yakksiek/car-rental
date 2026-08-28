@@ -35,6 +35,10 @@ import type { StaffStatus } from "./staff-status";
 //      — a real system-health signal, an orphan means the compensating delete
 //      also failed — but the ADMIN's situation is identical in both, and so is
 //      their remedy. Both codes therefore render one byte-identical sentence.
+//   4. A refusal that can never succeed carries no retry control. Added by the
+//      demo gate: three of the four mutations answer a demo caller with 403
+//      `demo_blocked`, and that is the only failure in this module which is not
+//      worth trying again — so it is the one row-action failure without `Ponów`.
 //
 // WHAT THIS MODULE CANNOT SEE, and where that half is enforced instead.
 // Phase 10's defect was not "the wrong surface" — three of four row arms were
@@ -69,6 +73,31 @@ import type { StaffStatus } from "./staff-status";
 export const PROVISION_FAILURE_CODES = ["provision_rolled_back", "provision_orphaned"] as const;
 
 export type ProvisionFailureCode = (typeof PROVISION_FAILURE_CODES)[number];
+
+/**
+ * The `code` the three demo-gated routes carry on their 403 (`api/staff.ts`,
+ * `api/staff/[id]/deactivate.ts`, `api/staff/[id]/reset-password.ts`).
+ *
+ * It exists because a BARE 403 already means something else on every one of
+ * those routes — bad origin, missing role, unconfigured service key, or (on
+ * remove) the `self` refusal — and all of them resolve to a "check your
+ * connection / try again" sentence. A demo refusal is none of those and is not
+ * retryable, so without the code the roster would name the wrong cause and offer
+ * a retry that cannot succeed.
+ */
+export const DEMO_BLOCKED_CODE = "demo_blocked";
+
+/**
+ * The demo refusal, shared by all three resolvers AND by the island's disabled
+ * controls (`StaffList.tsx`, and the promoted add row in `QuickAddButton.tsx`),
+ * so the reason a control is fenced and the reason the server gives are one
+ * string. Matches the `MSG.demoBlocked` the three routes answer with.
+ *
+ * Deliberately NOT the same sentence as the sign-in card's demo note
+ * (design-contract §2.9): that one is scoped to the sign-in context and warns
+ * ahead of time; this one explains a control the visitor is looking at.
+ */
+export const DEMO_BLOCKED_MESSAGE = "Ta akcja jest wyłączona na koncie demo.";
 
 // Membership via a Set, not by indexing an object literal: `codes["__proto__"]`
 // would answer with `Object.prototype` — truthy, non-null, and rendered as
@@ -110,6 +139,12 @@ const COPY = {
    */
   inviteSent: "Wysłano zaproszenie.",
   resetSent: "Wysłano e-mail do resetu hasła.",
+  /**
+   * The demo gate's refusal, on whichever surface the mutation owns. Not
+   * authored here — it is `DEMO_BLOCKED_MESSAGE` above, because the island's
+   * disabled controls carry the same sentence and the two must not drift.
+   */
+  demoBlocked: DEMO_BLOCKED_MESSAGE,
 } as const;
 
 /**
@@ -192,11 +227,24 @@ export type AddOutcome =
   | { kind: "http"; httpStatus: number; code?: string | null }
   | { kind: "network" };
 
-/** Everything `POST /api/staff/:id/deactivate` can answer with. */
-export type RemoveOutcome = { kind: "http"; httpStatus: number } | { kind: "network" };
+/**
+ * Everything `POST /api/staff/:id/deactivate` can answer with.
+ *
+ * `code` widens this to `AddOutcome`'s shape. Only the demo gate populates it
+ * today; every other arm leaves it null and keeps the status-only routing it
+ * shipped with.
+ */
+export type RemoveOutcome = { kind: "http"; httpStatus: number; code?: string | null } | { kind: "network" };
 
-/** Everything the two row-action routes can answer with. */
-export type RowActionOutcome = { kind: "http"; httpStatus: number } | { kind: "network" };
+/**
+ * Everything the two row-action routes can answer with.
+ *
+ * Widened with `code` for the same reason as `RemoveOutcome`. Only `reset` can
+ * actually carry `demo_blocked` — `[id]/invite.ts` is deliberately outside the
+ * gate — but the two actions share one resolver and one wire read, so splitting
+ * the type would buy an asymmetry rather than a guarantee.
+ */
+export type RowActionOutcome = { kind: "http"; httpStatus: number; code?: string | null } | { kind: "network" };
 
 // The four legal shapes of a report. Going through these constructors is what
 // makes "banner while the modal stays open" unrepresentable — rule 1 above.
@@ -248,6 +296,7 @@ const swapToLastAdmin = (): Report => ({
  * | 201 created / 200 repaired, mail ok  | nothing                    | closes  |
  * | 200 repaired, activation mail failed | banner                     | closes  |
  * | 409 duplicate                        | inline under the e-mail    | stays   |
+ * | 403 + `demo_blocked`                 | modal, form-level          | stays   |
  * | 500 + a provisioning `code`          | modal, form-level          | stays   |
  * | anything else, incl. `fetch` threw   | modal, form-level          | stays   |
  */
@@ -278,6 +327,18 @@ export function resolveAddReport(outcome: AddOutcome): Report {
       if (outcome.httpStatus === 409) {
         return inModal("email", COPY.duplicateEmail);
       }
+      // The demo gate refused it. Reported in the modal like every other add
+      // failure (phase 9's rule), form-level rather than under the e-mail field:
+      // nothing is wrong with the address, the account is simply not allowed to
+      // create staff. `inModal` carries `offersRetry: false`, which is the whole
+      // point here — retrying is futile by construction, not merely unhelpful.
+      //
+      // Reachable only from a stale page: the island renders this trigger
+      // disabled for a demo caller. The server is the boundary; the disabled
+      // control is the courtesy.
+      if (outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
+        return inModal("form", COPY.demoBlocked);
+      }
       // A provisioning failure belongs to the submission, not to a field. The
       // route marks it with a machine-readable `code`; an unhandled 500 has
       // none (Astro's HTML body), so it falls through to the arm below.
@@ -301,6 +362,7 @@ export function resolveAddReport(outcome: AddOutcome): Report {
  * | --------------------------- | ---------------------- | ------- |
  * | 200 removed                 | nothing                | closes  |
  * | 409 last administrator      | the refusal modal      | swaps   |
+ * | 403 + `demo_blocked`        | modal, form-level      | stays   |
  * | anything else               | modal, form-level      | stays   |
  * | `fetch` threw               | modal, form-level      | stays   |
  *
@@ -324,6 +386,13 @@ export function resolveRemoveReport(outcome: RemoveOutcome): Report {
   if (outcome.httpStatus === 409) {
     return swapToLastAdmin();
   }
+  // The demo gate. Checked BEFORE the catch-all below, which would otherwise
+  // report "Nie udało się usunąć pracownika. Spróbuj ponownie." — an instruction
+  // to retry something that can never succeed. Same surface as every other
+  // refused remove (`remove` may not use the banner at all: its modal is open).
+  if (outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
+    return inModal("form", COPY.demoBlocked);
+  }
   return inModal("form", COPY.removeFailed);
 }
 
@@ -331,11 +400,12 @@ export function resolveRemoveReport(outcome: RemoveOutcome): Report {
  * The outcome→surface table for the two ROW actions — a first send or resend of
  * an invitation, and a password-reset mail.
  *
- * | Outcome       | Surface                    | Retry   |
- * | ------------- | -------------------------- | ------- |
- * | 200           | banner, success tone       | no      |
- * | anything else | banner, error tone         | `Ponów` |
- * | `fetch` threw | banner, error tone         | `Ponów` |
+ * | Outcome              | Surface                    | Retry   |
+ * | -------------------- | -------------------------- | ------- |
+ * | 200                  | banner, success tone       | no      |
+ * | 403 + `demo_blocked` | banner, error tone         | no      |
+ * | anything else        | banner, error tone         | `Ponów` |
+ * | `fetch` threw        | banner, error tone         | `Ponów` |
  *
  * These are the arms with no modal to move a message into, which is why §3 had
  * to make the banner itself reachable rather than relocating them. The surface
@@ -346,6 +416,13 @@ export function resolveRemoveReport(outcome: RemoveOutcome): Report {
 export function resolveRowActionReport(action: "invite" | "reset", outcome: RowActionOutcome): Report {
   if (outcome.kind === "http" && outcome.httpStatus === 200) {
     return inBanner("success", action === "invite" ? COPY.inviteSent : COPY.resetSent);
+  }
+  // The demo gate, on the banner these two actions own — and WITHOUT the `Ponów`
+  // the arm below carries, because a retry that is refused by construction is a
+  // control that can only fail. Only `reset` can reach this: `[id]/invite.ts` is
+  // outside the gate by design, and the integration suite pins that boundary.
+  if (outcome.kind === "http" && outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
+    return inBanner("error", COPY.demoBlocked);
   }
   // One generic failure string covers both actions and every failing status.
   // §9.4 records the decision not to split it: neither action has a form to
