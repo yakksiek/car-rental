@@ -1,7 +1,7 @@
 ---
 change_id: demo-account-gate
 title: Demo admin account for recruiters, with POST /api/staff gated on demo
-status: implementing
+status: implemented
 created: 2026-08-28
 updated: 2026-08-28
 archived_at: null

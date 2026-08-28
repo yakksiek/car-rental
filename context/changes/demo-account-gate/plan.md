@@ -325,6 +325,21 @@ Requires `DEMO_EMAIL`/`DEMO_PASSWORD` in the E2E environment, pointed at the see
 
 ## Phase 4 (deferrable): Nightly demo-data reset
 
+> **DROPPED 2026-08-28 (owner).** Not built, and not scheduled. Phases 1–3 ship a complete,
+> correct slice, and this phase's stated trigger — visitor mutations having visibly rotted the
+> demo — has not happened yet: there is no prod demo account at all. Dropping it also avoids
+> standing up a scheduled endpoint that truncates business tables, which the Overview below
+> calls the single most dangerous thing in this plan, for a problem nobody has observed.
+>
+> Two things this phase would also have carried, re-homed so they are not lost with it:
+>
+> - **The demo-password hijack** (a visitor can change the published password via GoTrue) moved to
+>   `context/foundation/known-issues.md` → "A demo visitor can change the published demo password",
+>   together with the spike-verified `auth.users` trigger that fixes it. That fix is orthogonal to
+>   data rot and does not need this phase.
+> - **Data rot itself** stays unaddressed by design. Revive this phase, or open a new change, if
+>   the cockpit ever fills with visitor leftovers.
+
 ### Overview
 
 Without this, the demo degrades: every visitor leaves rejected reservations and half-finished protocols behind, and after a few months the cockpit shows accumulated noise instead of a designed flow.
@@ -482,21 +497,25 @@ Order matters — step 1 must happen **before** the account is marked, because P
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx astro check`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Formatting clean: `npm run format`
-- [x] 3.4 E2E passes: `npm run test:e2e`
-- [x] 3.5 Production build succeeds: `npm run build`
+- [x] 3.1 Type checking passes: `npx astro check` — dc624cc
+- [x] 3.2 Linting passes: `npm run lint` — dc624cc
+- [x] 3.3 Formatting clean: `npm run format` — dc624cc
+- [x] 3.4 E2E passes: `npm run test:e2e` — dc624cc
+- [x] 3.5 Production build succeeds: `npm run build` — dc624cc
 
 #### Manual
 
-- [x] 3.6 Demo card authored into `staff-login.jsx` and re-exported to `design-review/auth-signin-{d,m}.png`
-- [x] 3.7 Vision-diff of `/auth/signin` against canonical mockup passes at both breakpoints
-- [x] 3.8 Card absent when env unset, with no layout shift
-- [x] 3.9 Prefill fills both fields and submits to `/dashboard`
-- [x] 3.10 Password manager autofill does not fight the prefill
+- [x] 3.6 Demo card authored into `staff-login.jsx` and re-exported to `design-review/auth-signin-{d,m}.png` — dc624cc
+- [x] 3.7 Vision-diff of `/auth/signin` against canonical mockup passes at both breakpoints — dc624cc
+- [x] 3.8 Card absent when env unset, with no layout shift — dc624cc
+- [x] 3.9 Prefill fills both fields and submits to `/dashboard` — dc624cc
+- [x] 3.10 Password manager autofill does not fight the prefill — dc624cc
 
 ### Phase 4 (deferrable): Nightly demo-data reset
+
+> **DROPPED 2026-08-28 (owner).** The rows below are left unticked on purpose — they were
+> never done, and marking them otherwise would be a lie. `/10x-archive` will surface them
+> as informational warnings; that is the intended record. See the phase block above.
 
 #### Automated
 
