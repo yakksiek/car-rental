@@ -35,7 +35,22 @@ const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
 // The RPC is skipped entirely when no password is set, so a deployment that does
 // not publish a demo (local dev, CI) pays no round trip and renders byte-
 // identically to before this slice. `supabase` is null when unconfigured.
-const demoEmail = DEMO_PASSWORD ? ((await Astro.locals.supabase?.rpc("demo_account_email"))?.data ?? null) : null;
+//
+// The error is logged rather than swallowed, for the same reason middleware logs
+// its profile lookup: a failed RPC and "no demo account exists" both arrive here
+// as a null address and hide the card, and only one of them is a problem. The
+// likely cause is a Worker deployed ahead of its migration — merging deploys the
+// Worker but pushes no migrations, so `demo_account_email()` would 404 and the
+// card would vanish from prod with nothing anywhere saying why.
+let demoEmail: string | null = null;
+if (DEMO_PASSWORD && Astro.locals.supabase) {
+  const { data, error } = await Astro.locals.supabase.rpc("demo_account_email");
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("[auth/signin] demo_account_email() failed — demo card hidden:", error);
+  }
+  demoEmail = data ?? null;
+}
 const demo = demoEmail && DEMO_PASSWORD ? { email: demoEmail, password: DEMO_PASSWORD } : undefined;
 ---
 
