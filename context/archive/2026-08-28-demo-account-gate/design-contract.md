@@ -1,6 +1,8 @@
 # Design Contract — demo-account-gate
 
-Surface touched: **`/auth/signin`** (one surface). Phases 1, 2 and 4 touch no UI beyond disabling three existing controls in `StaffList`, which reuse their own components' disabled states and add no new visual element.
+Surfaces touched: **`/auth/signin`** (the designed one, §1–§3), plus two incidental surfaces recorded in **§4** — a demo note on `/dashboard/staff` and a footer link on every public page.
+
+~~Surface touched: **`/auth/signin`** (one surface). Phases 1, 2 and 4 touch no UI beyond disabling three existing controls in `StaffList`, which reuse their own components' disabled states and add no new visual element.~~ **Corrected 2026-09-01 (impl-review F7).** Both halves turned out false during implementation: Phase 2 added a page-level note to the staff roster, and Phase 3 added `Strefa pracownika` to `SiteFooter`. Neither is a design invention — the note borrows the existing footer note's geometry element for element, and the link reuses the footer's own row — but the audit had recorded that no such element would exist, so the vision-diff gate at 3.7 was scoped to `/auth/signin` alone and never covered them. They are specified in §4 now so a later reader is not told the surface count is one.
 
 Canonical source: Claude Design project `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`), file `staff-login.jsx`, screens `ScreenStaffLoginMobile` / `ScreenStaffLoginDesktop` + the shared `LoginForm`. Copy from `shared.jsx` `STR.PL.login`.
 
@@ -127,9 +129,11 @@ Rendered only when both `DEMO_EMAIL` and `DEMO_PASSWORD` are set. When absent, n
 | 2.6 label — email    | `E-mail`                                                                                            |
 | 2.6 label — password | `Hasło`                                                                                             |
 | 2.7 button           | `Wypełnij dane demo`                                                                                |
-| 2.9 note             | `Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.`                              |
+| 2.9 note             | `Dodawanie i usuwanie kont, reset hasła oraz tworzenie rezerwacji są w trybie demo wyłączone.`      |
 
-Line 2.9 is deliberate: it tells the visitor up front why three controls in the roster are disabled, which turns "this app is broken" into "this was thought about". It is the same message class as the API's `Ta akcja jest wyłączona na koncie demo.` but scoped to the sign-in context, so the two strings differ on purpose and neither should be made to reuse the other.
+Line 2.9 is deliberate: it tells the visitor up front why some controls are disabled once they are inside, which turns "this app is broken" into "this was thought about". It is the same message class as the API's `Ta akcja jest wyłączona na koncie demo.` but scoped to the sign-in context, so the two strings differ on purpose and neither should be made to reuse the other. The same holds for §4.1's roster note.
+
+**Rewritten 2026-09-01 (impl-review F7).** It previously read `Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.`, which was not true in either half: `POST /api/staff/[id]/invite` is deliberately ungated and sends an e-mail, and account deletion is not what the gate does (it soft-deactivates). The replacement enumerates what is actually fenced, including the manual-reservation route closed by impl-review F1. `exact` — the mockup's `STR.{EN,PL}.login.demo` needs the same rewrite for the boards to match.
 
 ### States
 
@@ -160,6 +164,48 @@ mobile boards use. The card adds ~200px, and an 844 frame clipped the submit but
 pinned help footer — an artifact of the fixed phone frame, not of the design. Recorded in
 `export-shot.html` and in the project's `design-review/index.md`. The desktop board is unchanged
 at `1320×840`.
+
+---
+
+## §4 — Incidental surfaces (recorded 2026-09-01, impl-review F7)
+
+Neither was in the Design Alignment Audit, because the audit stated Phases 1–2 would add no new
+visual element (see the corrected header). Both shipped anyway, both are defensible, and both are
+specified here so the record matches the app. Neither has a canonical mockup, so every line is a
+`deviation` — they reuse existing app geometry rather than porting a designed one.
+
+### 4.1 — Demo note on `/dashboard/staff` (`StaffList.tsx`)
+
+Why it exists rather than a tooltip alone: shadcn's `Button` carries `disabled:pointer-events-none`
+(`button.tsx:8`), so a `title` on a disabled control is exposed to assistive tech but can never be
+hit-tested on hover. The per-control `title` is therefore the _accessible_ explanation and this note
+is the _visible_ one — they are not redundant.
+
+| #    | Element    | Value                                                                    | Mark                                                                                |
+| ---- | ---------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 4.1a | Container  | `cardClass` + `mt-4 flex items-center gap-3 px-5 py-4`                   | deviation(reuses the existing desktop footer note, element for element)             |
+| 4.1b | Icon       | `ShieldCheck`, `size-5 shrink-0`, `text-muted-foreground`                | deviation(new — assurance glyph, not an error glyph: the fence is deliberate)       |
+| 4.1c | Text       | `text-sm text-muted-foreground`                                          | deviation(matches 4.1a's source note)                                               |
+| 4.1d | Copy       | `Dodawanie i usuwanie kont oraz reset hasła są w trybie demo wyłączone.` | deviation(new — screen-scoped; narrower than §2.9 on purpose)                       |
+| 4.1e | Breakpoint | Renders at every breakpoint                                              | deviation(the disabled controls do too, unlike the md+ footer note it borrows from) |
+
+Stacking note: for a demo admin on a non-empty desktop roster this renders directly above the
+existing `!isEmpty` footer note, so two `mt-4 px-5 py-4` cards sit back to back. Accepted — they say
+different things — but it is the one place this element changes an existing layout.
+
+### 4.2 — `Strefa pracownika` link in `SiteFooter.astro`
+
+| #    | Element | Value                                                                           | Mark                                                         |
+| ---- | ------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 4.2a | Row     | `{ label: "Strefa pracownika", href: "/auth/signin" }` in the INFORMACJE column | deviation(new row; reuses the column's existing row styling) |
+
+The plan's Desired End State asserted `/auth/signin` was _"reachable from 'Strefa pracownika' in
+`SiteFooter.astro`"_ as a statement of fact, when no such link existed. It is a prerequisite for the
+slice, so the scope is right — it simply had no Changes Required line and no contract entry.
+
+**Security note, not a design one:** this puts the page publishing the demo password one click from
+every public page, and there is no `robots.txt` or `noindex` on `/auth/signin` (impl-review F3).
+Deliberate publication is not deliberate indexing.
 
 ---
 

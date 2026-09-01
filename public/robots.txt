@@ -1,0 +1,19 @@
+# FleetRent is a PORTFOLIO deployment, not a real rental company. Nothing here
+# should turn up in search results:
+#
+#   * the fleet, prices and reservations are fictional seed data, and an indexed
+#     listing for a company that does not exist is actively misleading;
+#   * /auth/signin publishes demo credentials on purpose, so an indexed copy of
+#     that page is an indexed copy of a working password.
+#
+# `Disallow` stops well-behaved crawlers FETCHING. It does not stop a URL that
+# was discovered elsewhere — a CV link, for instance — from being indexed
+# URL-only, and because a blocked crawler never fetches the page, it never sees
+# the `noindex` in `src/layouts/Layout.astro` either.
+#
+# So if anything here is ALREADY indexed, the removal path is the opposite of
+# this file: comment the `Disallow` out, let crawlers fetch and read the
+# `noindex`, wait for the pages to drop, then restore it.
+
+User-agent: *
+Disallow: /

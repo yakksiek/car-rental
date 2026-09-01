@@ -42,6 +42,13 @@ const ANON_EXECUTABLE_ALLOWLIST = new Set<string>([
   // it returns NOTHING without a valid token_hash, whose entropy — not the grant
   // — is what resists enumeration.
   "resolve_link_token",
+  // demo-account-gate impl-review F3: /auth/signin renders for signed-out
+  // visitors, so the lookup that tells it WHICH account is the published demo
+  // account has no session to gate on. Anon EXECUTE leaks nothing — the value it
+  // returns is printed on that public page for anyone to read, which is the
+  // entire purpose of the function. It exposes exactly one column of one row and
+  // returns NULL unless a single active `is_demo` profile exists.
+  "demo_account_email",
 ]);
 
 interface FnRow {

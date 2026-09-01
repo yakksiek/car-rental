@@ -1,6 +1,6 @@
 ---
 // core
-import { DEMO_EMAIL, DEMO_PASSWORD } from "astro:env/server";
+import { DEMO_PASSWORD } from "astro:env/server";
 
 // components
 import Layout from "../../layouts/Layout.astro";
@@ -23,10 +23,35 @@ const error = resolveAuthError("signin", Astro.url.searchParams.get("error"));
 const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
 
 // Published demo credentials for the portfolio deployment (demo-account-gate).
-// Both halves or nothing: a half-configured pair renders no card rather than a
-// card missing the value it exists to publish. Absent locally and in CI, so the
-// page is byte-identical to before there.
-const demo = DEMO_EMAIL && DEMO_PASSWORD ? { email: DEMO_EMAIL, password: DEMO_PASSWORD } : undefined;
+//
+// The address is DERIVED from `profiles.is_demo` rather than configured beside
+// it: `demo_account_email()` returns the single active demo account's e-mail, or
+// null when there is none, it is deactivated, or there is more than one. That is
+// what stops this card from ever publishing working credentials for an account
+// the gate does not cover — two independent switches could disagree, and the
+// disagreement failed OPEN. Only the password stays configuration, because it is
+// the half that rotates and the half the database must not know.
+//
+// The RPC is skipped entirely when no password is set, so a deployment that does
+// not publish a demo (local dev, CI) pays no round trip and renders byte-
+// identically to before this slice. `supabase` is null when unconfigured.
+//
+// The error is logged rather than swallowed, for the same reason middleware logs
+// its profile lookup: a failed RPC and "no demo account exists" both arrive here
+// as a null address and hide the card, and only one of them is a problem. The
+// likely cause is a Worker deployed ahead of its migration — merging deploys the
+// Worker but pushes no migrations, so `demo_account_email()` would 404 and the
+// card would vanish from prod with nothing anywhere saying why.
+let demoEmail: string | null = null;
+if (DEMO_PASSWORD && Astro.locals.supabase) {
+  const { data, error } = await Astro.locals.supabase.rpc("demo_account_email");
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("[auth/signin] demo_account_email() failed — demo card hidden:", error);
+  }
+  demoEmail = data ?? null;
+}
+const demo = demoEmail && DEMO_PASSWORD ? { email: demoEmail, password: DEMO_PASSWORD } : undefined;
 ---
 
 <Layout title="Strefa pracownika — logowanie">
