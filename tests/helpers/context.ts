@@ -15,7 +15,7 @@ import { anonClient, as, type SeededRole } from "./clients";
 //
 // The handlers read ONLY `context.request` (Origin header + `.json()`),
 // `context.url` (`.origin`, `.searchParams`), `context.locals` (`.supabase`,
-// `.user`, `.role`), `context.params` (`.id`) and — since S-14's session-origin
+// `.user`, `.role`, `.isDemo`), `context.params` (`.id`) and — since S-14's session-origin
 // gate — `context.cookies`. A minimal object covers all of them; the single
 // `as unknown as APIContext` cast below is the one type escape (Astro's real
 // `APIContext` is far larger than any handler uses).
@@ -45,6 +45,13 @@ export interface BuildApiContextOptions {
   user?: User | null;
   /** `locals.role` — middleware normally derives this from the profiles lookup. */
   role?: AppLocalsRole;
+  /**
+   * `locals.isDemo` — middleware reads it off the SAME profiles lookup as `role`
+   * (`profiles.is_demo`). Defaults to `false`, matching middleware's fail-closed
+   * default on every path where no profile resolves: an unauthenticated,
+   * profile-less or unconfigured request is never a demo request.
+   */
+  isDemo?: boolean;
   /** Route params for `[id]` routes, e.g. `{ id }`. */
   params?: Record<string, string | undefined>;
   /** Request body — JSON-serialized into the Request. Omit for GET. */
@@ -176,27 +183,43 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
       supabase: opts.supabase,
       user: opts.user ?? null,
       role: opts.role ?? null,
+      isDemo: opts.isDemo ?? false,
     },
   } as unknown as APIContext;
 }
 
 /**
+ * The `locals.role` middleware would derive for each seeded account.
+ *
+ * `norole` has NO profiles row, so its app-role is null (fail-closed) even
+ * though `locals.user` is truthy. `demo` DOES have one, with `role = 'admin'` —
+ * the demo marker denies, it never grants, so its role must read exactly as a
+ * real admin's or the gate would be testing the wrong thing.
+ */
+const APP_ROLE: Record<SeededRole, AppLocalsRole> = {
+  admin: "admin",
+  employee: "employee",
+  norole: null,
+  demo: "admin",
+};
+
+/**
  * Build a context for a seeded role, pairing `as(role)`'s real JWT with a
- * matching `locals.user`/`locals.role` so client and app-role never drift.
+ * matching `locals.user`/`locals.role`/`locals.isDemo` so client, app-role and
+ * demo marker never drift from what middleware would have written.
  * `norole` is an authenticated user with NO profiles row, so its app-role is
  * null (fail-closed) even though `locals.user` is truthy.
  */
 export async function asContext(
   role: SeededRole,
-  opts: Omit<BuildApiContextOptions, "supabase" | "user" | "role">,
+  opts: Omit<BuildApiContextOptions, "supabase" | "user" | "role" | "isDemo">,
 ): Promise<APIContext> {
   const supabase = await as(role);
   const { data } = await supabase.auth.getUser();
-  const appRole: AppLocalsRole = role === "norole" ? null : role;
-  return buildApiContext({ ...opts, supabase, user: data.user, role: appRole });
+  return buildApiContext({ ...opts, supabase, user: data.user, role: APP_ROLE[role], isDemo: role === "demo" });
 }
 
 /** Build a context for an unauthenticated (anon) caller: null user + null role. */
-export function anonContext(opts: Omit<BuildApiContextOptions, "supabase" | "user" | "role">): APIContext {
-  return buildApiContext({ ...opts, supabase: anonClient(), user: null, role: null });
+export function anonContext(opts: Omit<BuildApiContextOptions, "supabase" | "user" | "role" | "isDemo">): APIContext {
+  return buildApiContext({ ...opts, supabase: anonClient(), user: null, role: null, isDemo: false });
 }

@@ -30,17 +30,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, deactivated_at")
+        .select("role, deactivated_at, is_demo")
         .eq("user_id", user.id)
         .maybeSingle();
       context.locals.role = profile && profile.deactivated_at == null ? profile.role : null;
+      // The demo marker rides the same row, so it costs no extra round trip. It
+      // follows the RAW column rather than the resolved role: deactivation and
+      // demo-ness are independent decisions, and collapsing them would make a
+      // deactivated demo account read as a non-demo one. Missing profile → false.
+      context.locals.isDemo = profile?.is_demo ?? false;
     } else {
       context.locals.role = null;
+      context.locals.isDemo = false;
     }
   } else {
-    // Supabase unconfigured — auth disabled, no user and no role.
+    // Supabase unconfigured — auth disabled, no user, no role, no demo account.
     context.locals.user = null;
     context.locals.role = null;
+    context.locals.isDemo = false;
   }
 
   // Centralized, fail-closed gate. There is no path where an unresolved or

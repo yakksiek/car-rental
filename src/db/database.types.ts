@@ -72,6 +72,7 @@ export type Database = {
           created_at: string
           deactivated_at: string | null
           full_name: string | null
+          is_demo: boolean
           password_set_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -81,6 +82,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          is_demo?: boolean
           password_set_at?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -90,6 +92,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string | null
+          is_demo?: boolean
           password_set_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -533,6 +536,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      current_is_demo: { Args: never; Returns: boolean }
       deactivate_staff: { Args: { target: string }; Returns: string }
       decide_reservation: {
         Args: {

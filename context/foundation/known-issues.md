@@ -235,3 +235,40 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   every clause against real GoTrue-minted tokens, so an upgrade that moves the ground reds the suite
   before it reaches production. If it does fire, the fix is to re-probe the table and update the
   migration's clauses — not to loosen them.
+
+## A demo visitor can change the published demo password (`demo-account-gate`)
+
+- **Symptom:** Signed in as the demo admin, `supabase.auth.updateUser({ password })` **succeeds**.
+  The sign-in card keeps publishing the old password, so the first visitor who changes it locks out
+  every later visitor — silently, with nothing surfacing the failure. Probed and confirmed against
+  local Supabase 2026-08-28 during `demo-account-gate` Phase 2.
+- **Cause:** Two layers, and neither is ours. `[auth.email] secure_password_change = false` in
+  `supabase/config.toml` means no reauth is required; more fundamentally the call goes straight to
+  GoTrue with no Postgres involved, so neither the `profiles` write policies nor the `demo` arm of
+  `deactivate_staff` (`20260828140000_demo_account_write_gate.sql`) is on the path. Gating the app's
+  own change-password route would not help either: the credentials are published by design and the
+  publishable anon key is serialized into the page HTML on the protocol screens
+  (`dashboard/pickups/[reservationId].astro`), so a visitor can call GoTrue directly with `curl`.
+- **Scope:** Production only, and only once a prod demo account exists — it does not yet. Local and
+  CI are unaffected (`demo@fleetrent.test` is reseeded by `supabase db reset`). Blast radius is the
+  demo itself: an attacker gains nothing they did not already have as the published admin, they can
+  only deny the demo to others. The three staff mutations stay gated regardless.
+- **Decision:** Open, not fixed. The nominal home was `demo-account-gate` Phase 4's nightly reset,
+  and **Phase 4 was dropped 2026-08-28**, so it is re-homed here rather than lost.
+- **A fix exists and was spike-verified 2026-08-28** — a `BEFORE UPDATE` trigger on `auth.users`
+  that reverts `encrypted_password` when the row's profile has `is_demo`, which sits _underneath_
+  GoTrue where RLS cannot reach:
+
+  ```sql
+  if new.encrypted_password is distinct from old.encrypted_password
+     and exists (select 1 from public.profiles p where p.user_id = old.id and p.is_demo) then
+    new.encrypted_password := old.encrypted_password;
+  end if;
+  ```
+
+  Measured: GoTrue reports success, the hijack password does not work, the published one still
+  signs in, and a non-demo control user changes password normally. Two costs before adopting it —
+  it blocks the **service-role** admin API too (rotation then needs `is_demo` toggled off and back,
+  or a `set_config` escape hatch), and it would be this repo's first trigger on the Supabase-owned
+  `auth` schema. Provisioning is unaffected provided the account is marked `is_demo` last, which the
+  prod runbook already requires for a separate reason.
