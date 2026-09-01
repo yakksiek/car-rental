@@ -12,6 +12,7 @@ import { QuickActionMenu } from "./QuickActionMenu";
 // others
 import { cn } from "../../lib/utils";
 import { useFleetPicker } from "../hooks/useFleetPicker";
+import { DEMO_BLOCKED_MESSAGE } from "../../lib/staff-report";
 import { buildQuickActions, PROMOTED_ACTIONS, type PromotedActionKey, type ResolvedQuickAction } from "./quick-actions";
 
 // The quick-action trigger (S-12b) — the design's `QuickAddButton`, ported at
@@ -59,9 +60,22 @@ interface QuickAddButtonProps {
    * closure cannot survive. Resolved through `PROMOTED_ACTIONS`.
    */
   promoted?: PromotedActionKey;
+  /**
+   * Is the caller the published demo account (`profiles.is_demo`)? Threaded from
+   * `Astro.locals.isDemo`, and meaningful ONLY together with
+   * `promoted="employee"`: `POST /api/staff` is the one route reachable from this
+   * menu that the demo gate refuses, so that row renders disabled with the
+   * refusal as its hint instead of opening a dialog whose submit the server will
+   * 403.
+   *
+   * `vehicle` and `res` stay live — a demo visitor really can add a vehicle and
+   * book a reservation, and fencing more than the server fences would understate
+   * how much of the cockpit works.
+   */
+  isDemo?: boolean;
 }
 
-export default function QuickAddButton({ mode, promoted }: QuickAddButtonProps) {
+export default function QuickAddButton({ mode, promoted, isDemo = false }: QuickAddButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const { vehicles, state, load } = useFleetPicker();
@@ -79,6 +93,15 @@ export default function QuickAddButton({ mode, promoted }: QuickAddButtonProps) 
     // trigger and "Dodaj pojazd" stay: adding a vehicle is what fixes an empty
     // fleet, so this must not become S-12's whole-component `return null`.
     disabledKeys.res = { hint: COPY.emptyFleet };
+  }
+  // The demo gate, reusing D3's exact affordance rather than inventing one: the
+  // row goes disabled and its description slot carries the reason, which is what
+  // makes the fence VISIBLE rather than only discoverable by clicking. The
+  // trigger and the other rows stay, for the same reason D3 keeps them — a
+  // recruiter should see that staff management exists and is deliberately
+  // fenced, which is the point of showing the slice at all.
+  if (isDemo && promoted === "employee") {
+    disabledKeys.employee = { hint: DEMO_BLOCKED_MESSAGE };
   }
 
   const pick = (item: ResolvedQuickAction) => {

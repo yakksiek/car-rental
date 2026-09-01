@@ -21,10 +21,16 @@ import { fillHydrated, waitForIslands } from "./support/hydration";
 // `norole@fleetrent.test` deliberately has no saved state: it is the
 // fail-closed fixture, and every test that needs it must drive the sign-in
 // itself so the 403 it triggers is the observed behavior, not a fixture detail.
+//
+// `demo` IS saved, because the thing it proves cannot be reached any other way:
+// `demo-gate.spec.ts` needs two byte-identical requests differing only in whose
+// session cookie is attached, and a real cookie session is the only way
+// `locals.isDemo` gets populated by middleware at all. It is a distinct seeded
+// account, so signing in as it rotates no password the rest of the suite needs.
 
 const AUTH_DIR = "playwright/.auth";
 
-for (const role of ["employee", "admin"] as const) {
+for (const role of ["employee", "admin", "demo"] as const) {
   setup(`authenticate as ${role}`, async ({ page }) => {
     const { email, password } = SEEDED_CREDENTIALS[role];
 

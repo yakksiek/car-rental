@@ -1,9 +1,15 @@
 // core
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // others
+import { POST as staffCreatePOST } from "../../src/pages/api/staff";
+import { POST as staffDeactivatePOST } from "../../src/pages/api/staff/[id]/deactivate";
+import { POST as staffInvitePOST } from "../../src/pages/api/staff/[id]/invite";
+import { POST as staffResetPasswordPOST } from "../../src/pages/api/staff/[id]/reset-password";
 import { anonClient, as, serviceClient } from "../helpers/clients";
+import { asContext } from "../helpers/context";
 import { settledMailCount, waitForMailCount } from "../helpers/mailpit";
+import { DEMO_BLOCKED_CODE, DEMO_BLOCKED_MESSAGE } from "../../src/lib/staff-report";
 import { createEmployee, deactivateStaff, inviteEmployee, listStaff } from "../../src/lib/services/staff";
 
 // Staff account-lifecycle suite (S-08). Locks the invariants that are expensive
@@ -18,6 +24,9 @@ import { createEmployee, deactivateStaff, inviteEmployee, listStaff } from "../.
 
 const svc = serviceClient();
 const SEED_ADMIN = "a0000000-0000-0000-0000-0000000000ad";
+// The published portfolio account (supabase/seed.sql) — a real admin whose only
+// distinguishing property is `profiles.is_demo`.
+const DEMO_ADMIN = "d0000000-0000-0000-0000-0000000000de";
 const ORIGIN = "http://localhost:4321";
 const PASSWORD = "Fl33tRent-Admin_2026!";
 
@@ -40,6 +49,11 @@ async function findAuthUserId(email: string): Promise<string | null> {
 // `bannedUntil` below already uses.
 function stampFrom(row: unknown): string | null {
   return (row as { password_set_at?: string | null } | null)?.password_set_at ?? null;
+}
+
+/** `user_id` column of a service-role select, narrowed the same way. */
+function userIdsFrom(rows: unknown): string[] {
+  return ((rows as { user_id: string }[] | null) ?? []).map((row) => row.user_id);
 }
 
 /** `profiles.password_set_at` for a user — the owned "has a password" signal. */
@@ -598,9 +612,23 @@ describe("deactivate_staff guards + RLS boundary (S-08)", () => {
     });
     expect(signIn.error).toBeNull();
 
-    // Make `target` the ONLY active admin: deactivate the caller and the seed admin.
+    // Make `target` the ONLY active admin. The set to silence is queried rather
+    // than hardcoded: the seed carries more than one admin (SEED_ADMIN plus the
+    // published demo admin), and hardcoding the pair silently turns this
+    // assertion into a no-op the moment another admin is seeded — which is
+    // exactly what happened when the demo account landed.
+    const { data: otherAdmins } = await svc
+      .from("profiles")
+      .select("user_id")
+      .eq("role", "admin")
+      .is("deactivated_at", null)
+      .neq("user_id", targetId);
+    const silenced = userIdsFrom(otherAdmins);
+    expect(silenced).toContain(callerId);
+    expect(silenced).toContain(SEED_ADMIN);
+
     const now = new Date().toISOString();
-    await svc.from("profiles").update({ deactivated_at: now }).in("user_id", [callerId, SEED_ADMIN]);
+    await svc.from("profiles").update({ deactivated_at: now }).in("user_id", silenced);
     try {
       const res = await callerClient.rpc("deactivate_staff", { target: targetId });
       expect(res.error).toBeNull();
@@ -614,7 +642,414 @@ describe("deactivate_staff guards + RLS boundary (S-08)", () => {
         .single();
       expect(targetProfile?.deactivated_at).toBeNull();
     } finally {
-      await svc.from("profiles").update({ deactivated_at: null }).eq("user_id", SEED_ADMIN);
+      // Restore exactly what was silenced (the caller is torn down by
+      // `createdIds`; every seeded admin has to come back active).
+      await svc.from("profiles").update({ deactivated_at: null }).in("user_id", silenced);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The demo gate (demo-account-gate phase 2)
+// ---------------------------------------------------------------------------
+//
+// WHY THESE RUN AT THE ROUTE LAYER while the rest of this file runs at the
+// service layer: the gate IS a route-handler check. It sits in the self-gating
+// ladder between `requireRole` and the body parse, and no service knows it
+// exists — `createEmployee`, `deactivateStaff` and `resetStaffPassword` are all
+// reachable and correct for a demo caller. So the only place the property is
+// true or false is the handler, driven here through a constructed APIContext
+// (tests/helpers/context.ts), exactly as `api-authz.test.ts` drives its matrix.
+//
+// WHAT THE NEGATIVE CONTROL CAN AND CANNOT BE. Under vitest `astro:env/server`
+// is stubbed unconfigured (tests/stubs/astro-env-server.ts), so
+// `createAdminClient()` returns null and ALL FOUR of these routes end in their
+// `unconfigured` 403 no matter who calls them. A route-layer "the admin's call
+// succeeds" is therefore not available at this altitude, and pretending
+// otherwise would need a stub change that flips the email seam and config-status
+// for every other suite in the repo.
+//
+// What IS available is sharper than it sounds: the admin and the demo caller
+// issue the BYTE-IDENTICAL request and differ only in `locals.isDemo`, and they
+// get two different refusals — `demo_blocked` for the demo caller, an
+// `unconfigured` 403 with NO `code` for the admin, which is proof the admin got
+// PAST the gate and failed at the next boundary. That is precisely the claim the
+// gate makes. The happy paths for the same three mutations are covered one layer
+// down by the lifecycle cases above, which run the services for real.
+describe("the demo gate on the three staff mutation routes (demo-account-gate)", () => {
+  // ONE disposable target serves every case here: a refused call changes
+  // nothing, because the gate returns before the body is parsed and before any
+  // admin client is constructed. Torn down with the rest via `createdIds`.
+  let targetId = "";
+  let targetEmail = "";
+  let ownerId = "";
+  let ownerEmail = "";
+  // A real auth user with NO profiles row, so an INSERT probe targets a valid FK.
+  // Without it the insert cases fail on `profiles_user_id_fkey` and a policy
+  // denial cannot be told apart from a bad fixture — which is exactly what the
+  // first draft of these cases did, passing for the wrong reason.
+  let insertProbeId = "";
+
+  const UNCONFIGURED = "Zarządzanie kontami nie jest skonfigurowane.";
+
+  /** The JSON body of a handler response, narrowed for the two fields asserted. */
+  async function refusal(res: Response): Promise<{ error?: string; code?: string }> {
+    return (await res.json()) as { error?: string; code?: string };
+  }
+
+  beforeAll(async () => {
+    targetEmail = uniqueEmail("demo-gate-target");
+    const created = await svc.auth.admin.createUser({
+      email: targetEmail,
+      password: PASSWORD,
+      email_confirm: true,
+    });
+    const user = created.data.user;
+    if (!user) {
+      throw new Error("Failed to create the demo-gate target fixture");
+    }
+    targetId = user.id;
+    createdIds.push(targetId);
+    await svc.from("profiles").insert({ user_id: targetId, role: "employee", full_name: "Cel Bramki Demo Żółć" });
+
+    // A disposable SECOND admin, standing in for the owner's real account. It is
+    // what makes the lockout cases meaningful: the RPC's `self` and `last_admin`
+    // guards both hold for a demo caller, so the only lockout it ever had was
+    // "remove a DIFFERENT admin" — and that needs a different admin to exist.
+    ownerEmail = uniqueEmail("demo-gate-owner");
+    const owner = await svc.auth.admin.createUser({
+      email: ownerEmail,
+      password: PASSWORD,
+      email_confirm: true,
+    });
+    const ownerUser = owner.data.user;
+    if (!ownerUser) {
+      throw new Error("Failed to create the stand-in owner fixture");
+    }
+    ownerId = ownerUser.id;
+    createdIds.push(ownerId);
+    await svc.from("profiles").insert({ user_id: ownerId, role: "admin", full_name: "Zastępczy Właściciel" });
+
+    const probe = await svc.auth.admin.createUser({
+      email: uniqueEmail("demo-gate-insert-probe"),
+      password: PASSWORD,
+      email_confirm: true,
+    });
+    const probeUser = probe.data.user;
+    if (!probeUser) {
+      throw new Error("Failed to create the insert-probe fixture");
+    }
+    insertProbeId = probeUser.id;
+    createdIds.push(insertProbeId);
+  });
+
+  it("marks the seeded demo account and only the seeded demo account", async () => {
+    // The gate is driven by the COLUMN, not by the role — an admin is an admin.
+    // If this ever inverts, every case below would pass for the wrong reason.
+    const { data: demo } = await svc.from("profiles").select("role, is_demo").eq("user_id", DEMO_ADMIN).single();
+    expect(demo?.role).toBe("admin");
+    expect(demo?.is_demo).toBe(true);
+
+    const { data: real } = await svc.from("profiles").select("role, is_demo").eq("user_id", SEED_ADMIN).single();
+    expect(real?.role).toBe("admin");
+    expect(real?.is_demo).toBe(false);
+  });
+
+  it("refuses POST /api/staff — the one route that mails a caller-supplied address", async () => {
+    const email = uniqueEmail("demo-blocked-add");
+    const res = await staffCreatePOST(
+      await asContext("demo", {
+        method: "POST",
+        path: "/api/staff",
+        body: { email, full_name: "Nigdy Nie Powstanie" },
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await refusal(res)).toEqual({ error: DEMO_BLOCKED_MESSAGE, code: DEMO_BLOCKED_CODE });
+
+    // The refusal is total, not cosmetic. This is the ONLY staff route that takes
+    // a caller-supplied address and hands it to GoTrue, so the claims that matter
+    // are "no account exists for it" and "nothing was mailed to it" — neither of
+    // which an absent error would prove.
+    expect(await findAuthUserId(email)).toBeNull();
+    expect(await settledMailCount(email)).toBe(0);
+  });
+
+  it("refuses POST /api/staff/[id]/deactivate, leaving the target active", async () => {
+    const res = await staffDeactivatePOST(
+      await asContext("demo", {
+        method: "POST",
+        path: `/api/staff/${targetId}/deactivate`,
+        params: { id: targetId },
+        body: { confirmEmail: targetEmail },
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await refusal(res)).toEqual({ error: DEMO_BLOCKED_MESSAGE, code: DEMO_BLOCKED_CODE });
+
+    // THE LOCKOUT THE RPC DOES NOT COVER, and the reason this route is gated at
+    // all. `deactivate_staff` guards `self` and `last_admin`, so a demo admin can
+    // remove neither itself nor the last admin — but nothing in the RPC stops it
+    // removing a DIFFERENT admin, which in production is the owner. Note the body
+    // above carries the CORRECT confirmation e-mail: this would have succeeded.
+    const { data } = await svc.from("profiles").select("deactivated_at").eq("user_id", targetId).single();
+    expect(data?.deactivated_at).toBeNull();
+  });
+
+  it("refuses POST /api/staff/[id]/reset-password and sends no mail", async () => {
+    const res = await staffResetPasswordPOST(
+      await asContext("demo", {
+        method: "POST",
+        path: `/api/staff/${targetId}/reset-password`,
+        params: { id: targetId },
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await refusal(res)).toEqual({ error: DEMO_BLOCKED_MESSAGE, code: DEMO_BLOCKED_CODE });
+    expect(await settledMailCount(targetEmail)).toBe(0);
+  });
+
+  // ORDERING, both directions. The gate has exactly one correct position in the
+  // ladder and both neighbours are asserted, because either slip is silent: too
+  // early and a cross-site POST would be told it is a demo account; too late and
+  // a demo caller's refusal would depend on whether their body happened to parse.
+  it("sits BELOW the CSRF check — a foreign origin is still a bad-origin 403", async () => {
+    const res = await staffCreatePOST(
+      await asContext("demo", {
+        method: "POST",
+        path: "/api/staff",
+        body: { email: uniqueEmail("demo-foreign"), full_name: "Obce Źródło" },
+        origin: "https://evil.example.com",
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = await refusal(res);
+    expect(body.error).toBe("Nieprawidłowe źródło żądania.");
+    expect(body.code).toBeUndefined();
+  });
+
+  it("sits ABOVE the body parse — malformed JSON from a demo caller is still `demo_blocked`", async () => {
+    const res = await staffCreatePOST(
+      await asContext("demo", { method: "POST", path: "/api/staff", rawBody: "{not json" }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await refusal(res)).toEqual({ error: DEMO_BLOCKED_MESSAGE, code: DEMO_BLOCKED_CODE });
+  });
+
+  it("does not fire for a NON-demo admin on any of the three — only the marker differs", async () => {
+    // The identical requests as `admin`. Each gets past the gate and dies at the
+    // next boundary (`createAdminClient()` is null under the env stub), which is
+    // what a `code`-less `unconfigured` 403 means here. See the block header.
+    const calls: { name: string; run: () => Promise<Response> }[] = [
+      {
+        name: "POST /api/staff",
+        run: async () =>
+          staffCreatePOST(
+            await asContext("admin", {
+              method: "POST",
+              path: "/api/staff",
+              body: { email: uniqueEmail("non-demo-admin"), full_name: "Prawdziwy Administrator" },
+            }),
+          ),
+      },
+      {
+        name: "POST /api/staff/[id]/deactivate",
+        run: async () =>
+          staffDeactivatePOST(
+            await asContext("admin", {
+              method: "POST",
+              path: `/api/staff/${targetId}/deactivate`,
+              params: { id: targetId },
+              body: { confirmEmail: targetEmail },
+            }),
+          ),
+      },
+      {
+        name: "POST /api/staff/[id]/reset-password",
+        run: async () =>
+          staffResetPasswordPOST(
+            await asContext("admin", {
+              method: "POST",
+              path: `/api/staff/${targetId}/reset-password`,
+              params: { id: targetId },
+            }),
+          ),
+      },
+    ];
+
+    for (const { name, run } of calls) {
+      const body = await refusal(await run());
+      expect(body.code, `${name} refused a real admin as a demo caller`).toBeUndefined();
+      expect(body.error, name).toBe(UNCONFIGURED);
+    }
+
+    // And nothing was deactivated on the way through.
+    const { data } = await svc.from("profiles").select("deactivated_at").eq("user_id", targetId).single();
+    expect(data?.deactivated_at).toBeNull();
+  });
+
+  it("leaves POST /api/staff/[id]/invite OUTSIDE the gate — the deliberate scope boundary", async () => {
+    // Not gated, and this pins why rather than merely that: unlike the three
+    // above, `inviteEmployee` resolves its own recipient AND refuses anyone whose
+    // `password_set_at` is set, so the worst a demo caller can do is re-send an
+    // invitation to an already-listed, password-less staffer. A demo caller must
+    // therefore reach the SAME refusal a real admin does.
+    for (const role of ["demo", "admin"] as const) {
+      const res = await staffInvitePOST(
+        await asContext(role, {
+          method: "POST",
+          path: `/api/staff/${targetId}/invite`,
+          params: { id: targetId },
+        }),
+      );
+      const body = await refusal(res);
+      expect(body.code, `invite refused ${role} with a demo code`).toBeUndefined();
+      expect(body.error, `invite answered ${role} differently`).toBe(UNCONFIGURED);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // The DB layer. The route guard above is only one door.
+  // ─────────────────────────────────────────────────────────────────────────
+  //
+  // `profiles.is_demo` is NOT a JWT claim — it is a column the app reads onto
+  // `App.Locals` — so `current_app_role()` and every RLS policy see the demo
+  // account as the plain admin it is. And the demo credentials are PUBLISHED
+  // while the publishable anon key is serialized into the page HTML on the two
+  // protocol screens (`pickups/[reservationId].astro:108`). A visitor holding
+  // nothing but what we deliberately publish can therefore sign in with
+  // supabase-js and reach PostgREST with no Astro route in the path.
+  //
+  // Probed 2026-08-28 BEFORE the fix: all four succeeded. These cases are the
+  // regression guard, and they are deliberately driven through `as("demo")` —
+  // a real JWT on the anon key, exactly as that visitor's script would be.
+  describe("the same refusal at the DB layer, where no route handler runs", () => {
+    /** The stand-in owner's row as service-role sees it — the ground truth. */
+    async function ownerRow(): Promise<{
+      role: string | null;
+      deactivated_at: string | null;
+      full_name: string | null;
+    }> {
+      const { data } = await svc
+        .from("profiles")
+        .select("role, deactivated_at, full_name")
+        .eq("user_id", ownerId)
+        .single();
+      return data as { role: string | null; deactivated_at: string | null; full_name: string | null };
+    }
+
+    it("refuses `deactivate_staff` called DIRECTLY, with its own `demo` tag", async () => {
+      // SECURITY DEFINER runs as the function owner, so RLS never applies to it —
+      // this arm is a separate door from the policies below, not a duplicate of
+      // them. Note the target is an ADMIN: `self` and `last_admin` would both
+      // have returned 'ok' here, which is precisely the gap.
+      const res = await (await as("demo")).rpc("deactivate_staff", { target: ownerId });
+
+      expect(res.error).toBeNull();
+      expect(res.data).toBe("demo");
+      expect((await ownerRow()).deactivated_at).toBeNull();
+    });
+
+    it("refuses a direct UPDATE on profiles — the lockout with no RPC involved", async () => {
+      // An RLS denial on UPDATE is not an error: the rows simply fall out of the
+      // policy and PostgREST reports zero affected. Asserting on `error` alone
+      // would pass whether or not the policy holds, so this asserts BOTH the
+      // affected-row count and the row's actual state.
+      const res = await (await as("demo"))
+        .from("profiles")
+        .update({ deactivated_at: new Date().toISOString(), role: "employee" })
+        .eq("user_id", ownerId)
+        .select();
+
+      expect(res.data ?? []).toHaveLength(0);
+      const row = await ownerRow();
+      expect(row.deactivated_at).toBeNull();
+      expect(row.role).toBe("admin");
+    });
+
+    it("refuses a direct DELETE on profiles — stripping the owner's role entirely", async () => {
+      const res = await (await as("demo")).from("profiles").delete().eq("user_id", ownerId).select();
+
+      expect(res.data ?? []).toHaveLength(0);
+      expect((await ownerRow()).role).toBe("admin");
+    });
+
+    it("refuses a direct INSERT into profiles — as a POLICY denial, not a stray error", async () => {
+      // INSERT is the one that DOES error: a failing `with check` raises rather
+      // than filtering rows away. The CODE is asserted because any error would
+      // otherwise satisfy this — a foreign-key violation from a synthetic uuid
+      // reads identically at the `error !== null` level, which is how the first
+      // draft of this case passed while the policy did nothing.
+      const res = await (await as("demo"))
+        .from("profiles")
+        .insert({ user_id: insertProbeId, role: "admin", full_name: "Podstawiony Admin" });
+
+      expect(res.error?.code).toBe("42501");
+      expect(res.error?.message ?? "").toMatch(/row-level security/i);
+
+      const { data } = await svc.from("profiles").select("user_id").eq("user_id", insertProbeId).maybeSingle();
+      expect(data).toBeNull();
+    });
+
+    it("still lets a REAL admin do all four — the policies gate the marker, not the role", async () => {
+      // The negative control that makes the four above meaningful. If the new
+      // clause had been written as a plain role tightening, every case above
+      // would still pass and this one would go red.
+      const admin = await as("admin");
+
+      const renamed = await admin
+        .from("profiles")
+        .update({ full_name: "Zmienione Przez Admina" })
+        .eq("user_id", ownerId)
+        .select();
+      expect(renamed.data ?? []).toHaveLength(1);
+
+      // The same row the demo caller was refused above, so the two cases differ
+      // in exactly one variable: who is asking.
+      const inserted = await admin
+        .from("profiles")
+        .insert({ user_id: insertProbeId, role: "employee", full_name: "Wstawiony Przez Admina" })
+        .select();
+      expect(inserted.error).toBeNull();
+      expect(inserted.data ?? []).toHaveLength(1);
+
+      const deleted = await admin.from("profiles").delete().eq("user_id", insertProbeId).select();
+      expect(deleted.data ?? []).toHaveLength(1);
+
+      const rpc = await admin.rpc("deactivate_staff", { target: ownerId });
+      expect(rpc.data).toBe("ok");
+      expect((await ownerRow()).deactivated_at).not.toBeNull();
+
+      // Restore: later cases and the `afterAll` sweep both assume an active row.
+      await svc
+        .from("profiles")
+        .update({ deactivated_at: null, full_name: "Zastępczy Właściciel" })
+        .eq("user_id", ownerId);
+    });
+
+    it("keeps the marker readable by the account it describes", async () => {
+      // `current_is_demo()` is granted to `authenticated` because the profiles
+      // policies call it and a policy helper runs as the QUERYING role. Anon's
+      // refusal is pinned separately, in `rpc-execute-grants.test.ts`.
+      expect((await (await as("demo")).rpc("current_is_demo")).data).toBe(true);
+      expect((await (await as("admin")).rpc("current_is_demo")).data).toBe(false);
+      // Fail-closed the right way round: no profiles row must read as NOT demo,
+      // so an unknown caller is never locked out of their own deployment.
+      expect((await (await as("norole")).rpc("current_is_demo")).data).toBe(false);
+    });
+  });
+
+  it("leaves the demo account's READ access untouched — it sees the whole roster", async () => {
+    // "No read-side restrictions" is a decision, not an oversight: the seed data
+    // is fictional and the cockpit is the thing a recruiter came to look at. The
+    // flag denies three mutations; it must never narrow a query.
+    const roster = await listStaff(await as("demo"));
+    expect(roster.length).toBeGreaterThan(0);
+    expect(roster.map((m) => m.email)).toContain("admin@fleetrent.test");
   });
 });

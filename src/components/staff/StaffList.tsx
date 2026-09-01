@@ -13,6 +13,7 @@ import { cn } from "../../lib/utils";
 import { formatLastActive, plForm, staffInitials } from "../../lib/staff-format";
 import {
   type AddOutcome,
+  DEMO_BLOCKED_MESSAGE,
   type Report,
   type ReportTone,
   inviteActionLabel,
@@ -110,6 +111,15 @@ const COPY = {
   statusInvitedMobile: "Zaproszony",
   statusCreatedMobile: "Dodany",
   footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
+  // The page-level demo note. Reused VERBATIM from design-contract.md §2.9 — the
+  // sign-in card's line, which the contract authored precisely to say "why three
+  // controls in the roster are disabled". Same sentence, second surface; nothing
+  // new is written here.
+  //
+  // NOT the same string as `DEMO_BLOCKED_MESSAGE`, and deliberately so: that one
+  // answers "why is THIS button dead" on a single control, this one answers
+  // "what is fenced" for the screen. The contract records the split.
+  demoNote: "Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.",
 } as const;
 
 // 16px content cards (design source = borderRadius:16 = rounded-lg). The project
@@ -535,7 +545,26 @@ function LastAdminModal({ onClose }: { onClose: () => void }) {
 
 // ── main island ──────────────────────────────────────────────────────────────
 
-export default function StaffList({ staff: initial, currentUserId }: { staff: StaffMember[]; currentUserId: string }) {
+export default function StaffList({
+  staff: initial,
+  currentUserId,
+  isDemo = false,
+}: {
+  staff: StaffMember[];
+  currentUserId: string;
+  /**
+   * Is the caller the published demo account? From `Astro.locals.isDemo`.
+   *
+   * Three controls go disabled: add, remove, and reset-password — the exact three
+   * `lib/access.ts`'s `isDemoAccount` gate refuses on the server. The invite row
+   * action stays live because its route is outside the gate.
+   *
+   * DISABLED, NOT HIDDEN. A recruiter should see that staff management exists and
+   * is deliberately fenced; hiding it would read as a missing feature. The UI is
+   * a courtesy either way — the server refuses these regardless of what renders.
+   */
+  isDemo?: boolean;
+}) {
   const [staff, setStaff] = React.useState<StaffMember[]>(initial);
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
@@ -703,8 +732,16 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
       });
       if (res.status === 200) {
         setStaff((rows) => rows.filter((r) => r.id !== member.id));
+        return applyReport(resolveRemoveReport({ kind: "http", httpStatus: 200 }), closeRemoveModal);
       }
-      return applyReport(resolveRemoveReport({ kind: "http", httpStatus: res.status }), closeRemoveModal);
+      // Only a FAILURE carries a `code`, and only the demo gate sets one today.
+      // Read defensively: an unhandled 500 is Astro's HTML body, so `json()`
+      // rejects and the outcome falls back to the status-only routing it had.
+      const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+      return applyReport(
+        resolveRemoveReport({ kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        closeRemoveModal,
+      );
     } catch {
       return applyReport(resolveRemoveReport({ kind: "network" }), closeRemoveModal);
     } finally {
@@ -743,8 +780,18 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
         const invitedAt = body?.invitedAt ?? new Date().toISOString();
         setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
+        return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }), noModal, retry);
       }
-      return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: res.status }), noModal, retry);
+      // Symmetric with `resetPassword` below, though invite can never answer
+      // `demo_blocked` — its route is outside the gate by design. The two row
+      // actions share one resolver and one outcome type, so reading the code on
+      // only one of them would buy an asymmetry rather than a guarantee.
+      const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+      return applyReport(
+        resolveRowActionReport("invite", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        noModal,
+        retry,
+      );
     } catch {
       return applyReport(resolveRowActionReport("invite", { kind: "network" }), noModal, retry);
     } finally {
@@ -758,7 +805,17 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
     setBanner(null);
     try {
       const res = await fetch(`/api/staff/${member.id}/reset-password`, { method: "POST" });
-      return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: res.status }), noModal, retry);
+      if (res.status === 200) {
+        return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }), noModal, retry);
+      }
+      // The one row action the demo gate refuses. Without the `code` the banner
+      // would call a permanent refusal a connection problem and offer `Ponów`.
+      const failure = (await res.json().catch(() => null)) as { code?: string } | null;
+      return applyReport(
+        resolveRowActionReport("reset", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        noModal,
+        retry,
+      );
     } catch {
       return applyReport(resolveRowActionReport("reset", { kind: "network" }), noModal, retry);
     } finally {
@@ -793,7 +850,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                 divider (after row 1 — the rule is positional, not structural).
                 The promoted action opens a dialog rather than navigating, so it
                 carries `onPick` instead of an `href`. */}
-            <QuickAddButton mode="mobile" promoted="employee" />
+            <QuickAddButton mode="mobile" promoted="employee" isDemo={isDemo} />
           </div>
         </div>
       </header>
@@ -942,6 +999,7 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
         {/* ── Roster ────────────────────────────────────────────────────── */}
         {isEmpty ? (
           <EmptyState
+            isDemo={isDemo}
             onAdd={() => {
               setAddOpen(true);
             }}
@@ -1003,7 +1061,8 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                               <Button
                                 variant="outline"
                                 className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
-                                disabled={busyId === m.id}
+                                disabled={isDemo || busyId === m.id}
+                                title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
                                 onClick={() => resetPassword(m)}
                               >
                                 <KeyRound className="size-3.5" />
@@ -1034,9 +1093,14 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                               size="icon"
                               className={cn(
                                 "size-9",
-                                isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
+                                // Muted rather than crimson whenever it is dead:
+                                // a destructive-coloured disabled control reads
+                                // as "still dangerous". Same treatment `isSelf`
+                                // already gets, extended to the demo fence.
+                                isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                               )}
-                              disabled={isSelf || busyId === m.id}
+                              disabled={isSelf || isDemo || busyId === m.id}
+                              title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
                               aria-label={COPY.removeAria}
                               onClick={() => {
                                 setRemoveFor(m);
@@ -1085,7 +1149,8 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                           variant="outline"
                           size="icon"
                           className="text-foreground size-11 rounded-xl"
-                          disabled={busyId === m.id}
+                          disabled={isDemo || busyId === m.id}
+                          title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
                           aria-label={COPY.resetAria}
                           onClick={() => resetPassword(m)}
                         >
@@ -1112,9 +1177,10 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
                         size="icon"
                         className={cn(
                           "size-11 rounded-xl",
-                          isSelf ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
+                          isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                         )}
-                        disabled={isSelf || busyId === m.id}
+                        disabled={isSelf || isDemo || busyId === m.id}
+                        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
                         aria-label={COPY.removeAria}
                         onClick={() => {
                           setRemoveFor(m);
@@ -1128,6 +1194,27 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
               })}
             </div>
           </>
+        )}
+
+        {/* Demo note — the VISIBLE half of the fence.
+
+            `Button` carries `disabled:pointer-events-none` (button.tsx:8), so a
+            `title` on a disabled control is read by assistive tech but never
+            surfaces on hover: the browser cannot hit-test it. That makes the
+            per-control tooltip the ACCESSIBLE explanation and this note the
+            visible one, and it is why both exist rather than one.
+
+            Geometry is §3.5's footer note, element for element — same
+            `cardClass`, `mt-4`, `gap-3`, `px-5 py-4`, `size-5` icon, `text-sm`.
+            No dimension here is new. It renders at EVERY breakpoint because the
+            disabled controls do too, where §3.5 is md+ with a §3.13 mobile twin.
+            `ShieldCheck` is the banner's own success/assurance glyph: the fence
+            is a deliberate guarantee, not an error. */}
+        {isDemo && (
+          <div className={cn(cardClass, "mt-4 flex items-center gap-3 px-5 py-4")}>
+            <ShieldCheck className="text-muted-foreground size-5 shrink-0" />
+            <p className="text-muted-foreground text-sm">{COPY.demoNote}</p>
+          </div>
         )}
 
         {/* Desktop footer note (§3.5) */}
@@ -1182,7 +1269,10 @@ export default function StaffList({ staff: initial, currentUserId }: { staff: St
 
 // ── empty / no-results states ─────────────────────────────────────────────────
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+// Only reachable on a roster with zero rows, which the demo never has — the
+// seeded staff list is the thing a recruiter is here to look at. Fenced anyway:
+// leaving one live add trigger behind an unreachable branch is how a gate rots.
+function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boolean }) {
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
       <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-lg">
@@ -1190,7 +1280,12 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </div>
       <div className="text-foreground mt-4 text-xl font-bold tracking-tight">{COPY.emptyTitle}</div>
       <p className="text-muted-foreground mt-1.5 max-w-xs text-sm leading-relaxed">{COPY.emptyHint}</p>
-      <Button className="bg-foreground text-background hover:bg-foreground/90 mt-5 h-11 px-4" onClick={onAdd}>
+      <Button
+        className="bg-foreground text-background hover:bg-foreground/90 mt-5 h-11 px-4"
+        disabled={isDemo}
+        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+        onClick={onAdd}
+      >
         <Plus className="size-4" />
         {COPY.add}
       </Button>

@@ -81,6 +81,16 @@ const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
 const today = new Date().toISOString().slice(0, 10);
 const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 
+// The demo marker for the quick-add menu's promoted row. Read HERE rather than
+// added to all 10 staff pages' props, for `dueTodayCount`'s reason directly
+// above: it is a property of the REQUEST, not of the page, so one call site
+// cannot drift while ten can. Only `/dashboard/staff` (promotedAction="employee")
+// acts on it — the island ignores it for every other promoted key.
+//
+// `staff.astro` still passes `isDemo` explicitly to <StaffList>, because that is
+// a page-owned island the shell does not mount.
+const isDemo = Astro.locals.isDemo;
+
 // Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
 // on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
 // overlay, and gating it with the band would kill both on the three pages that hide it.
@@ -266,7 +276,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <div class="flex min-w-0 items-center justify-end gap-3">
             <GlobalSearch client:load {...searchProps} />
             <slot name="header-actions" />
-            <QuickAddButton client:load mode="desktop" promoted={promotedAction} />
+            <QuickAddButton client:load mode="desktop" promoted={promotedAction} isDemo={isDemo} />
           </div>
         </header>
       ) : (
