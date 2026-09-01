@@ -272,3 +272,31 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   or a `set_config` escape hatch), and it would be this repo's first trigger on the Supabase-owned
   `auth` schema. Provisioning is unaffected provided the account is marked `is_demo` last, which the
   prod runbook already requires for a separate reason.
+
+## Demo visitors mutate live data with no reset path (`demo-account-gate`)
+
+- **Symptom:** Every visitor who signs in with the published demo credentials leaves real rows
+  behind — reservations, protocols, decided requests, edited vehicles. Nothing removes them. Over
+  months the cockpit fills with strangers' leftovers instead of the designed flow. Added 2026-09-01
+  by the `demo-account-gate` impl-review (F6); the risk itself was accepted when Phase 4 was
+  dropped 2026-08-28, but lived only inside that plan's dropped-phase block, which archiving would
+  have taken out of the durable register.
+- **The sharper half, not previously recorded:** it is not confined to the staff cockpit. Verified
+  against the catalog 2026-09-01 — `vehicles_update_staff` lets any staff caller (demo included)
+  `UPDATE` any vehicle, and `vehicles_select_anon` is `using (is_active = true)`. So a visitor can
+  set every vehicle inactive and **empty the public catalog**, the half of the portfolio that does
+  not sit behind auth. `set_vehicle_active` is a demo-callable `SECURITY DEFINER` RPC as well, so
+  dropping the policy alone would not close it.
+- **Scope:** Production only, and live — the demo card renders on
+  `fleetrent.marcin-kulbicki.workers.dev/auth/signin` with working credentials. Local and CI are
+  unaffected (`supabase db reset` reseeds). The three gated staff mutations and the
+  `/api/reservations/manual` mail relay (impl-review F1) stay refused regardless.
+- **Decision:** Open, accepted. The nominal fix was `demo-account-gate` Phase 4 (a nightly
+  `reset_demo_data()` RPC behind a cron-triggered route), **dropped 2026-08-28** on the grounds that
+  a scheduled endpoint truncating business tables is not worth building for rot nobody has observed.
+  That trade still holds; this entry exists so the accepted risk is findable when it stops holding.
+- **Cheaper mitigations if it bites before Phase 4 is revived:** gate the demo account out of
+  `set_vehicle_active` and the `vehicles` write policies (leaving the fleet read-only for demo,
+  which protects the public catalog without any scheduled job) — that is the narrow slice of
+  impl-review F4 that matters most here. A manual `supabase db reset`-equivalent against prod is
+  NOT an option: it would drop the demo account and the owner's admin account with it.
