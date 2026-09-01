@@ -11,8 +11,9 @@ interface Props {
   // field so the signin endpoint honors the user's intended destination.
   redirectTo: string;
   // Published demo credentials (demo-account-gate). Present only when the page
-  // resolved BOTH DEMO_EMAIL and DEMO_PASSWORD; absent everywhere else, and the
-  // card then emits no wrapper at all so the form is unchanged.
+  // resolved BOTH the flagged account's address (`demo_account_email()`) and
+  // DEMO_PASSWORD; absent everywhere else, and the card then emits no wrapper
+  // at all so the form is unchanged.
   demo?: { email: string; password: string };
 }
 
@@ -23,8 +24,10 @@ interface Props {
 //
 // The demo card above the <h1> is the portfolio deployment's front door: the
 // cockpit sits behind auth, so a recruiter following a CV link needs published
-// credentials. It renders only when the page resolved both DEMO_EMAIL and
-// DEMO_PASSWORD. Values transcribed from `design-contract.md` §2; the canonical
+// credentials. It renders only when the page resolved both the flagged account's
+// address and DEMO_PASSWORD — the address comes from `profiles.is_demo` via
+// `demo_account_email()`, so this card can never name an ungated account
+// (impl-review F3). Values transcribed from `design-contract.md` §2; the canonical
 // mockup is `staff-login.jsx` → `LoginDemoCard`.
 export default function SignInForm({ serverError, redirectTo, demo }: Props) {
   const [email, setEmail] = useState("");
@@ -109,7 +112,7 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
           </button>
 
           <p className="text-muted-foreground text-xs leading-[1.45]">
-            Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.
+            Dodawanie i usuwanie kont, reset hasła oraz tworzenie rezerwacji są w trybie demo wyłączone.
           </p>
         </div>
       ) : null}

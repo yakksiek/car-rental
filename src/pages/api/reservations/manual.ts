@@ -2,7 +2,7 @@
 import type { APIRoute } from "astro";
 
 // others
-import { isRoleSufficient } from "../../../lib/access";
+import { isDemoAccount, isRoleSufficient } from "../../../lib/access";
 import { manualReservationSchema } from "../../../lib/reservation-schema";
 import { notifyReservationConfirmed } from "../../../lib/services/reservation-email";
 import { createConfirmedReservation } from "../../../lib/services/reservations";
@@ -16,6 +16,8 @@ import { createConfirmedReservation } from "../../../lib/services/reservations";
 //   (a) same-origin `Origin` check (CSRF) before any work,
 //   (b) auth — a signed-out caller is 401,
 //   (c) role — employee or above, else 403 (the RPC gates a third time),
+//   (c2) the demo gate — this route takes a caller-supplied `customer_email`
+//        and mails it, so the published demo account must not reach it,
 //   (d) zod body validation (`manualReservationSchema`) → 400 `{ errors }`,
 //   (e) the atomic write; a lost race is a typed `conflict` 409, never a 500,
 //   (f) best-effort confirmation email — the booking is already committed.
@@ -25,6 +27,10 @@ const MSG = {
   badBody: "Nieprawidłowe zgłoszenie.",
   unauthenticated: "Wymagane logowanie.",
   forbidden: "Brak uprawnień.",
+  // Shared verbatim by the guarded routes (staff, deactivate, reset-password
+  // and this one). Duplicated rather than imported, following the strings
+  // above it that are already duplicated across those files.
+  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
   conflict: "Ten pojazd ma już rezerwację w wybranych dniach.",
   unavailable: "Ten pojazd nie jest już dostępny.",
   serverError: "Nie udało się utworzyć rezerwacji.",
@@ -57,6 +63,14 @@ export const POST: APIRoute = async (context) => {
   }
   if (!isRoleSufficient(context.locals.role, "employee")) {
     return json(403, { error: MSG.forbidden });
+  }
+
+  // (c2) The demo gate, placed above the body parse so a refused request never
+  // reaches `customer_email` — the caller-supplied address this route would
+  // otherwise hand to a real provider send at (f). `code` matches the three
+  // staff routes so a client can tell a demo refusal from a role refusal.
+  if (isDemoAccount(context.locals)) {
+    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
   }
 
   let payload: unknown;

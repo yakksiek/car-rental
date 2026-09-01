@@ -62,15 +62,15 @@ interface QuickAddButtonProps {
   promoted?: PromotedActionKey;
   /**
    * Is the caller the published demo account (`profiles.is_demo`)? Threaded from
-   * `Astro.locals.isDemo`, and meaningful ONLY together with
-   * `promoted="employee"`: `POST /api/staff` is the one route reachable from this
-   * menu that the demo gate refuses, so that row renders disabled with the
-   * refusal as its hint instead of opening a dialog whose submit the server will
-   * 403.
+   * `Astro.locals.isDemo`. Two rows in this menu reach a demo-gated route:
+   * `employee` (`POST /api/staff`, only when promoted) and `res`
+   * (`POST /api/reservations/manual`). Both render disabled with the refusal
+   * as their hint instead of opening a dialog whose submit the server will 403.
    *
-   * `vehicle` and `res` stay live — a demo visitor really can add a vehicle and
-   * book a reservation, and fencing more than the server fences would understate
-   * how much of the cockpit works.
+   * `vehicle` stays live — a demo visitor really can add a vehicle, and fencing
+   * more than the server fences would understate how much of the cockpit works.
+   * `res` is fenced: /api/reservations/manual mails a caller-supplied address,
+   * so it is gated server-side like the staff routes.
    */
   isDemo?: boolean;
 }
@@ -100,8 +100,14 @@ export default function QuickAddButton({ mode, promoted, isDemo = false }: Quick
   // trigger and the other rows stay, for the same reason D3 keeps them — a
   // recruiter should see that staff management exists and is deliberately
   // fenced, which is the point of showing the slice at all.
-  if (isDemo && promoted === "employee") {
-    disabledKeys.employee = { hint: DEMO_BLOCKED_MESSAGE };
+  if (isDemo) {
+    if (promoted === "employee") {
+      disabledKeys.employee = { hint: DEMO_BLOCKED_MESSAGE };
+    }
+    // `res` posts to /api/reservations/manual, which mails the
+    // caller-supplied `customer_email`. That route is gated server-side, so
+    // the row must not invite a click the server will 403.
+    disabledKeys.res = { hint: DEMO_BLOCKED_MESSAGE };
   }
 
   const pick = (item: ResolvedQuickAction) => {

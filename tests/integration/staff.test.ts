@@ -150,8 +150,14 @@ afterAll(async () => {
     await svc.from("profiles").delete().eq("user_id", id);
     await svc.auth.admin.deleteUser(id).catch(() => undefined);
   }
-  // Defensive: guarantee the seed admin is active for every later test file.
-  await svc.from("profiles").update({ deactivated_at: null }).eq("user_id", SEED_ADMIN);
+  // Defensive: guarantee the seeded admins are active for every later test file.
+  // DEMO_ADMIN belongs here too (impl-review F9): the last-admin test silences
+  // every OTHER active admin, and since the demo account landed that set includes
+  // it. Its own `finally` restores it, but a killed run or a worker timeout skips
+  // that — and a deactivated demo admin resolves to a null role in middleware, so
+  // the NEXT Playwright run fails at `authenticate as demo` with nothing pointing
+  // back here.
+  await svc.from("profiles").update({ deactivated_at: null }).in("user_id", [SEED_ADMIN, DEMO_ADMIN]);
 });
 
 describe("staff account lifecycle (S-08)", () => {
@@ -626,6 +632,10 @@ describe("deactivate_staff guards + RLS boundary (S-08)", () => {
     const silenced = userIdsFrom(otherAdmins);
     expect(silenced).toContain(callerId);
     expect(silenced).toContain(SEED_ADMIN);
+    // The case the comment above exists for: the demo admin is the extra seeded
+    // admin that turned the old hardcoded pair into a no-op. Assert it explicitly so
+    // a future seeded admin cannot silently re-open the same hole.
+    expect(silenced).toContain(DEMO_ADMIN);
 
     const now = new Date().toISOString();
     await svc.from("profiles").update({ deactivated_at: now }).in("user_id", silenced);
@@ -1051,5 +1061,75 @@ describe("the demo gate on the three staff mutation routes (demo-account-gate)",
     const roster = await listStaff(await as("demo"));
     expect(roster.length).toBeGreaterThan(0);
     expect(roster.map((m) => m.email)).toContain("admin@fleetrent.test");
+  });
+});
+
+// The publication side of the gate (demo-account-gate impl-review F3).
+//
+// `/auth/signin` used to publish `DEMO_EMAIL` — a secret set independently of
+// `profiles.is_demo`. Two switches that could disagree, and the disagreement
+// failed OPEN: point the secret at a real admin, or set it before marking the
+// account, and the page hands out working credentials for an UNGATED admin.
+// `demo_account_email()` removes the second switch by deriving the address from
+// the flag. These cases pin the three NULL branches, because "returns the right
+// address" is the easy half — refusing to answer is what makes it safe.
+describe("demo_account_email() — the card can only name a gated account (impl-review F3)", () => {
+  /** Flip the marker, run `body`, and put it back however `body` ends. */
+  async function withDemoFlag(userId: string, isDemo: boolean, body: () => Promise<void>): Promise<void> {
+    const { data: before } = await svc.from("profiles").select("is_demo").eq("user_id", userId).single();
+    await svc.from("profiles").update({ is_demo: isDemo }).eq("user_id", userId);
+    try {
+      await body();
+    } finally {
+      await svc
+        .from("profiles")
+        .update({ is_demo: before?.is_demo ?? false })
+        .eq("user_id", userId);
+    }
+  }
+
+  it("returns the seeded demo account's address to an ANONYMOUS caller", async () => {
+    // Anon on purpose: the sign-in page renders for signed-out visitors, so a
+    // grant that required a session would make the card permanently invisible.
+    const res = await anonClient().rpc("demo_account_email");
+
+    expect(res.error).toBeNull();
+    expect(res.data).toBe("demo@fleetrent.test");
+  });
+
+  it("returns NULL when no account is marked — the card disappears rather than guessing", async () => {
+    await withDemoFlag(DEMO_ADMIN, false, async () => {
+      const res = await anonClient().rpc("demo_account_email");
+      expect(res.error).toBeNull();
+      expect(res.data).toBeNull();
+    });
+  });
+
+  it("returns NULL when TWO accounts are marked — ambiguity is refused, not resolved", async () => {
+    // Picking a row here would publish an address nobody deliberately chose,
+    // which is the same class of accident the whole function exists to prevent.
+    await withDemoFlag(SEED_ADMIN, true, async () => {
+      const { data: flagged } = await svc.from("profiles").select("user_id").eq("is_demo", true);
+      expect(flagged ?? []).toHaveLength(2);
+
+      const res = await anonClient().rpc("demo_account_email");
+      expect(res.error).toBeNull();
+      expect(res.data).toBeNull();
+    });
+  });
+
+  it("returns NULL when the demo account is deactivated — publishing a dead login helps nobody", async () => {
+    const { data: before } = await svc.from("profiles").select("deactivated_at").eq("user_id", DEMO_ADMIN).single();
+    await svc.from("profiles").update({ deactivated_at: new Date().toISOString() }).eq("user_id", DEMO_ADMIN);
+    try {
+      const res = await anonClient().rpc("demo_account_email");
+      expect(res.error).toBeNull();
+      expect(res.data).toBeNull();
+    } finally {
+      await svc
+        .from("profiles")
+        .update({ deactivated_at: before?.deactivated_at ?? null })
+        .eq("user_id", DEMO_ADMIN);
+    }
   });
 });
