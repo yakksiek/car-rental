@@ -209,7 +209,9 @@ Safe for every non-demo caller by construction: no app code writes `profiles` th
 
 **Intent**: Prove the server boundary independently of the UI — the guard must hold against a direct API call.
 
-**Contract**: Authenticate as a demo admin fixture and assert each of the three routes returns `403` with `code: "demo_blocked"`. Assert the negative control: the same calls as a non-demo admin still succeed. Assert `POST /api/staff/[id]/invite` is **not** refused for a demo caller, pinning the deliberate scope boundary. Follow the suite's existing fixture and cleanup conventions.
+**Contract**: Authenticate as a demo admin fixture and assert each of the three routes returns `403` with `code: "demo_blocked"`. ~~Assert the negative control: the same calls as a non-demo admin still succeed.~~ Assert `POST /api/staff/[id]/invite` is **not** refused for a demo caller, pinning the deliberate scope boundary. Follow the suite's existing fixture and cleanup conventions.
+
+**Negative control weakened during Phase 2 — recorded 2026-09-01 (impl-review F8).** "Still succeed" is not reachable at this layer: the integration harness stubs `astro:env/server` unconfigured, so `createAdminClient()` returns `null` and **all four** routes end in their own `unconfigured` 403 regardless of caller. What shipped (`tests/integration/staff.test.ts:884-888`) asserts the real-admin call gets a **code-less** `unconfigured` 403 instead of a `demo_blocked` one — a genuine discriminator (it proves the admin got _past_ the gate), but weaker than the contracted assertion, and it was never written back here until now. The gap is partly covered elsewhere: `e2e/demo-gate.spec.ts` gets a live `400`-vs-`403` discriminator for `POST /api/staff`, and `e2e/staff-admin.spec.ts` proves a real admin's add and remove succeed end to end. **`reset-password`'s real-admin success path is asserted nowhere** — the one hole left.
 
 #### 5. Report unit coverage
 
@@ -327,9 +329,18 @@ Requires `DEMO_EMAIL`/`DEMO_PASSWORD` in the E2E environment, pointed at the see
 
 > **DROPPED 2026-08-28 (owner).** Not built, and not scheduled. Phases 1–3 ship a complete,
 > correct slice, and this phase's stated trigger — visitor mutations having visibly rotted the
-> demo — has not happened yet: there is no prod demo account at all. Dropping it also avoids
-> standing up a scheduled endpoint that truncates business tables, which the Overview below
-> calls the single most dangerous thing in this plan, for a problem nobody has observed.
+> demo — has not happened yet. Dropping it also avoids standing up a scheduled endpoint that
+> truncates business tables, which the Overview below calls the single most dangerous thing in
+> this plan, for a problem nobody has observed.
+>
+> **Premise corrected 2026-09-01 (impl-review F6).** The drop note originally justified itself
+> with "there is no prod demo account at all." That is no longer true: the demo card renders on
+> `fleetrent.marcin-kulbicki.workers.dev/auth/signin` with working published credentials, and
+> `supabase migration list --linked` confirms both `20260828120000` and `20260828140000` are
+> applied on prod. **The decision stands** — the argument that survives is the second one (a cron
+> endpoint that truncates business tables is not worth building for unobserved rot), not the
+> first. Re-checked because a dropped phase's premise is a claim about the world, and the world
+> moved.
 >
 > Two things this phase would also have carried, re-homed so they are not lost with it:
 >
@@ -337,8 +348,11 @@ Requires `DEMO_EMAIL`/`DEMO_PASSWORD` in the E2E environment, pointed at the see
 >   `context/foundation/known-issues.md` → "A demo visitor can change the published demo password",
 >   together with the spike-verified `auth.users` trigger that fixes it. That fix is orthogonal to
 >   data rot and does not need this phase.
-> - **Data rot itself** stays unaddressed by design. Revive this phase, or open a new change, if
->   the cockpit ever fills with visitor leftovers.
+> - **Data rot itself** stays unaddressed by design, and now lives in
+>   `context/foundation/known-issues.md` → "Demo visitors mutate live data with no reset path"
+>   (added 2026-09-01, impl-review F6) so it survives this plan being archived. That entry also
+>   records the sharper consequence this block never named: a visitor can empty the **public**
+>   catalog, not just clutter the cockpit. Revive this phase, or open a new change, if it bites.
 
 ### Overview
 
@@ -509,7 +523,13 @@ Order matters — step 1 must happen **before** the account is marked, because P
 - [x] 3.7 Vision-diff of `/auth/signin` against canonical mockup passes at both breakpoints — dc624cc
 - [x] 3.8 Card absent when env unset, with no layout shift — dc624cc
 - [x] 3.9 Prefill fills both fields and submits to `/dashboard` — dc624cc
-- [x] 3.10 Password manager autofill does not fight the prefill — dc624cc
+- [x] 3.10 Password manager autofill does not fight the prefill — dc624cc (observed manually only — see note)
+
+> **Note on 3.10 (impl-review F10, 2026-09-01).** Unlike every other row in this Progress
+> section, nothing in the diff backs this one. The `autoComplete="username"` /
+> `"current-password"` attributes in `SignInForm.tsx` predate this change and `dc624cc`
+> touches neither line, so no test would fail if the behaviour regressed. Left ticked because
+> it WAS observed; annotated so a later reader does not mistake it for covered.
 
 ### Phase 4 (deferrable): Nightly demo-data reset
 
