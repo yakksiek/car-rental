@@ -560,6 +560,7 @@ export type Database = {
           vehicle_production_year: number
         }[]
       }
+      demo_account_email: { Args: never; Returns: string }
       get_protocol: {
         Args: { p_id: string }
         Returns: {

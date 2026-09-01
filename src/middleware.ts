@@ -28,11 +28,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // so a soft-removed staffer is denied every gated route on their next
     // request even while their auth.users row persists.
     if (user) {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("role, deactivated_at, is_demo")
         .eq("user_id", user.id)
         .maybeSingle();
+      // A failed lookup is indistinguishable from a missing profile downstream —
+      // both leave `profile` null, which resolves `role` to null and 403s EVERY
+      // gated route for EVERY staffer, silently. That is the right security
+      // direction and the wrong availability one, so the cause has to be
+      // recoverable from a log rather than guessed at. The sharpest case is a
+      // Worker deploy that outran its migration (`is_demo` not yet on the table):
+      // merging to main deploys the Worker but pushes no migrations, so this
+      // select 400s app-wide with nothing else to say why. See the plan's
+      // Migration Notes.
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error("[middleware] profile lookup failed — role denied for this request:", error);
+      }
       context.locals.role = profile && profile.deactivated_at == null ? profile.role : null;
       // The demo marker rides the same row, so it costs no extra round trip. It
       // follows the RAW column rather than the resolved role: deactivation and

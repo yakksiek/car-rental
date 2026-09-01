@@ -1,0 +1,42 @@
+-- Drop the blanket INSERT policy on `reservations`.
+--
+-- `20260617120000_reservation_approval.sql` tightened this table when
+-- `decide_reservation` became the sole write path, dropping the `using (true)`
+-- UPDATE and DELETE policies. It scoped itself to those two, so the equally
+-- blanket INSERT policy from `20260603155136_booking_integrity_data.sql:160-163`
+-- survived:
+--
+--     create policy reservations_insert_authenticated
+--       on reservations for insert
+--       to authenticated
+--       with check (true);
+--
+-- `with check (true)` never calls `current_app_role()`, so it admits ANY
+-- authenticated caller — including one with no `profiles` row at all. That was a
+-- latent over-grant while every account belonged to staff. `demo-account-gate`
+-- publishes admin credentials on `/auth/signin`, which turns it into a live
+-- vector: a visitor can `POST /rest/v1/reservations` directly, bypassing every
+-- route handler, with arbitrary dates, `status = 'confirmed'`, and any
+-- `customer_email` they choose. Two consequences, both hard to undo:
+--
+--   * the row joins the `reservations_no_overlap` EXCLUDE set
+--     (`20260603155136:124-129`) and there is no DELETE policy and no cancel RPC,
+--     so it blocks that vehicle's date range permanently — recoverable only by
+--     service-role SQL;
+--   * it plants a caller-chosen address in `reservations.customer_email`, which
+--     `create_protocol` → `POST /api/protocols/<id>/resend-email` will then mail.
+--     The column itself is immutable (no UPDATE policy, no RPC writes it), so
+--     planting it at INSERT time was the only way in.
+--
+-- Dropping rather than tightening: nothing depends on this policy. Every
+-- reservation write in `src/` goes through a SECURITY DEFINER RPC
+-- (`create_reservation_request`, `create_confirmed_reservation`), which runs as
+-- owner and bypasses RLS. The direct `.from("reservations").insert(...)` calls in
+-- `tests/integration/` and `e2e/fixtures/` all use the service-role client, which
+-- bypasses RLS too. So this removes surface without removing a code path.
+--
+-- SELECT is untouched — employees still read the pending queue and the calendar.
+--
+-- Reversal is symmetric: re-create the policy exactly as quoted above.
+
+drop policy if exists reservations_insert_authenticated on reservations;
