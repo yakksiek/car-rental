@@ -22,6 +22,17 @@ const { title = "Flota — wynajem pojazdów użytkowych" } = Astro.props;
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#B43638" />
+    {
+      /* Portfolio deployment — nothing here belongs in a search index. Site-wide
+        rather than per-page because the reason is the deployment, not the route:
+        the data is fictional, and /auth/signin publishes demo credentials.
+        `public/robots.txt` is the companion, and the two do DIFFERENT jobs — that
+        file stops crawling, this stops indexing of a URL found via a link (a CV,
+        say). See the removal note in robots.txt if anything is already indexed.
+        The page-level noindex on /reserve and /r/[token] predates this and stays:
+        those are noindex for their own per-page reason. */
+    }
+    <meta name="robots" content="noindex, nofollow" />
     <Font cssVariable="--font-inter" preload />
     <Font cssVariable="--font-instrument-serif" preload={[{ style: "normal" }]} />
     <Font cssVariable="--font-jetbrains-mono" />

@@ -111,15 +111,20 @@ const COPY = {
   statusInvitedMobile: "Zaproszony",
   statusCreatedMobile: "Dodany",
   footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
-  // The page-level demo note. Reused VERBATIM from design-contract.md §2.9 — the
-  // sign-in card's line, which the contract authored precisely to say "why three
-  // controls in the roster are disabled". Same sentence, second surface; nothing
-  // new is written here.
+  // The page-level demo note (design-contract.md §4.1). Scoped to THIS screen, so
+  // it names only what this screen fences. The sign-in card's §2.9 line makes the
+  // app-wide claim and therefore also names the reservation fence; the two differ
+  // on purpose and neither should be made to reuse the other.
+  //
+  // Narrowed 2026-09-01 (impl-review F7). It previously read "Akcje wysyłające
+  // e-maile i usuwanie kont…", which was false on its own screen: `Wyślij
+  // zaproszenie` is deliberately NOT gated and sends an e-mail, and it sits in
+  // this very table.
   //
   // NOT the same string as `DEMO_BLOCKED_MESSAGE`, and deliberately so: that one
   // answers "why is THIS button dead" on a single control, this one answers
   // "what is fenced" for the screen. The contract records the split.
-  demoNote: "Akcje wysyłające e-maile i usuwanie kont są w trybie demo wyłączone.",
+  demoNote: "Dodawanie i usuwanie kont oraz reset hasła są w trybie demo wyłączone.",
 } as const;
 
 // 16px content cards (design source = borderRadius:16 = rounded-lg). The project
@@ -1204,10 +1209,13 @@ export default function StaffList({
             per-control tooltip the ACCESSIBLE explanation and this note the
             visible one, and it is why both exist rather than one.
 
-            Geometry is §3.5's footer note, element for element — same
-            `cardClass`, `mt-4`, `gap-3`, `px-5 py-4`, `size-5` icon, `text-sm`.
-            No dimension here is new. It renders at EVERY breakpoint because the
-            disabled controls do too, where §3.5 is md+ with a §3.13 mobile twin.
+            Geometry is the existing desktop footer note's, element for element —
+            same `cardClass`, `mt-4`, `gap-3`, `px-5 py-4`, `size-5` icon,
+            `text-sm`. No dimension here is new. It renders at EVERY breakpoint
+            because the disabled controls do too, where that note is md+ with a
+            mobile twin. Recorded in this slice's design-contract.md §4.1; the
+            §3.5/§3.13 numbering this comment used to cite belongs to the ARCHIVED
+            employee-account-management contract, not to any section here.
             `ShieldCheck` is the banner's own success/assurance glyph: the fence
             is a deliberate guarantee, not an error. */}
         {isDemo && (

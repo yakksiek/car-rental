@@ -119,29 +119,39 @@ test("invite-accept: admin invite → emailed link → first password → sign i
 //
 // Why a browser. The slice exists so a recruiter following a CV link can get
 // into the staff cockpit, and that path crosses every boundary at once: the
-// server resolving DEMO_EMAIL/DEMO_PASSWORD out of `astro:env/server`, the card
-// rendering them into the page, the React island hydrating, the prefill writing
+// server resolving DEMO_PASSWORD out of `astro:env/server` AND the demo address
+// out of `demo_account_email()`, the card rendering them into the page, the React
+// island hydrating, the prefill writing
 // both controlled inputs, the native POST to /api/auth/signin, and the
 // middleware gate on /dashboard. Nothing below the browser can prove the
 // published credentials actually open the door — a unit test of the click
 // handler would pass with the wrong values wired to the wrong fields.
 //
-// The credentials come from `process.env` (playwright.config.ts loads
-// `.env.test`), but the app under test reads `.dev.vars` — set the pair in BOTH,
-// pointed at the seeded `demo@fleetrent.test`. With either unset the card does
-// not render, and this spec skips rather than failing a machine that never
+// Only the PASSWORD is configuration now (impl-review F3): the address is derived
+// from `profiles.is_demo` by `demo_account_email()`, so the card can never name an
+// account the gate does not cover. That is why the expected e-mail below is the
+// SEEDED account rather than `process.env.DEMO_EMAIL` — asserting against the env
+// var would test a coincidence between `.env.test` and the database, and would red
+// this spec for a config edit that left the app perfectly correct.
+//
+// `DEMO_PASSWORD` comes from `process.env` (playwright.config.ts loads `.env.test`)
+// but the app under test reads `.dev.vars` — set it in BOTH. With it unset the card
+// does not render, and this spec skips rather than failing a machine that never
 // configured a demo account.
 // ---------------------------------------------------------------------------
 
-// Coerced to "" rather than left undefined so the assertions below need no
-// non-null assertion — the skip above is what proves both are really set.
-const DEMO_EMAIL = process.env.DEMO_EMAIL ?? "";
+// The account `supabase/seed.sql` marks `is_demo`, and therefore the only address
+// `demo_account_email()` can return against a seeded database.
+const SEEDED_DEMO_EMAIL = "demo@fleetrent.test";
+
+// Coerced to "" rather than left undefined so the assertion below needs no
+// non-null assertion — the skip is what proves it is really set.
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
 
 test("demo prefill: published credentials fill both fields in one click and sign in to /dashboard", async ({
   page,
 }) => {
-  test.skip(!DEMO_EMAIL || !DEMO_PASSWORD, "DEMO_EMAIL/DEMO_PASSWORD unset — the demo card does not render");
+  test.skip(!DEMO_PASSWORD, "DEMO_PASSWORD unset — the demo card does not render");
 
   await page.goto("/auth/signin");
   await waitForIslands(page);
@@ -157,7 +167,7 @@ test("demo prefill: published credentials fill both fields in one click and sign
 
   await page.getByRole("button", { name: "Wypełnij dane demo" }).click();
 
-  await expect(email).toHaveValue(DEMO_EMAIL);
+  await expect(email).toHaveValue(SEEDED_DEMO_EMAIL);
   await expect(password).toHaveValue(DEMO_PASSWORD);
 
   // The assertion of record: the prefilled pair really signs in and clears the
