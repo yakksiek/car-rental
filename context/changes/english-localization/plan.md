@@ -31,12 +31,35 @@ worst case:
    | `Intl.DateTimeFormat("pl-PL", {month:"long"})`                | `wrzesień` (nominative)                 |
    | `Intl.PluralRules("pl-PL").select(n)` for 1 / 2 / 5 / 12 / 22 | `one` / `few` / `many` / `many` / `few` |
    | `Intl.NumberFormat("pl-PL")` grouping separator               | U+00A0                                  |
+   | `Intl.NumberFormat("en")` grouping separator                  | **U+002C (comma)** — not U+00A0         |
+   | `Intl.NumberFormat("pl-PL").format(5900)`                     | **`5900`** — ungrouped, see below       |
    | `Intl.DateTimeFormat` with `timeZone:"Europe/Warsaw"`         | `12:49` from `10:49Z`                   |
    | `Intl.RelativeTimeFormat("pl-PL").format(-2,"day")`           | `przedwczoraj`                          |
 
-   `Intl` reproduces every hand-rolled behaviour, including the 12–14 plural exception **and** the
-   nominative-vs-genitive month split that `ReservationCalendar.tsx:68-95` carries two tables for.
-   The grouping character matches `format.ts:13`'s hand-rolled non-breaking space exactly.
+   `Intl` reproduces every hand-rolled **grammar** behaviour, including the 12–14 plural exception
+   **and** the nominative-vs-genitive month split that `ReservationCalendar.tsx:68-95` carries two
+   tables for. Dates, plurals and relative time are a clean swap.
+
+   **Number and currency formatting are NOT a clean swap** (plan-review F3, re-probed 2026-09-02).
+   Three corrections to the original reading:
+   - **Grouping threshold.** CLDR `pl` sets `minimumGroupingDigits = 2`, so `pl-PL` groups only at
+     5+ integer digits: `1234 → "1234"`, `5900 → "5900"`, `10800 → "10 800"`. `format.ts` groups from
+     4 digits and `format.test.ts:33` asserts `formatPln("5900.00") === "5 900 zł"`. A straight
+     swap regresses the app's most common amounts. `{ useGrouping: "always" }` restores it and must
+     be passed explicitly.
+   - **`style:"currency"` changes more than the separator.** Under `pl` it forces two decimals
+     (`5900 → "5900,00 zł"`), contradicting `formatPln`'s documented "whole amounts drop the decimal
+     part". Under `en` it emits the ISO prefix `"PLN 1,234.50"`; even `currencyDisplay:"narrowSymbol"`
+     gives `"zł 1,234.50"` — symbol _before_ the number. Preserving today's `"320 zł"` shape requires
+     manual composition, not `style:"currency"`.
+   - **The grouping character does NOT match across locales.** `format.ts:13`'s U+00A0 matches
+     `pl-PL`; `en` / `en-US` / `en-GB` all group with a comma.
+
+   **Consequence for `lessons.md`.** The standing lesson "Locale/timezone/currency are single-locale"
+   still reads _"Mind workerd's trimmed ICU (why `returns.astro` hand-rolls Polish month names)"_
+   (`lessons.md:78`). That premise is false — this probe disproves it, and Phase 2 deletes exactly
+   those tables. Correcting that clause is a Phase 2 deliverable (§9), not a follow-up, or the next
+   slice re-inherits the constraint.
 
 2. **The `pluralPl` arity problem is ~6 call sites, not "every call site"** — `TrustCard.astro:22`,
    `StaffList.tsx:104`, `staff-format.ts:21-22`, `templates.ts:206`, `protocol-pdf.ts:559`, plus the
@@ -147,10 +170,17 @@ screens and artifacts.
 
 ## Critical Implementation Details
 
-**Test sequencing within each copy phase.** The E2E specs are re-anchored to English, and the copy
-they assert on changes in the same phase. Land the copy change first and run the suite red, then
-rewrite that surface's locators — never both in one commit. A spec rewritten alongside its strings
-gives no signal about which half is wrong.
+**Test sequencing within each copy phase — all three test layers, not just E2E.** The specs are
+re-anchored to English, and the copy they assert on changes in the same phase. Land the copy change
+first and run the suite red, then rewrite that surface's assertions — never both in one commit. A
+spec rewritten alongside its strings gives no signal about which half is wrong.
+
+This holds identically for unit and integration specs (plan-review F6), and each phase's Changes
+Required now names the ones it invalidates. The integration coupling is much smaller than the raw
+diacritic count suggests: **6 assertions in 4 files**, not "~64 across 15" — the other files use
+Polish as test-owned fixture data (`full_name: "Robert Zieliński"`,
+`protocol-email.test.ts:51`'s `DAMAGE_LOCATION`), which is created by the test, never compared
+against app copy, and must stay Polish.
 
 **Cookie writes must not break the SSR/hydration contract.** The switch is a POST to an API route
 that sets the cookie and redirects back, not a client-side `document.cookie` write. A client write
@@ -183,15 +213,52 @@ app still renders Polish everywhere, now through a seam that knows the locale is
 modules use, following Starlight's shape.
 
 **Contract**: `export type Locale = "en" | "pl"`; `DEFAULT_LOCALE = "en"`; `LOCALES` as an ordered
-readonly tuple for the switcher. `useTranslations(locale: Locale)` returns `t(key)` resolving against
-the composed namespace map, falling back to `DEFAULT_LOCALE` on a missing key. Key parity between the
-`pl` and `en` halves must be a **type error**, not a runtime fallback — the fallback exists for
-robustness in production, not as a licence to ship an untranslated key.
+readonly tuple for the switcher. Key parity between the `pl` and `en` halves must be a **type error**,
+not a runtime fallback — the fallback exists for robustness in production, not as a licence to ship
+an untranslated key.
 
 ```ts
 // The parity constraint every namespace file is declared against.
 export type Dict<T extends Record<string, string>> = { en: T; pl: Record<keyof T, string> };
 ```
+
+**Two accessors, and the boundary between them is load-bearing** (plan-review F4). A single composed
+accessor would defeat the per-domain namespacing this whole design exists for: bundlers tree-shake on
+_exports_, not on object keys, so a module that merges every namespace pulls all of them into any
+browser bundle that reaches it.
+
+- **`locals.t("ns.key")` — composed, SERVER-ONLY.** Resolves against every namespace; used by
+  `.astro` components, which ship no JavaScript. Falls back to `DEFAULT_LOCALE` on a missing key.
+- **A named per-namespace accessor — for anything an island can reach.** Takes `locale` plus one
+  namespace module and resolves within it. React islands import their own namespace and take
+  `locale` as a prop; API routes and server-only `src/lib` modules may use either.
+
+**The rule that makes it hold: a `src/lib` module that islands import never touches the composed
+map.** Without a named island accessor the plan offers exactly one callable API, so an implementer
+converting the 14 island `COPY` objects in Phase 5 has no correct option to reach for — the leak
+becomes the path of least resistance rather than a slip. Nothing downstream would catch it: no phase
+has a bundle-size gate, and Performance Considerations asks for a comparison against a baseline that
+was never recorded. Record one before Phase 5.
+
+**`src/lib/format.ts` is the file this rule is really about** — 11 islands import it. It splits along
+a line already latent in the file:
+
+- **Number arrangers** (`formatPlnAmount`, `formatPln`, `formatDailyRate`, `rentalDays`,
+  `estimatedTotal`, `totalDueAtPickup`, `formatDuration`, `formatCargoDims`, `formatPayloadKg`,
+  `pluralPl`) — the caller supplies any word, the helper arranges digits. `FleetList.tsx:150-160`
+  already does this: `{formatPln(vehicle.daily_rate)}{COPY.perDay}`, number from the helper, word
+  from the component — and pointedly does not call `formatDailyRate`. Most need nothing at all: `zł`
+  and `" kg"` are units, identical in both locales. `formatDuration`'s plural noun takes injected
+  forms (`plural(n, { one: t("day.one"), other: t("day.other") })`).
+- **Vocabulary** (`categoryLabelPl`, `transmissionLabelPl`, `fuelLabelPl`, `rejectionReasonLabelPl`,
+  `reservationStatusLabelPl`) — pure dictionaries with no formatting logic; `format.ts:162` is
+  literally `return CATEGORY_LABELS_PL[category]`. Injecting a whole map is "import the namespace"
+  with worse ergonomics. These five move **out** to a catalog namespace (`src/lib/i18n/vehicle.ts`),
+  imported per-domain by whoever needs them.
+
+After the split `format.ts` has no reason to reach the catalog at all — the leak stops existing
+rather than being governed by a rule 157 files must remember, and `format.ts` stays a pure numeric
+module, which is what makes `format.test.ts` the straightforward unit suite it is today.
 
 #### 2. Middleware resolution
 
@@ -206,6 +273,21 @@ trip). Set `context.locals.locale` and `context.locals.t`. Resolution must run *
 gate so a redirect can carry the locale, and must never throw — an unrecognised cookie value falls
 back to the default rather than erroring.
 
+**One carve-out: the `profiles.locale` fallback is SKIPPED when the row is the demo account.** Read
+`is_demo` and `locale` off the same row (both already in the select), and when `is_demo` is true go
+straight to `DEFAULT_LOCALE`, ignoring the stored value. Every demo visitor shares one `profiles`
+row, so without this the first person to touch the switch sets the language for every recruiter who
+signs in afterwards — which is precisely the acceptance test ("reads English from CV link to
+sign-out with zero interaction"). The cookie still governs within a session, so a demo visitor's
+switch works exactly as it does for real staff; only the cross-visitor carry-over is cut.
+
+**This pairs with a deliberate non-gate in §6 — comment BOTH sites as a pair.** `set_profile_locale`
+writes for the demo account like any other, so the demo behaves identically to a real account for
+anyone inspecting it; this read-side skip is the only thing preventing the leak. A stored value that
+nothing reads is exactly the kind of thing a later change "cleans up", so each site must name the
+other in a comment: remove the skip and the leak returns silently, with no test failing unless
+`1.16` below is in place.
+
 #### 3. Locals declaration
 
 **File**: `src/env.d.ts`
@@ -217,7 +299,7 @@ same rule as `isDemo`) and `t: ReturnType<typeof useTranslations>`.
 
 #### 4. Document language
 
-**File**: `src/layouts/Layout.astro`
+**File**: `src/layouts/Layout.astro`, `src/lib/config-status.ts`
 
 **Intent**: Stop hardcoding `lang="pl"`, and translate the default page title and the missing-config
 banner copy.
@@ -225,6 +307,12 @@ banner copy.
 **Contract**: `<html lang={Astro.locals.locale}>` at `:17`. The default title at `:13` keeps **Flota**
 as the brand (untranslated) with only the tagline localized. `Uwaga:` / `Dokumentacja` at `:52,58`
 move into the catalog.
+
+**`src/lib/config-status.ts` converts here too** (plan-review F9), not in Phase 5. `configStatuses`
+and `missingConfigs` are module-level exported const arrays with Polish `message` and `docsLabel`
+strings baked in, consumed as _values_ at `Layout.astro:45`. Making them locale-aware is a
+value→function conversion (`missingConfigs(locale)`), not a parameter add — and doing it alongside
+the banner chrome keeps the whole banner from rendering half-translated for four phases.
 
 #### 5. Locale switch endpoint
 
@@ -236,27 +324,70 @@ move into the catalog.
 parse of `{ locale, redirect }` → 400. Deliberately **public** (no auth gate) — an anonymous visitor
 must be able to switch; say so in a comment. `redirect` is validated through the existing
 `safeRedirectPath` so a tampered value can only resolve to an internal path. When
-`context.locals.user` is set, also write `profiles.locale`. Cookie uses the shared
-`shouldSecureCookies(context.url)` rule, `sameSite: "lax"`, one-year max-age. Responds 303 to the
-validated path.
+`context.locals.user` is set, also persist the preference by calling the `set_profile_locale(text)`
+RPC from §6; a direct `.from("profiles").update(…)` **cannot work** and fails silently. Cookie uses
+the shared `shouldSecureCookies(context.url)` rule, `sameSite: "lax"`, one-year max-age. Responds
+303 to the validated path.
+
+**`redirect` gets its own guard — do NOT reuse `safeRedirectPath`** (plan-review F8). That helper
+carries two guarantees built for post-login redirects that are wrong here: it returns
+`DEFAULT_POST_LOGIN` (`/dashboard`) for anything it rejects (`safe-redirect.ts:10,20`), and it
+explicitly refuses `/auth` and `/auth/*` (`:25-27`) so sign-in never bounces to itself. The recruiter
+path runs through `/auth/signin`, so switching there would throw an anonymous visitor at
+`/dashboard`; on `/auth/reset-password` and `/auth/callback` it also drops the URL's
+`token_hash`/`type` params and strands a mid-invite-accept user. Criteria 3.10 and 4.7 ("switching
+locale preserves the current page") cannot pass on any auth page otherwise. Write a small sibling
+with the same open-redirect rules — leading `/`, reject `//` and `/\` — falling back to `/` and
+**not** excluding `/auth/*`. Leave `safeRedirectPath` untouched: its `/auth` refusal is load-bearing
+for sign-in. (`back-target.ts:46-49` already works around the same fallback, and even that idiom
+would not admit `/auth/*`.)
 
 #### 6. Migration
 
 **File**: `supabase/migrations/<timestamp>_locale_dimension.sql`
 
 **Intent**: Add the three locale columns plus the consent-attribution columns frame decision 4
-requires.
+requires — **and** open the five write paths that would otherwise leave every one of them unfillable.
 
 **Contract**: `profiles.locale text` (nullable — null means "no preference, use default");
 `reservations.locale text not null default 'en'`; `protocols.locale text not null default 'pl'`;
 `reservations.terms_version text` and `reservations.terms_locale text` beside the existing
 `terms_accepted_at`. A `check` constraint pins each to `('en','pl')`.
 
+**Adding the columns is the easy half — none of them is writable without SQL changes in this same
+migration** (plan-review F1). Five write paths, all of them below the TypeScript layer:
+
+1. **`profiles.locale`** — deliberately **not** demo-gated (see §2: the read side skips the demo
+   row instead, so the write can stay uniform). There is exactly one UPDATE policy on the table,
+   `profiles_update_authenticated` (`20260604153139_employee_admin_roles.sql:80-84`, tightened at
+   `20260828140000_demo_account_write_gate.sql:86-94`), and it is
+   `using (current_app_role() = 'admin' and not current_is_demo())`. There is **no** "update your own
+   row" clause, so an employee matches nothing and the demo account is explicitly excluded — and an
+   RLS-denied UPDATE is not an error, it is a successful update of zero rows. Add
+   `set_profile_locale(p_locale text)`: `SECURITY DEFINER`, no target parameter, stamps `auth.uid()`'s
+   own row only — the shape `mark_password_set()` already uses. Every existing `profiles` write in
+   the repo goes through the service-role client for this same reason.
+2. **`create_reservation_request`** — the public funnel's atomic write, called at
+   `services/reservations.ts:50`. Its `insert into public.reservations (…)` column list is fixed
+   (`20260810140000_reservation_date_order_guard.sql:185-193`). Add `p_locale`, `p_terms_version`,
+   `p_terms_locale`.
+3. **`create_confirmed_reservation`** — the staff manual-booking sibling
+   (`services/reservations.ts:102`). Add `p_locale`. It returns an email payload and mails the
+   customer, so this path needs a language as much as the funnel does.
+4. **`create_protocol`** — issue protocol (`20260716120000_return_protocol.sql:129-136`).
+   Add `p_locale`.
+5. **`create_return_protocol`** — return protocol (`:456-463`). Add `p_locale`.
+
+**Every redefinition carries the standing RPC lesson**: `revoke execute on function … from public,
+anon;` **first**, then grant to the roles that need it — per function, every time. A
+`grant execute … to authenticated` alone restricts nothing.
+
 **Backfill is asymmetric and deliberate**: existing `reservations` and `protocols` rows are stamped
 `'pl'` — they were created by a Polish-only app, and for `protocols` the stored PDF bytes are
 provably Polish. The column _defaults_ differ from the backfill (`reservations` defaults `'en'` for
 new rows; `protocols` defaults `'pl'` and is always written explicitly at render time). No RLS policy
-changes — the columns ride existing row grants.
+changes — the columns ride existing row grants, and `set_profile_locale` is the seam that makes
+`profiles` writable without widening the admin-only policy.
 
 #### 7. Type regeneration
 
@@ -280,6 +411,8 @@ changes — the columns ride existing row grants.
 - Build succeeds: `npm run build`
 - A new unit test pins locale resolution precedence (cookie > profile > default) including the
   unrecognised-cookie fallback
+- Baseline island chunk sizes recorded to `island-baseline.md` from a production build, taken
+  **before** any catalog string lands, stamped with its commit SHA
 
 #### Manual Verification:
 
@@ -334,19 +467,54 @@ being per-language**, which is what makes this deletable rather than duplicable.
 
 #### 3. Money and rate formatting
 
-**File**: `src/lib/format.ts`
+**File**: `src/lib/format.ts`, `src/lib/return-form.ts`, `src/lib/protocol-form.ts`,
+`src/lib/media/protocol-pdf.ts`
 
-**Intent**: Stop baking `zł` and `/doba` into the formatter.
+**Intent**: Stop baking `zł` and `/doba` into the formatter, and unify the four independent
+thousands-groupers.
 
 **Contract**: `formatPln` / `formatPlnAmount` / `formatDailyRate` gain a `locale` parameter. The
-currency stays PLN in both locales (the business is Polish); only presentation localizes.
-`groupThousands` and `PLN_GROUP_SEPARATOR` are deleted — `Intl.NumberFormat` emits the same U+00A0
-separator, verified by probe. The `/doba` suffix becomes a catalog string (`/day` in EN).
+currency stays PLN in both locales (the business is Polish), and `zł` therefore stays in both — it is
+a currency symbol, not a translatable word. `groupThousands` and `PLN_GROUP_SEPARATOR` are replaced
+by `Intl.NumberFormat`, but **compose the amount manually rather than using `style:"currency"`**,
+and pass `{ useGrouping: "always" }` — see Current State Analysis item 1. The target output is
+unchanged from today in both locales: `"320 zł"`, `"5 900 zł"`, `"1,20 zł"` under `pl`, and the same
+shapes under `en` with `Intl`'s own separators. **Criterion 2.8 ("renders identically to before under
+`pl`") is the gate on this**, and a naive `style:"currency"` swap fails it.
 
-**Watch the two regex strippers**: `BookingWidget.tsx:353` and `ReservationForm.tsx:658` do
-`.replace(/\s*zł$/,"")` to restyle the amount. Once currency is locale-aware these break silently
-under EN. Replace them with `formatPlnAmount` (which already returns the bare number) rather than
-extending the regex.
+**There are FOUR hand-rolled groupers, not one, using THREE different separators** (plan-review F5).
+"`groupThousands` is deleted" is safe only for money; enumerate all of them:
+
+| location                            | separator | behind                                            |
+| ----------------------------------- | --------- | ------------------------------------------------- |
+| `src/lib/format.ts:13,23`           | U+00A0    | money **and** `formatPayloadKg` (`format.ts:150`) |
+| `src/lib/return-form.ts:18-19`      | U+0020    | `formatKmDriven` (`:34`)                          |
+| `src/lib/protocol-form.ts:32-38`    | U+202F    | `formatOdometer`, with an inverse `parseOdometer` |
+| `src/lib/media/protocol-pdf.ts:528` | U+00A0    | the PDF odometer                                  |
+
+- **Deleting `format.ts:23` breaks the kg path** unless `formatPayloadKg` moves to
+  `Intl.NumberFormat` in the same edit — it has 4 call sites: `VehicleCard.astro:46`,
+  `LandingVehicleCard.astro:43`, `VehicleDetail.astro:37`, `src/pages/fleet/index.astro:197`.
+- **`protocol-form.ts` is a format→parse round trip.** `parseOdometer` is the inverse of
+  `formatOdometer` (`display.replace(/\D/g,"")`), so the two must change together or the odometer
+  field stops reading its own output. This file was in no phase's list before.
+- Whether the three non-money groupers converge on one shared `Intl` helper or merely stop being
+  hand-rolled is an implementation call; what matters is that none is left asserting a separator the
+  others don't use.
+
+The `/doba` suffix **leaves `format.ts` entirely** rather than being looked up from inside it — see
+Phase 1 §1's island rule. It is duplicated in **6 places** outside `format.ts:52` and each needs a
+catalog string: `BookingWidget.tsx:42`, `FleetList.tsx:74`, `ReservationForm.tsx:349`,
+`PendingQueue.tsx:361`, `pricing.astro:169,231`. `formatDailyRate` either takes the suffix as an
+argument or is deleted in favour of the composition `FleetList` already uses — check its remaining
+callers to decide.
+
+**Watch the two regex strippers**: `src/components/vehicle/BookingWidget.tsx:353` and
+`src/components/reservation/ReservationForm.tsx:658` do `.replace(/\s*zł$/,"")` to restyle the
+amount. Once currency is locale-aware these break silently under EN. Replace them with
+`formatPlnAmount` (which already returns the bare number) rather than extending the regex — **and
+note both render a hardcoded `zł` span on the very next line** (`BookingWidget.tsx:355`,
+`ReservationForm.tsx:659`), which the strip fix alone leaves behind.
 
 #### 4. Relative time
 
@@ -394,7 +562,8 @@ surfaced by the frame, not refactoring noise.
 
 #### 8. Unit test migration
 
-**File**: `src/lib/format.test.ts`, `src/lib/staff-format.test.ts`, and the ~20 other affected specs
+**File**: `src/lib/format.test.ts`, `src/lib/staff-format.test.ts`, **`src/lib/search-format.test.ts`**,
+**`e2e/seed.spec.ts`**, and the ~20 other affected specs
 
 **Intent**: Parameterize the ~170 Polish assertions by locale.
 
@@ -402,6 +571,28 @@ surfaced by the frame, not refactoring noise.
 locales. The Polish plural table (`1:one, 2:few, 5:many, 12:many, 13:many, 14:many, 22:few, 25:many`)
 is kept as an explicit test case — `Intl` supplies it now, but the assertion is what proves the
 migration preserved behaviour rather than silently changing it.
+
+**Two specs break in this phase even though no copy changes** (plan-review F2), because they consume
+the helpers being deleted rather than the strings being translated:
+
+- `src/lib/search-format.test.ts:14,18` asserts `"02 – 09 kwi"` / `"28 kwi – 03 maj"`, built from
+  `MONTHS_ABBR_PL` — deleted by §1.
+- `e2e/seed.spec.ts:55` builds its day-button locator names with
+  `format(…, { locale: pl })` from `date-fns/locale` — the exact import §4 removes and criterion 2.6
+  greps for. This is the one E2E spec this phase touches; the other six are Phase 4/5 work.
+
+#### 9. Correct the trimmed-ICU lesson
+
+**File**: `context/foundation/lessons.md`
+
+**Intent**: The premise this phase acts on is still recorded as true in the durable register.
+
+**Contract**: `lessons.md:78` ("Locale/timezone/currency are single-locale") ends with _"Mind
+**workerd's trimmed ICU** for server-side locale formatting (why `returns.astro` hand-rolls Polish
+month names)."_ That is false — probed 2026-09-01 and re-probed 2026-09-02 — and this phase deletes
+the very tables it points at. Replace the clause with the probed result and the number/currency
+caveats from Current State Analysis item 1. Leave the rest of the lesson intact: the explicit
+`timeZone` rule and the SSR hydration-mismatch reasoning are unaffected and still correct.
 
 ### Success Criteria:
 
@@ -411,7 +602,8 @@ migration preserved behaviour rather than silently changing it.
 - Lint passes: `npm run lint`
 - Unit tests pass in both locales: `npm test`
 - Integration tests pass: `npm run test:integration`
-- E2E suite still green (copy has not changed yet): `npm run test:e2e`
+- E2E suite green after `seed.spec.ts`'s date locators are re-anchored (no app copy changes in this
+  phase, but §8 covers the two specs that consume the deleted helpers): `npm run test:e2e`
 - `grep -rn "date-fns/locale" src/` returns nothing
 - `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing
 
@@ -580,7 +772,8 @@ Landing components: `ProcessSteps.astro`, `TrustCard.astro`, `TypeSelector.astro
 
 #### 3. Auth surfaces
 
-**File**: `src/pages/auth/*.astro`, `src/components/auth/*`, `src/lib/auth-messages.ts`
+**File**: `src/pages/auth/*.astro` (including `link-conflict.astro:49`), `src/components/auth/*`
+(including `SignOutButton.tsx:26`), `src/lib/auth-messages.ts`, `src/lib/auth-messages.test.ts`
 
 **Intent**: Everything between the footer link and the cockpit.
 
@@ -592,14 +785,23 @@ once. The demo-credentials card rendered into `/auth/signin` is on this path.
 
 **File**: `src/components/shell/StaffShell.astro`, `src/components/shell/NavIcon.astro`,
 `src/pages/dashboard.astro`, `src/components/dashboard/{DispatchBoard,DispatchSchedule,StatCards,NeedDecisionPanel,QuickAddButton,QuickActionMenu}.tsx`,
+`src/components/dashboard/quick-actions.ts`,
 `src/components/search/{GlobalSearch,SearchRows}.tsx`, `src/lib/dispatch-board.ts`,
-`src/lib/staff-report.ts`
+`src/lib/staff-report.ts`, `src/lib/staff-report.test.ts`,
+`src/components/dashboard/quick-actions.test.ts`
 
 **Intent**: The first screen a recruiter sees after signing in, and the navigation around it.
 
-**Contract**: Nav labels — Pulpit, Wnioski, Wydania, Zwroty, Zespół, Flota — carry no diacritics and
-are invisible to diacritic-based extraction; enumerate them explicitly. The **Flota** nav item
+**Contract**: The staff chrome strings carry no diacritics and are invisible to diacritic-based
+extraction, so here is the full list (plan-review F10) — `StaffShell.astro:110-126` plus the chrome
+around it: **Pulpit** (`:111`), **Wnioski** (`:112`), **Wydania** (`:113`), **Zwroty** (`:117`),
+**Kalendarz** (`:121`), **Flota** (`:122`), **Zespół** (`:126`, admin-only), the sidebar section
+heading **Operacje** (`:153`), **Profil** (`:201,202,341`) and **Wyloguj** (`:223,238`). The **Flota** nav item
 becomes "Fleet" (frame decision 5) while the brand does not.
+
+`QuickActionMenu.tsx` renders its labels from `src/components/dashboard/quick-actions.ts:35,92`
+(`"Nowa rezerwacja"`, `"Dodaj pracownika"`) — the strings are not in the component, so the module and
+its spec are listed above (plan-review F6).
 
 #### 5. Seed data
 
@@ -608,23 +810,49 @@ becomes "Fleet" (frame decision 5) while the brand does not.
 **Intent**: Seeded content is fixture data we control, not user-typed free text — so it should read
 English under English chrome.
 
-**Contract**: Vehicle names (e.g. `'Volkswagen Crafter 9-osobowy'`), notes and rejection reasons are
-rewritten in English. **Retain two Polish rows deliberately** so the hybrid-document behaviour frame
-decision 2 mandates stays visible and testable. Frame decision 2 is unchanged — it governs what real
-users type, not fixtures. Note `known-issues.md:75`: the seeded `picsum.photos` URLs are a separate,
+**Contract**: **Vehicle `name` values only** — e.g. `'Volkswagen Crafter 9-osobowy'`. `seed.sql`
+carries **no `notes` and no `rejection_note` values at all** (plan-review F7), so the earlier wording
+named data that does not exist. **Retain two vehicle rows with Polish names deliberately** so the
+hybrid-document behaviour frame decision 2 mandates stays visible and testable; name them here when
+the seed is written so criterion 4.8 has a subject.
+
+The one piece of seeded Polish free text is `protocol_damages.location` (`seed.sql:380,387`) — that
+stays Polish, both because frame decision 2 governs it and because it is the diacritic fixture the
+PDF path is proved against. Frame decision 2 is otherwise unchanged: it governs what real users
+type, not fixtures. Note `known-issues.md:75`: the seeded `picsum.photos` URLs are a separate,
 already-tracked issue and stay as-is.
+
+**No slug risk from this rename.** `vehicleSlug` is called as
+`vehicleSlug(vehicle.make ?? vehicle.name, vehicle.model ?? "")` at all three sites
+(`VehicleCard.astro:33`, `LandingVehicleCard.astro:32`, `fleet/[id]/[...slug].astro:45`), and all 7
+seeded rows have non-null Latin `make`/`model`. `name` is only a fallback, and
+`fleet/[id]/[...slug].astro:13-14` resolves by `id` regardless.
 
 #### 6. E2E re-anchor
 
-**File**: `e2e/staff-auth.spec.ts`, `e2e/auth.setup.ts`, `e2e/fixtures/*`
+**File**: `e2e/staff-auth.spec.ts`, `e2e/auth.setup.ts`, `e2e/fixtures/*`, **`e2e/staff-admin.spec.ts`**,
+**`e2e/auth-hardening.spec.ts`**, **`e2e/quick-actions.spec.ts`**, **`e2e/demo-gate.spec.ts`**
 
-**Intent**: Re-anchor this surface's ~22 Polish locators to English.
+**Intent**: Re-anchor this surface's Polish locators to English.
 
 **Contract**: Land the copy change and run the suite red **first**, then rewrite the locators — a
 spec rewritten alongside its strings gives no signal about which half is wrong. `auth.setup.ts` may
 need the locale cookie seeded explicitly so the suite is deterministic rather than relying on the
 default. `e2e-rules.md`'s literal-copy policy is preserved: locators keep literal strings, now
 English ones. Recall that the invite/recovery specs only work on `:4321`.
+
+**Four specs Phase 5 would otherwise own belong here** (plan-review F2) — they assert on copy THIS
+phase changes, so leaving them to Phase 5 makes criterion 4.4 unreachable:
+
+- `staff-admin.spec.ts` — `:43` `"Nowe"` and `:44` `/Dodaj pracownika/` inside `openAddEmployee`
+  (used by 5 tests); `:118,119,123-125` the `ResetPasswordForm` strings; `:131-133` the `SignInForm`
+  strings; `:134` `"Wyloguj"` from `StaffShell`.
+- `auth-hardening.spec.ts` — `:70,81,96,109,122,150,151,159,160,194,198,199`.
+- `quick-actions.spec.ts` — `:46` `"Nowe"`, `:48` `/Nowa rezerwacja/`. The whole spec is two clicks,
+  both on Phase-4 strings.
+- `demo-gate.spec.ts` — `:63,80` `"Wyloguj"`, the live-session precondition for both tests.
+
+`fleet-admin.spec.ts` genuinely stays in Phase 5 — every locator in it is Phase-5 fleet copy.
 
 ### Success Criteria:
 
@@ -698,7 +926,7 @@ validation time through `useTranslations`. The schema stays the single validatio
 
 #### 4. API messages
 
-**File**: 17 route files under `src/pages/api/`
+**File**: 17 route files under `src/pages/api/`, `tests/integration/staff.test.ts`
 
 **Intent**: The `MSG` maps in every API route.
 
@@ -709,22 +937,48 @@ for inline literals.
 
 #### 5. Remaining lib labels
 
-**File**: `src/lib/{protocol-labels,reservation-status,returns-filter,search-format,catalog-filters,manual-availability,config-status,auth-session,back-target,slug,services/staff,services/vehicles,media/compress,media/fonts}.ts`
+**File**: `src/lib/{protocol-labels,reservation-status,returns-filter,search-format,catalog-filters,manual-availability,auth-session,back-target,slug,services/staff,services/vehicles,media/compress,media/fonts}.ts`,
+`src/components/hooks/*`, `docs/reference/contract-surfaces.md`
 
 **Intent**: The label modules that feed multiple screens.
 
-**Contract**: Each exported label map gains a locale parameter. `slug.ts` needs care — if it
-transliterates Polish diacritics for URL generation, that behaviour must **not** change, or existing
-vehicle URLs break.
+**Contract**: Each exported label map gains a locale parameter. `slug.ts` needs care, but the
+trigger is **editing `slug.ts` itself**, not the Phase 4 seed rename (plan-review F7): its 9-entry
+lowercase `DIACRITICS` map exists for user-entered vehicles, and no spec, fixture or stored column
+holds a slug value. Leave the transliteration behaviour alone.
+
+**Four of these modules are named contract surfaces** (plan-review F9). "Gains a locale parameter" is
+a shape change to load-bearing exports, so state the new signature per export and update
+`docs/reference/contract-surfaces.md` in the same commit:
+
+- `catalog-filters.ts` — `parseFilters` / `serializeFilters` / `validateDateRange`
+- `auth-session.ts` — `readPendingToken` / `serializePendingToken` / `selectResetPasswordBranch`
+- `services/staff.ts` — the 7 named exports plus `employeeInviteSchema`
+- `services/vehicles.ts` — `listVehicles` / `searchAvailableVehicles` / `getVehicleById`
+
+**`src/components/hooks/` was previously unowned.** Most of its Polish is comments, but
+`useProtocolMedia.ts:228` throws a user-reachable `` `Brak pliku w pamięci: ${path}` ``.
+
+**`config-status.ts` moved to Phase 1 §4** — it is not a label map. `configStatuses` and
+`missingConfigs` are module-level const arrays consumed as _values_ by `Layout.astro:45`, so making
+them locale-aware is a value→function conversion, and Phase 1 already translates the banner chrome
+around them.
 
 #### 6. E2E re-anchor
 
-**File**: `e2e/{staff-admin,fleet-admin,quick-actions,auth-hardening,demo-gate,seed}.spec.ts`
+**File**: `e2e/fleet-admin.spec.ts`, plus any Phase-5 surface locators remaining in
+`e2e/staff-admin.spec.ts` after Phase 4 §6
 
-**Intent**: Re-anchor the remaining ~67 Polish locators, 53 of them in `staff-admin.spec.ts`.
+**Intent**: Re-anchor the remaining Polish locators on Phase-5 surfaces.
 
 **Contract**: Same sequencing rule — copy first, red suite, then locators. Per surface, not all at
-once.
+once. `quick-actions`, `auth-hardening`, `demo-gate` and `seed` moved out of this list — the first
+three to Phase 4 §6 and `seed` to Phase 2 §8 (plan-review F2), because each asserts on copy or
+helpers those earlier phases change. `fleet-admin.spec.ts` is genuinely Phase-5 work:
+`"Pokaż wycofane"`, `"Przywróć"`, `"Wycofaj"`, `"Wycofać pojazd z floty?"`. Note its `:58` comment
+reasons about the seeded `Fiat Ducato (wycofany)` sort order — English seed names keep
+`e2e/fixtures/booking.ts:127`'s deliberate `Ż` prefix sorting last, so the behaviour survives, but
+the comment goes stale and should be refreshed.
 
 ### Success Criteria:
 
@@ -735,9 +989,14 @@ once.
 - Unit + integration tests pass: `npm test && npm run test:integration`
 - Full E2E suite green against English: `npm run test:e2e`
 - Build succeeds: `npm run build`
-- No Polish diacritics remain in `src/**` outside catalog `pl` blocks and code comments — a scripted
-  sweep, since `Start` / `Flota` / `Cennik` / `Pulpit` carry none and a diacritic grep alone
-  undercounts
+- Island chunk sizes compared against `island-baseline.md`; no island has grown materially. A jump on
+  a public-site island (`HeroSearch`, `FleetList`, `BookingWidget`) means something reached the
+  composed map — find it before shipping, per Phase 1 §1's boundary rule
+- No Polish diacritics remain in `src/pages/**` and `src/components/**` outside catalog `pl` blocks
+  and code comments — a scripted sweep, since `Start` / `Flota` / `Cennik` / `Pulpit` carry none and
+  a diacritic grep alone undercounts. **Scoped to those two trees deliberately** (plan-review F9):
+  `src/lib/email/templates.ts` (42 diacritic lines) and `src/lib/media/protocol-pdf.ts` (16) are
+  Phase 6 work, so the full `src/**` sweep is a Phase 6 criterion, not this one.
 
 #### Manual Verification:
 
@@ -763,7 +1022,8 @@ which is what makes an employee working in English still email a Polish customer
 
 #### 1. Email templates
 
-**File**: `src/lib/email/templates.ts`, `src/lib/email/index.ts`
+**File**: `src/lib/email/templates.ts`, `src/lib/email/index.ts`,
+`tests/integration/{protocol-email,return-protocol-email,return-protocols-api}.test.ts`
 
 **Intent**: Localize the 5 templates on the reservation's stored locale.
 
@@ -806,15 +1066,43 @@ records that a template regression surfaces as _"Link wygasł"_. **`config.toml`
 #### 4. Brand reconciliation
 
 **File**: `src/lib/email/templates.ts:28,87,139,225,313`, `src/lib/media/protocol-pdf.ts:167,463`,
-`public/robots.txt`
+`src/components/shell/StaffShell.astro:122,143`, `public/robots.txt`
 
 **Intent**: The brand is **Flota** everywhere (frame decision 5); emails and the PDF currently say
 FleetRent.
 
 **Contract**: 5 email subjects/bodies and 2 PDF footer sites change FleetRent → Flota. Check
-`robots.txt`. `prd.md`, `roadmap.md` and the deployed hostname
+`robots.txt`. **`StaffShell.astro` holds both halves of the brand/nav collision in one file**
+(plan-review F10): `:143` is the brand wordmark `Flota` and must NOT translate, while `:122` is the
+nav item and becomes "Fleet" in Phase 4 §4 — neither was in the plan's brand or nav lists. `prd.md`, `roadmap.md` and the deployed hostname
 `fleetrent.marcin-kulbicki.workers.dev` still say FleetRent — the hostname is not user-visible brand
 and stays; annotate the divergence in the docs rather than renaming the deployment.
+
+#### 5. Reservation locale capture — both creation paths
+
+**Land this BEFORE §1.** Every template in §1 reads `reservations.locale`, and until something
+writes it every row carries the column default `'en'` — so §1's Polish-customer behaviour is
+unverifiable and manual check 6.7 cannot pass. (Moved here from Phase 7 §2 by plan-review F1: the
+capture used to sit two phases after the code that depends on it.)
+
+**File**: `src/pages/api/reservations.ts`, `src/lib/services/reservations.ts`,
+`src/pages/api/reservations/manual.ts`, `src/components/dashboard/ManualReservationModal.tsx`,
+`src/lib/reservation-schema.ts`
+
+**Intent**: Stamp the language on the reservation at creation, on **both** paths — the public funnel
+and the staff manual booking. The RPC parameters this needs already exist from Phase 1 §6.
+
+**Contract**:
+
+- **Public funnel** — pass `context.locals.locale` as `p_locale` to `create_reservation_request`.
+  This is the funnel's only chance: confirmation emails are sent days later by staff who cannot know
+  what language the customer used.
+- **Manual booking** — `ManualReservationModal` gains a **customer-language field** (PL / EN),
+  threaded through `manualReservationSchema` and `createConfirmedReservation` as `p_locale`. It must
+  not default to the employee's session locale: an employee working in the English cockpit booking a
+  Polish walk-in is exactly the case the whole `reservations.locale` design exists to serve, and
+  `api/reservations/manual.ts:99` mails that customer immediately. Default the field to **`pl`** —
+  a walk-in at a Polish depot is the common case — so the field is a correction, not a chore.
 
 ### Success Criteria:
 
@@ -829,6 +1117,8 @@ and stays; annotate the divergence in the docs rather than renaming the deployme
 - A PDF render test with the full diacritic set (`ą ć ę ł ń ó ś ź ż` + uppercase) passes in **both**
   locales
 - `grep -rn "FleetRent" src/ public/` returns nothing
+- The full sweep now passes: no Polish diacritics anywhere in `src/**` outside catalog `pl` blocks
+  and code comments (deferred here from Phase 5 — plan-review F9)
 
 #### Manual Verification:
 
@@ -873,11 +1163,14 @@ gap becomes visible rather than hidden. Uses the standard public shell so the he
 
 **Intent**: Record which terms, in which language, a customer accepted.
 
-**Contract**: On submission write `terms_version` (a constant exported alongside the page, bumped
-when the text changes) and `terms_locale` (the active locale) beside the existing
-`terms_accepted_at`. Also capture `reservations.locale` here — this is the funnel's only chance,
-since confirmation emails are sent days later by staff who cannot know what language the customer
-used.
+**Contract**: On submission pass `terms_version` (a constant exported alongside the page, bumped when
+the text changes) and `terms_locale` (the active locale) to `create_reservation_request` as
+`p_terms_version` / `p_terms_locale`, landing beside the existing `terms_accepted_at`. The RPC
+parameters exist from Phase 1 §6.
+
+`reservations.locale` capture is **no longer here** — it moved to Phase 6 §5 (plan-review F1),
+because Phase 6's email templates read it and cannot be verified without it. This section now covers
+consent attribution only.
 
 #### 3. Polish smoke spec
 
@@ -936,7 +1229,10 @@ case the types cannot see.
 22:few, 25:many` — kept as an explicit assertion so the migration is provably behaviour-preserving
 - English plural selection — `1:one`, everything else `other`
 - Date formatting in both locales with an explicit `Europe/Warsaw` timezone
-- Money formatting: grouping separator is U+00A0 in both locales; `formatPlnAmount` returns the bare
+- Money formatting: grouping separator is U+00A0 under `pl` and U+002C under `en`; `pl` groups from
+  4 digits only because `useGrouping: "always"` overrides CLDR's `minimumGroupingDigits = 2`
+  (`formatPln("5900.00")` stays `"5 900 zł"`); whole amounts still drop the decimal part in both
+  locales; `formatPlnAmount` returns the bare
   number with no currency suffix
 - Catalog key parity per namespace, plus no-Polish-diacritics-in-`en`
 - Email template rendering in both locales, with Polish free text embedded in an English template
@@ -949,7 +1245,11 @@ case the types cannot see.
 - `protocols.locale` is stamped at creation and an existing PDF is never re-rendered
 - `POST /api/locale` rejects a foreign origin (403) and sanitizes the redirect target
 - API error messages localize per `locals.locale`
-- The ~64 Polish assertions across 15 integration files are updated as their surfaces land
+- The integration assertions that actually compare against app copy — 6 across 4 files — are updated
+  in the phase that changes their surface, and are listed in that phase's Changes Required:
+  `staff.test.ts:703,841` (Phase 5), `protocol-email.test.ts:197,221`,
+  `return-protocol-email.test.ts:209,234`, `return-protocols-api.test.ts:292` (Phase 6). The other
+  Polish in `tests/integration/` is test-owned fixture data and stays Polish.
 
 ### E2E Tests:
 
@@ -978,8 +1278,21 @@ Locale resolution adds **no round trip** — `locale` rides the existing `profil
 `middleware.ts:33`, exactly as `is_demo` does.
 
 The catalog is namespaced per domain specifically so React islands tree-shake. A flat catalog would
-put every string in both locales into each of 14 island bundles. Verify after Phase 5 that island
-chunk sizes have not grown materially; if one has, the namespace is too coarse and should be split.
+put every string in both locales into each of 14 island bundles. The two-accessor boundary in
+Phase 1 §1 is what keeps that true; this section is how it gets _proved_ rather than asserted.
+
+**Record the baseline in Phase 1, before any catalog string lands** (plan-review F4) —
+`npm run build`, then the per-chunk byte sizes of `dist/_worker.js/_astro/*.js` for the island
+entrypoints, written to `context/changes/english-localization/island-baseline.md` with the commit
+SHA it was taken at. Phase 5 compares against that file. Without it, "have not grown materially" has
+nothing to measure against and the check silently passes whatever happens — which is exactly how a
+composed-map leak would reach production unnoticed.
+
+The islands to record, being the ones that import `src/lib/format.ts` or `staff-format.ts` and are
+therefore most exposed if the boundary leaks: `BookingWidget`, `HeroSearch`, `ReservationForm`,
+`SearchRows`, `PendingQueue`, `NeedDecisionPanel`, `ManualReservationModal`, `FleetList`,
+`ManualReservationCalendar`, `VehicleForm`, plus `GlobalSearch` and `StaffList`. If one has grown
+materially, the namespace is too coarse — or something reached the composed map.
 
 Retiring `date-fns/locale`'s `pl` static import from 8 components removes that locale bundle from
 those chunks. `Intl` is a runtime built-in with no bundle cost.
@@ -1035,6 +1348,10 @@ by hand on hosted — never `supabase config push`.
 - [ ] 1.5 Integration tests pass: `npm run test:integration`
 - [ ] 1.6 Build succeeds: `npm run build`
 - [ ] 1.7 Unit test pins locale resolution precedence and unrecognised-cookie fallback
+- [ ] 1.12 Integration test proves `set_profile_locale` stamps an EMPLOYEE's own row (not just an admin's)
+- [ ] 1.13 Each redefined RPC carries `revoke execute … from public, anon` before its grant
+- [ ] 1.15 Baseline island chunk sizes recorded to `island-baseline.md` with its commit SHA
+- [ ] 1.16 Integration test: a demo-account locale write does NOT change what a fresh cookie-less demo session resolves to
 
 #### Manual
 
@@ -1042,6 +1359,8 @@ by hand on hosted — never `supabase config push`.
 - [ ] 1.9 `<html lang>` reads `en`; `POST /api/locale` flips it and the cookie persists
 - [ ] 1.10 Staff locale choice writes `profiles.locale` and survives a cleared cookie
 - [ ] 1.11 Foreign-origin POST refused 403; external redirect target sanitized
+- [ ] 1.14 Signed in as an EMPLOYEE (not admin), the preference persists across a cleared cookie
+- [ ] 1.17 Demo: switch to PL, sign out, clear cookies, sign back in — cockpit is English again
 
 ### Phase 2: Retire Polish Grammar-as-Logic
 
@@ -1054,6 +1373,8 @@ by hand on hosted — never `supabase config push`.
 - [ ] 2.5 E2E suite still green: `npm run test:e2e`
 - [ ] 2.6 `grep -rn "date-fns/locale" src/` returns nothing
 - [ ] 2.7 `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing
+- [ ] 2.12 `search-format.test.ts` and `e2e/seed.spec.ts` re-anchored off the deleted date helpers
+- [ ] 2.14 All four thousands-groupers unified; `formatPayloadKg` and `parseOdometer` still round-trip
 
 #### Manual
 
@@ -1061,6 +1382,7 @@ by hand on hosted — never `supabase config push`.
 - [ ] 2.9 `/dashboard/pickups` reads "5 rezerwacji" not "5 rezerwacje"
 - [ ] 2.10 Signature timestamp still shows Warsaw time
 - [ ] 2.11 Booking widget and reservation summaries show the bare amount, no stray `zł`
+- [ ] 2.13 `lessons.md`'s trimmed-ICU clause corrected; `formatPln(5900)` still renders `5 900 zł`
 
 ### Phase 3: Header Redesign + Language Switcher
 
@@ -1078,7 +1400,7 @@ by hand on hosted — never `supabase config push`.
 - [ ] 3.7 No header overflow at any width, including previously-overflowing states
 - [ ] 3.8 `LangToggle` visible and operable at every public breakpoint
 - [ ] 3.9 Staff sidebar control and account row both persist the choice
-- [ ] 3.10 Switching locale preserves the current page
+- [ ] 3.10 Switching locale preserves the current page, including on `/auth/*`
 - [ ] 3.11 Regression gate: no nav wrap / height change at 768–790px or 840px, interaction exercised
 - [ ] 3.12 Regression gate: landing phone reachable at ≥1136px, no width left with no phone affordance
 - [ ] 3.13 Matches `design-contract.md`
@@ -1092,6 +1414,7 @@ by hand on hosted — never `supabase config push`.
 - [ ] 4.3 Unit + integration tests pass
 - [ ] 4.4 E2E suite green against English: `npm run test:e2e`
 - [ ] 4.5 Catalog key parity holds for every namespace touched
+- [ ] 4.10 `staff-admin`, `auth-hardening`, `quick-actions`, `demo-gate` re-anchored to English
 
 #### Manual
 
@@ -1109,7 +1432,9 @@ by hand on hosted — never `supabase config push`.
 - [ ] 5.3 Unit + integration tests pass
 - [ ] 5.4 Full E2E suite green against English: `npm run test:e2e`
 - [ ] 5.5 Build succeeds: `npm run build`
-- [ ] 5.6 Scripted sweep finds no Polish outside catalog `pl` blocks and comments
+- [ ] 5.6 Scripted sweep of `src/pages/**` + `src/components/**` finds no Polish outside catalog `pl` blocks and comments
+- [ ] 5.12 `contract-surfaces.md` updated for the four surfaces whose exports gained a locale parameter
+- [ ] 5.13 Island chunk sizes compared against `island-baseline.md` — no material growth
 
 #### Manual
 
@@ -1129,6 +1454,8 @@ by hand on hosted — never `supabase config push`.
 - [ ] 6.4 Integration tests pass including protocol-email specs
 - [ ] 6.5 PDF renders the full diacritic set in both locales
 - [ ] 6.6 `grep -rn "FleetRent" src/ public/` returns nothing
+- [ ] 6.13 Integration test: a `locale:'pl'` reservation emails Polish from an `en` session
+- [ ] 6.15 Full `src/**` Polish sweep passes (deferred from Phase 5)
 
 #### Manual
 
@@ -1138,6 +1465,7 @@ by hand on hosted — never `supabase config push`.
 - [ ] 6.10 `protocols.locale` stamped correctly on new protocols
 - [ ] 6.11 Invite and recovery emails bilingual with working links (throwaway account only)
 - [ ] 6.12 Polish free-text damage note renders inside an English PDF
+- [ ] 6.14 Manual-booking modal carries a customer-language field, defaulting to `pl`
 
 ### Phase 7: `/terms` + Verification Pass
 
