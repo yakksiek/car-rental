@@ -3,6 +3,7 @@
 import Layout from "../../layouts/Layout.astro";
 import StaffShell from "../../components/shell/StaffShell.astro";
 import NavIcon from "../../components/shell/NavIcon.astro";
+import LangRow from "../../components/shell/LangRow";
 
 // others
 import { staffIdentity } from "../../lib/staff-identity";
@@ -17,7 +18,7 @@ import { countOverdueReturns } from "../../lib/services/protocols";
 // Design contract: context/changes/staff-account/design-contract.md. The mockup's
 // Telefon (D1), Powiadomienia (D2) and Praca/Oddział (D3) rows are deliberate
 // trims — the data model carries no phone, notification or branch field.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale } = Astro.locals;
 
 // The caller's own profiles row is self-SELECT-able under RLS. `maybeSingle` keeps
 // a missing row non-fatal: the name simply degrades to the humanised email.
@@ -121,6 +122,17 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
           <section>
             <div class="text-muted-foreground mx-1 mb-2 text-[11.5px] font-bold tracking-[0.4px] uppercase">Konto</div>
             <div class="bg-card shadow-card overflow-hidden rounded-lg">
+              {
+                /* Language is the one preference this screen can actually write —
+                 the sidebar row is desktop-only, and the mobile tab bar has no room
+                 for a chrome control, so /dashboard/account is where a
+                 `profiles.locale` setting belongs (design has no mockup for it:
+                 `deviation(no source)`). Both write through POST /api/locale. */
+              }
+              <div class="border-b border-[var(--flota-hair-2)]">
+                <LangRow client:idle variant="account" locale={locale} redirect="/dashboard/account" />
+              </div>
+
               <a
                 href="/dashboard/account/password"
                 class="hover:bg-background flex items-center gap-[13px] px-4 py-3.5 transition-colors"

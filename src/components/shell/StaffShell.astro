@@ -4,6 +4,7 @@ import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
 import GlobalSearch from "../search/GlobalSearch";
 import QuickAddButton from "../dashboard/QuickAddButton";
+import LangRow from "./LangRow";
 
 // others
 import type { AppRole } from "../../types";
@@ -90,6 +91,10 @@ const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 // `staff.astro` still passes `isDemo` explicitly to <StaffList>, because that is
 // a page-owned island the shell does not mount.
 const { isDemo, locale } = Astro.locals;
+
+// "Put me back where I was" after a locale switch; re-validated server-side by
+// `safeInternalPath`. The query string rides along so a filtered list survives.
+const localeRedirect = Astro.url.pathname + Astro.url.search;
 
 // Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
 // on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
@@ -193,6 +198,15 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
 
     <div class="mt-auto w-full">
       {
+        /* The locale row is the FIRST child of the mt-auto block, above the user
+        chip — the one part of the staff chrome with slack (design `SidebarLangRow`;
+        the top band cannot hold it, see the note on <LangRow>). Mobile gets no
+        chrome control: the tab bar below is already at 8 items = 360px on a 360px
+        viewport, so the preference lives on /dashboard/account instead. */
+      }
+      <LangRow client:idle variant="sidebar" locale={locale} redirect={localeRedirect} />
+
+      {
         /* The chip is the desktop entry point to Profil (S-11) — the design reaches
         the account screen from here rather than from an Operacje nav row. */
       }
@@ -202,7 +216,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         aria-label={`Profil — ${displayName}`}
         title="Profil"
         class:list={[
-          "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
+          "mt-2 flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
           active === "me"
             ? "bg-background ring-foreground/15 ring-2"
             : "bg-background lg:bg-background md:hover:bg-background md:bg-transparent",

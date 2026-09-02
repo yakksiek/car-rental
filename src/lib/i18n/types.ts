@@ -16,6 +16,20 @@ export const LOCALES = ["en", "pl"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
+/**
+ * Each locale's ENDONYM — its name in its own language. Deliberately NOT a
+ * catalog namespace: a language control has to read in the language it names,
+ * so "Polski" stays "Polski" for an English reader and vice versa. It is the
+ * one label in the app that must never depend on a translation key.
+ *
+ * Used by the staff sidebar / account locale rows (design `SidebarLangRow`);
+ * the compact header toggle shows the uppercased 2-letter code instead.
+ */
+export const LOCALE_ENDONYMS: Record<Locale, string> = {
+  en: "English",
+  pl: "Polski",
+};
+
 // English is the DEFAULT; Polish is the opt-in. The driver for this whole slice
 // is the portfolio/recruiter reader, who must not have to find a switch first.
 export const DEFAULT_LOCALE: Locale = "en";

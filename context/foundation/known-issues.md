@@ -337,7 +337,7 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   carried id. Add a unit case per failure mode (punctuation, reordering, cross-language) to
   `src/lib/protocol-delta.test.ts`.
 
-## `HeaderContactToggle` phone mode wraps the nav and grows the public header 22px (tablet)
+## FIXED (english-localization Phase 3): header contact toggle wrapped the nav and grew the public header 22px (tablet)
 
 - **Symptom:** On every public page **except the landing page**, at tablet widths, tapping the phone
   segment of the header's contact/booking toggle breaks the header: the active nav pill's label
@@ -358,18 +358,24 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   49px tall across 768–1023. Confirms this is a `SiteHeader`-only defect.
 - **Scope:** Live on the deployed portfolio; reachable by any visitor on a tablet who taps the phone
   icon on `/fleet`, `/pricing`, `/faq`, `/about`, `/reserve`, `/r/[token]`.
-- **Decision:** Do **not** patch in place. `english-localization` **Phase 3 deletes
-  `HeaderContactToggle` entirely** and replaces it with the design's `ActionMenu` — a fixed **40px**
-  icon trigger that opens a popover and never expands in-flow — so the failure mode is removed by
-  construction rather than papered over. Phase 3 also moves the header to container queries and adds
-  the always-visible `LangToggle`, so the whole row is re-specified at once.
+- **Decision:** Do **not** patch in place. `english-localization` **Phase 3 deleted the toggle
+  component entirely** and replaced it with the design's `ActionMenu` — a fixed **40px** icon trigger
+  that opens a popover and never expands in-flow — so the failure mode is removed by construction
+  rather than papered over. Phase 3 also moved the header to container queries and added the
+  always-visible `LangToggle`, so the whole row was re-specified at once.
+- **Fixed and verified 2026-09-02.** Playwright regression sweep over `/fleet`, `/pricing`, `/faq`,
+  `/about` at 768 / 780 / 790 / 840px, **exercising the control** (the old failure needed an
+  interaction, not just a page load): the bar stays **87px before and after opening the menu**, the
+  nav pill stays on **one line**, and `scrollWidth` never exceeds the viewport. The nav links now
+  carry `whitespace-nowrap`, the flex children `shrink-0`, and the reflow is the design's own
+  container queries (`max-width` 1180 / 980 / 840), verified firing at exactly those thresholds.
 - **If it must be fixed sooner** (independently of i18n): add `whitespace-nowrap` to the nav links and
   `min-w-0` to the flex children in `SiteHeader.astro`, and cap the phone `revealWidth`. That stops
   the wrap but leaves the row over budget at 768 — the real fix is the design's collapse.
 - **Evidence:** `context/changes/english-localization/design-review/bug-siteheader-768-phonemode.png`
   (wrapped) and `bug-siteheader-820-phonemode.png` (same state, width that survives).
 
-## Landing header hides the phone number across a 256px band (1024–1279) — and it would fit from 1136
+## FIXED (english-localization Phase 3): landing header hid the phone number across a 256px band (1024–1279)
 
 - **Symptom:** On the **landing page only**, the phone number is absent from the header at viewport
   widths **1024–1279px**. There is no phone affordance of any kind in that band: `1264px` — a common
@@ -401,7 +407,15 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   is what resolves it, and Phase 3 must port that collapse to the landing fork rather than only to
   `SiteHeader`.
 - **Scope:** Live on the deployed portfolio. Landing page, 1024–1279px.
-- **Decision:** Open — owned by `english-localization` Phase 3, because the fix and the regression
-  share the same line of code. Not worth a standalone patch first.
+- **Decision:** Owned by `english-localization` Phase 3, because the fix and the regression shared
+  the same line of code. Not worth a standalone patch first.
+- **Fixed and verified 2026-09-02.** The design's collapse is ported to the landing fork: below the
+  threshold the phone and the CTA fold into one `ActionMenu` whose first row is the `tel:` link, so
+  **there is no longer any width with no phone affordance at all**. Verified by Playwright at 1920 /
+  1440 / 1340 / 1280 / 1200 / 1136 / 1024 / 900 / 768 / 500 / 390 / 360 — the number is reachable at
+  every one, directly at ≥1340 and through the menu below it. The threshold is a container query on
+  the pill's own content box (`@min-[1208px]`), derived from measurement: 393px nav + 2 × 402px
+  cluster = 1197, since the `1fr` side columns are symmetric. The tablet band and the mobile row
+  collapse the same way, so all three landing presentations now behave like `SiteHeader`.
 - **Evidence:** `context/changes/english-localization/design-review/bug-landing-1264-no-phone.png`,
   `bug-landing-1136-would-fit.png`, `bug-landing-1280-phone-returns.png`.

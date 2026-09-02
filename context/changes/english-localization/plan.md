@@ -1366,44 +1366,44 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 2.1 Type check passes: `npx astro check`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Unit tests pass in both locales: `npm test`
-- [x] 2.4 Integration tests pass: `npm run test:integration`
-- [x] 2.5 E2E suite still green: `npm run test:e2e`
-- [x] 2.6 `grep -rn "date-fns/locale" src/` returns nothing
-- [x] 2.7 `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing
-- [x] 2.12 `search-format.test.ts` and `e2e/seed.spec.ts` re-anchored off the deleted date helpers
-- [x] 2.14 All four thousands-groupers unified; `formatPayloadKg` and `parseOdometer` still round-trip
+- [x] 2.1 Type check passes: `npx astro check` — f807e24
+- [x] 2.2 Lint passes: `npm run lint` — f807e24
+- [x] 2.3 Unit tests pass in both locales: `npm test` — f807e24
+- [x] 2.4 Integration tests pass: `npm run test:integration` — f807e24
+- [x] 2.5 E2E suite still green: `npm run test:e2e` — f807e24
+- [x] 2.6 `grep -rn "date-fns/locale" src/` returns nothing — f807e24
+- [x] 2.7 `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing — f807e24
+- [x] 2.12 `search-format.test.ts` and `e2e/seed.spec.ts` re-anchored off the deleted date helpers — f807e24
+- [x] 2.14 All four thousands-groupers unified; `formatPayloadKg` and `parseOdometer` still round-trip — f807e24
 
 #### Manual
 
-- [x] 2.8 Dates, money and counts render identically to before under `pl`
-- [x] 2.9 `/dashboard/pickups` reads "5 rezerwacji" not "5 rezerwacje"
-- [x] 2.10 Signature timestamp still shows Warsaw time
-- [x] 2.11 Booking widget and reservation summaries show the bare amount, no stray `zł`
-- [x] 2.13 `lessons.md`'s trimmed-ICU clause corrected; `formatPln(5900)` still renders `5 900 zł`
+- [x] 2.8 Dates, money and counts render identically to before under `pl` — f807e24
+- [x] 2.9 `/dashboard/pickups` reads "5 rezerwacji" not "5 rezerwacje" — f807e24
+- [x] 2.10 Signature timestamp still shows Warsaw time — f807e24
+- [x] 2.11 Booking widget and reservation summaries show the bare amount, no stray `zł` — f807e24
+- [x] 2.13 `lessons.md`'s trimmed-ICU clause corrected; `formatPln(5900)` still renders `5 900 zł` — f807e24
 
 ### Phase 3: Header Redesign + Language Switcher
 
 #### Automated
 
-- [ ] 3.1 Type check passes: `npx astro check`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 E2E suite green: `npm run test:e2e`
-- [ ] 3.5 `grep -rn "HeaderContactToggle" src/` returns nothing
+- [x] 3.1 Type check passes: `npx astro check`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 E2E suite green: `npm run test:e2e`
+- [x] 3.5 `grep -rn "HeaderContactToggle" src/` returns nothing
 
 #### Manual
 
-- [ ] 3.6 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
-- [ ] 3.7 No header overflow at any width, including previously-overflowing states
-- [ ] 3.8 `LangToggle` visible and operable at every public breakpoint
-- [ ] 3.9 Staff sidebar control and account row both persist the choice
-- [ ] 3.10 Switching locale preserves the current page, including on `/auth/*`
-- [ ] 3.11 Regression gate: no nav wrap / height change at 768–790px or 840px, interaction exercised
-- [ ] 3.12 Regression gate: landing phone reachable at ≥1136px, no width left with no phone affordance
-- [ ] 3.13 Matches `design-contract.md`
+- [x] 3.6 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
+- [x] 3.7 No header overflow at any width, including previously-overflowing states
+- [x] 3.8 `LangToggle` visible and operable at every public breakpoint
+- [x] 3.9 Staff sidebar control and account row both persist the choice
+- [x] 3.10 Switching locale preserves the current page, including on `/auth/*`
+- [x] 3.11 Regression gate: no nav wrap / height change at 768–790px or 840px, interaction exercised
+- [x] 3.12 Regression gate: landing phone reachable at ≥1136px, no width left with no phone affordance
+- [x] 3.13 Matches `design-contract.md`
 
 ### Phase 4: Recruiter Path to English
 
