@@ -27,3 +27,35 @@ export function safeRedirectPath(raw: string | null | undefined): string {
   }
   return raw;
 }
+
+// ---------------------------------------------------------------------------
+// The locale switcher's sibling guard (english-localization Phase 1 §5).
+//
+// `safeRedirectPath` above CANNOT be reused for it. Two of its guarantees are
+// built for post-login redirects and are actively wrong for "put me back on the
+// page I was reading":
+//
+//   * it falls back to `/dashboard` (DEFAULT_POST_LOGIN), so an anonymous
+//     visitor switching language on the public site would be thrown at the staff
+//     area — which then bounces them to sign-in;
+//   * it refuses `/auth` and `/auth/*` outright (:25-27), which is load-bearing
+//     for sign-in and must stay. But the recruiter path runs THROUGH
+//     `/auth/signin`, and on `/auth/reset-password` / `/auth/callback` a
+//     rewritten target would also drop the URL's `token_hash`/`type` params and
+//     strand someone mid-invite-accept.
+//
+// So: the same open-redirect rules — must be root-relative, reject the
+// protocol-relative `//host` and its backslash variant — with `/` as the
+// fallback and no `/auth` exclusion. `safeRedirectPath` is untouched.
+// ---------------------------------------------------------------------------
+
+/** Any safe internal path, or `/`. Open-redirect rules only — no route policy. */
+export function safeInternalPath(raw: string | null | undefined): string {
+  if (!raw) {
+    return "/";
+  }
+  if (!raw.startsWith("/") || raw[1] === "/" || raw[1] === "\\") {
+    return "/";
+  }
+  return raw;
+}

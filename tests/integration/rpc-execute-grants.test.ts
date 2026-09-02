@@ -111,6 +111,51 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
       expect(isPermissionDenied(res.error)).toBe(true);
     });
 
+    it("create_protocol -> permission denied", async () => {
+      // english-localization drops + recreates this to add `p_locale`, and a DROP
+      // resets the ACL to Supabase's default (EXECUTE to PUBLIC + anon). Same
+      // regression shape as list_pending_reservations in 20260731212650 — which
+      // was caught only because it was in this suite.
+      const res = await anonClient().rpc("create_protocol", {
+        p_id: MISSING_VEHICLE,
+        p_reservation_id: MISSING_VEHICLE,
+        p_odometer_km: 1,
+        p_fuel_eighths: 4,
+        p_signed_at: "2026-08-01T10:00:00Z",
+        p_customer_ack: true,
+        p_signature: "issue/none/sig.png",
+        p_photos: [],
+        p_damages: [],
+      });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("create_return_protocol -> permission denied", async () => {
+      // Dropped + recreated by the same migration, for the same reason.
+      const res = await anonClient().rpc("create_return_protocol", {
+        p_id: MISSING_VEHICLE,
+        p_reservation_id: MISSING_VEHICLE,
+        p_baseline_protocol_id: MISSING_VEHICLE,
+        p_odometer_km: 1,
+        p_fuel_eighths: 4,
+        p_signed_at: "2026-08-01T10:00:00Z",
+        p_customer_ack: true,
+        p_signature: "return/none/sig.png",
+        p_photos: [],
+        p_damages: [],
+      });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("set_profile_locale -> permission denied", async () => {
+      // english-localization: the definer seam that makes profiles.locale
+      // writable at all. It takes no target parameter and stamps auth.uid()'s own
+      // row, so an anon caller has nothing to stamp — but the grant layer must
+      // refuse it before that ever matters.
+      const res = await anonClient().rpc("set_profile_locale", { p_locale: "pl" });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
     it("current_is_demo -> permission denied", async () => {
       // Added by demo-account-gate. It is an RLS POLICY helper, so like
       // `current_app_role()` it must stay granted to `authenticated` or every
@@ -171,6 +216,30 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
         p_company: null,
         p_vat_id: null,
         p_notes: null,
+      });
+      expect(isPermissionDenied(res.error)).toBe(false);
+    });
+
+    it("create_reservation_request -> still anon-callable with the locale params", async () => {
+      // english-localization DROPs and recreates this function to add p_locale /
+      // p_terms_version / p_terms_locale. A drop resets the ACL, and this one is
+      // intentionally PUBLIC (lessons.md carve-out (a)) — so the failure mode is
+      // the mirror image of the staff RPCs above: not "silently re-opened" but
+      // "silently closed", which would take the entire booking funnel down.
+      const res = await anonClient().rpc("create_reservation_request", {
+        p_vehicle_id: MISSING_VEHICLE,
+        p_pickup: "2026-08-01",
+        p_return: "2026-08-05",
+        p_customer_name: "Grant Guard",
+        p_customer_email: "grant.guard@example.com",
+        p_customer_phone: "+48600000000",
+        p_terms_accepted: true,
+        p_company: null,
+        p_vat_id: null,
+        p_notes: null,
+        p_locale: "en",
+        p_terms_version: "v1",
+        p_terms_locale: "en",
       });
       expect(isPermissionDenied(res.error)).toBe(false);
     });

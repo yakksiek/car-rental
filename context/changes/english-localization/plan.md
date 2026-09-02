@@ -1341,26 +1341,26 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [ ] 1.2 Type check passes: `npx astro check`
-- [ ] 1.3 Lint passes: `npm run lint`
-- [ ] 1.4 Unit tests pass: `npm test`
-- [ ] 1.5 Integration tests pass: `npm run test:integration`
-- [ ] 1.6 Build succeeds: `npm run build`
-- [ ] 1.7 Unit test pins locale resolution precedence and unrecognised-cookie fallback
-- [ ] 1.12 Integration test proves `set_profile_locale` stamps an EMPLOYEE's own row (not just an admin's)
-- [ ] 1.13 Each redefined RPC carries `revoke execute … from public, anon` before its grant
-- [ ] 1.15 Baseline island chunk sizes recorded to `island-baseline.md` with its commit SHA
-- [ ] 1.16 Integration test: a demo-account locale write does NOT change what a fresh cookie-less demo session resolves to
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
+- [x] 1.2 Type check passes: `npx astro check`
+- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.4 Unit tests pass: `npm test`
+- [x] 1.5 Integration tests pass: `npm run test:integration`
+- [x] 1.6 Build succeeds: `npm run build`
+- [x] 1.7 Unit test pins locale resolution precedence and unrecognised-cookie fallback
+- [x] 1.12 Integration test proves `set_profile_locale` stamps an EMPLOYEE's own row (not just an admin's)
+- [x] 1.13 Each redefined RPC carries `revoke execute … from public, anon` before its grant
+- [x] 1.15 Baseline island chunk sizes recorded to `island-baseline.md` with its commit SHA
+- [x] 1.16 Integration test: a demo-account locale write does NOT change what a fresh cookie-less demo session resolves to
 
 #### Manual
 
-- [ ] 1.8 App renders identically to before — no visible copy or layout change
-- [ ] 1.9 `<html lang>` reads `en`; `POST /api/locale` flips it and the cookie persists
-- [ ] 1.10 Staff locale choice writes `profiles.locale` and survives a cleared cookie
-- [ ] 1.11 Foreign-origin POST refused 403; external redirect target sanitized
-- [ ] 1.14 Signed in as an EMPLOYEE (not admin), the preference persists across a cleared cookie
-- [ ] 1.17 Demo: switch to PL, sign out, clear cookies, sign back in — cockpit is English again
+- [x] 1.8 App renders identically to before — no visible copy or layout change
+- [x] 1.9 `<html lang>` reads `en`; `POST /api/locale` flips it and the cookie persists
+- [x] 1.10 Staff locale choice writes `profiles.locale` and survives a cleared cookie
+- [x] 1.11 Foreign-origin POST refused 403; external redirect target sanitized
+- [x] 1.14 Signed in as an EMPLOYEE (not admin), the preference persists across a cleared cookie
+- [x] 1.17 Demo: switch to PL, sign out, clear cookies, sign back in — cockpit is English again
 
 ### Phase 2: Retire Polish Grammar-as-Logic
 
