@@ -10,6 +10,7 @@ import { Kbd, ReservationRow, ReturnRow, ROW_SHELL, searchHref, VehicleRow } fro
 
 // others
 import { cn } from "../../lib/utils";
+import type { Locale } from "../../lib/i18n/types";
 import { useGlobalSearchHotkey } from "../hooks/useGlobalSearchHotkey";
 import { useSearch } from "../hooks/useSearch";
 import type { SearchResults } from "../../types";
@@ -97,6 +98,8 @@ export interface GlobalSearchProps {
    * owns the mobile overlay); only the hotkey registration is skipped.
    */
   hotkey?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting shell passes it down. */
+  locale: Locale;
 }
 
 interface QuickJump {
@@ -121,6 +124,7 @@ export default function GlobalSearch({
   field = true,
   autoOpen = false,
   hotkey = true,
+  locale,
 }: GlobalSearchProps) {
   const [query, setQuery] = React.useState("");
   const [desktopOpen, setDesktopOpen] = React.useState(false);
@@ -240,7 +244,7 @@ export default function GlobalSearch({
       ) : total === 0 ? (
         <NoResults query={trimmed} />
       ) : (
-        <ResultGroups results={results} query={trimmed} today={today} />
+        <ResultGroups results={results} query={trimmed} today={today} locale={locale} />
       )}
     </>
   );
@@ -366,7 +370,7 @@ export default function GlobalSearch({
                 ) : (
                   // The list simply ends after the last row (contract Surface 4) —
                   // there is nothing to link out to, so nothing follows it.
-                  <ResultGroups results={results} query={trimmed} today={today} />
+                  <ResultGroups results={results} query={trimmed} today={today} locale={locale} />
                 )}
               </Command.List>
             </Command>
@@ -404,7 +408,17 @@ export function GroupHeader({
  * like) and as cmdk's `onSelect` (so ↵ on the highlighted row opens the same place —
  * cmdk resolves Enter by calling `onSelect`, it does not click the child).
  */
-function ResultGroups({ results, query, today }: { results: SearchResults; query: string; today: string }) {
+function ResultGroups({
+  results,
+  query,
+  today,
+  locale,
+}: {
+  results: SearchResults;
+  query: string;
+  today: string;
+  locale: Locale;
+}) {
   const go = (href: string) => () => {
     window.location.href = href;
   };
@@ -422,7 +436,7 @@ function ResultGroups({ results, query, today }: { results: SearchResults; query
               onSelect={go(searchHref.reservation(row))}
               asChild
             >
-              <ReservationRow row={row} query={query} />
+              <ReservationRow row={row} query={query} locale={locale} />
             </Command.Item>
           ))}
         </Command.Group>
@@ -432,7 +446,7 @@ function ResultGroups({ results, query, today }: { results: SearchResults; query
         <Command.Group heading={<GroupHeader icon={ArrowDown} label={COPY.returns} count={results.returns.length} />}>
           {results.returns.map((row) => (
             <Command.Item key={row.id} value={`return-${row.id}`} onSelect={go(searchHref.return(row))} asChild>
-              <ReturnRow row={row} query={query} today={today} />
+              <ReturnRow row={row} query={query} today={today} locale={locale} />
             </Command.Item>
           ))}
         </Command.Group>

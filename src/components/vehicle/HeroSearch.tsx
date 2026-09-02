@@ -1,8 +1,6 @@
 // core
 import * as React from "react";
 import { navigate } from "astro:transitions/client";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { CalendarIcon, SearchIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -16,6 +14,8 @@ import { cn } from "../../lib/utils";
 import type { VehicleCategory, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { toIsoDate } from "../../lib/date-iso";
+import { dayMonthShort } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { categoryLabelPl } from "../../lib/format";
 
 // The landing hero's primary action (design screen 07): a Typ / Daty / Oddział
@@ -36,9 +36,11 @@ const CATEGORIES: VehicleCategory[] = [
 interface Props {
   // Current category preselection, if the landing was reached with one. Usually null.
   category?: VehicleCategory | null;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
-export default function HeroSearch({ category = null }: Props) {
+export default function HeroSearch({ category = null, locale }: Props) {
   const [type, setType] = React.useState<string>(category ?? "all");
   const [range, setRange] = React.useState<DateRange | undefined>(undefined);
   const [error, setError] = React.useState<string | null>(null);
@@ -46,9 +48,9 @@ export default function HeroSearch({ category = null }: Props) {
 
   const dateLabel =
     range?.from && range.to
-      ? `${format(range.from, "d MMM", { locale: pl })} – ${format(range.to, "d MMM", { locale: pl })}`
+      ? `${dayMonthShort(range.from, locale)} – ${dayMonthShort(range.to, locale)}`
       : range?.from
-        ? `${format(range.from, "d MMM", { locale: pl })} – …`
+        ? `${dayMonthShort(range.from, locale)} – …`
         : "Dowolne daty";
 
   function handleSearch() {
@@ -125,7 +127,7 @@ export default function HeroSearch({ category = null }: Props) {
                 }}
                 numberOfMonths={1}
                 disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                locale={pl}
+                appLocale={locale}
                 autoFocus
               />
             </PopoverContent>

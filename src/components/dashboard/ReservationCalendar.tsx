@@ -10,6 +10,8 @@ import { CalendarDecision } from "./ReservationDecision";
 // others
 import dayjs from "../../lib/calendar/dayjs";
 import { reservationsToEvents } from "../../lib/calendar/map";
+import { dayMonthYearRange, monthYearLong } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { cn } from "../../lib/utils";
 import type { CalendarReservation } from "../../types";
 
@@ -62,38 +64,6 @@ function isoDate(value: unknown): string {
   return "";
 }
 
-// Polish month names — nominative for the month-view title, genitive for the
-// week-view range. Self-contained so the label never depends on the dayjs locale
-// bundle being loaded in workerd.
-const PL_MONTHS_NOM = [
-  "styczeń",
-  "luty",
-  "marzec",
-  "kwiecień",
-  "maj",
-  "czerwiec",
-  "lipiec",
-  "sierpień",
-  "wrzesień",
-  "październik",
-  "listopad",
-  "grudzień",
-];
-const PL_MONTHS_GEN = [
-  "stycznia",
-  "lutego",
-  "marca",
-  "kwietnia",
-  "maja",
-  "czerwca",
-  "lipca",
-  "sierpnia",
-  "września",
-  "października",
-  "listopada",
-  "grudnia",
-];
-
 const VIEW_OPTIONS: { id: CalendarView; label: string }[] = [
   { id: "month", label: "Miesiąc" },
   { id: "week", label: "Tydzień" },
@@ -103,19 +73,23 @@ const VIEW_OPTIONS: { id: CalendarView; label: string }[] = [
 // Miesiąc/Tydzień segmented switch on the right. No `+ New`, no export, no
 // hour-grid Dzień / Rok. Rendered inside the calendar provider, so it can drive
 // navigation through the public context hook.
-function CalendarHeader() {
+function CalendarHeader({ locale }: { locale: Locale }) {
   const { currentDate, view, setView, nextPeriod, prevPeriod, today } = useIlamyCalendarContext();
 
+  // The two period labels used to need two hand-rolled Polish month tables — a
+  // NOMINATIVE one for the standalone month title (`lipiec 2026`) and a GENITIVE
+  // one for the week range (`25–31 lipca 2026`) — on the belief that workerd's ICU
+  // could not be trusted. It can (probed 2026-09-01), and `Intl` makes the same
+  // split for free: a month asked for on its own comes back nominative, a month
+  // asked for beside a day comes back genitive. `formatRange` even reproduces the
+  // range's elision byte for byte, including which end keeps the month.
   let label: string;
   if (view === "week") {
     const start = currentDate.subtract((currentDate.day() + 6) % 7, "day"); // Monday
     const end = start.add(6, "day");
-    label =
-      start.month() === end.month()
-        ? `${start.date()}–${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`
-        : `${start.date()} ${PL_MONTHS_GEN[start.month()]} – ${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`;
+    label = dayMonthYearRange(start.toDate(), end.toDate(), locale);
   } else {
-    label = `${PL_MONTHS_NOM[currentDate.month()]} ${currentDate.year()}`;
+    label = monthYearLong(currentDate.toDate(), locale);
   }
 
   const navButton = "text-foreground hover:bg-background flex size-9 items-center justify-center rounded-full";
@@ -254,12 +228,15 @@ export default function ReservationCalendar({
   initialDate,
   initialView = "month",
   focusVehicleId,
+  locale,
 }: {
   resources: Resource[];
   reservations: CalendarReservation[];
   initialDate?: string;
   initialView?: CalendarView;
   focusVehicleId?: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
   const [reservations, setReservations] = React.useState<CalendarReservation[]>(initial);
   const [active, setActive] = React.useState<CalendarReservation | null>(null);
@@ -327,7 +304,7 @@ export default function ReservationCalendar({
           hideExportButton
           headerComponent={
             <>
-              <CalendarHeader />
+              <CalendarHeader locale={locale} />
               <CalendarAutoFocus focusDate={initialDate} />
             </>
           }
@@ -357,6 +334,7 @@ export default function ReservationCalendar({
 
       {active && (
         <CalendarDecision
+          locale={locale}
           reservation={active}
           onClose={() => {
             setActive(null);

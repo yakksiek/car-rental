@@ -1,10 +1,35 @@
 // others
-import { estimatedTotal, formatDuration, formatPln, rejectionReasonLabelPl, rentalDays } from "../format";
+import {
+  estimatedTotal,
+  formatDuration,
+  formatInteger,
+  formatPln,
+  plural,
+  rejectionReasonLabelPl,
+  rentalDays,
+} from "../format";
+import type { PluralForms } from "../format";
+import type { Locale } from "../i18n/types";
 import type { RejectionReason } from "../../types";
 import type { EmailContent } from "./index";
 
 // Polish transactional templates (S-02 + S-03). Each template is a pure function
 // returning EmailContent; the caller addresses and sends it via `sendEmail`.
+
+/**
+ * The language every outbound artifact is rendered in — **one named seam, not a
+ * scatter of `"pl-PL"` string literals**, which is what this file carried before.
+ *
+ * It is deliberately a constant and not a parameter yet. The language of a
+ * customer email is a property of the RESERVATION (or the protocol), never of the
+ * employee whose session triggered the send — an employee working an English
+ * cockpit must still mail a Polish customer in Polish. `reservations.locale` and
+ * `protocols.locale` exist for exactly that (this change's Phase 1 migration), but
+ * neither is on the RPC return shapes these callers read yet. Wiring that, and the
+ * bodies' English twins, is Phase 6; until then every artifact is Polish, which is
+ * what every already-sent one is.
+ */
+const ARTIFACT_LOCALE: Locale = "pl";
 
 export interface ReservationReceivedParams {
   reference: string;
@@ -22,8 +47,8 @@ export interface ReservationReceivedParams {
 /** Submit-confirmation email: reference, summary, and the status link. */
 export function reservationReceivedEmail(params: ReservationReceivedParams): EmailContent {
   const days = rentalDays(params.pickup, params.return);
-  const total = formatPln(estimatedTotal(params.dailyRate, days));
-  const duration = formatDuration(days);
+  const total = formatPln(estimatedTotal(params.dailyRate, days), ARTIFACT_LOCALE);
+  const duration = formatDuration(days, ARTIFACT_LOCALE);
 
   const subject = `FleetRent — zgłoszenie ${params.reference} przyjęte`;
 
@@ -80,9 +105,9 @@ export interface ReservationConfirmedParams {
 /** Acceptance email: the booking is confirmed, with the pickup details + deposit. */
 export function reservationConfirmedEmail(params: ReservationConfirmedParams): EmailContent {
   const days = rentalDays(params.pickup, params.return);
-  const total = formatPln(estimatedTotal(params.dailyRate, days));
-  const duration = formatDuration(days);
-  const deposit = formatPln(params.deposit);
+  const total = formatPln(estimatedTotal(params.dailyRate, days), ARTIFACT_LOCALE);
+  const duration = formatDuration(days, ARTIFACT_LOCALE);
+  const deposit = formatPln(params.deposit, ARTIFACT_LOCALE);
 
   const subject = `FleetRent — rezerwacja ${params.reference} potwierdzona`;
 
@@ -198,29 +223,33 @@ function fuelLabel(eighths: number): string {
   return `${eighths}/8`;
 }
 
+const DAMAGE_ITEM_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "item", other: "items" },
+  pl: { one: "pozycja", few: "pozycje", many: "pozycji", other: "pozycji" },
+};
+
+const NO_DAMAGES: Record<Locale, string> = { en: "none", pl: "brak" };
+
 /**
- * `0` → `"brak"`, otherwise the count with the Polish plural it takes:
- * 1 → `pozycja`, 2–4 → `pozycje`, everything else → `pozycji`, with the
- * 12–14 exception that makes the teens take the genitive plural.
+ * `0` → `"brak"`, otherwise the count with the plural form it takes — 1 →
+ * `pozycja`, 2–4 → `pozycje`, the rest (teens included) → `pozycji`.
+ *
+ * The 12–14 exception used to be spelled out here in modular arithmetic, one of
+ * three copies in the repo. `Intl.PluralRules` supplies it now, via the shared
+ * `plural`; the words are the only thing this function still owns.
  */
-function damageLabel(count: number): string {
+function damageLabel(count: number, locale: Locale): string {
   if (count === 0) {
-    return "brak";
+    return NO_DAMAGES[locale];
   }
-  if (count === 1) {
-    return "1 pozycja";
-  }
-  const lastTwo = count % 100;
-  const last = count % 10;
-  const few = last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14);
-  return `${count} ${few ? "pozycje" : "pozycji"}`;
+  return `${count} ${plural(count, locale, DAMAGE_ITEM_FORMS[locale])}`;
 }
 
 /** Handover email: the signed protocol, summarized, with the PDF attached. */
 export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent {
-  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
+  const odometer = `${formatInteger(params.odometerKm, ARTIFACT_LOCALE)} km`;
   const fuel = fuelLabel(params.fuelEighths);
-  const damages = damageLabel(params.damageCount);
+  const damages = damageLabel(params.damageCount, ARTIFACT_LOCALE);
 
   const subject = `FleetRent — protokół wydania ${params.reference}`;
 
@@ -288,10 +317,10 @@ export interface ProtocolReturnedParams {
   newDamageCount: number;
 }
 
-/** Signed km summary: `+1 228 km` / `−40 km` / `0 km` (pl-PL grouping). */
+/** Signed km summary: `+1 228 km` / `−40 km` / `0 km`, grouped for the artifact locale. */
 function kmDrivenLabel(km: number): string {
   const sign = km > 0 ? "+" : "";
-  return `${sign}${km.toLocaleString("pl-PL")} km`;
+  return `${sign}${formatInteger(km, ARTIFACT_LOCALE)} km`;
 }
 
 /** Signed fuel-eighths change: `bez zmian` / `+2/8` / `−4/8` (a true minus, U+2212). */
@@ -304,11 +333,11 @@ function fuelDeltaLabel(delta: number): string {
 
 /** Return email: the signed return protocol, its comparison summarized, PDF attached. */
 export function protocolReturnedEmail(params: ProtocolReturnedParams): EmailContent {
-  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
+  const odometer = `${formatInteger(params.odometerKm, ARTIFACT_LOCALE)} km`;
   const fuel = fuelLabel(params.fuelEighths);
   const kmDriven = kmDrivenLabel(params.kmDriven);
   const fuelChange = fuelDeltaLabel(params.fuelDelta);
-  const newDamages = damageLabel(params.newDamageCount);
+  const newDamages = damageLabel(params.newDamageCount, ARTIFACT_LOCALE);
 
   const subject = `FleetRent — protokół zwrotu ${params.reference}`;
 

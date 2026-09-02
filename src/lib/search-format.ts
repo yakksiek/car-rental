@@ -1,17 +1,17 @@
 // others
-import { MONTHS_ABBR_PL } from "./pl-date";
+import { monthShort } from "./format-date";
+import type { Locale } from "./i18n/types";
 
 // Pure, I/O-free presentation helpers for staff global-search rows (S-13). Kept
-// out of the React components so the fiddly bits — Polish month abbreviations,
-// the relative-day wording, and case-insensitive match segmentation — are unit
+// out of the React components so the fiddly bits — the month abbreviations, the
+// relative-day wording, and case-insensitive match segmentation — are unit
 // testable on their own.
 //
-// Like `pl-date`, dates are handled as ISO `YYYY-MM-DD` STRINGS and never routed
-// through `Intl`, matching the rest of the app: the Cloudflare workerd runtime ships
-// a trimmed ICU and cannot be trusted for Polish month names server-side. Both call
-// sites are now client-only (the rows render inside the search dropdown), so that is
-// consistency rather than necessity. Splitting the string also sidesteps the timezone
-// question entirely — a calendar date has no instant to shift.
+// Dates stay ISO `YYYY-MM-DD` STRINGS and are never turned into an instant, which
+// sidesteps the timezone question entirely — a calendar date has nothing to shift.
+// The month names now come from `Intl` via `format-date`; the hand-rolled Polish
+// abbreviation table this used to import is deleted, along with the trimmed-ICU
+// premise behind it (probed false 2026-09-01).
 
 interface IsoParts {
   year: number;
@@ -31,23 +31,26 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /**
  * The rental span shown under a result row's customer name:
- * `searchDateRange("2026-04-02", "2026-04-09") -> "02 – 09 kwi"`. When the range
- * crosses a month boundary both ends carry their month:
- * `("2026-04-28", "2026-05-03") -> "28 kwi – 03 maj"`. Returns "—" for a
+ * `searchDateRange("2026-04-02", "2026-04-09", "pl") -> "02 – 09 kwi"`. When the
+ * range crosses a month boundary both ends carry their month:
+ * `(…"2026-04-28", "2026-05-03") -> "28 kwi – 03 maj"`. Returns "—" for a
  * malformed date rather than throwing — a row must still render.
+ *
+ * The day-then-month order holds in both locales (`"02 – 09 Apr"`) because `en`
+ * formats as en-GB — see `format-date.ts`.
  */
-export function searchDateRange(pickup: string, returnDate: string): string {
+export function searchDateRange(pickup: string, returnDate: string, locale: Locale): string {
   const from = parseIso(pickup);
   const to = parseIso(returnDate);
   if (!from || !to) {
     return "—";
   }
 
-  const toLabel = `${pad2(to.day)} ${MONTHS_ABBR_PL[to.month - 1]}`;
+  const toLabel = `${pad2(to.day)} ${monthShort(to.month - 1, locale)}`;
   if (from.year === to.year && from.month === to.month) {
     return `${pad2(from.day)} – ${toLabel}`;
   }
-  return `${pad2(from.day)} ${MONTHS_ABBR_PL[from.month - 1]} – ${toLabel}`;
+  return `${pad2(from.day)} ${monthShort(from.month - 1, locale)} – ${toLabel}`;
 }
 
 /** Whole days between two ISO calendar dates (`b - a`), or null if either is malformed. */
@@ -67,12 +70,18 @@ function dayDelta(a: string, b: string): number | null {
  * When a return is (or was) due, worded relative to `today`:
  * `"dziś"` / `"wczoraj"` / `"jutro"`, and a plain `"12 kwi"` beyond that window.
  *
+ * The three relative words stay hand-written on purpose. `Intl.RelativeTimeFormat`
+ * covers this shape, but its `pl` wording for day 0 is `dzisiaj` where the design
+ * board says `dziś` — which makes these a COPY choice, not grammar, so they move
+ * into the catalog with the rest of the search rows rather than being retired
+ * here. `locale` is what the month fallback needs.
+ *
  * `today` is passed in rather than read from the clock so a server-rendered row
  * and its hydrated counterpart agree — the server runs UTC while the depot lives
  * in Europe/Warsaw, and a self-read clock would make the two disagree for part of
  * the day (the locale/timezone lesson).
  */
-export function relativeDayPl(iso: string, today: string): string {
+export function relativeDayPl(iso: string, today: string, locale: Locale): string {
   const delta = dayDelta(today, iso);
   if (delta === null) {
     return "—";
@@ -88,7 +97,7 @@ export function relativeDayPl(iso: string, today: string): string {
   }
 
   const parts = parseIso(iso);
-  return parts ? `${pad2(parts.day)} ${MONTHS_ABBR_PL[parts.month - 1]}` : "—";
+  return parts ? `${pad2(parts.day)} ${monthShort(parts.month - 1, locale)}` : "—";
 }
 
 export interface HighlightSegment {

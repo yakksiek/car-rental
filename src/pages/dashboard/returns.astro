@@ -9,7 +9,7 @@ import ReturnQueue from "../../components/dashboard/ReturnQueue";
 import { countOverdueReturns, listReturnsToday } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 import { parseReturnsFilter } from "../../lib/returns-filter";
-import { dateEyebrowPl, dateLabelPl } from "../../lib/pl-date";
+import { dateEyebrow, dateLabel } from "../../lib/format-date";
 
 // The returns worklist (S-06 Phase 6): confirmed reservations due-or-overdue to
 // return, each awaiting a return protocol or already returned today. Gated to
@@ -22,7 +22,7 @@ import { dateEyebrowPl, dateLabelPl } from "../../lib/pl-date";
 // `today` is the server's UTC calendar date, matching the DB's `current_date`
 // (Supabase runs UTC), so the overdue-vs-due split the queue paints agrees with the
 // RPC's `return_date <= current_date` filter.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale } = Astro.locals;
 
 const [rows, pending, overdueCount] = await Promise.all([
   listReturnsToday(supabase),
@@ -40,11 +40,10 @@ const today = now.toISOString().slice(0, 10);
 const subtitle = "Pojazdy do zwrotu na dziś";
 
 // Mobile header eyebrow — `ŚR · 16 LIPCA`; desktop filter-bar date (design O2) —
-// `Śr, 16 lip`. Both come from `pl-date`'s lookup tables (never `Intl`: workerd's
-// trimmed ICU can't be trusted for Polish server-side), keyed on the same UTC
-// calendar the `today` split uses.
-const dateEyebrow = dateEyebrowPl(now);
-const dateLabel = dateLabelPl(now);
+// `Śr, 16 lip`. Both come from `Intl`, keyed on the same UTC calendar the `today`
+// split uses.
+const eyebrow = dateEyebrow(now, locale);
+const label = dateLabel(now, locale);
 ---
 
 <Layout title="Zwroty — Flota">
@@ -64,12 +63,19 @@ const dateLabel = dateLabelPl(now);
       }
       <header class="mb-4 flex items-start justify-between gap-4 md:hidden">
         <div class="min-w-0">
-          <p class="text-muted-foreground text-[11px] font-bold tracking-[0.08em]">{dateEyebrow}</p>
+          <p class="text-muted-foreground text-[11px] font-bold tracking-[0.08em]">{eyebrow}</p>
           <h1 class="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">Zwroty</h1>
         </div>
-        <QuickAddButton client:load mode="mobile" />
+        <QuickAddButton client:load mode="mobile" locale={locale} />
       </header>
-      <ReturnQueue client:load rows={rows} today={today} initialFilter={initialFilter} dateLabel={dateLabel} />
+      <ReturnQueue
+        client:load
+        rows={rows}
+        today={today}
+        initialFilter={initialFilter}
+        dateLabel={label}
+        locale={locale}
+      />
     </main>
   </StaffShell>
 </Layout>

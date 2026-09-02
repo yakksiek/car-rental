@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { CheckIcon } from "lucide-react";
 
 // components
@@ -12,7 +10,9 @@ import { Label } from "../ui/label";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
+import { dayMonthRange, dayMonthShort } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { reservationRequestSchema } from "../../lib/reservation-schema";
 
 // Reservation flow steps 2–3 — "Twoje dane" then "Podsumowanie" (design
@@ -44,11 +44,17 @@ interface Props {
   backHref: string;
   /** Server-rendered silhouette for the order-summary thumbnail. */
   children?: React.ReactNode;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 const BRANCH = "Warszawa · Mokotów";
 
 const COPY = {
+  // The daily-rate suffix. It used to be baked into `format.ts`'s
+  // `formatDailyRate`; a unit-arranging helper has no business owning a word a
+  // caller could phrase differently, so it sits with the rest of this island's copy.
+  perDay: "/doba",
   eyebrow: "Zarezerwuj pojazd",
   headingDetails: "Twoje dane",
   headingReview: "Podsumowanie",
@@ -132,13 +138,6 @@ const chevronIcon = (
   </svg>
 );
 
-/** `24 – 27 marca` (same month shows the pickup day only) / `28 marca – 2 kwietnia`. */
-function rangeHeadline(from: Date, to: Date): string {
-  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
-  const fromLabel = sameMonth ? format(from, "d", { locale: pl }) : format(from, "d MMMM", { locale: pl });
-  return `${fromLabel} – ${format(to, "d MMMM", { locale: pl })}`;
-}
-
 /** First zod message per top-level field, e.g. `{ customer_email: "Podaj…" }`. */
 function firstIssuePerField(issues: { path: PropertyKey[]; message: string }[]): Record<string, string> {
   const errors: Record<string, string> = {};
@@ -150,7 +149,7 @@ function firstIssuePerField(issues: { path: PropertyKey[]; message: string }[]):
 }
 
 export default function ReservationForm(props: Props) {
-  const { vehicle, pickup, return: returnIso, backHref, children } = props;
+  const { vehicle, pickup, return: returnIso, backHref, children, locale } = props;
 
   const [step, setStep] = React.useState<Step>("details");
   const [name, setName] = React.useState("");
@@ -178,7 +177,9 @@ export default function ReservationForm(props: Props) {
   const pickupDate = fromIsoDate(pickup);
   const returnDate = fromIsoDate(returnIso);
   const datesHeadline =
-    pickupDate && returnDate ? `${rangeHeadline(pickupDate, returnDate)} · ${formatDuration(days)}` : "";
+    pickupDate && returnDate
+      ? `${dayMonthRange(pickupDate, returnDate, locale, { month: "long" })} · ${formatDuration(days, locale)}`
+      : "";
 
   function buildPayload() {
     return {
@@ -331,22 +332,25 @@ export default function ReservationForm(props: Props) {
   ];
 
   const summaryRows = [
-    { label: COPY.pickup, value: pickupDate ? `${format(pickupDate, "d MMM", { locale: pl })} · 14:00` : "—" },
-    { label: COPY.return, value: returnDate ? `${format(returnDate, "d MMM", { locale: pl })} · 10:00` : "—" },
+    { label: COPY.pickup, value: pickupDate ? `${dayMonthShort(pickupDate, locale)} · 14:00` : "—" },
+    { label: COPY.return, value: returnDate ? `${dayMonthShort(returnDate, locale)} · 10:00` : "—" },
     { label: COPY.branch, value: BRANCH },
   ];
 
   const priceRows = [
-    { label: `${formatPln(vehicle.dailyRate)} × ${formatDuration(days)}`, value: formatPln(total) },
-    { label: COPY.deposit, value: formatPln(vehicle.deposit) },
+    {
+      label: `${formatPln(vehicle.dailyRate, locale)} × ${formatDuration(days, locale)}`,
+      value: formatPln(total, locale),
+    },
+    { label: COPY.deposit, value: formatPln(vehicle.deposit, locale) },
   ];
 
   // Read-only review rows (step 3). Optional B2B fields only appear when filled.
   const reviewBookingRows = [
-    { label: COPY.pickup, value: pickupDate ? `${format(pickupDate, "d MMM", { locale: pl })} · 14:00` : "—" },
-    { label: COPY.return, value: returnDate ? `${format(returnDate, "d MMM", { locale: pl })} · 10:00` : "—" },
-    { label: COPY.duration, value: formatDuration(days) },
-    { label: COPY.rate, value: `${formatPln(vehicle.dailyRate)}/doba` },
+    { label: COPY.pickup, value: pickupDate ? `${dayMonthShort(pickupDate, locale)} · 14:00` : "—" },
+    { label: COPY.return, value: returnDate ? `${dayMonthShort(returnDate, locale)} · 10:00` : "—" },
+    { label: COPY.duration, value: formatDuration(days, locale) },
+    { label: COPY.rate, value: `${formatPln(vehicle.dailyRate, locale)}${COPY.perDay}` },
   ];
   const reviewCustomerRows = [
     { label: "Imię i nazwisko", value: name },
@@ -461,7 +465,7 @@ export default function ReservationForm(props: Props) {
           {/* Navy estimated-total band (design desktop-2). */}
           <div className="bg-foreground text-background mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3">
             <span className="text-sm font-semibold">{COPY.estimate}</span>
-            <span className="text-lg font-bold tracking-tight">{formatPln(total)}</span>
+            <span className="text-lg font-bold tracking-tight">{formatPln(total, locale)}</span>
           </div>
 
           <p className="text-muted-foreground mt-4 text-sm leading-snug">{COPY.reassurance}</p>
@@ -655,15 +659,19 @@ export default function ReservationForm(props: Props) {
             <div className="min-w-0">
               <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
               <div className="mt-0.5 font-bold tracking-tight">
-                <span className="text-[2.5rem] leading-none">{formatPln(total).replace(/\s*zł$/, "")}</span>
+                {/* Two type sizes, so the bare number comes from `formatPlnAmount`
+                    rather than from stripping `zł` off `formatPln` with a regex —
+                    that strip silently stopped matching once the currency became
+                    locale-aware, and the `zł` span beside it stayed regardless. */}
+                <span className="text-[2.5rem] leading-none">{formatPlnAmount(total, locale)}</span>
                 <span className="ml-1 text-lg">zł</span>
               </div>
             </div>
             <div className="shrink-0 text-right text-xs leading-snug opacity-80">
               <div>
-                {formatDuration(days)} × {formatPln(vehicle.dailyRate)}
+                {formatDuration(days, locale)} × {formatPln(vehicle.dailyRate, locale)}
               </div>
-              <div>+ kaucja {formatPln(vehicle.deposit)}</div>
+              <div>+ kaucja {formatPln(vehicle.deposit, locale)}</div>
             </div>
           </div>
           <button

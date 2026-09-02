@@ -1,5 +1,6 @@
 // others
 import { formatDuration, rentalDays } from "./format";
+import type { Locale } from "./i18n/types";
 import type { DispatchReturnRow } from "../types";
 
 // Pure, DOM-free helpers for the returns worklist (S-07 Phases 2–3). They live here
@@ -65,9 +66,9 @@ export function sortReturnsByUrgency(rows: DispatchReturnRow[], today: string): 
  * count is the calendar span `today − return_date` (`rentalDays`), ≥ 1 exactly when
  * the row classifies as `overdue`.
  */
-export function overdueDaysLabel(row: DispatchReturnRow, today: string): string | null {
+export function overdueDaysLabel(row: DispatchReturnRow, today: string, locale: Locale): string | null {
   if (captionOf(row, today) !== "overdue") {
     return null;
   }
-  return `${formatDuration(rentalDays(row.return_date, today))} po terminie`;
+  return `${formatDuration(rentalDays(row.return_date, today), locale)} po terminie`;
 }

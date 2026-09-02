@@ -89,7 +89,7 @@ const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 //
 // `staff.astro` still passes `isDemo` explicitly to <StaffList>, because that is
 // a page-owned island the shell does not mount.
-const isDemo = Astro.locals.isDemo;
+const { isDemo, locale } = Astro.locals;
 
 // Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
 // on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
@@ -102,6 +102,7 @@ const searchProps = {
   field: search,
   autoOpen,
   hotkey: searchHotkey,
+  locale,
 };
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
@@ -276,7 +277,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <div class="flex min-w-0 items-center justify-end gap-3">
             <GlobalSearch client:load {...searchProps} />
             <slot name="header-actions" />
-            <QuickAddButton client:load mode="desktop" promoted={promotedAction} isDemo={isDemo} />
+            <QuickAddButton client:load mode="desktop" promoted={promotedAction} isDemo={isDemo} locale={locale} />
           </div>
         </header>
       ) : (

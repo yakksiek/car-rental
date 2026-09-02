@@ -23,6 +23,7 @@ interface Props {
 }
 
 const { vehicle } = Astro.props;
+const { locale } = Astro.locals;
 
 // Title = make + model on one line (e.g. "Renault Master"); subtitle = category · year
 // (e.g. "Furgon · 2021"), matching the live design's descriptor + year — the category
@@ -40,7 +41,7 @@ const specs = [
   { icon: "seats" as const, value: vehicle.seats === null ? "—" : String(vehicle.seats) },
   { icon: "transmission" as const, value: transmissionLabelPl(vehicle.transmission) },
   { icon: "fuel" as const, value: fuelLabelPl(vehicle.fuel_type) },
-  { icon: "payload" as const, value: formatPayloadKg(vehicle.payload_capacity_kg) },
+  { icon: "payload" as const, value: formatPayloadKg(vehicle.payload_capacity_kg, locale) },
 ];
 ---
 
@@ -104,7 +105,7 @@ const specs = [
       >
         <div class="text-foreground text-[24px] leading-none font-bold tracking-tight @min-[400px]:text-[22px]">
           <span class="text-muted-foreground hidden text-[12px] font-medium @min-[400px]:inline">od </span>{
-            formatPln(vehicle.daily_rate)
+            formatPln(vehicle.daily_rate, locale)
           }<span class="text-muted-foreground text-[13px] font-medium">&nbsp;/dzień</span>
         </div>
         <span

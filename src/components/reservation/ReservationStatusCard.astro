@@ -1,8 +1,4 @@
 ---
-// core
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
-
 // components
 import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
 
@@ -10,6 +6,7 @@ import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
+import { dayMonthShort } from "../../lib/format-date";
 import type { ReservationStatus, ReservationStatusView } from "../../types";
 
 // The status screen's header + booking summary (design desktop-3 / mobile-4):
@@ -25,6 +22,7 @@ interface Props {
 }
 
 const { view } = Astro.props;
+const { locale } = Astro.locals;
 
 // Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
 // produces; confirmed/rejected/cancelled arrive with S-03. The WORDING now comes
@@ -43,12 +41,12 @@ const returnDate = fromIsoDate(view.return_date);
 const days = rentalDays(view.pickup_date, view.return_date);
 const metaLine =
   pickup && returnDate
-    ? `${format(pickup, "d MMM", { locale: pl })} · 14:00 → ${format(returnDate, "d MMM", { locale: pl })} · 10:00 · ${formatDuration(days)}`
+    ? `${dayMonthShort(pickup, locale)} · 14:00 → ${dayMonthShort(returnDate, locale)} · 10:00 · ${formatDuration(days, locale)}`
     : "—";
 
 const title = [view.vehicle_make, view.vehicle_model].filter(Boolean).join(" ");
-const total = formatPln(estimatedTotal(view.vehicle_daily_rate, days));
-const deposit = formatPln(view.vehicle_deposit);
+const total = formatPln(estimatedTotal(view.vehicle_daily_rate, days), locale);
+const deposit = formatPln(view.vehicle_deposit, locale);
 ---
 
 <section class="flex flex-col items-center text-center">

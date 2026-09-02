@@ -10,6 +10,7 @@ import QuickAddButton from "../dashboard/QuickAddButton";
 // others
 import { cn } from "../../lib/utils";
 import { categoryLabelPl, formatPln, fuelLabelPl, transmissionLabelPl } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/types";
 import type { CategoryCounts } from "../../lib/services/vehicles";
 import type { Vehicle, VehicleCategory } from "../../types";
 
@@ -147,15 +148,15 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-function Rate({ vehicle, className }: { vehicle: Vehicle; className?: string }) {
+function Rate({ vehicle, className, locale }: { vehicle: Vehicle; className?: string; locale: Locale }) {
   return (
     <div className={className}>
       <span className="text-foreground text-sm font-[650] tracking-tight">
-        {formatPln(vehicle.daily_rate)}
+        {formatPln(vehicle.daily_rate, locale)}
         {COPY.perDay}
       </span>
       <span className="text-muted-foreground ml-2 text-xs">
-        {formatPln(vehicle.monthly_rate)}
+        {formatPln(vehicle.monthly_rate, locale)}
         {COPY.perMonth}
       </span>
     </div>
@@ -215,7 +216,16 @@ function RetireDialog({
 
 // ── main island ──────────────────────────────────────────────────────────────
 
-export default function FleetList({ vehicles: initial, counts }: { vehicles: Vehicle[]; counts: CategoryCounts }) {
+export default function FleetList({
+  vehicles: initial,
+  counts,
+  locale,
+}: {
+  vehicles: Vehicle[];
+  counts: CategoryCounts;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
+}) {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>(initial);
   const [category, setCategory] = React.useState<VehicleCategory | null>(null);
   const [search, setSearch] = React.useState("");
@@ -335,7 +345,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
             duplicate. Size 48 → 40 per the settled reconciliation, with the
             design's own shadow (replacing `shadow-accent`). */}
         <div className="md:hidden">
-          <QuickAddButton mode="mobile" promoted="vehicle" />
+          <QuickAddButton mode="mobile" promoted="vehicle" locale={locale} />
         </div>
       </div>
 
@@ -466,7 +476,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                       <StatusBadge active={v.is_active} />
                     </td>
                     <td className="px-5 py-3.5">
-                      <Rate vehicle={v} />
+                      <Rate vehicle={v} locale={locale} />
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
@@ -526,7 +536,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                       <StatusBadge active={v.is_active} />
                     </div>
                     <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v)}</div>
-                    <Rate vehicle={v} className="mt-1.5" />
+                    <Rate vehicle={v} locale={locale} className="mt-1.5" />
                   </div>
                 </div>
                 <div className="mt-3.5 flex gap-2">

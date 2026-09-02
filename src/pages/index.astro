@@ -36,6 +36,7 @@ const NO_FILTERS: VehicleFilters = {
   sort: null,
 };
 
+const { locale } = Astro.locals;
 const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
 const featured = vehicles.slice(0, 3);
 ---
@@ -243,7 +244,7 @@ const featured = vehicles.slice(0, 3);
     <div
       class="mx-auto w-full max-w-[560px] px-4 sm:px-6 md:absolute md:top-[-315px] md:right-10 md:z-20 md:mx-0 md:w-[320px] md:max-w-none md:px-0 xl:top-[-145px] xl:right-auto xl:left-16 xl:w-[740px]"
     >
-      <HeroSearch client:load />
+      <HeroSearch client:load locale={locale} />
     </div>
 
     <!-- Trust card — stacked on mobile, a 3-across white bar at the tablet tier

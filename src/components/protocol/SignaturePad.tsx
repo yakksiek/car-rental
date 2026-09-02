@@ -7,6 +7,8 @@ import { Button } from "../ui/button";
 
 // others
 import { cn } from "../../lib/utils";
+import { timeCompany } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 
 // Signature capture (S-05 Phase 5), as a full-screen signing modal rather than an
 // inline pad. Two reasons this beats the inline canvas on a phone:
@@ -37,14 +39,21 @@ interface FieldProps {
   inset?: boolean;
   /** Upload the committed PNG; resolves `true` on success. The parent owns storage + `signed_at`. */
   onSigned: (png: Blob) => Promise<boolean>;
+  /** Islands cannot read `Astro.locals`; the mounting form passes it down. */
+  locale: Locale;
 }
 
-function signedTimePl(signedAt: string): string {
-  return new Date(signedAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+/**
+ * `14:08` in the COMPANY's zone, not the viewer's. This used to read the runtime
+ * zone, which is the exact shape the locale lesson warns about: a signature is a
+ * company-anchored event, and a viewer-local read cannot survive being SSR'd.
+ */
+function signedTime(signedAt: string, locale: Locale): string {
+  return timeCompany(new Date(signedAt), locale);
 }
 
 /** The inline Section-4 control: a prompt button when empty, a summary once signed. */
-export function SignatureField({ signedAt, customerName, invalid, inset, onSigned }: FieldProps) {
+export function SignatureField({ signedAt, customerName, invalid, inset, onSigned, locale }: FieldProps) {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -60,7 +69,7 @@ export function SignatureField({ signedAt, customerName, invalid, inset, onSigne
         >
           <span className="text-success flex items-center gap-2 text-[13px] font-semibold">
             <Check className="size-4 shrink-0" />
-            Podpisał(a) {customerName} · o {signedTimePl(signedAt)}
+            Podpisał(a) {customerName} · o {signedTime(signedAt, locale)}
           </span>
           <button
             type="button"

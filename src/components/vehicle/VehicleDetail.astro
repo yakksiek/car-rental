@@ -27,6 +27,7 @@ interface Props {
 }
 
 const { vehicle, pickup, returnDate, busyRanges = [] } = Astro.props;
+const { locale } = Astro.locals;
 
 const title = [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ");
 
@@ -34,7 +35,7 @@ const specs = [
   { icon: "seats" as const, label: "Miejsca", value: vehicle.seats === null ? "—" : String(vehicle.seats) },
   { icon: "transmission" as const, label: "Skrzynia", value: transmissionLabelPl(vehicle.transmission) },
   { icon: "fuel" as const, label: "Paliwo", value: fuelLabelPl(vehicle.fuel_type) },
-  { icon: "payload" as const, label: "Ładowność", value: formatPayloadKg(vehicle.payload_capacity_kg) },
+  { icon: "payload" as const, label: "Ładowność", value: formatPayloadKg(vehicle.payload_capacity_kg, locale) },
   {
     icon: "cargo" as const,
     label: "Ładunek (D×S×W)",
@@ -160,6 +161,7 @@ const trust = [
          bottom CTA bar (the calendar is far up the page). -->
     <div class="mt-7 lg:mt-0">
       <BookingWidget
+        locale={locale}
         client:load
         vehicleId={vehicle.id}
         dailyRate={vehicle.daily_rate}

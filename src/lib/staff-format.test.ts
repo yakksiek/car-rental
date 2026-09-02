@@ -1,26 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import { formatLastActive, plForm, staffCountLabel, staffInitials } from "./staff-format";
+import { formatLastActive, staffCountLabel, staffInitials } from "./staff-format";
 
 const NOW = Date.parse("2026-07-23T12:00:00Z");
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
 
-describe("plForm (Polish count nouns)", () => {
-  it("selects one / few / many by the Polish rule", () => {
-    expect(plForm(1, "osoba", "osoby", "osób")).toBe("osoba");
-    expect(plForm(2, "osoba", "osoby", "osób")).toBe("osoby");
-    expect(plForm(4, "osoba", "osoby", "osób")).toBe("osoby");
-    expect(plForm(5, "osoba", "osoby", "osób")).toBe("osób");
-    expect(plForm(12, "osoba", "osoby", "osób")).toBe("osób"); // 12–14 stay many
-    expect(plForm(22, "osoba", "osoby", "osób")).toBe("osoby");
-  });
-});
-
+// This module's own count-noun selector — a second copy of Polish's 1 / 2–4 /
+// rest split — is deleted; `format.ts`'s `plural` (Intl.PluralRules) is the one
+// selector now, and
+// `format.test.ts` asserts the category table directly. What survives here is the
+// LABEL, exercised across the same counts so the swap is visible end to end.
 describe("staffCountLabel", () => {
   it("renders the uppercase eyebrow", () => {
-    expect(staffCountLabel(5, 1)).toBe("5 OSÓB · 1 ADMINISTRATOR");
-    expect(staffCountLabel(1, 1)).toBe("1 OSOBA · 1 ADMINISTRATOR");
-    expect(staffCountLabel(3, 2)).toBe("3 OSOBY · 2 ADMINISTRATORZY");
+    expect(staffCountLabel(5, 1, "pl")).toBe("5 OSÓB · 1 ADMINISTRATOR");
+    expect(staffCountLabel(1, 1, "pl")).toBe("1 OSOBA · 1 ADMINISTRATOR");
+    expect(staffCountLabel(3, 2, "pl")).toBe("3 OSOBY · 2 ADMINISTRATORZY");
+  });
+
+  it("keeps the 12–14 exception the deleted selector hard-coded", () => {
+    expect(staffCountLabel(12, 22, "pl")).toBe("12 OSÓB · 22 ADMINISTRATORZY");
+  });
+
+  it("renders the English eyebrow from a two-form noun", () => {
+    expect(staffCountLabel(5, 1, "en")).toBe("5 PEOPLE · 1 ADMIN");
+    expect(staffCountLabel(1, 2, "en")).toBe("1 PERSON · 2 ADMINS");
   });
 });
 

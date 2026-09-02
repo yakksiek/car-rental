@@ -6,6 +6,8 @@ import QuickAddButton from "../../components/dashboard/QuickAddButton";
 import PickupQueue from "../../components/dashboard/PickupQueue";
 
 // others
+import { plural, type PluralForms } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/types";
 import { countOverdueReturns, listDispatchToday } from "../../lib/services/protocols";
 import { listPendingReservations } from "../../lib/services/reservations";
 
@@ -17,7 +19,7 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // This is the entry point S-06 (return) and S-07 (overdue) reuse. `PickupQueue`
 // mounts `client:load` — it is lightweight (no pdf-lib/heic2any), so unlike the
 // form island there is no Worker-bundle reason to force `client:only`.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale } = Astro.locals;
 
 const [rows, pending, overdueCount] = await Promise.all([
   listDispatchToday(supabase),
@@ -25,9 +27,19 @@ const [rows, pending, overdueCount] = await Promise.all([
   countOverdueReturns(supabase),
 ]);
 
+// The subtitle's counted noun. The old inline conditional was a TWO-form
+// approximation of a THREE-form language: it rendered the `few` form for every
+// count above one, so five pickups read "5 rezerwacje" where Polish requires the
+// genitive "5 rezerwacji". `Intl.PluralRules` picks the right form (and the 12–14
+// exception with it) instead of the count being compared to 1.
+const RESERVATION_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "reservation", other: "reservations" },
+  pl: { one: "rezerwacja", few: "rezerwacje", many: "rezerwacji", other: "rezerwacji" },
+};
+
 const count = rows.length;
 const countLabel =
-  count === 0 ? "Brak wydań na dziś" : count === 1 ? "1 rezerwacja do wydania" : `${count} rezerwacje do wydania`;
+  count === 0 ? "Brak wydań na dziś" : `${count} ${plural(count, locale, RESERVATION_FORMS[locale])} do wydania`;
 ---
 
 <Layout title="Wydania — Flota">
@@ -50,7 +62,7 @@ const countLabel =
         <h1 class="text-foreground text-xl font-bold tracking-tight">Wydania</h1>
         <p class="text-muted-foreground mt-1 text-sm">{countLabel}</p>
         <div class="absolute top-1/2 right-0 -translate-y-1/2">
-          <QuickAddButton client:load mode="mobile" />
+          <QuickAddButton client:load mode="mobile" locale={locale} />
         </div>
       </header>
       <PickupQueue client:load rows={rows} />

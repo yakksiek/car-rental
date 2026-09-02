@@ -4,6 +4,9 @@ import { PDFDocument, rgb } from "pdf-lib";
 import type { PDFFont, PDFImage, PDFPage } from "pdf-lib";
 
 // others
+import { formatInteger, plural } from "../format";
+import type { PluralForms } from "../format";
+import type { Locale } from "../i18n/types";
 import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL, fuelLabelPl } from "../protocol-labels";
 import type { PdfFonts } from "./fonts";
 import { loadPdfFonts } from "./fonts";
@@ -108,6 +111,21 @@ export interface ProtocolPdfData {
 // Page geometry and tokens (mirrors the app's palette; see src/styles/global.css)
 // ---------------------------------------------------------------------------
 
+/**
+ * The language a stored protocol is rendered in — the same named seam
+ * `email/templates.ts` carries, and deliberately a constant rather than a field on
+ * `ProtocolPdfData`.
+ *
+ * A protocol PDF is the customer's copy of a document they physically signed, so
+ * its language is a property of the PROTOCOL, never of the employee's session: a
+ * recruiter reading an English cockpit must not make the next customer sign a
+ * declaration in a language they did not read. `protocols.locale` (this change's
+ * Phase 1 migration) is the real source; stamping it at render time and giving the
+ * body its English twin is Phase 6 §2. Every already-issued PDF is Polish and
+ * stays Polish — the plan is explicit that none is ever regenerated.
+ */
+const ARTIFACT_LOCALE: Locale = "pl";
+
 const A4 = { width: 595.28, height: 841.89 } as const;
 const MARGIN = 48;
 const CONTENT_WIDTH = A4.width - MARGIN * 2;
@@ -198,7 +216,7 @@ function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
   w.field("Klient", data.customerName);
   w.field("Pojazd", data.vehicle);
   w.field("Rejestracja", data.plate, { bold: true });
-  w.field("Stan licznika", `${formatKm(data.odometerKm)} km`);
+  w.field("Stan licznika", `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km`);
   w.field("Poziom paliwa", fuelLabelPl(data.fuelEighths));
   w.gap(10);
 }
@@ -214,11 +232,14 @@ function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
 function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparison): void {
   w.heading("Porównanie ze stanem wydania");
 
-  w.field("Przy wydaniu", `${formatKm(c.baselineOdometerKm)} km · ${fuelLabelPl(c.baselineFuelEighths)}`);
-  w.field("Przy zwrocie", `${formatKm(data.odometerKm)} km · ${fuelLabelPl(data.fuelEighths)}`);
+  w.field(
+    "Przy wydaniu",
+    `${formatKm(c.baselineOdometerKm, ARTIFACT_LOCALE)} km · ${fuelLabelPl(c.baselineFuelEighths)}`,
+  );
+  w.field("Przy zwrocie", `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km · ${fuelLabelPl(data.fuelEighths)}`);
   w.gap(8);
 
-  w.field("Przejechano", `${signedKm(c.kmDriven)} km`);
+  w.field("Przejechano", `${signedKm(c.kmDriven, ARTIFACT_LOCALE)} km`);
   if (c.odometerSuspect) {
     w.text("Licznik nie jest wyższy niż przy wydaniu — sprawdź odczyt.", {
       size: SMALL_SIZE,
@@ -264,11 +285,14 @@ function drawDamages(w: Writer, data: ProtocolPdfData): void {
       color: INK,
     });
     if (damage.photos.length > 0) {
-      w.text(`${damage.photos.length} ${photoCountWord(damage.photos.length)} — patrz dokumentacja zdjęciowa`, {
-        size: SMALL_SIZE,
-        color: MUTED,
-        indent: 12,
-      });
+      w.text(
+        `${damage.photos.length} ${photoCountWord(damage.photos.length, ARTIFACT_LOCALE)} — patrz dokumentacja zdjęciowa`,
+        {
+          size: SMALL_SIZE,
+          color: MUTED,
+          indent: 12,
+        },
+      );
     }
     w.gap(4);
   }
@@ -518,14 +542,17 @@ function fit(image: PDFImage, maxWidth: number, maxHeight: number): { width: num
 }
 
 /**
- * `12345` → `"12 345"` with a non-breaking space.
+ * `12345` → `"12 345"`, grouped for the artifact locale.
  *
- * Hand-rolled rather than `toLocaleString("pl-PL")`: some engines group with a
- * NARROW no-break space (U+202F), which is outside the embedded subset and would
- * render as a tofu box in the middle of the odometer reading. U+00A0 is in range.
+ * Shares the app's one grouper, then **pins the separator into the embedded font
+ * subset**. Some CLDR versions group with a NARROW no-break space (U+202F), which
+ * is outside the subset: `drawText` would either throw or draw a tofu box in the
+ * middle of the odometer reading. U+00A0 is in range, so anything narrow is folded
+ * onto it. This is the one caller of `formatInteger` that post-processes it, and
+ * the reason `format.ts` names the PDF as its exception.
  */
-function formatKm(km: number): string {
-  return String(Math.trunc(km)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0");
+function formatKm(km: number, locale: Locale): string {
+  return formatInteger(km, locale).replace(/\u202F/g, "\u00A0");
 }
 
 /**
@@ -533,11 +560,11 @@ function formatKm(km: number): string {
  * typographic minus U+2212, which is outside the embedded subset and would tofu);
  * `formatKm` groups the magnitude so the sign never lands mid-number.
  */
-function signedKm(km: number): string {
+function signedKm(km: number, locale: Locale): string {
   if (km === 0) {
     return "0";
   }
-  return `${km > 0 ? "+" : "-"}${formatKm(Math.abs(km))}`;
+  return `${km > 0 ? "+" : "-"}${formatKm(Math.abs(km), locale)}`;
 }
 
 /** Signed fuel-eighths change: `bez zmian` / `+2/8` / `-4/8` (ASCII sign, subset-safe). */
@@ -555,12 +582,16 @@ function formatDateTime(iso: string): string {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** `1` → `zdjęcie`, `2–4` → `zdjęcia`, otherwise `zdjęć` (with the 12–14 exception). */
-function photoCountWord(count: number): string {
-  if (count === 1) {
-    return "zdjęcie";
-  }
-  const lastTwo = count % 100;
-  const last = count % 10;
-  return last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14) ? "zdjęcia" : "zdjęć";
+const PHOTO_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "photo", other: "photos" },
+  pl: { one: "zdjęcie", few: "zdjęcia", many: "zdjęć", other: "zdjęć" },
+};
+
+/**
+ * `1` → `zdjęcie`, `2–4` → `zdjęcia`, otherwise `zdjęć`. The 12–14 exception used
+ * to be open-coded here; `Intl.PluralRules` supplies it now via the shared
+ * `plural`, leaving this function owning only the words.
+ */
+function photoCountWord(count: number, locale: Locale): string {
+  return plural(count, locale, PHOTO_FORMS[locale]);
 }

@@ -5,30 +5,41 @@ import { describe, expect, it } from "vitest";
 import { highlightSegments, relativeDayPl, searchDateRange } from "./search-format";
 
 // Unit suite for the search rows' pure presentation helpers (S-13 Phase 3). These
-// carry the two things most likely to break silently in a result row: Polish date
-// wording (which must NOT go through Intl — workerd's ICU is trimmed) and the
-// match segmentation the `<mark>` highlighting is built from.
+// carry the two things most likely to break silently in a result row: the date
+// wording and the match segmentation the `<mark>` highlighting is built from.
+//
+// The Polish assertions below are unchanged from before the month names moved to
+// `Intl`, and that is deliberate: byte-identical PL output is the gate on the
+// swap (plan criterion 2.8), so an assertion written against the deleted
+// `MONTHS_ABBR_PL` table is exactly what proves `Intl` reproduced it. The English
+// rows are new — `en` formats as en-GB, so the day-then-month order survives and
+// one composition serves both locales.
 
 describe("searchDateRange", () => {
   it("collapses the month when both ends share it", () => {
-    expect(searchDateRange("2026-04-02", "2026-04-09")).toBe("02 – 09 kwi");
+    expect(searchDateRange("2026-04-02", "2026-04-09", "pl")).toBe("02 – 09 kwi");
   });
 
   it("carries the month on both ends across a boundary", () => {
-    expect(searchDateRange("2026-04-28", "2026-05-03")).toBe("28 kwi – 03 maj");
+    expect(searchDateRange("2026-04-28", "2026-05-03", "pl")).toBe("28 kwi – 03 maj");
   });
 
   it("carries the month on both ends across a year boundary in the same month number", () => {
-    expect(searchDateRange("2025-12-30", "2026-12-02")).toBe("30 gru – 02 gru");
+    expect(searchDateRange("2025-12-30", "2026-12-02", "pl")).toBe("30 gru – 02 gru");
   });
 
   it("zero-pads single-digit days", () => {
-    expect(searchDateRange("2026-01-01", "2026-01-05")).toBe("01 – 05 sty");
+    expect(searchDateRange("2026-01-01", "2026-01-05", "pl")).toBe("01 – 05 sty");
   });
 
   it("returns a dash for a malformed date rather than throwing", () => {
-    expect(searchDateRange("nie-data", "2026-01-05")).toBe("—");
-    expect(searchDateRange("2026-01-05", "")).toBe("—");
+    expect(searchDateRange("nie-data", "2026-01-05", "pl")).toBe("—");
+    expect(searchDateRange("2026-01-05", "", "pl")).toBe("—");
+  });
+
+  it("keeps the same shape under en, with English month abbreviations", () => {
+    expect(searchDateRange("2026-04-02", "2026-04-09", "en")).toBe("02 – 09 Apr");
+    expect(searchDateRange("2026-04-28", "2026-05-03", "en")).toBe("28 Apr – 03 May");
   });
 });
 
@@ -36,23 +47,23 @@ describe("relativeDayPl", () => {
   const TODAY = "2026-08-10";
 
   it("words the day relative to today inside the ±1 window", () => {
-    expect(relativeDayPl("2026-08-10", TODAY)).toBe("dziś");
-    expect(relativeDayPl("2026-08-09", TODAY)).toBe("wczoraj");
-    expect(relativeDayPl("2026-08-11", TODAY)).toBe("jutro");
+    expect(relativeDayPl("2026-08-10", TODAY, "pl")).toBe("dziś");
+    expect(relativeDayPl("2026-08-09", TODAY, "pl")).toBe("wczoraj");
+    expect(relativeDayPl("2026-08-11", TODAY, "pl")).toBe("jutro");
   });
 
   it("falls back to an abbreviated date beyond that window", () => {
-    expect(relativeDayPl("2026-08-07", TODAY)).toBe("07 sie");
-    expect(relativeDayPl("2026-09-01", TODAY)).toBe("01 wrz");
+    expect(relativeDayPl("2026-08-07", TODAY, "pl")).toBe("07 sie");
+    expect(relativeDayPl("2026-09-01", TODAY, "pl")).toBe("01 wrz");
   });
 
   it("crosses month and year boundaries without drifting", () => {
-    expect(relativeDayPl("2026-07-31", "2026-08-01")).toBe("wczoraj");
-    expect(relativeDayPl("2026-01-01", "2025-12-31")).toBe("jutro");
+    expect(relativeDayPl("2026-07-31", "2026-08-01", "pl")).toBe("wczoraj");
+    expect(relativeDayPl("2026-01-01", "2025-12-31", "pl")).toBe("jutro");
   });
 
   it("returns a dash for a malformed date", () => {
-    expect(relativeDayPl("", TODAY)).toBe("—");
+    expect(relativeDayPl("", TODAY, "pl")).toBe("—");
   });
 });
 

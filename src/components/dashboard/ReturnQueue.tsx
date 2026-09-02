@@ -9,6 +9,7 @@ import { DeliveryBadge, deliveryBadge } from "../protocol/DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { resendReturnEmail } from "../hooks/useReturnProtocolSubmit";
+import type { Locale } from "../../lib/i18n/types";
 import { captionOf, overdueDaysLabel, sortReturnsByUrgency, toggleReturnsFilter } from "../../lib/returns-filter";
 import type { ReturnCaption } from "../../lib/returns-filter";
 import type { DispatchReturnRow } from "../../types";
@@ -249,12 +250,14 @@ function ReturnRow({
   resending,
   error,
   onResend,
+  locale,
 }: {
   state: RowState;
   today: string;
   resending: boolean;
   error: string | null;
   onResend: () => void;
+  locale: Locale;
 }) {
   const { row } = state;
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ");
@@ -262,7 +265,7 @@ function ReturnRow({
   const returned = caption === "returned";
   const overdue = caption === "overdue";
   // Plural-aware `N dni po terminie`; non-null exactly when `overdue` (design-contract §C).
-  const overdueLabel = overdueDaysLabel(row, today);
+  const overdueLabel = overdueDaysLabel(row, today, locale);
   // For returned rows, the effective delivery status is the resend override when one
   // landed this session, else the folded-in value from the RPC.
   const deliveryStatus = state.deliveryOverride ?? row.delivery_status;
@@ -416,6 +419,7 @@ export default function ReturnQueue({
   today,
   initialFilter = null,
   dateLabel,
+  locale,
 }: {
   rows: DispatchReturnRow[];
   today: string;
@@ -426,6 +430,8 @@ export default function ReturnQueue({
   // Today's date, pre-formatted server-side (workerd ICU can't do Polish) for the
   // desktop filter bar's right edge.
   dateLabel?: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
   // Group the worklist overdue → due → returned once at mount (design-contract §C); the
   // RPC returns `reference` order, preserved within each group by the stable sort. Same
@@ -520,6 +526,7 @@ export default function ReturnQueue({
             const returnProtocolId = state.row.return_protocol_id;
             return (
               <ReturnRow
+                locale={locale}
                 key={state.row.reservation_id}
                 state={state}
                 today={today}

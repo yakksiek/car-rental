@@ -27,7 +27,7 @@ import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protoc
 // No early `return` in frontmatter: a top-level return crashes
 // `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`. The 404
 // follows the `Astro.response.status` pattern used elsewhere.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale } = Astro.locals;
 const { id } = Astro.params;
 
 // Nav badge counts for the shell (S-07 added the overdue one; S-12b adds the
@@ -140,6 +140,7 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
     {
       protocol ? (
         <ProtocolView
+          locale={locale}
           back={back}
           client:load
           protocolId={protocol.id}

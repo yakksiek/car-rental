@@ -7,22 +7,26 @@ import type { AutoTagBaselineDamage } from "./protocol-delta";
 
 // The design's mono chips use U+2212 MINUS, not a hyphen — assert the exact glyph.
 const MINUS = "−";
+// The thousands separator `Intl` uses for `pl` (U+00A0). This module used to
+// hand-roll grouping with a PLAIN space, one of three spellings in the repo.
+const NBSP = "\u00a0";
 
 describe("formatKmDriven", () => {
   it("groups thousands with a Polish space and signs the value", () => {
-    expect(formatKmDriven(1228)).toBe("+1 228 km");
-    expect(formatKmDriven(120)).toBe("+120 km");
-    expect(formatKmDriven(42_850)).toBe("+42 850 km");
+    expect(formatKmDriven(1228, "pl")).toBe(`+1${NBSP}228 km`);
+    expect(formatKmDriven(1228, "en")).toBe("+1,228 km");
+    expect(formatKmDriven(120, "pl")).toBe("+120 km");
+    expect(formatKmDriven(42_850, "pl")).toBe(`+42${NBSP}850 km`);
   });
 
   it("shows a below-baseline reading as a negative km (neutral tone is the caller's job)", () => {
-    expect(formatKmDriven(-120)).toBe(`${MINUS}120 km`);
-    expect(formatKmDriven(-1500)).toBe(`${MINUS}1 500 km`);
+    expect(formatKmDriven(-120, "pl")).toBe(`${MINUS}120 km`);
+    expect(formatKmDriven(-1500, "pl")).toBe(`${MINUS}1${NBSP}500 km`);
   });
 
   it("shows zero unsigned and a non-finite live value as an em dash", () => {
-    expect(formatKmDriven(0)).toBe("0 km");
-    expect(formatKmDriven(NaN)).toBe("—");
+    expect(formatKmDriven(0, "pl")).toBe("0 km");
+    expect(formatKmDriven(NaN, "pl")).toBe("—");
   });
 });
 

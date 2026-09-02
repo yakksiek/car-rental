@@ -5,6 +5,7 @@ import { ChevronRight, Truck } from "lucide-react";
 // others
 import { cn } from "../../lib/utils";
 import { estimatedTotal, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/types";
 import { highlightSegments, relativeDayPl, searchDateRange } from "../../lib/search-format";
 import type { SearchResultReservation, SearchResultReturn, SearchResultVehicle } from "../../types";
 
@@ -159,8 +160,9 @@ type RowAnchorProps = Omit<React.ComponentPropsWithRef<"a">, "children" | "class
 export function ReservationRow({
   row,
   query,
+  locale,
   ...anchor
-}: { row: SearchResultReservation; query: string } & RowAnchorProps) {
+}: { row: SearchResultReservation; query: string; locale: Locale } & RowAnchorProps) {
   const days = rentalDays(row.pickup_date, row.return_date);
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
 
@@ -176,11 +178,11 @@ export function ReservationRow({
           <Highlight text={row.customer_name} query={query} />
         </span>
         <span className="text-muted-foreground block truncate text-[12px]">
-          {vehicle} · {searchDateRange(row.pickup_date, row.return_date)}
+          {vehicle} · {searchDateRange(row.pickup_date, row.return_date, locale)}
         </span>
       </span>
       <span className="text-foreground shrink-0 text-[14px] font-bold">
-        {formatPln(estimatedTotal(row.daily_rate, days))}
+        {formatPln(estimatedTotal(row.daily_rate, days), locale)}
       </span>
       <EnterChip />
     </a>
@@ -191,8 +193,9 @@ export function ReturnRow({
   row,
   query,
   today,
+  locale,
   ...anchor
-}: { row: SearchResultReturn; query: string; today: string } & RowAnchorProps) {
+}: { row: SearchResultReturn; query: string; today: string; locale: Locale } & RowAnchorProps) {
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
   const returned = row.status === "returned";
 
@@ -208,7 +211,8 @@ export function ReturnRow({
           <Highlight text={row.customer_name} query={query} />
         </span>
         <span className="text-muted-foreground block truncate text-[12px]">
-          {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> · {relativeDayPl(row.return_date, today)}
+          {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> ·{" "}
+          {relativeDayPl(row.return_date, today, locale)}
         </span>
       </span>
       <TrailingAffordance />

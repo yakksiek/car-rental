@@ -10,7 +10,9 @@ import { ADD_EMPLOYEE_EVENT } from "../dashboard/quick-actions";
 
 // others
 import { cn } from "../../lib/utils";
-import { formatLastActive, plForm, staffInitials } from "../../lib/staff-format";
+import { formatLastActive, staffInitials } from "../../lib/staff-format";
+import { plural, type PluralForms } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/types";
 import {
   type AddOutcome,
   DEMO_BLOCKED_MESSAGE,
@@ -29,6 +31,14 @@ import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff
 // confirm) / reset-password actions. Feedback is an inline banner + optimistic
 // list mutation (no toast). Built to design-contract.md §3.1–3.13. Polish copy
 // canonical.
+
+// The counted noun for the mobile eyebrow. `staff-format.ts`'s own count-noun
+// selector — a second hand-rolled copy of Polish's 1 / 2–4 / rest split — is
+// deleted; the category now comes from `Intl.PluralRules` via the shared `plural`.
+const PEOPLE_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "person", other: "people" },
+  pl: { one: "osoba", few: "osoby", many: "osób", other: "osób" },
+};
 
 const COPY = {
   title: "Pracownicy",
@@ -101,7 +111,7 @@ const COPY = {
   // referenced it. Removed with the strings that moved.)
   retry: "Ponów",
   // mobile
-  eyebrowMobileWord: (n: number) => `${n} ${plForm(n, "osoba", "osoby", "osób").toUpperCase()}`,
+  eyebrowMobileWord: (n: number, locale: Locale) => `${n} ${plural(n, locale, PEOPLE_FORMS[locale]).toUpperCase()}`,
   chipActive: "Aktywni",
   chipInvited: "Zaproszeni",
   chipCreated: "Dodani",
@@ -554,6 +564,7 @@ export default function StaffList({
   staff: initial,
   currentUserId,
   isDemo = false,
+  locale,
 }: {
   staff: StaffMember[];
   currentUserId: string;
@@ -569,6 +580,8 @@ export default function StaffList({
    * a courtesy either way — the server refuses these regardless of what renders.
    */
   isDemo?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
   const [staff, setStaff] = React.useState<StaffMember[]>(initial);
   const [search, setSearch] = React.useState("");
@@ -843,7 +856,7 @@ export default function StaffList({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                {COPY.eyebrowMobileWord(total)}
+                {COPY.eyebrowMobileWord(total, locale)}
               </div>
               <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">
                 {COPY.titleMobile}
@@ -855,7 +868,7 @@ export default function StaffList({
                 divider (after row 1 — the rule is positional, not structural).
                 The promoted action opens a dialog rather than navigating, so it
                 carries `onPick` instead of an `href`. */}
-            <QuickAddButton mode="mobile" promoted="employee" isDemo={isDemo} />
+            <QuickAddButton mode="mobile" promoted="employee" isDemo={isDemo} locale={locale} />
           </div>
         </div>
       </header>

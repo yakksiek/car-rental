@@ -1,8 +1,4 @@
 ---
-// core
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
-
 // components
 import Layout from "../../layouts/Layout.astro";
 import SiteHeader from "../../components/SiteHeader.astro";
@@ -17,6 +13,7 @@ import type { CatalogSort, Vehicle, VehicleCategory, VehicleFilters } from "../.
 import { parseFilters, serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { getCategoryCounts, listVehicles, searchAvailableVehicles } from "../../lib/services/vehicles";
 import { categoryLabelPl, formatPayloadKg } from "../../lib/format";
+import { dayMonthShort } from "../../lib/format-date";
 import { fromIsoDate } from "../../lib/date-iso";
 
 // The filterable catalog. Reads filter state from the URL, validates the date
@@ -28,7 +25,7 @@ import { fromIsoDate } from "../../lib/date-iso";
 // the layout's <ClientRouter />; FilterBar is intentionally NOT persisted so it
 // remounts and re-reads `initial` from the live URL on every navigation.
 
-const supabase = Astro.locals.supabase;
+const { supabase, locale } = Astro.locals;
 const filters = parseFilters(Astro.url.searchParams);
 const dateCheck = validateDateRange(filters.pickup, filters.return);
 
@@ -102,7 +99,7 @@ function rangeLabel(pickup: string, returnDate: string): string {
   if (!from || !to) {
     return "";
   }
-  return `${format(from, "d MMM", { locale: pl })} – ${format(to, "d MMM", { locale: pl })}`;
+  return `${dayMonthShort(from, locale)} – ${dayMonthShort(to, locale)}`;
 }
 
 const SORT_LABELS: Record<CatalogSort, string> = {
@@ -168,7 +165,7 @@ const chipClass =
 
     <!-- Filter bar -->
     <div class="pb-4">
-      <FilterBar initial={filters} client:load />
+      <FilterBar initial={filters} locale={locale} client:load />
     </div>
 
     <!-- Active filters -->
@@ -194,7 +191,7 @@ const chipClass =
           )}
           {filters.minPayload !== null && (
             <a href={withoutFilter({ minPayload: null })} class:list={chipClass}>
-              od {formatPayloadKg(filters.minPayload)}
+              od {formatPayloadKg(filters.minPayload, locale)}
               <span aria-hidden="true" class="text-base leading-none">
                 ×
               </span>

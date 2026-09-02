@@ -1,8 +1,6 @@
 // core
 import * as React from "react";
 import { navigate } from "astro:transitions/client";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { ArrowUpDown, CalendarIcon, ChevronDownIcon, Package, SlidersHorizontal } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -17,6 +15,8 @@ import { cn } from "../../lib/utils";
 import type { CatalogSort, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
+import { dayMonthShort } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 
 // The catalog's only interactive piece — the restyled filter card (design
 // ScreenDesktopFleet / ScreenTabletFleet / ScreenMobileFleet). It stages
@@ -35,6 +35,8 @@ import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 
 interface Props {
   initial: VehicleFilters;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 const PAYLOAD_OPTIONS = [
@@ -65,7 +67,7 @@ const fieldShell =
 
 const fieldLabel = "text-[10px] leading-none text-muted-foreground uppercase sm:tracking-[0.5px]";
 
-export default function FilterBar({ initial }: Props) {
+export default function FilterBar({ initial, locale }: Props) {
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initial.pickup);
     const to = fromIsoDate(initial.return);
@@ -83,9 +85,9 @@ export default function FilterBar({ initial }: Props) {
   const hasDate = Boolean(range?.from);
   const dateLabel =
     range?.from && range.to
-      ? `${format(range.from, "d MMM", { locale: pl })} – ${format(range.to, "d MMM", { locale: pl })}`
+      ? `${dayMonthShort(range.from, locale)} – ${dayMonthShort(range.to, locale)}`
       : range?.from
-        ? `${format(range.from, "d MMM", { locale: pl })} – …`
+        ? `${dayMonthShort(range.from, locale)} – …`
         : "Wybierz daty";
 
   function handleApply() {
@@ -161,7 +163,7 @@ export default function FilterBar({ initial }: Props) {
               }}
               numberOfMonths={1}
               disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-              locale={pl}
+              appLocale={locale}
               autoFocus
             />
           </PopoverContent>

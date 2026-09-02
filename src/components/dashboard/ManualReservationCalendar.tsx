@@ -1,9 +1,7 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { AlertTriangle } from "lucide-react";
-import { labelDayButton, type DateRange, type DayButton, type Matcher } from "react-day-picker";
+import { type DateRange, type DayButton, type Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
@@ -12,6 +10,8 @@ import { Calendar } from "../ui/calendar";
 import { checkRangeBookable, dayAvailabilityMap, type RangeConflict } from "../../lib/availability";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { formatDuration, rentalDays } from "../../lib/format";
+import { dayFull, dayMonthShort, monthYearLong } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { AVAILABILITY_COPY, type BusyRangesFetchState } from "../../lib/manual-availability";
 import { cn } from "../../lib/utils";
 import type { VehicleBusyRange } from "../../types";
@@ -72,18 +72,20 @@ const HINT: Record<RangeConflict, string> = {
   spansBooked: COPY.hintSpansBooked,
 };
 
-// The source's own two-letter forms. The raw `pl` locale emits "pon.", "wt.", …,
-// so the headers are forced through `formatWeekdayName`. Indexed by `getDay()`.
+// The source's own two-letter forms — narrower than the shared calendar's default
+// header, which is why this grid overrides `formatWeekdayName`. Indexed by
+// `getDay()`. Still Polish-only: these are design copy, not grammar, so they
+// translate with the rest of the cockpit rather than here.
 const WEEKDAYS = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"] as const;
 
 /** `"1 kwi"` — the source's `mrFmt`, shared with the modal's day labels. */
-function formatDayShort(date: Date): string {
-  return format(date, "d MMM", { locale: pl });
+function formatDayShort(date: Date, locale: Locale): string {
+  return dayMonthShort(date, locale);
 }
 
 /** `"Kwiecień 2026"` — the source's `PL_MON_FULL` caption; sentence case, NOT uppercased. */
-function formatCaption(date: Date): string {
-  const month = format(date, "LLLL yyyy", { locale: pl });
+function formatCaption(date: Date, locale: Locale): string {
+  const month = monthYearLong(date, locale);
   return month.charAt(0).toUpperCase() + month.slice(1);
 }
 
@@ -166,6 +168,8 @@ interface Props {
    * can be picked. Without a retry inside the picker the surface is a dead end.
    */
   onRetry: () => void;
+  /** Islands cannot read `Astro.locals`; the mounting modal passes it down. */
+  locale: Locale;
 }
 
 export function ManualReservationCalendar({
@@ -177,6 +181,7 @@ export function ManualReservationCalendar({
   onChange,
   onApply,
   onRetry,
+  locale,
 }: Props) {
   const [hint, setHint] = React.useState<string | null>(null);
 
@@ -314,18 +319,19 @@ export function ManualReservationCalendar({
           disabled={disabledDays}
           modifiers={dayModifiers}
           excludeDisabled
-          locale={pl}
+          appLocale={locale}
           formatters={{
-            formatCaption,
+            formatCaption: (date) => formatCaption(date, locale),
             formatWeekdayName: (date) => WEEKDAYS[date.getDay()],
           }}
           labels={{
             labelPrevious: () => COPY.prevMonth,
             labelNext: () => COPY.nextMonth,
             // Append the start-only/end-only rule to each changeover day's
-            // aria-label; wrap the library default so today/selected markers stay.
-            labelDayButton: (date, modifiers, options, dateLib) => {
-              const base = labelDayButton(date, modifiers, options, dateLib);
+            // aria-label. The base repeats the shared wrapper's `dayFull` because
+            // an override REPLACES the entry rather than wrapping it.
+            labelDayButton: (date, modifiers) => {
+              const base = dayFull(date, locale);
               if (modifiers.busyAm) {
                 return `${base}, ${COPY.pickupOnlyLabel}`;
               }
@@ -393,7 +399,7 @@ export function ManualReservationCalendar({
         ) : (
           <span className="text-[12.5px] font-semibold text-[var(--flota-ink-2)] tabular-nums">
             {selected?.from && selected.to
-              ? `${formatDayShort(selected.from)} – ${formatDayShort(selected.to)} · ${formatDuration(days)}`
+              ? `${formatDayShort(selected.from, locale)} – ${formatDayShort(selected.to, locale)} · ${formatDuration(days, locale)}`
               : ""}
           </span>
         )}

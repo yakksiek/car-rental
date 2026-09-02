@@ -10,6 +10,8 @@ import CategoryIcon from "../components/vehicle/CategoryIcon.astro";
 import type { InfoIconName } from "../components/icons/info-icons";
 import { getCategoryPricing } from "../lib/services/vehicles";
 import { formatPln } from "../lib/format";
+
+const { locale } = Astro.locals;
 import { cn } from "../lib/utils";
 
 // Cennik — hybrid page (design ScreenPricingDesktop/Mobile, PricingBody). Only the
@@ -227,16 +229,16 @@ const goodToKnow: [k: string, v: string][] = [
                 {/* Mobile: stacked rates; desktop: two right-aligned cells. */}
                 <div class="shrink-0 text-right sm:hidden">
                   <div class="text-foreground text-[15px] font-[750] tracking-[-0.4px]">
-                    od {formatPln(row.minDaily)}
+                    od {formatPln(row.minDaily, locale)}
                     <span class="text-muted-foreground text-[11px] font-semibold">/doba</span>
                   </div>
-                  <div class="text-muted-foreground mt-px text-[12px]">od {formatPln(row.minMonthly)}/mies</div>
+                  <div class="text-muted-foreground mt-px text-[12px]">od {formatPln(row.minMonthly, locale)}/mies</div>
                 </div>
                 <div class="text-foreground hidden text-right text-[16px] font-[750] tracking-[-0.4px] sm:block">
-                  od {formatPln(row.minDaily)}
+                  od {formatPln(row.minDaily, locale)}
                 </div>
                 <div class="hidden text-right text-[16px] font-bold tracking-[-0.4px] text-[var(--flota-ink-2)] sm:block">
-                  od {formatPln(row.minMonthly)}
+                  od {formatPln(row.minMonthly, locale)}
                 </div>
               </div>
             ))

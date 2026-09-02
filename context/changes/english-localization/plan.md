@@ -1341,48 +1341,48 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 Type check passes: `npx astro check`
-- [x] 1.3 Lint passes: `npm run lint`
-- [x] 1.4 Unit tests pass: `npm test`
-- [x] 1.5 Integration tests pass: `npm run test:integration`
-- [x] 1.6 Build succeeds: `npm run build`
-- [x] 1.7 Unit test pins locale resolution precedence and unrecognised-cookie fallback
-- [x] 1.12 Integration test proves `set_profile_locale` stamps an EMPLOYEE's own row (not just an admin's)
-- [x] 1.13 Each redefined RPC carries `revoke execute … from public, anon` before its grant
-- [x] 1.15 Baseline island chunk sizes recorded to `island-baseline.md` with its commit SHA
-- [x] 1.16 Integration test: a demo-account locale write does NOT change what a fresh cookie-less demo session resolves to
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 7fe5b43
+- [x] 1.2 Type check passes: `npx astro check` — 7fe5b43
+- [x] 1.3 Lint passes: `npm run lint` — 7fe5b43
+- [x] 1.4 Unit tests pass: `npm test` — 7fe5b43
+- [x] 1.5 Integration tests pass: `npm run test:integration` — 7fe5b43
+- [x] 1.6 Build succeeds: `npm run build` — 7fe5b43
+- [x] 1.7 Unit test pins locale resolution precedence and unrecognised-cookie fallback — 7fe5b43
+- [x] 1.12 Integration test proves `set_profile_locale` stamps an EMPLOYEE's own row (not just an admin's) — 7fe5b43
+- [x] 1.13 Each redefined RPC carries `revoke execute … from public, anon` before its grant — 7fe5b43
+- [x] 1.15 Baseline island chunk sizes recorded to `island-baseline.md` with its commit SHA — 7fe5b43
+- [x] 1.16 Integration test: a demo-account locale write does NOT change what a fresh cookie-less demo session resolves to — 7fe5b43
 
 #### Manual
 
-- [x] 1.8 App renders identically to before — no visible copy or layout change
-- [x] 1.9 `<html lang>` reads `en`; `POST /api/locale` flips it and the cookie persists
-- [x] 1.10 Staff locale choice writes `profiles.locale` and survives a cleared cookie
-- [x] 1.11 Foreign-origin POST refused 403; external redirect target sanitized
-- [x] 1.14 Signed in as an EMPLOYEE (not admin), the preference persists across a cleared cookie
-- [x] 1.17 Demo: switch to PL, sign out, clear cookies, sign back in — cockpit is English again
+- [x] 1.8 App renders identically to before — no visible copy or layout change — 7fe5b43
+- [x] 1.9 `<html lang>` reads `en`; `POST /api/locale` flips it and the cookie persists — 7fe5b43
+- [x] 1.10 Staff locale choice writes `profiles.locale` and survives a cleared cookie — 7fe5b43
+- [x] 1.11 Foreign-origin POST refused 403; external redirect target sanitized — 7fe5b43
+- [x] 1.14 Signed in as an EMPLOYEE (not admin), the preference persists across a cleared cookie — 7fe5b43
+- [x] 1.17 Demo: switch to PL, sign out, clear cookies, sign back in — cockpit is English again — 7fe5b43
 
 ### Phase 2: Retire Polish Grammar-as-Logic
 
 #### Automated
 
-- [ ] 2.1 Type check passes: `npx astro check`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Unit tests pass in both locales: `npm test`
-- [ ] 2.4 Integration tests pass: `npm run test:integration`
-- [ ] 2.5 E2E suite still green: `npm run test:e2e`
-- [ ] 2.6 `grep -rn "date-fns/locale" src/` returns nothing
-- [ ] 2.7 `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing
-- [ ] 2.12 `search-format.test.ts` and `e2e/seed.spec.ts` re-anchored off the deleted date helpers
-- [ ] 2.14 All four thousands-groupers unified; `formatPayloadKg` and `parseOdometer` still round-trip
+- [x] 2.1 Type check passes: `npx astro check`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Unit tests pass in both locales: `npm test`
+- [x] 2.4 Integration tests pass: `npm run test:integration`
+- [x] 2.5 E2E suite still green: `npm run test:e2e`
+- [x] 2.6 `grep -rn "date-fns/locale" src/` returns nothing
+- [x] 2.7 `grep -rn "pluralPl\|plForm\|MONTHS_PL\|PL_MONTHS" src/` returns nothing
+- [x] 2.12 `search-format.test.ts` and `e2e/seed.spec.ts` re-anchored off the deleted date helpers
+- [x] 2.14 All four thousands-groupers unified; `formatPayloadKg` and `parseOdometer` still round-trip
 
 #### Manual
 
-- [ ] 2.8 Dates, money and counts render identically to before under `pl`
-- [ ] 2.9 `/dashboard/pickups` reads "5 rezerwacji" not "5 rezerwacje"
-- [ ] 2.10 Signature timestamp still shows Warsaw time
-- [ ] 2.11 Booking widget and reservation summaries show the bare amount, no stray `zł`
-- [ ] 2.13 `lessons.md`'s trimmed-ICU clause corrected; `formatPln(5900)` still renders `5 900 zł`
+- [x] 2.8 Dates, money and counts render identically to before under `pl`
+- [x] 2.9 `/dashboard/pickups` reads "5 rezerwacji" not "5 rezerwacje"
+- [x] 2.10 Signature timestamp still shows Warsaw time
+- [x] 2.11 Booking widget and reservation summaries show the bare amount, no stray `zł`
+- [x] 2.13 `lessons.md`'s trimmed-ICU clause corrected; `formatPln(5900)` still renders `5 900 zł`
 
 ### Phase 3: Header Redesign + Language Switcher
 

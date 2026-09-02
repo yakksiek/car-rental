@@ -26,7 +26,7 @@ import { resolveBackTarget } from "../../../lib/back-target";
 // frontmatter has no early `return` (a top-level return crashes
 // `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`); the 404
 // follows the `Astro.response.status` pattern instead.
-const { supabase } = Astro.locals;
+const { supabase, locale } = Astro.locals;
 const { reservationId } = Astro.params;
 
 // Reachable from the returns worklist AND from the dispatch cockpit, so "back"
@@ -106,6 +106,7 @@ const ctx = baseline
       </main>
     ) : (
       <ReturnProtocolForm
+        locale={locale}
         client:only="react"
         ctx={ctx}
         supabaseUrl={supabaseUrl}

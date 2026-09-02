@@ -86,19 +86,19 @@ describe("toggleReturnsFilter", () => {
 describe("overdueDaysLabel", () => {
   it("reads `1 dzień po terminie` at the 1-day boundary", () => {
     // TODAY − return_date = 1 → singular `dzień`.
-    expect(overdueDaysLabel(row({ return_protocol_id: null, return_date: "2026-07-22" }), TODAY)).toBe(
+    expect(overdueDaysLabel(row({ return_protocol_id: null, return_date: "2026-07-22" }), TODAY, "pl")).toBe(
       "1 dzień po terminie",
     );
   });
 
   it("reads `N dni po terminie` beyond one day", () => {
     // `overdue` is 2026-07-20, i.e. 3 calendar days before TODAY.
-    expect(overdueDaysLabel(overdue, TODAY)).toBe("3 dni po terminie");
+    expect(overdueDaysLabel(overdue, TODAY, "pl")).toBe("3 dni po terminie");
   });
 
   it("is null for due and returned rows (they carry no overdue label)", () => {
-    expect(overdueDaysLabel(dueToday, TODAY)).toBeNull();
-    expect(overdueDaysLabel(returned, TODAY)).toBeNull();
+    expect(overdueDaysLabel(dueToday, TODAY, "pl")).toBeNull();
+    expect(overdueDaysLabel(returned, TODAY, "pl")).toBeNull();
   });
 });
 

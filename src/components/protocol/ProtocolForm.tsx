@@ -25,6 +25,7 @@ import { PHOTO_SLOT_LABELS_PL } from "../../lib/protocol-labels";
 import { PHOTO_SLOTS, protocolInputSchema } from "../../lib/protocol-schema";
 import type { ProtocolInput } from "../../lib/protocol-schema";
 import { allSlotsFilled, formatOdometer, parseOdometer, randomUuid } from "../../lib/protocol-form";
+import type { Locale } from "../../lib/i18n/types";
 import { resendProtocolEmail, useProtocolSubmit } from "../hooks/useProtocolSubmit";
 import { IDLE, useProtocolMedia } from "../hooks/useProtocolMedia";
 import type { ProtocolPhotoSlot } from "../../types";
@@ -64,6 +65,8 @@ interface Props {
   ctx: ProtocolContext;
   supabaseUrl: string;
   supabaseKey: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 // The odometer is held as a string (like every numeric field in this repo) so the
@@ -94,7 +97,7 @@ const ERROR_ORDER: (keyof FormValues)[] = [
 
 const ERROR_ANCHOR: Partial<Record<keyof FormValues, string>> = { photos: "photos-grid", damages: "damages" };
 
-export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Props) {
+export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, locale }: Props) {
   const backHref = back?.href ?? "/dashboard/pickups";
   // Minted once, before the first byte is uploaded: this id keys every storage
   // object, and an id generated inside `create_protocol` would arrive too late.
@@ -433,7 +436,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Pr
                       autoComplete="off"
                       placeholder="0"
                       aria-invalid={Boolean(errors.odometerKm)}
-                      value={formatOdometer(odometer)}
+                      value={formatOdometer(odometer, locale)}
                       onChange={(event) => {
                         setValue("odometerKm", parseOdometer(event.target.value), { shouldValidate: isSubmitted });
                       }}
@@ -443,8 +446,8 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Pr
                   </div>
                   {rollback && (
                     <p className="text-warning text-[12px] font-medium">
-                      Poprzedni odczyt to {formatOdometer(String(ctx.lastOdometerKm))} km — sprawdź, czy licznik się
-                      zgadza.
+                      Poprzedni odczyt to {formatOdometer(String(ctx.lastOdometerKm), locale)} km — sprawdź, czy licznik
+                      się zgadza.
                     </p>
                   )}
                   {/* The grown input already pushes this to the bottom, level with
@@ -595,6 +598,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Pr
               )}
 
               <SignatureField
+                locale={locale}
                 signedAt={signedAt || null}
                 customerName={ctx.customerName}
                 invalid={Boolean(errors.signaturePath)}

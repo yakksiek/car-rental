@@ -1,6 +1,7 @@
 ---
 // others
-import { pluralPl } from "../../lib/format";
+import { plural, type PluralForms } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/types";
 
 // Landing trust card (S4) — three rows: a hardcoded ratings PLACEHOLDER, the live
 // fleet count, and the reservation channels. Rendered twice (desktop floats in the
@@ -18,8 +19,15 @@ interface Props {
 
 const { count, class: className } = Astro.props;
 
-// Live fleet count with correct Polish plural (1 pojazd / 2–4 pojazdy / 5+ pojazdów).
-const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
+// Live fleet count with the noun form the count takes — 1 pojazd / 2–4 pojazdy /
+// 5+ pojazdów, and the 12–14 exception, all from `Intl.PluralRules`.
+const VEHICLE_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "vehicle", other: "vehicles" },
+  pl: { one: "pojazd", few: "pojazdy", many: "pojazdów", other: "pojazdów" },
+};
+
+const { locale } = Astro.locals;
+const countNoun = plural(count, locale, VEHICLE_FORMS[locale]);
 ---
 
 <div

@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { ArrowRight, Calendar, Check } from "lucide-react";
 
 // components
@@ -13,6 +11,8 @@ import { ReasonSheet, ResultOverlay } from "./ReservationDecision";
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatPln, rentalDays } from "../../lib/format";
+import { dayMonthRange } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { PendingReservation, RejectionReason } from "../../types";
 
@@ -41,15 +41,13 @@ const PREVIEW_LIMIT = 4;
 
 const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
-function formatRange(pickup: string, returnDate: string): string {
+function formatRange(pickup: string, returnDate: string, locale: Locale): string {
   const from = fromIsoDate(pickup);
   const to = fromIsoDate(returnDate);
   if (!from || !to) {
     return `${pickup} – ${returnDate}`;
   }
-  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
-  const fromLabel = sameMonth ? format(from, "dd", { locale: pl }) : format(from, "dd MMM", { locale: pl });
-  return `${fromLabel} – ${format(to, "dd MMM", { locale: pl })}`;
+  return dayMonthRange(from, to, locale, { pad: true });
 }
 
 function vehicleName(r: PendingReservation): string {
@@ -62,14 +60,16 @@ function DecisionCard({
   busy,
   onApprove,
   onReject,
+  locale,
 }: {
   reservation: PendingReservation;
   busy: boolean;
   onApprove: () => void;
   onReject: () => void;
+  locale: Locale;
 }) {
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
-  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
+  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days), locale);
 
   return (
     <div className={cn(cardClass, "p-4")}>
@@ -86,7 +86,7 @@ function DecisionCard({
       <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
         <Calendar className="size-3.5 shrink-0" />
         <span className="truncate">
-          {formatRange(reservation.pickup_date, reservation.return_date)} · {vehicleName(reservation)}
+          {formatRange(reservation.pickup_date, reservation.return_date, locale)} · {vehicleName(reservation)}
         </span>
         <span className="text-foreground ml-auto shrink-0 text-sm font-bold tracking-tight">{total}</span>
       </div>
@@ -111,8 +111,11 @@ function DecisionCard({
 export default function NeedDecisionPanel({
   reservations: initial,
   showHeader = true,
+  locale,
 }: {
   reservations: PendingReservation[];
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
   /**
    * The mobile cockpit wraps this panel in a tinted section whose band already
    * carries the title and the "Otwórz" link, so it suppresses the panel's own
@@ -193,6 +196,7 @@ export default function NeedDecisionPanel({
         <div className="flex flex-col gap-3">
           {visible.map((r) => (
             <DecisionCard
+              locale={locale}
               key={r.id}
               reservation={r}
               busy={busy}

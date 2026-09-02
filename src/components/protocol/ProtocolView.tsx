@@ -9,6 +9,9 @@ import { DeliveryBadge, deliveryBadge } from "./DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { fuelLabelPl } from "../../lib/protocol-labels";
+import { formatInteger } from "../../lib/format";
+import { dateTimeCompany } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { computeReturnDeltas } from "../../lib/protocol-delta";
 import { formatFuelDelta, formatKmDriven, formatNewDamageCount } from "../../lib/return-form";
 import { useResendEmail } from "../hooks/useResendEmail";
@@ -92,6 +95,8 @@ export interface ProtocolViewProps {
   };
   /** The issue damage list, shown read-only above the current damages on a return. */
   baselineDamages?: ProtocolViewBaselineDamage[];
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 function Section({
@@ -188,27 +193,22 @@ function CompareFoot({ base, text, bad }: { base: React.ReactNode; text: string;
 
 const FUEL_SEGMENTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-function formatSignedAt(signedAt: string): string {
+function formatSignedAt(signedAt: string, locale: Locale): string {
   const date = new Date(signedAt);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  // `client:load` SSRs this on workerd (UTC) then hydrates in the browser (local
-  // zone), so the time MUST be pinned to a fixed zone — otherwise the two renders
-  // disagree and React throws a hydration mismatch. Europe/Warsaw = the company's
-  // zone; the pl-PL date part already agrees across workerd/browser ICU, only the
-  // timezone drifted. `pl-PL`, day + short time, e.g. "10 lip 2026, 14:08".
-  return new Intl.DateTimeFormat("pl-PL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Warsaw",
-  }).format(date);
+  // The zone stays PINNED, and that is the whole point of this helper: `client:load`
+  // SSRs it on workerd (UTC) then hydrates in the browser (local zone), so an
+  // unpinned formatter makes the two renders disagree and React throws a hydration
+  // mismatch. Europe/Warsaw is the company's zone — a signature time is a
+  // company-anchored event, not a viewer-relative one. Only the LANGUAGE became a
+  // variable here; `dateTimeCompany` keeps the zone fixed. e.g. "10 lip 2026, 14:08".
+  return dateTimeCompany(date, locale);
 }
 
 export default function ProtocolView(props: ProtocolViewProps) {
+  const { locale } = props;
   const { busy, resend } = useResendEmail();
   const [deliveryStatus, setDeliveryStatus] = React.useState<string | null>(props.deliveryStatus);
   const [error, setError] = React.useState<string | null>(null);
@@ -305,18 +305,18 @@ export default function ProtocolView(props: ProtocolViewProps) {
       <div className="grid grid-cols-2 gap-5">
         {/* Odometer — current readout + (return only) the baseline reference + km-driven delta. */}
         <div>
-          <Readout label="Licznik" value={`${props.odometerKm.toLocaleString("pl-PL")} km`} />
+          <Readout label="Licznik" value={`${formatInteger(props.odometerKm, locale)} km`} />
           {comparison && deltas && (
             <CompareFoot
               base={
                 <>
                   <span className="text-foreground font-mono font-semibold">
-                    {comparison.baselineOdometerKm.toLocaleString("pl-PL")}
+                    {formatInteger(comparison.baselineOdometerKm, locale)}
                   </span>{" "}
                   km
                 </>
               }
-              text={formatKmDriven(deltas.kmDriven)}
+              text={formatKmDriven(deltas.kmDriven, locale)}
               bad={false}
             />
           )}
@@ -473,7 +473,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
         )}
       </div>
       <p className="text-muted-foreground mt-2 text-[12px]">
-        Podpisał(a) {props.customerName} · {formatSignedAt(props.signedAt)}
+        Podpisał(a) {props.customerName} · {formatSignedAt(props.signedAt, locale)}
       </p>
     </Section>
   );
@@ -487,7 +487,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
         Porównanie wydanie → zwrot
       </h2>
       <div className="mt-3 flex flex-col gap-2.5">
-        <SummaryRow label="Przejechano" text={formatKmDriven(deltas.kmDriven)} bad={false} />
+        <SummaryRow label="Przejechano" text={formatKmDriven(deltas.kmDriven, locale)} bad={false} />
         <SummaryRow label="Zmiana paliwa" text={formatFuelDelta(deltas.fuelDelta)} bad={deltas.flags.fuelAdverse} />
         <SummaryRow
           label="Nowe uszkodzenia"

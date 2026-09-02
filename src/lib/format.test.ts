@@ -6,59 +6,90 @@ import {
   categoryLabelPl,
   estimatedTotal,
   formatCargoDims,
-  formatDailyRate,
   formatDuration,
+  formatInteger,
   formatPayloadKg,
   formatPln,
   formatPlnAmount,
   fuelLabelPl,
-  pluralPl,
+  plural,
   rentalDays,
   totalDueAtPickup,
   transmissionLabelPl,
 } from "./format";
+import type { PluralForms } from "./format";
 
-const NBSP = " "; // the non-breaking thousands separator the formatter emits
+const NBSP = "\u00a0"; // the non-breaking thousands separator `pl` grouping emits
 
 describe("formatPln", () => {
   it("formats a whole-number string (the numeric-as-string quirk) without decimals", () => {
-    expect(formatPln("320.00")).toBe("320 zł");
+    expect(formatPln("320.00", "pl")).toBe("320 zł");
+    expect(formatPln("320.00", "en")).toBe("320 zł");
   });
 
   it("formats a whole number input without decimals", () => {
-    expect(formatPln(249)).toBe("249 zł");
+    expect(formatPln(249, "pl")).toBe("249 zł");
   });
 
-  it("groups thousands with a non-breaking space", () => {
-    expect(formatPln("5900.00")).toBe(`5${NBSP}900 zł`);
-    expect(formatPln(10800)).toBe(`10${NBSP}800 zł`);
+  // The regression `useGrouping: "always"` exists for. CLDR `pl` sets
+  // `minimumGroupingDigits = 2`, so a default `Intl.NumberFormat("pl-PL")` leaves
+  // `5900` ungrouped — the app's single most common amount shape.
+  it("groups thousands from four digits up, with the separator each locale uses", () => {
+    expect(formatPln("5900.00", "pl")).toBe(`5${NBSP}900 zł`);
+    expect(formatPln(10800, "pl")).toBe(`10${NBSP}800 zł`);
+    expect(formatPln("5900.00", "en")).toBe("5,900 zł");
+    expect(formatPln(10800, "en")).toBe("10,800 zł");
   });
 
-  it("shows two decimals for fractional amounts with a comma separator", () => {
-    expect(formatPln("1.20")).toBe("1,20 zł");
-    expect(formatPln(1.2)).toBe("1,20 zł");
+  it("shows two decimals for fractional amounts, with each locale's decimal mark", () => {
+    expect(formatPln("1.20", "pl")).toBe("1,20 zł");
+    expect(formatPln(1.2, "pl")).toBe("1,20 zł");
+    expect(formatPln(1.2, "en")).toBe("1.20 zł");
+  });
+
+  // `style: "currency"` would render `5900,00 zł` under `pl` (forced two decimals)
+  // and `PLN 5,900.00` under `en` (ISO prefix, symbol first). Neither is the shape
+  // the screens carry, which is why the amount is composed by hand.
+  it("keeps the symbol after the number in both locales, and drops decimals when whole", () => {
+    expect(formatPln(5900, "pl").endsWith(" zł")).toBe(true);
+    expect(formatPln(5900, "en")).toBe("5,900 zł");
   });
 
   it("falls back to zero for an unparseable value", () => {
-    expect(formatPln("abc")).toBe("0 zł");
+    expect(formatPln("abc", "pl")).toBe("0 zł");
   });
 });
 
 describe("formatPlnAmount", () => {
   it("formats the number exactly as formatPln does, minus the currency", () => {
-    for (const value of ["320.00", 249, "5900.00", 10800, "1.20", 1.2, "abc"] as const) {
-      expect(formatPlnAmount(value)).toBe(formatPln(value).replace(" zł", ""));
+    for (const locale of ["pl", "en"] as const) {
+      for (const value of ["320.00", 249, "5900.00", 10800, "1.20", 1.2, "abc"] as const) {
+        expect(formatPlnAmount(value, locale)).toBe(formatPln(value, locale).replace(" zł", ""));
+      }
     }
   });
 
-  it("keeps the non-breaking thousands separator", () => {
-    expect(formatPlnAmount(3000)).toBe(`3${NBSP}000`);
+  it("keeps the non-breaking thousands separator under pl", () => {
+    expect(formatPlnAmount(3000, "pl")).toBe(`3${NBSP}000`);
   });
 });
 
-describe("formatDailyRate", () => {
-  it("appends the per-day suffix", () => {
-    expect(formatDailyRate("249.00")).toBe("249 zł/doba");
+describe("formatInteger", () => {
+  // The one grouper: it replaced four hand-rolled ones that spelled the separator
+  // U+00A0, U+0020 and U+202F, plus bare `toLocaleString("pl-PL")` calls that
+  // dropped grouping below five digits.
+  it("groups with U+00A0 under pl and a comma under en", () => {
+    expect(formatInteger(128450, "pl")).toBe(`128${NBSP}450`);
+    expect(formatInteger(128450, "en")).toBe("128,450");
+  });
+
+  it("groups from four digits, where a default pl formatter would not", () => {
+    expect(formatInteger(1228, "pl")).toBe(`1${NBSP}228`);
+  });
+
+  it("leaves three digits ungrouped and truncates a fractional input", () => {
+    expect(formatInteger(999, "pl")).toBe("999");
+    expect(formatInteger("1350.00", "pl")).toBe(`1${NBSP}350`);
   });
 });
 
@@ -82,11 +113,12 @@ describe("formatCargoDims", () => {
 
 describe("formatPayloadKg", () => {
   it("groups thousands and appends kg", () => {
-    expect(formatPayloadKg("1350.00")).toBe(`1${NBSP}350 kg`);
+    expect(formatPayloadKg("1350.00", "pl")).toBe(`1${NBSP}350 kg`);
+    expect(formatPayloadKg("1350.00", "en")).toBe("1,350 kg");
   });
 
   it("returns a dash when absent", () => {
-    expect(formatPayloadKg(null)).toBe("—");
+    expect(formatPayloadKg(null, "pl")).toBe("—");
   });
 });
 
@@ -147,48 +179,66 @@ describe("totalDueAtPickup", () => {
 
 describe("formatDuration", () => {
   it("uses the singular for one day", () => {
-    expect(formatDuration(1)).toBe("1 dzień");
+    expect(formatDuration(1, "pl")).toBe("1 dzień");
+    expect(formatDuration(1, "en")).toBe("1 day");
   });
 
-  it("uses dni for everything else", () => {
-    expect(formatDuration(3)).toBe("3 dni");
-    expect(formatDuration(5)).toBe("5 dni");
-    expect(formatDuration(21)).toBe("21 dni");
+  it("uses the plural for everything else", () => {
+    expect(formatDuration(3, "pl")).toBe("3 dni");
+    expect(formatDuration(5, "pl")).toBe("5 dni");
+    expect(formatDuration(21, "pl")).toBe("21 dni");
+    expect(formatDuration(3, "en")).toBe("3 days");
   });
 });
 
-describe("pluralPl", () => {
-  const POJAZD: [string, string, string] = ["pojazd", "pojazdy", "pojazdów"];
+describe("plural", () => {
+  // Kept verbatim from the deleted Polish-only selector's suite, and that is the
+  // point:
+  // `Intl.PluralRules` supplies these categories now, but only an assertion that
+  // predates the swap can prove the swap preserved behaviour rather than quietly
+  // changing it. English is asserted alongside to prove the arity is no longer
+  // per-language — the same call answers a two-form locale from `other`.
+  const POJAZD: PluralForms = { one: "pojazd", few: "pojazdy", many: "pojazdów", other: "pojazdów" };
+  const VEHICLE: PluralForms = { one: "vehicle", other: "vehicles" };
 
   it("uses the genitive (many) form for zero", () => {
-    expect(pluralPl(0, POJAZD)).toBe("pojazdów");
+    expect(plural(0, "pl", POJAZD)).toBe("pojazdów");
+    expect(plural(0, "en", VEHICLE)).toBe("vehicles");
   });
 
   it("uses the singular for exactly one", () => {
-    expect(pluralPl(1, POJAZD)).toBe("pojazd");
+    expect(plural(1, "pl", POJAZD)).toBe("pojazd");
+    expect(plural(1, "en", VEHICLE)).toBe("vehicle");
   });
 
   it("uses the few form for 2–4", () => {
-    expect(pluralPl(2, POJAZD)).toBe("pojazdy");
-    expect(pluralPl(4, POJAZD)).toBe("pojazdy");
+    expect(plural(2, "pl", POJAZD)).toBe("pojazdy");
+    expect(plural(4, "pl", POJAZD)).toBe("pojazdy");
+    expect(plural(2, "en", VEHICLE)).toBe("vehicles");
   });
 
   it("uses the many form for 5+", () => {
-    expect(pluralPl(5, POJAZD)).toBe("pojazdów");
+    expect(plural(5, "pl", POJAZD)).toBe("pojazdów");
   });
 
   it("uses the few form for 22–24 (mod-10 in 2–4, not a teen)", () => {
-    expect(pluralPl(22, POJAZD)).toBe("pojazdy");
+    expect(plural(22, "pl", POJAZD)).toBe("pojazdy");
   });
 
   it("uses the many form for 25", () => {
-    expect(pluralPl(25, POJAZD)).toBe("pojazdów");
+    expect(plural(25, "pl", POJAZD)).toBe("pojazdów");
   });
 
   it("uses the many form for the teens 12–14 despite their mod-10 digit", () => {
-    expect(pluralPl(12, POJAZD)).toBe("pojazdów");
-    expect(pluralPl(13, POJAZD)).toBe("pojazdów");
-    expect(pluralPl(14, POJAZD)).toBe("pojazdów");
+    expect(plural(12, "pl", POJAZD)).toBe("pojazdów");
+    expect(plural(13, "pl", POJAZD)).toBe("pojazdów");
+    expect(plural(14, "pl", POJAZD)).toBe("pojazdów");
+  });
+
+  it("falls back to `other` when the locale selects a category the caller omitted", () => {
+    // A Polish caller that only supplied `{one, other}` still renders something
+    // sane for a `few` count rather than `undefined`.
+    expect(plural(2, "pl", { one: "dzień", other: "dni" })).toBe("dni");
   });
 });
 

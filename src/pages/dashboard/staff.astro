@@ -21,7 +21,7 @@ import { countOverdueReturns } from "../../lib/services/protocols";
 // `isDemo` rides through to the island so the three demo-gated controls render
 // fenced rather than inviting a click the server will 403. The shell reads the
 // same flag off `Astro.locals` itself for the quick-add menu's promoted row.
-const { user, role, supabase, isDemo } = Astro.locals;
+const { user, role, supabase, isDemo, locale } = Astro.locals;
 
 const [staff, pending, overdueCount] = await Promise.all([
   listStaff(supabase),
@@ -36,13 +36,13 @@ const adminCount = staff.filter((s) => s.role === "admin").length;
   <StaffShell
     active="staff"
     title="Pracownicy"
-    subtitle={staffCountLabel(staff.length, adminCount)}
+    subtitle={staffCountLabel(staff.length, adminCount, locale)}
     promotedAction="employee"
     user={user}
     role={role}
     pendingCount={pending.length}
     overdueCount={overdueCount}
   >
-    <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} isDemo={isDemo} />
+    <StaffList client:load staff={staff} currentUserId={user?.id ?? ""} isDemo={isDemo} locale={locale} />
   </StaffShell>
 </Layout>

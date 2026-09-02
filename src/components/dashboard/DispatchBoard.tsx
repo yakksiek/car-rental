@@ -11,6 +11,7 @@ import DispatchSchedule, { MobileScheduleSection, MobileSection, toPickupItem, t
 import { cn } from "../../lib/utils";
 import { isSectionVisible } from "../../lib/dispatch-board";
 import type { DayCounts, ScheduleGroups, SectionKey } from "../../lib/dispatch-board";
+import type { Locale } from "../../lib/i18n/types";
 import type { PendingReservation } from "../../types";
 
 // The dispatch cockpit's single island. It owns both breakpoints so the compact
@@ -33,6 +34,8 @@ export interface DispatchBoardProps {
   // renders pre-filtered with no hydration flash — a client-only `window.location`
   // read would differ from the SSR'd HTML. `wszystko` = all sections.
   initialSection?: SectionKey;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 /** The four mobile chips, in order; the fill is per-chip tone (design-contract §F). */
@@ -86,6 +89,7 @@ export default function DispatchBoard({
   groups,
   today,
   initialSection = "wszystko",
+  locale,
 }: DispatchBoardProps) {
   const [section, setSection] = React.useState<SectionKey>(initialSection);
 
@@ -131,7 +135,7 @@ export default function DispatchBoard({
             </h2>
             <DispatchSchedule groups={groups} today={today} origin={origin} />
           </div>
-          <NeedDecisionPanel reservations={pending} />
+          <NeedDecisionPanel reservations={pending} locale={locale} />
         </div>
       </div>
 
@@ -180,7 +184,7 @@ export default function DispatchBoard({
               }
             >
               <div className="mb-2">
-                <NeedDecisionPanel reservations={pending} showHeader={false} />
+                <NeedDecisionPanel reservations={pending} showHeader={false} locale={locale} />
               </div>
             </MobileSection>
           )}

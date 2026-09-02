@@ -1,9 +1,7 @@
 // core
 import * as React from "react";
 import { navigate } from "astro:transitions/client";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
-import { labelDayButton, type DateRange, type Matcher } from "react-day-picker";
+import { type DateRange, type Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
@@ -13,7 +11,9 @@ import type { VehicleBusyRange } from "../../types";
 import { checkRangeBookable, dayAvailabilityMap, type RangeConflict } from "../../lib/availability";
 import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
+import { dayFull, dayMonthShort, monthYearLong } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { cn } from "../../lib/utils";
 
 // Step 1 of the reservation flow ("Daty") — lives on the vehicle detail page
@@ -36,6 +36,8 @@ interface Props {
   initialReturn?: string | null;
   /** Pending + confirmed date bounds to grey out in the calendar (Phase 6). */
   busyRanges?: VehicleBusyRange[];
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 const COPY = {
@@ -95,6 +97,7 @@ export default function BookingWidget({
   initialPickup = null,
   initialReturn = null,
   busyRanges = [],
+  locale,
 }: Props) {
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initialPickup);
@@ -176,13 +179,13 @@ export default function BookingWidget({
     <dl className="divide-y divide-[var(--flota-hair-2)]">
       <div className="flex items-center justify-between gap-3 py-3">
         <dt className="text-muted-foreground text-sm font-medium">
-          {hasEstimate ? `${formatPln(dailyRate)} × ${formatDuration(days)}` : COPY.chooseRange}
+          {hasEstimate ? `${formatPln(dailyRate, locale)} × ${formatDuration(days, locale)}` : COPY.chooseRange}
         </dt>
-        <dd className="text-foreground text-sm font-semibold">{hasEstimate ? formatPln(total) : "—"}</dd>
+        <dd className="text-foreground text-sm font-semibold">{hasEstimate ? formatPln(total, locale) : "—"}</dd>
       </div>
       <div className="flex items-center justify-between gap-3 py-3">
         <dt className="text-muted-foreground text-sm font-medium">{COPY.deposit}</dt>
-        <dd className="text-foreground text-sm font-semibold">{formatPln(deposit)}</dd>
+        <dd className="text-foreground text-sm font-semibold">{formatPln(deposit, locale)}</dd>
       </div>
     </dl>
   );
@@ -192,11 +195,11 @@ export default function BookingWidget({
       {/* Price header */}
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-foreground text-2xl font-bold tracking-tight">
-          {formatPln(dailyRate)}
+          {formatPln(dailyRate, locale)}
           <span className="text-muted-foreground text-sm font-medium"> {COPY.perDay}</span>
         </p>
         <p className="text-muted-foreground text-sm font-medium">
-          {formatPln(monthlyRate)}
+          {formatPln(monthlyRate, locale)}
           {COPY.perMonth}
         </p>
       </div>
@@ -204,8 +207,8 @@ export default function BookingWidget({
       {/* Selected-range fields */}
       <div className="mt-4 grid grid-cols-2 gap-2">
         {[
-          { label: COPY.pickup, value: range?.from ? `${format(range.from, "d MMM", { locale: pl })} · 14:00` : "—" },
-          { label: COPY.return, value: range?.to ? `${format(range.to, "d MMM", { locale: pl })} · 10:00` : "—" },
+          { label: COPY.pickup, value: range?.from ? `${dayMonthShort(range.from, locale)} · 14:00` : "—" },
+          { label: COPY.return, value: range?.to ? `${dayMonthShort(range.to, locale)} · 10:00` : "—" },
         ].map((field) => (
           <div key={field.label} className="rounded-xl border border-[var(--flota-hair-2)] px-3 py-2">
             <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">{field.label}</div>
@@ -256,15 +259,16 @@ export default function BookingWidget({
             blocked: "rounded-md bg-[var(--muted)] opacity-100!",
           }}
           excludeDisabled
-          locale={pl}
+          appLocale={locale}
           formatters={{
-            formatCaption: (date) => format(date, "LLLL yyyy", { locale: pl }).toUpperCase(),
+            formatCaption: (date) => monthYearLong(date, locale).toUpperCase(),
           }}
           labels={{
             // Append the start-only/end-only rule to each changeover day's
-            // aria-label; wrap the library default so today/selected markers stay.
-            labelDayButton: (date, modifiers, options, dateLib) => {
-              const base = labelDayButton(date, modifiers, options, dateLib);
+            // aria-label. The base repeats the shared wrapper's `dayFull` because
+            // an override REPLACES the entry rather than wrapping it.
+            labelDayButton: (date, modifiers) => {
+              const base = dayFull(date, locale);
               if (modifiers.pickupOnly) {
                 return `${base}, ${COPY.pickupOnlyLabel}`;
               }
@@ -308,7 +312,9 @@ export default function BookingWidget({
       {/* Estimated total */}
       <div className="flex items-center justify-between gap-3 border-t border-[var(--flota-hair-2)] pt-4">
         <span className="text-foreground text-sm font-semibold">{COPY.estimate}</span>
-        <span className="text-foreground text-xl font-bold tracking-tight">{hasEstimate ? formatPln(total) : "—"}</span>
+        <span className="text-foreground text-xl font-bold tracking-tight">
+          {hasEstimate ? formatPln(total, locale) : "—"}
+        </span>
       </div>
 
       {error && <p className="text-destructive mt-3 text-sm font-medium">{error}</p>}
@@ -349,19 +355,22 @@ export default function BookingWidget({
             <div className="min-w-0">
               <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
               <div className="mt-0.5 font-bold tracking-tight">
-                <span className="text-[2.5rem] leading-none">
-                  {hasEstimate ? formatPln(total).replace(/\s*zł$/, "") : "—"}
-                </span>
+                {/* The bare number and its unit are two type sizes, so the amount
+                    comes from `formatPlnAmount` (which never appends the unit)
+                    rather than from stripping `zł` off `formatPln` with a regex —
+                    that strip silently stopped matching the moment the currency
+                    became locale-aware. */}
+                <span className="text-[2.5rem] leading-none">{hasEstimate ? formatPlnAmount(total, locale) : "—"}</span>
                 {hasEstimate && <span className="ml-1 text-lg">zł</span>}
               </div>
             </div>
             <div className="shrink-0 text-right text-xs leading-snug opacity-80">
               {hasEstimate && (
                 <div>
-                  {formatDuration(days)} × {formatPln(dailyRate)}
+                  {formatDuration(days, locale)} × {formatPln(dailyRate, locale)}
                 </div>
               )}
-              <div>+ kaucja {formatPln(deposit)}</div>
+              <div>+ kaucja {formatPln(deposit, locale)}</div>
             </div>
           </div>
           <button

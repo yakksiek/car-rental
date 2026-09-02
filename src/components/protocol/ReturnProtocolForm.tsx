@@ -28,6 +28,7 @@ import { PHOTO_SLOTS } from "../../lib/protocol-schema";
 import { returnProtocolSchema } from "../../lib/return-protocol-schema";
 import type { ReturnProtocolInput } from "../../lib/return-protocol-schema";
 import { allSlotsFilled, formatOdometer, parseOdometer, randomUuid } from "../../lib/protocol-form";
+import type { Locale } from "../../lib/i18n/types";
 import * as paths from "../../lib/protocol-storage-paths";
 import { resendReturnEmail, useReturnProtocolSubmit } from "../hooks/useReturnProtocolSubmit";
 import { IDLE, useProtocolMedia } from "../hooks/useProtocolMedia";
@@ -59,6 +60,8 @@ interface Props {
   ctx: ReturnProtocolContext;
   supabaseUrl: string;
   supabaseKey: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 // Mirrors the issue form's FormValues plus the return additions: the baseline id
@@ -133,7 +136,7 @@ function SummaryRow({ label, text, tone }: { label: string; text: string; tone: 
   );
 }
 
-export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back }: Props) {
+export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back, locale }: Props) {
   const backHref = back?.href ?? "/dashboard/returns";
   // Minted once, before the first byte is uploaded — RHF needs it in defaultValues
   // at construction (before any media callback that reads the form could exist).
@@ -252,7 +255,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
   const summaryEmpty = !hasOdometer && !hasFuel && damages.fields.length === 0;
   // The soft-warning state (design R5): a below-baseline reading. Never blocks.
   const odometerLow = hasOdometer && deltas.kmDriven < 0;
-  const kmText = hasOdometer ? formatKmDriven(deltas.kmDriven) : "—";
+  const kmText = hasOdometer ? formatKmDriven(deltas.kmDriven, locale) : "—";
   const fuelText = hasFuel ? formatFuelDelta(deltas.fuelDelta) : "—";
   const fuelTone: ChipTone = hasFuel && deltas.flags.fuelAdverse ? "bad" : "neutral";
   const damageTone: ChipTone = deltas.flags.damageAdverse ? "bad" : "neutral";
@@ -541,7 +544,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                       autoComplete="off"
                       placeholder="Wpisz odczyt"
                       aria-invalid={Boolean(errors.odometerKm)}
-                      value={formatOdometer(odometer)}
+                      value={formatOdometer(odometer, locale)}
                       onChange={(event) => {
                         setValue("odometerKm", parseOdometer(event.target.value), { shouldValidate: isSubmitted });
                       }}
@@ -553,7 +556,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                     <div className="flex items-center justify-between gap-2">
                       <span className={UP_LABEL}>Przy wydaniu</span>
                       <span className="text-foreground font-mono text-[12px] font-semibold">
-                        {formatOdometer(String(ctx.baselineOdometerKm))} km
+                        {formatOdometer(String(ctx.baselineOdometerKm), locale)} km
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -776,6 +779,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
               )}
 
               <SignatureField
+                locale={locale}
                 signedAt={signedAt || null}
                 customerName={ctx.customerName}
                 invalid={Boolean(errors.signaturePath)}

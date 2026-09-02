@@ -1,25 +1,34 @@
 // others
+import { plural, type PluralForms } from "./format";
+import type { Locale } from "./i18n/types";
 import type { StaffStatus } from "./staff-status";
 
-// Polish label formatters for the Employees roster (S-08). Pure + I/O-free so
-// they unit-test in isolation. Single-locale by construction (pl-PL) — the
-// relative-time helper takes an explicit `nowMs` rather than reading the clock,
-// so the caller controls SSR-vs-client evaluation and there is no hidden
-// hydration mismatch (locale lesson).
+// Label formatters for the Employees roster (S-08). Pure + I/O-free so they
+// unit-test in isolation. The relative-time helper takes an explicit `nowMs`
+// rather than reading the clock, so the caller controls SSR-vs-client evaluation
+// and there is no hidden hydration mismatch (locale lesson).
+//
+// The two hand-rolled count-noun selectors — this module's and its twin in
+// `format.ts`, each open-coding Polish's 1 / 2–4 / rest split and its 12–14
+// exception — are gone; both now route through the one `Intl.PluralRules` helper
+// (`plural`). The counted nouns below stay Polish for now: this
+// phase retires the GRAMMAR, and the roster's copy is translated with the rest of
+// the cockpit.
 
-/** Polish count-noun selection: 1 → one, 2–4 (but not 12–14) → few, else → many. */
-export function plForm(n: number, one: string, few: string, many: string): string {
-  if (n === 1) return one;
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
-  return many;
-}
+const PEOPLE_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "person", other: "people" },
+  pl: { one: "osoba", few: "osoby", many: "osób", other: "osób" },
+};
+
+const ADMIN_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "admin", other: "admins" },
+  pl: { one: "administrator", few: "administratorzy", many: "administratorów", other: "administratorów" },
+};
 
 /** Roster eyebrow, uppercased: `5 OSÓB · 1 ADMINISTRATOR`. */
-export function staffCountLabel(total: number, admins: number): string {
-  const people = plForm(total, "osoba", "osoby", "osób").toUpperCase();
-  const adm = plForm(admins, "administrator", "administratorzy", "administratorów").toUpperCase();
+export function staffCountLabel(total: number, admins: number, locale: Locale): string {
+  const people = plural(total, locale, PEOPLE_FORMS[locale]).toUpperCase();
+  const adm = plural(admins, locale, ADMIN_FORMS[locale]).toUpperCase();
   return `${total} ${people} · ${admins} ${adm}`;
 }
 

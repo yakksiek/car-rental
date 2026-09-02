@@ -1,10 +1,9 @@
 // core
 import { test, expect, type Page } from "@playwright/test";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 
 // others
 import { createBookedVehicle, deleteVehicle, nextMonthDay } from "./fixtures/booking";
+import { dayFull } from "../src/lib/format-date";
 import { waitForIslands } from "./support/hydration";
 
 // ---------------------------------------------------------------------------
@@ -46,12 +45,20 @@ import { waitForIslands } from "./support/hydration";
 test.use({ storageState: { cookies: [], origins: [] } });
 
 /**
- * A calendar day button, located by the accessible name react-day-picker renders
- * under the `pl` locale — e.g. "piątek, 14 sierpnia 2026". Matched as a regex on
- * the date fragment because changeover days carry an extra suffix.
+ * A calendar day button, located by the accessible name the app gives it — e.g.
+ * "Friday, 14 August 2026" for an anonymous visitor, who gets the default `en`
+ * locale. Matched as a regex on the name because changeover days append the
+ * pickup-only / return-only rule to it.
+ *
+ * Built with the app's OWN `dayFull`, not a re-implementation. The name used to
+ * come from react-day-picker's `locale={pl}` (a `date-fns` Locale object) and was
+ * rebuilt here with the same `date-fns` call — two independent spellings of one
+ * string, which is exactly the coupling that rots. The calendar now labels its
+ * days through `dayFull`; addressing them through the same function means the
+ * locator moves with the app instead of drifting from it.
  */
 function dayButton(page: Page, isoDate: string) {
-  const label = format(new Date(`${isoDate}T12:00:00`), "d MMMM yyyy", { locale: pl });
+  const label = dayFull(new Date(`${isoDate}T12:00:00`), "en");
   return page.getByRole("button", { name: new RegExp(label) });
 }
 

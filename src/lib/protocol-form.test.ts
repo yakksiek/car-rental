@@ -6,6 +6,10 @@ import { allSlotsFilled, filledSlotCount, formatOdometer, parseOdometer, randomU
 import { fuelLabelPl } from "./protocol-labels";
 import { PHOTO_SLOTS } from "./protocol-schema";
 
+// The thousands separator `Intl` uses for `pl` (U+00A0). This module used to
+// hand-roll grouping with U+202F — narrow no-break — which no other module used.
+const NBSP = "\u00a0";
+
 describe("fuelLabelPl", () => {
   it("names the two ends", () => {
     expect(fuelLabelPl(0)).toBe("0/8 · pusty");
@@ -68,14 +72,27 @@ describe("randomUuid", () => {
 
 describe("odometer grouping", () => {
   it("groups thousands and round-trips back to digits", () => {
-    expect(formatOdometer("128450")).toBe("128 450");
-    expect(formatOdometer("999")).toBe("999");
-    expect(formatOdometer("1234567")).toBe("1 234 567");
-    expect(parseOdometer("128 450")).toBe("128450");
+    expect(formatOdometer("128450", "pl")).toBe(`128${NBSP}450`);
+    expect(formatOdometer("128450", "en")).toBe("128,450");
+    expect(formatOdometer("999", "pl")).toBe("999");
+    expect(formatOdometer("1234567", "pl")).toBe(`1${NBSP}234${NBSP}567`);
+    expect(parseOdometer(`128${NBSP}450`)).toBe("128450");
+  });
+
+  // The field is CONTROLLED: every keystroke goes display → digits → display, so
+  // the two must stay exact inverses. `\\D` is what makes that hold across locales
+  // — it strips U+00A0 and a comma alike.
+  it("round-trips in both locales", () => {
+    for (const locale of ["pl", "en"] as const) {
+      for (const digits of ["0", "999", "128450", "1234567"]) {
+        expect(parseOdometer(formatOdometer(digits, locale))).toBe(digits);
+      }
+    }
   });
 
   it("drops anything that is not a digit", () => {
-    expect(formatOdometer("12a3 km")).toBe("123");
+    expect(formatOdometer("12a3 km", "pl")).toBe("123");
+    expect(formatOdometer("", "pl")).toBe("");
     expect(parseOdometer("")).toBe("");
   });
 });

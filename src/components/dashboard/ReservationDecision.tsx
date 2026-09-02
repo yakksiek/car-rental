@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { ArrowRight, Check, Truck, X } from "lucide-react";
 
 // components
@@ -11,6 +9,8 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
+import { dayMonthShortPadded } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { CalendarReservation, RejectionReason } from "../../types";
 
@@ -48,9 +48,9 @@ export const REASONS: { value: RejectionReason; label: string }[] = [
   { value: "other", label: "Inny" },
 ];
 
-function formatDayShort(iso: string): string {
+function formatDayShort(iso: string, locale: Locale): string {
   const d = fromIsoDate(iso);
-  return d ? format(d, "dd MMM", { locale: pl }) : iso;
+  return d ? dayMonthShortPadded(d, locale) : iso;
 }
 
 // ── reason bottom-sheet (mobile) / centered modal (desktop) ──────────────────
@@ -179,10 +179,12 @@ export function CalendarDecision({
   reservation,
   onClose,
   onDecided,
+  locale,
 }: {
   reservation: CalendarReservation;
   onClose: () => void;
   onDecided: (id: string, status: "confirmed" | "rejected") => void;
+  locale: Locale;
 }) {
   const { busy, decide } = useReservationDecision();
   const [reasonOpen, setReasonOpen] = React.useState(false);
@@ -253,7 +255,7 @@ export function CalendarDecision({
               {DECISION_COPY.pickup}
             </div>
             <div className="text-foreground mt-0.5 font-bold tracking-tight">
-              {formatDayShort(reservation.pickup_date)} · 14:00
+              {formatDayShort(reservation.pickup_date, locale)} · 14:00
             </div>
           </div>
           <ArrowRight className="text-muted-foreground size-[18px]" />
@@ -262,7 +264,7 @@ export function CalendarDecision({
               {DECISION_COPY.return}
             </div>
             <div className="text-foreground mt-0.5 font-bold tracking-tight">
-              {formatDayShort(reservation.return_date)} · 10:00
+              {formatDayShort(reservation.return_date, locale)} · 10:00
             </div>
           </div>
         </div>

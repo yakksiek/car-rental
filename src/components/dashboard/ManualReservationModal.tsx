@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { AlertTriangle, CalendarDays, Check, ChevronDown, Truck, X } from "lucide-react";
 
 // components
@@ -10,14 +8,7 @@ import { ManualReservationCalendar } from "./ManualReservationCalendar";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import {
-  estimatedTotal,
-  formatDailyRate,
-  formatDuration,
-  formatPln,
-  formatPlnAmount,
-  rentalDays,
-} from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
 import { checkRangeBookable } from "../../lib/availability";
 import {
   AVAILABILITY_COPY,
@@ -25,6 +16,8 @@ import {
   resolveAvailability,
   type AvailabilityState,
 } from "../../lib/manual-availability";
+import { dayMonthShort, dayMonthYearShort } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -44,6 +37,11 @@ import type { PickerVehicle } from "../../types";
 
 // Verbatim Polish copy — canonical, transcribed from the design source.
 const COPY = {
+  // The daily-rate suffix. `format.ts`'s `formatDailyRate` used to bake it into
+  // the number; a digit-arranging helper has no business owning a word a caller
+  // could phrase differently, so the composition moves here (the shape `FleetList`
+  // already used) and the helper is gone.
+  perDay: "/doba",
   title: "Nowa rezerwacja",
   badge: "Ręczna",
   subtitle: "Wynajem dodawany przez pracownika",
@@ -88,15 +86,15 @@ function vehicleTitle(vehicle: PickerVehicle): string {
 }
 
 /** `"1 kwi"` — the mockup's short day label (`mrFmt`). */
-function formatDayShort(iso: string): string {
+function formatDayShort(iso: string, locale: Locale): string {
   const date = fromIsoDate(iso);
-  return date ? format(date, "d MMM", { locale: pl }) : iso;
+  return date ? dayMonthShort(date, locale) : iso;
 }
 
 /** `"1 kwi 2026"` — the date-button label (`mrFmtFull`). */
-function formatDayFull(iso: string): string {
+function formatDayFull(iso: string, locale: Locale): string {
   const date = fromIsoDate(iso);
-  return date ? format(date, "d MMM yyyy", { locale: pl }) : iso;
+  return date ? dayMonthYearShort(date, locale) : iso;
 }
 
 // ── availability panel ───────────────────────────────────────────────────────
@@ -184,6 +182,7 @@ function DonePanel({
   pickup,
   returnDate,
   onClose,
+  locale,
 }: {
   reference: string;
   customerName: string;
@@ -191,6 +190,7 @@ function DonePanel({
   pickup: string;
   returnDate: string;
   onClose: () => void;
+  locale: Locale;
 }) {
   const days = rentalDays(pickup, returnDate);
 
@@ -213,8 +213,8 @@ function DonePanel({
           <div className="text-foreground mt-2.5 text-sm font-[650] tracking-[-0.2px]">{customerName}</div>
           <div className="text-muted-foreground mt-[3px] text-[12.5px]">{vehicleTitle(vehicle)}</div>
           <div className="mt-[7px] text-[13px] font-[650] text-[var(--flota-ink-2)] tabular-nums">
-            {formatDayShort(pickup)} – {formatDayShort(returnDate)}{" "}
-            <span className="text-muted-foreground font-[540]">· {formatDuration(days)}</span>
+            {formatDayShort(pickup, locale)} – {formatDayShort(returnDate, locale)}{" "}
+            <span className="text-muted-foreground font-[540]">· {formatDuration(days, locale)}</span>
           </div>
         </div>
 
@@ -240,7 +240,16 @@ function DonePanel({
 
 // ── the modal ────────────────────────────────────────────────────────────────
 
-export function ManualReservationModal({ vehicles, onClose }: { vehicles: PickerVehicle[]; onClose: () => void }) {
+export function ManualReservationModal({
+  vehicles,
+  onClose,
+  locale,
+}: {
+  vehicles: PickerVehicle[];
+  onClose: () => void;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
+}) {
   const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id ?? "");
   const [pickup, setPickup] = React.useState("");
   const [returnDate, setReturnDate] = React.useState("");
@@ -349,9 +358,9 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
   // half-made range a veto leaves behind, which shows the one date it has.
   const rangeLabel =
     pickup && returnDate
-      ? `${formatDayShort(pickup)} – ${formatDayFull(returnDate)}`
+      ? `${formatDayShort(pickup, locale)} – ${formatDayFull(returnDate, locale)}`
       : pickup
-        ? formatDayFull(pickup)
+        ? formatDayFull(pickup, locale)
         : COPY.pickRange;
 
   async function submit() {
@@ -395,6 +404,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
   if (created) {
     return (
       <DonePanel
+        locale={locale}
         reference={created}
         customerName={name}
         vehicle={vehicle}
@@ -463,7 +473,8 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
                 <div className="min-w-0 flex-1">
                   <div className="text-foreground text-sm font-[650] tracking-[-0.2px]">{vehicleTitle(vehicle)}</div>
                   <div className="text-muted-foreground mt-0.5 text-[11.5px]">
-                    <span className="font-mono">{vehicle.plate}</span> · {formatDailyRate(vehicle.daily_rate)}
+                    <span className="font-mono">{vehicle.plate}</span> · {formatPln(vehicle.daily_rate, locale)}
+                    {COPY.perDay}
                   </div>
                 </div>
                 <span className="bg-card shadow-card flex size-[30px] shrink-0 items-center justify-center rounded-sm">
@@ -530,7 +541,9 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
                       absent from the prompt state and from the half-made range
                       a veto leaves behind (D18). */}
                   {days > 0 && (
-                    <span className="text-muted-foreground text-[12px] font-semibold">{formatDuration(days)}</span>
+                    <span className="text-muted-foreground text-[12px] font-semibold">
+                      {formatDuration(days, locale)}
+                    </span>
                   )}
                   <ChevronDown className="text-muted-foreground size-[13px] shrink-0" />
                 </button>
@@ -543,6 +556,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
                     Zastosuj need no guards of their own. */}
                 {pickerOpen && !busy && !isMobile && (
                   <ManualReservationCalendar
+                    locale={locale}
                     variant="popover"
                     busyRanges={ranges}
                     rangesState={rangesState}
@@ -628,12 +642,12 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
         <div className="bg-card flex items-center gap-3 border-t border-[var(--flota-hair-2)] px-[18px] pt-3 pb-[18px] md:px-6 md:pt-3.5 md:pb-5">
           <div className="min-w-0 flex-1">
             <div className="text-muted-foreground text-[11px] font-semibold tracking-[0.3px] uppercase">
-              {formatDuration(days)} × {formatPln(vehicle.daily_rate)}
+              {formatDuration(days, locale)} × {formatPln(vehicle.daily_rate, locale)}
             </div>
             <div className="text-foreground mt-px text-[18px] font-[750] tracking-[-0.5px] tabular-nums">
-              {formatPln(total)}{" "}
+              {formatPln(total, locale)}{" "}
               <span className="text-muted-foreground text-[11.5px] font-semibold whitespace-nowrap">
-                + {formatPlnAmount(vehicle.deposit)} kaucji
+                + {formatPlnAmount(vehicle.deposit, locale)} kaucji
               </span>
             </div>
           </div>
@@ -681,6 +695,7 @@ export function ManualReservationModal({ vehicles, onClose }: { vehicles: Picker
           <div className="bg-card w-full rounded-t-[26px] px-4 pt-3.5 pb-[22px] shadow-[0_-10px_40px_rgba(0,0,0,0.22)]">
             <span aria-hidden="true" className="mx-auto mb-3.5 block h-1 w-10 rounded-full bg-[var(--flota-hair)]" />
             <ManualReservationCalendar
+              locale={locale}
               variant="sheet"
               busyRanges={ranges}
               rangesState={rangesState}

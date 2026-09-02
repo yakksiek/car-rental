@@ -11,7 +11,7 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // Employee pending-request queue (S-03). The /dashboard/reservations route is
 // gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
 // pending list through the role-gated definer RPC and mounts the decision island.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale } = Astro.locals;
 // No fleet fetch here any more (S-12b): the manual-reservation picker is loaded
 // on demand from `GET /api/vehicles` when a staffer actually picks that row, so
 // this page costs one SSR read fewer than it did under S-12.
@@ -45,7 +45,7 @@ const fromDashboard = Astro.url.searchParams.get("from") === "pulpit";
           only in the queue state and disappears on the request detail — passing
           `fromDashboard` so the island can render the back-to-pulpit affordance. */
       }
-      <PendingQueue client:load reservations={reservations} fromDashboard={fromDashboard} />
+      <PendingQueue client:load reservations={reservations} fromDashboard={fromDashboard} locale={locale} />
     </main>
   </StaffShell>
 </Layout>

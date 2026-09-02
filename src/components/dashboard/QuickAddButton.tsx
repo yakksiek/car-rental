@@ -11,6 +11,7 @@ import { QuickActionMenu } from "./QuickActionMenu";
 
 // others
 import { cn } from "../../lib/utils";
+import type { Locale } from "../../lib/i18n/types";
 import { useFleetPicker } from "../hooks/useFleetPicker";
 import { DEMO_BLOCKED_MESSAGE } from "../../lib/staff-report";
 import { buildQuickActions, PROMOTED_ACTIONS, type PromotedActionKey, type ResolvedQuickAction } from "./quick-actions";
@@ -73,9 +74,11 @@ interface QuickAddButtonProps {
    * so it is gated server-side like the staff routes.
    */
   isDemo?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting shell passes it down. */
+  locale: Locale;
 }
 
-export default function QuickAddButton({ mode, promoted, isDemo = false }: QuickAddButtonProps) {
+export default function QuickAddButton({ mode, promoted, isDemo = false, locale }: QuickAddButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const { vehicles, state, load } = useFleetPicker();
@@ -151,6 +154,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false }: Quick
     modalOpen && vehicles !== null
       ? createPortal(
           <ManualReservationModal
+            locale={locale}
             vehicles={vehicles}
             onClose={() => {
               setModalOpen(false);
