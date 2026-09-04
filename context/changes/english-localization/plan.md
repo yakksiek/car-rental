@@ -1565,14 +1565,14 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 8.1 Type check passes: `npx astro check`
-- [x] 8.2 Lint passes: `npm run lint`
-- [x] 8.3 Unit + integration tests pass
-- [x] 8.4 The route's per-field 400 shape still matches what the modal renders
+- [x] 8.1 Type check passes: `npx astro check` — e90709f
+- [x] 8.2 Lint passes: `npm run lint` — e90709f
+- [x] 8.3 Unit + integration tests pass — e90709f
+- [x] 8.4 The route's per-field 400 shape still matches what the modal renders — e90709f
 
 #### Manual
 
-- [x] 8.5 A too-short phone reports under the phone field; the button stays disabled
-- [x] 8.6 Correcting it clears the message and enables the button
-- [x] 8.7 Both locales
-- [x] 8.8 No field reds before it has been touched
+- [x] 8.5 A too-short phone reports under the phone field; the button stays disabled — e90709f
+- [x] 8.6 Correcting it clears the message and enables the button — e90709f
+- [x] 8.7 Both locales — e90709f
+- [x] 8.8 No field reds before it has been touched — e90709f
