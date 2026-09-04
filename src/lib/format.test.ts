@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 // others
 import {
-  categoryLabelPl,
   estimatedTotal,
   formatCargoDims,
   formatDuration,
@@ -11,11 +10,9 @@ import {
   formatPayloadKg,
   formatPln,
   formatPlnAmount,
-  fuelLabelPl,
   plural,
   rentalDays,
   totalDueAtPickup,
-  transmissionLabelPl,
 } from "./format";
 import type { PluralForms } from "./format";
 
@@ -239,28 +236,5 @@ describe("plural", () => {
     // A Polish caller that only supplied `{one, other}` still renders something
     // sane for a `few` count rather than `undefined`.
     expect(plural(2, "pl", { one: "dzień", other: "dni" })).toBe("dni");
-  });
-});
-
-describe("Polish enum labels", () => {
-  it("maps every vehicle category", () => {
-    expect(categoryLabelPl("cargo_van")).toBe("Furgon");
-    expect(categoryLabelPl("passenger_van")).toBe("Bus osobowy");
-    expect(categoryLabelPl("car_transporter")).toBe("Autolaweta");
-    expect(categoryLabelPl("refrigerated_truck")).toBe("Chłodnia");
-    expect(categoryLabelPl("flatbed_truck")).toBe("Skrzyniowy");
-  });
-
-  it("maps transmissions and is null-safe", () => {
-    expect(transmissionLabelPl("manual")).toBe("Manualna");
-    expect(transmissionLabelPl("automatic")).toBe("Automatyczna");
-    expect(transmissionLabelPl(null)).toBe("—");
-  });
-
-  it("maps known fuel types and falls back to capitalized raw input", () => {
-    expect(fuelLabelPl("diesel")).toBe("Diesel");
-    expect(fuelLabelPl("electric")).toBe("Elektryczny");
-    expect(fuelLabelPl("wodór")).toBe("Wodór");
-    expect(fuelLabelPl(null)).toBe("—");
   });
 });

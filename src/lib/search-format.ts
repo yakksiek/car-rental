@@ -1,6 +1,7 @@
 // others
 import { monthShort } from "./format-date";
-import type { Locale } from "./i18n/types";
+import { translator, type Locale } from "./i18n/types";
+import { search } from "./i18n/search";
 
 // Pure, I/O-free presentation helpers for staff global-search rows (S-13). Kept
 // out of the React components so the fiddly bits — the month abbreviations, the
@@ -68,32 +69,33 @@ function dayDelta(a: string, b: string): number | null {
 
 /**
  * When a return is (or was) due, worded relative to `today`:
- * `"dziś"` / `"wczoraj"` / `"jutro"`, and a plain `"12 kwi"` beyond that window.
+ * `"dziś"` / `"wczoraj"` / `"jutro"` (`"today"` / `"yesterday"` / `"tomorrow"`),
+ * and a plain `"12 kwi"` beyond that window.
  *
- * The three relative words stay hand-written on purpose. `Intl.RelativeTimeFormat`
- * covers this shape, but its `pl` wording for day 0 is `dzisiaj` where the design
- * board says `dziś` — which makes these a COPY choice, not grammar, so they move
- * into the catalog with the rest of the search rows rather than being retired
- * here. `locale` is what the month fallback needs.
+ * The three relative words stay hand-written on purpose, and they now live in the
+ * `search` namespace. `Intl.RelativeTimeFormat` covers this shape, but its `pl`
+ * wording for day 0 is `dzisiaj` where the design board says `dziś` — which makes
+ * these a COPY choice, not grammar. `locale` also drives the month fallback.
  *
  * `today` is passed in rather than read from the clock so a server-rendered row
  * and its hydrated counterpart agree — the server runs UTC while the depot lives
  * in Europe/Warsaw, and a self-read clock would make the two disagree for part of
  * the day (the locale/timezone lesson).
  */
-export function relativeDayPl(iso: string, today: string, locale: Locale): string {
+export function relativeDay(iso: string, today: string, locale: Locale): string {
   const delta = dayDelta(today, iso);
   if (delta === null) {
     return "—";
   }
+  const t = translator(locale, search);
   if (delta === 0) {
-    return "dziś";
+    return t("dayToday");
   }
   if (delta === -1) {
-    return "wczoraj";
+    return t("dayYesterday");
   }
   if (delta === 1) {
-    return "jutro";
+    return t("dayTomorrow");
   }
 
   const parts = parseIso(iso);

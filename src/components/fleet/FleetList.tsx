@@ -9,7 +9,8 @@ import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import { cn } from "../../lib/utils";
-import { categoryLabelPl, formatPln, fuelLabelPl, transmissionLabelPl } from "../../lib/format";
+import { formatPln } from "../../lib/format";
+import { categoryLabel, fuelLabel, transmissionLabel } from "../../lib/i18n/vehicle";
 import type { Locale } from "../../lib/i18n/types";
 import type { CategoryCounts } from "../../lib/services/vehicles";
 import type { Vehicle, VehicleCategory } from "../../types";
@@ -99,11 +100,11 @@ const CATEGORY_ORDER: VehicleCategory[] = [
 const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 /** `2021 · Diesel · Manualna` — only the present fields, dot-separated. */
-function specLine(vehicle: Vehicle): string {
+function specLine(vehicle: Vehicle, locale: Locale): string {
   return [
     vehicle.production_year ? String(vehicle.production_year) : null,
-    vehicle.fuel_type ? fuelLabelPl(vehicle.fuel_type) : null,
-    vehicle.transmission ? transmissionLabelPl(vehicle.transmission) : null,
+    vehicle.fuel_type ? fuelLabel(vehicle.fuel_type, locale) : null,
+    vehicle.transmission ? transmissionLabel(vehicle.transmission, locale) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -314,7 +315,7 @@ export default function FleetList({
     { key: "all", label: COPY.all, count: counts.total, value: null },
     ...CATEGORY_ORDER.map((c) => ({
       key: c,
-      label: categoryLabelPl(c),
+      label: categoryLabel(c, locale),
       count: counts.byCategory[c],
       value: c,
     })),
@@ -468,7 +469,7 @@ export default function FleetList({
                         <Thumbnail vehicle={v} className="h-11 w-16" />
                         <div className="min-w-0">
                           <div className="text-foreground truncate text-sm font-[650] tracking-tight">{v.name}</div>
-                          <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v)}</div>
+                          <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v, locale)}</div>
                         </div>
                       </div>
                     </td>
@@ -535,7 +536,7 @@ export default function FleetList({
                       <div className="text-foreground truncate text-[15px] font-[650] tracking-tight">{v.name}</div>
                       <StatusBadge active={v.is_active} />
                     </div>
-                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v)}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v, locale)}</div>
                     <Rate vehicle={v} locale={locale} className="mt-1.5" />
                   </div>
                 </div>

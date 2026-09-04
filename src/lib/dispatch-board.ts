@@ -1,5 +1,7 @@
 // others
 import { captionOf, sortReturnsByUrgency } from "./returns-filter";
+import { translator, type Locale } from "./i18n/types";
+import { staff } from "./i18n/staff";
 import type { DispatchReturnRow, DispatchRow, PendingReservation } from "../types";
 
 // Pure, DOM-free derivation for the `/dashboard` dispatch cockpit — the KPI/chip
@@ -44,7 +46,7 @@ export function dayCounts(
   };
 }
 
-/** One schedule group: its rows plus the "{done} z {total} zakończone" progress. */
+/** One schedule group: its rows plus the `staff.scheduleProgress` label. */
 export interface ScheduleGroup<Row> {
   rows: Row[];
   doneCount: number;
@@ -58,8 +60,10 @@ export interface ScheduleGroups {
   returns: ScheduleGroup<DispatchReturnRow>;
 }
 
-function progressLabel(doneCount: number, total: number): string {
-  return `${doneCount} z ${total} zakończone`;
+function progressLabel(doneCount: number, total: number, locale: Locale): string {
+  return translator(locale, staff)("scheduleProgress")
+    .replace("{done}", String(doneCount))
+    .replace("{total}", String(total));
 }
 
 /**
@@ -69,7 +73,12 @@ function progressLabel(doneCount: number, total: number): string {
  * overdue → due → returned, the same urgency sort the returns worklist paints;
  * pickups keep the RPC's `reference` order.
  */
-export function scheduleGroups(pickups: DispatchRow[], returns: DispatchReturnRow[], today: string): ScheduleGroups {
+export function scheduleGroups(
+  pickups: DispatchRow[],
+  returns: DispatchReturnRow[],
+  today: string,
+  locale: Locale,
+): ScheduleGroups {
   // Done work sinks to the bottom of its group so the open rows — the only ones
   // that still need a person — read as the list, and the schedule shortens from
   // the top as the day progresses. `sortReturnsByUrgency` already ends on
@@ -85,13 +94,13 @@ export function scheduleGroups(pickups: DispatchRow[], returns: DispatchReturnRo
       rows: sortedPickups,
       doneCount: pickupsDone,
       total: pickups.length,
-      progressLabel: progressLabel(pickupsDone, pickups.length),
+      progressLabel: progressLabel(pickupsDone, pickups.length, locale),
     },
     returns: {
       rows: sortedReturns,
       doneCount: returnsDone,
       total: sortedReturns.length,
-      progressLabel: progressLabel(returnsDone, sortedReturns.length),
+      progressLabel: progressLabel(returnsDone, sortedReturns.length, locale),
     },
   };
 }

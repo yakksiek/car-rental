@@ -15,7 +15,7 @@ import { plural, type PluralForms } from "../../lib/format";
 import type { Locale } from "../../lib/i18n/types";
 import {
   type AddOutcome,
-  DEMO_BLOCKED_MESSAGE,
+  demoBlockedMessage,
   type Report,
   type ReportTone,
   inviteActionLabel,
@@ -131,7 +131,7 @@ const COPY = {
   // zaproszenie` is deliberately NOT gated and sends an e-mail, and it sits in
   // this very table.
   //
-  // NOT the same string as `DEMO_BLOCKED_MESSAGE`, and deliberately so: that one
+  // NOT the same string as `demoBlockedMessage(locale)`, and deliberately so: that one
   // answers "why is THIS button dead" on a single control, this one answers
   // "what is fenced" for the screen. The contract records the split.
   demoNote: "Dodawanie i usuwanie kont oraz reset hasła są w trybie demo wyłączone.",
@@ -716,9 +716,9 @@ export default function StaffList({
         const failure = (await res.json().catch(() => null)) as { code?: string } | null;
         outcome = { kind: "http", httpStatus: res.status, code: failure?.code ?? null };
       }
-      return applyReport(resolveAddReport(outcome), closeAddModal);
+      return applyReport(resolveAddReport(outcome, locale), closeAddModal);
     } catch {
-      return applyReport(resolveAddReport({ kind: "network" }), closeAddModal);
+      return applyReport(resolveAddReport({ kind: "network" }, locale), closeAddModal);
     } finally {
       setAddBusy(false);
     }
@@ -750,18 +750,18 @@ export default function StaffList({
       });
       if (res.status === 200) {
         setStaff((rows) => rows.filter((r) => r.id !== member.id));
-        return applyReport(resolveRemoveReport({ kind: "http", httpStatus: 200 }), closeRemoveModal);
+        return applyReport(resolveRemoveReport({ kind: "http", httpStatus: 200 }, locale), closeRemoveModal);
       }
       // Only a FAILURE carries a `code`, and only the demo gate sets one today.
       // Read defensively: an unhandled 500 is Astro's HTML body, so `json()`
       // rejects and the outcome falls back to the status-only routing it had.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRemoveReport({ kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRemoveReport({ kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         closeRemoveModal,
       );
     } catch {
-      return applyReport(resolveRemoveReport({ kind: "network" }), closeRemoveModal);
+      return applyReport(resolveRemoveReport({ kind: "network" }, locale), closeRemoveModal);
     } finally {
       setBusyId(null);
     }
@@ -798,7 +798,7 @@ export default function StaffList({
         const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
         const invitedAt = body?.invitedAt ?? new Date().toISOString();
         setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
-        return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }), noModal, retry);
+        return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }, locale), noModal, retry);
       }
       // Symmetric with `resetPassword` below, though invite can never answer
       // `demo_blocked` — its route is outside the gate by design. The two row
@@ -806,12 +806,12 @@ export default function StaffList({
       // only one of them would buy an asymmetry rather than a guarantee.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRowActionReport("invite", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRowActionReport("invite", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         noModal,
         retry,
       );
     } catch {
-      return applyReport(resolveRowActionReport("invite", { kind: "network" }), noModal, retry);
+      return applyReport(resolveRowActionReport("invite", { kind: "network" }, locale), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -824,18 +824,18 @@ export default function StaffList({
     try {
       const res = await fetch(`/api/staff/${member.id}/reset-password`, { method: "POST" });
       if (res.status === 200) {
-        return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }), noModal, retry);
+        return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }, locale), noModal, retry);
       }
       // The one row action the demo gate refuses. Without the `code` the banner
       // would call a permanent refusal a connection problem and offer `Ponów`.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRowActionReport("reset", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRowActionReport("reset", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         noModal,
         retry,
       );
     } catch {
-      return applyReport(resolveRowActionReport("reset", { kind: "network" }), noModal, retry);
+      return applyReport(resolveRowActionReport("reset", { kind: "network" }, locale), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -1018,6 +1018,7 @@ export default function StaffList({
         {isEmpty ? (
           <EmptyState
             isDemo={isDemo}
+            locale={locale}
             onAdd={() => {
               setAddOpen(true);
             }}
@@ -1080,7 +1081,7 @@ export default function StaffList({
                                 variant="outline"
                                 className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
                                 disabled={isDemo || busyId === m.id}
-                                title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                                title={isDemo ? demoBlockedMessage(locale) : undefined}
                                 onClick={() => resetPassword(m)}
                               >
                                 <KeyRound className="size-3.5" />
@@ -1101,7 +1102,7 @@ export default function StaffList({
                                 ) : (
                                   <>
                                     <Send className="size-3.5" />
-                                    {COPY.sendInvite(m.status)}
+                                    {COPY.sendInvite(m.status, locale)}
                                   </>
                                 )}
                               </Button>
@@ -1118,7 +1119,7 @@ export default function StaffList({
                                 isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                               )}
                               disabled={isSelf || isDemo || busyId === m.id}
-                              title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                              title={isDemo ? demoBlockedMessage(locale) : undefined}
                               aria-label={COPY.removeAria}
                               onClick={() => {
                                 setRemoveFor(m);
@@ -1168,7 +1169,7 @@ export default function StaffList({
                           size="icon"
                           className="text-foreground size-11 rounded-xl"
                           disabled={isDemo || busyId === m.id}
-                          title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                          title={isDemo ? demoBlockedMessage(locale) : undefined}
                           aria-label={COPY.resetAria}
                           onClick={() => resetPassword(m)}
                         >
@@ -1180,7 +1181,7 @@ export default function StaffList({
                           size="icon"
                           className="text-foreground size-11 rounded-xl"
                           disabled={busyId === m.id}
-                          aria-label={COPY.sendInvite(m.status)}
+                          aria-label={COPY.sendInvite(m.status, locale)}
                           onClick={() => sendInvite(m)}
                         >
                           {busyId === m.id ? (
@@ -1198,7 +1199,7 @@ export default function StaffList({
                           isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                         )}
                         disabled={isSelf || isDemo || busyId === m.id}
-                        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                        title={isDemo ? demoBlockedMessage(locale) : undefined}
                         aria-label={COPY.removeAria}
                         onClick={() => {
                           setRemoveFor(m);
@@ -1293,7 +1294,7 @@ export default function StaffList({
 // Only reachable on a roster with zero rows, which the demo never has — the
 // seeded staff list is the thing a recruiter is here to look at. Fenced anyway:
 // leaving one live add trigger behind an unreachable branch is how a gate rots.
-function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boolean }) {
+function EmptyState({ onAdd, isDemo = false, locale }: { onAdd: () => void; isDemo?: boolean; locale: Locale }) {
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
       <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-lg">
@@ -1304,7 +1305,7 @@ function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boo
       <Button
         className="bg-foreground text-background hover:bg-foreground/90 mt-5 h-11 px-4"
         disabled={isDemo}
-        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+        title={isDemo ? demoBlockedMessage(locale) : undefined}
         onClick={onAdd}
       >
         <Plus className="size-4" />

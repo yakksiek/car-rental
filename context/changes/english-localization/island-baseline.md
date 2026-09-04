@@ -159,3 +159,54 @@ done | sort
 A jump on a **public-site** island (`HeroSearch`, `FleetList`, `BookingWidget`) — or any movement at
 all in `format.*.js` — means something reached the composed map. Find it before shipping, per the
 accessor boundary in `src/lib/i18n/types.ts`.
+
+---
+
+## Interim reading — end of Phase 4 (2026-09-02)
+
+Not a new baseline; the table above stays the reference. Recorded here because Phase 4 is the first
+phase to put catalog strings into browser bundles, so this is the first chance the boundary rule had
+to fail — and criterion 5.13 should arrive at a comparison that is already explained.
+
+Same command, same tooling, `dist/client/_astro/*.js` after `npm run build`.
+
+| chunk                 | baseline raw | now raw |    Δ raw | baseline gzip | now gzip |   Δ gzip |
+| --------------------- | -----------: | ------: | -------: | ------------: | -------: | -------: |
+| `format`              |        1 406 |   1 099 | **−307** |           816 |      605 | **−211** |
+| `BookingWidget`       |        7 857 |   7 813 |      −44 |         2 787 |    2 758 |      −29 |
+| `FleetList`           |       10 876 |  10 930 |      +54 |         3 778 |    3 790 |      +12 |
+| `GlobalSearch`        |       28 312 |  29 451 |   +1 139 |         9 768 |   10 152 |     +384 |
+| `HeroSearch`          |        3 777 |   3 836 |      +59 |         1 578 |    1 592 |      +14 |
+| `PendingQueue`        |       19 363 |  17 252 |   −2 111 |         5 560 |    4 787 |     −773 |
+| `ReservationCalendar` |      338 251 | 337 900 |     −351 |       107 175 |  107 022 |     −153 |
+| `ReservationForm`     |       15 083 |  14 906 |     −177 |         4 450 |    4 393 |      −57 |
+| `StaffList`           |       24 550 |  24 618 |      +68 |         7 172 |    7 209 |      +37 |
+| `VehicleForm`         |       11 742 |  11 717 |      −25 |         4 285 |    4 268 |      −17 |
+
+**`format` went DOWN, and that is the load-bearing number.** It is the chunk 11 islands share, so a
+composed-map leak moves it first and moves it for all of them at once. Instead it shrank by 211 B
+gzip: the five Polish enum dictionaries left `src/lib/format.ts` for
+`src/lib/i18n/{vehicle,reservation}.ts`, which the callers now import per-domain. Every island that
+went down did so for the same reason — they were carrying `format`'s Polish vocabulary and no longer
+are.
+
+Two islands grew, both for the string they were supposed to gain:
+
+- **`GlobalSearch` +384 B gzip** — the `search` namespace (19 keys × 2 locales), which `SearchRows`
+  is folded into. This is the whole of it.
+- **`FleetList` / `StaffList` +12 / +37 B gzip** — the `vehicle` and `staff` namespaces reaching them
+  through shared chunks. Noise.
+
+### One measured near-miss, fixed before it shipped
+
+`HeroSearch` first came in at **7 285 B / 2 972 B — +3 508 raw / +1 394 gzip, nearly double**, which
+is exactly the shape criterion 5.13 is looking for. It was not a composed-map leak: the island had
+imported the `landing` namespace for six search-bar labels, and `landing` is ~35 keys of marketing
+prose the rest of the page renders server-side. Moving those six keys into `i18n/vehicle.ts` — which
+the island already imported for `categoryLabel` — brought it to **+59 raw / +14 gzip**.
+
+Worth recording because it is the failure mode the rule does NOT name: the accessor boundary in
+`i18n/types.ts` says "do not reach the composed map", and this obeyed it perfectly while still
+shipping a locale's worth of prose to a browser. The rule that catches it is the narrower one — an
+island imports the SMALLEST namespace that covers it, and a namespace an island touches must not
+accumulate server-only copy.

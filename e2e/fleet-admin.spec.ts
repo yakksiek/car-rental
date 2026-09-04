@@ -55,7 +55,7 @@ test.describe("the fleet banner is reachable from the row that set it", () => {
 
   test("a failed Przywróć from a row below the fold is readable without scrolling", async ({ page }) => {
     // The fixture is the whole reason this spec can fail. The seed's single
-    // retired vehicle (`Fiat Ducato (wycofany)`) sorts FIRST by name, so its
+    // retired vehicle (`Fiat Ducato (retired)`) sorts FIRST by name, so its
     // `Przywróć` sits near the top and its banner happens to be in view — a
     // property of the fixture, not of the design. This row sorts last.
     const { vehicleId, name } = await createRetiredVehicle();

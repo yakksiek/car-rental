@@ -4,6 +4,8 @@ import { FormField } from "./FormField";
 import { PasswordToggle } from "./PasswordToggle";
 import { SubmitButton } from "./SubmitButton";
 import { ServerError } from "./ServerError";
+import { auth } from "../../lib/i18n/auth";
+import { translator, type Locale } from "../../lib/i18n/types";
 
 interface Props {
   // "recovery" (R3/R9 — set a new password) or "invite" (R6/R10 — first password,
@@ -17,6 +19,8 @@ interface Props {
   // React copy of it. Astro renders it to static HTML before hydration, so it is
   // inert markup as far as this island is concerned.
   children?: ReactNode;
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
 }
 
 // Set-password form (S-08, designs R3/R9 recovery + R6/R10 invite-accept).
@@ -35,7 +39,8 @@ interface Props {
 // verifyOtp → updateUser({ password }). The enforced minimum is the config.toml
 // policy (6); the "10 chars / number or symbol" checklist in the design is an
 // illustrative hint, not a policy change.
-export default function ResetPasswordForm({ mode, serverError, children }: Props) {
+export default function ResetPasswordForm({ mode, serverError, children, locale }: Props) {
+  const t = translator(locale, auth);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -47,10 +52,10 @@ export default function ResetPasswordForm({ mode, serverError, children }: Props
   function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     const next: typeof errors = {};
     if (password.length < 6) {
-      next.password = "Hasło musi mieć co najmniej 6 znaków";
+      next.password = t("passwordTooShort");
     }
     if (confirm !== password) {
-      next.confirm = "Hasła nie są takie same";
+      next.confirm = t("passwordMismatch");
     }
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -70,19 +75,15 @@ export default function ResetPasswordForm({ mode, serverError, children }: Props
     >
       <div>
         {invite && (
-          <div className="text-primary mb-1.5 text-[11px] font-bold tracking-wide uppercase">Witaj we Flocie</div>
+          <div className="text-primary mb-1.5 text-[11px] font-bold tracking-wide uppercase">{t("inviteKicker")}</div>
         )}
         <h1 className="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">
-          {invite ? "Ustaw hasło" : "Ustaw nowe hasło"}
+          {invite ? t("inviteHeading") : t("resetHeading")}
         </h1>
-        <p className="text-muted-foreground mt-2 text-sm leading-[1.45]">
-          {invite
-            ? "Masz zaproszenie do zespołu dyspozytorni. Utwórz hasło, aby aktywować konto."
-            : "Wybierz silne hasło, którego nie używasz nigdzie indziej."}
-        </p>
+        <p className="text-muted-foreground mt-2 text-sm leading-[1.45]">{invite ? t("inviteSub") : t("resetSub")}</p>
       </div>
 
-      {/* Account box (`Ustawiasz hasło dla`). A direct flex child, so the form's
+      {/* Account box (`auth.settingPasswordFor`). A direct flex child, so the form's
           own gap-[18px] supplies the 18px the design puts above and below it —
           no margin of its own. */}
       {children}
@@ -90,19 +91,20 @@ export default function ResetPasswordForm({ mode, serverError, children }: Props
       <div className="flex flex-col gap-3.5">
         <FormField
           id="password"
-          label="Nowe hasło"
+          label={t("newPasswordLabel")}
           type={show ? "text" : "password"}
           value={password}
           onChange={(v) => {
             setPassword(v);
             if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
           }}
-          placeholder="Twoje nowe hasło"
+          placeholder={t("newPasswordPlaceholder")}
           autoComplete="new-password"
           error={errors.password}
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show}
               onToggle={() => {
                 setShow(!show);
@@ -112,14 +114,14 @@ export default function ResetPasswordForm({ mode, serverError, children }: Props
         />
         <FormField
           id="confirm"
-          label="Potwierdź hasło"
+          label={t("confirmLabel")}
           type={show ? "text" : "password"}
           value={confirm}
           onChange={(v) => {
             setConfirm(v);
             if (errors.confirm) setErrors((p) => ({ ...p, confirm: undefined }));
           }}
-          placeholder="Powtórz hasło"
+          placeholder={t("confirmPlaceholder")}
           autoComplete="new-password"
           error={errors.confirm}
           icon={<Lock className="size-[17px]" />}
@@ -128,8 +130,8 @@ export default function ResetPasswordForm({ mode, serverError, children }: Props
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText="Zapisywanie..." icon={<Check className="size-[17px]" />}>
-        {invite ? "Aktywuj konto" : "Zapisz hasło"}
+      <SubmitButton pending={submitting} pendingText={t("resetPending")} icon={<Check className="size-[17px]" />}>
+        {invite ? t("inviteSubmit") : t("resetSubmit")}
       </SubmitButton>
     </form>
   );

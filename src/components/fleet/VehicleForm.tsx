@@ -11,7 +11,8 @@ import { Textarea } from "../ui/textarea";
 
 // others
 import { cn } from "../../lib/utils";
-import { categoryLabelPl } from "../../lib/format";
+import { categoryLabel } from "../../lib/i18n/vehicle";
+import type { Locale } from "../../lib/i18n/types";
 import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema";
 import type { Vehicle, VehicleCategory } from "../../types";
 
@@ -291,9 +292,11 @@ function FormActions({
 interface Props {
   mode: "create" | "edit";
   vehicle?: Vehicle;
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
 }
 
-export default function VehicleForm({ mode, vehicle }: Props) {
+export default function VehicleForm({ mode, vehicle, locale }: Props) {
   const [fields, setFields] = React.useState<StringFields>(() => initialStrings(vehicle));
   const [category, setCategory] = React.useState<string>(vehicle?.category ?? "");
   const [transmission, setTransmission] = React.useState<string>(vehicle?.transmission ?? "");
@@ -568,7 +571,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
                           fieldErrors.category && !category && "border-destructive",
                         )}
                       >
-                        {categoryLabelPl(c)}
+                        {categoryLabel(c, locale)}
                       </button>
                     );
                   })}

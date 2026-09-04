@@ -2,7 +2,8 @@
 import * as React from "react";
 
 // others
-import type { Locale } from "../../lib/i18n/types";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { nav } from "../../lib/i18n/nav";
 import { cn } from "../../lib/utils";
 
 // Compact language switcher for the public chrome (design `shared.jsx`
@@ -31,6 +32,8 @@ import { cn } from "../../lib/utils";
 //     no caret either, so this is also the internally-consistent half of the
 //     design. Revisit only if a THIRD locale lands, which is what actually turns
 //     a toggle into a menu;
+//   • the design hardcodes the `aria-label` in English in BOTH `STR` halves —
+//     the same gap as its untranslated staff nav — so the Polish half is authored;
 //   • the design mutates `window.__flotaLang`; ours round-trips the server;
 //   • the design specifies no focus-visible state, so we author one.
 
@@ -63,6 +66,7 @@ function GlobeGlyph() {
 }
 
 export default function LangToggle({ locale, redirect, tone = "light" }: Props) {
+  const t = translator(locale, nav);
   const [submitting, setSubmitting] = React.useState(false);
   const dark = tone === "dark";
   // Two locales, so the switch target is simply "the other one". A third locale
@@ -83,7 +87,7 @@ export default function LangToggle({ locale, redirect, tone = "light" }: Props) 
       <button
         type="submit"
         disabled={submitting}
-        aria-label="Change language"
+        aria-label={t("changeLanguage")}
         className={cn(
           "inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-2.5 transition-colors",
           "focus-visible:ring-2 focus-visible:outline-none disabled:opacity-70",

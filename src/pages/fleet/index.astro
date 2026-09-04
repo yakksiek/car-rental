@@ -12,7 +12,8 @@ import FleetTypeScroll from "../../components/vehicle/FleetTypeScroll.tsx";
 import type { CatalogSort, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
 import { parseFilters, serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { getCategoryCounts, listVehicles, searchAvailableVehicles } from "../../lib/services/vehicles";
-import { categoryLabelPl, formatPayloadKg } from "../../lib/format";
+import { formatPayloadKg } from "../../lib/format";
+import { categoryLabel } from "../../lib/i18n/vehicle";
 import { dayMonthShort } from "../../lib/format-date";
 import { fromIsoDate } from "../../lib/date-iso";
 
@@ -57,7 +58,7 @@ const tabs: { category: VehicleCategory | null; label: string; count: number }[]
   { category: null, label: "Wszystkie", count: counts.total },
   ...CATEGORIES.map((category) => ({
     category,
-    label: categoryLabelPl(category),
+    label: categoryLabel(category, locale),
     count: counts.byCategory[category],
   })),
 ];
@@ -175,7 +176,7 @@ const chipClass =
           <span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Aktywne filtry:</span>
           {filters.category && (
             <a href={withoutFilter({ category: null })} class:list={chipClass}>
-              {categoryLabelPl(filters.category)}
+              {categoryLabel(filters.category, locale)}
               <span aria-hidden="true" class="text-base leading-none">
                 ×
               </span>

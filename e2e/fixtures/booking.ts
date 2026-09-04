@@ -120,7 +120,7 @@ export async function createBookedVehicle(): Promise<BookedVehicle> {
  * A RETIRED vehicle that lands at the BOTTOM of `/dashboard/vehicles`.
  *
  * `listFleet` orders by `name` ascending, and the one retired vehicle in the seed
- * (`Fiat Ducato (wycofany)`) therefore sorts FIRST — so its `Przywróć` sits near
+ * (`Fiat Ducato (retired)`) therefore sorts FIRST — so its `Przywróć` sits near
  * the top of the list and its banner happens to be in view. That is a property of
  * the fixture, not of the design (invite-journey-fixes plan, phase 11: "what the
  * seed understates"), and a spec resting on it would pass whether or not the fix

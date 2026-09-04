@@ -60,7 +60,7 @@ test.describe("demo session", () => {
     // Load a gated page first: it proves the stored session is live, so a
     // failure below is the demo gate and not an expired cookie.
     await page.goto("/dashboard");
-    await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const res = await page.request.post("/api/staff", { headers: headers(baseURL), data: INVALID_BODY });
 
@@ -77,7 +77,7 @@ test.describe("admin session (control)", () => {
 
   test("the identical request from a non-demo admin reaches body validation instead", async ({ page, baseURL }) => {
     await page.goto("/dashboard");
-    await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     const res = await page.request.post("/api/staff", { headers: headers(baseURL), data: INVALID_BODY });
 

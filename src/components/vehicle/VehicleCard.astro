@@ -5,7 +5,8 @@ import SpecIcon from "./SpecIcon.astro";
 
 // others
 import type { Vehicle } from "../../types";
-import { categoryLabelPl, formatPln, fuelLabelPl, formatPayloadKg, transmissionLabelPl } from "../../lib/format";
+import { formatPln, formatPayloadKg } from "../../lib/format";
+import { categoryLabel, fuelLabel, transmissionLabel } from "../../lib/i18n/vehicle";
 import { vehicleSlug } from "../../lib/slug";
 
 // The catalog card (design ScreenDesktopFleet → FleetCardBig). Used ONLY on /fleet,
@@ -42,8 +43,8 @@ const photo = vehicle.photos.length > 0 ? vehicle.photos[0] : null;
 
 const specs = [
   { icon: "seats" as const, value: vehicle.seats === null ? "—" : String(vehicle.seats) },
-  { icon: "transmission" as const, value: transmissionLabelPl(vehicle.transmission) },
-  { icon: "fuel" as const, value: fuelLabelPl(vehicle.fuel_type) },
+  { icon: "transmission" as const, value: transmissionLabel(vehicle.transmission, locale) },
+  { icon: "fuel" as const, value: fuelLabel(vehicle.fuel_type, locale) },
   { icon: "payload" as const, value: formatPayloadKg(vehicle.payload_capacity_kg, locale) },
 ];
 ---
@@ -56,7 +57,7 @@ const specs = [
     <!-- Eyebrow / title / subtitle -->
     <div class="min-w-0">
       <div class="text-muted-foreground text-[11px] font-bold tracking-[0.4px] uppercase">
-        {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabelPl(vehicle.category)}
+        {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabel(vehicle.category, locale)}
       </div>
       <div class="mt-2 truncate text-[21px] leading-[1.1] font-bold tracking-[-0.5px] text-[var(--flota-ink)]">
         {title}

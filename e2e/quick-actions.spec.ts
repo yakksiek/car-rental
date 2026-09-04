@@ -43,9 +43,9 @@ test("quick-action menu fetches the fleet on demand and opens the manual-reserva
   // silently swallowed.
   await waitForIslands(page);
 
-  await page.getByRole("button", { name: "Nowe" }).click();
+  await page.getByRole("button", { name: "New" }).click();
 
-  const reservationRow = page.getByRole("button", { name: /Nowa rezerwacja/ });
+  const reservationRow = page.getByRole("button", { name: /New reservation/ });
   await expect(reservationRow).toBeVisible();
 
   // Wait on the response, never a timeout. This is the request that only exists

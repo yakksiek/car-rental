@@ -6,6 +6,8 @@ import { HelpCircle, Home, Info, Menu, Receipt, Truck, X } from "lucide-react";
 import Brand from "./brand/Brand";
 
 // others
+import { translator, type Locale } from "../lib/i18n/types";
+import { nav as navCopy } from "../lib/i18n/nav";
 import { cn } from "../lib/utils";
 
 // Mobile nav overlay for the public header: a hamburger that opens a full-screen
@@ -24,17 +26,22 @@ type NavId = "home" | "fleet" | "pricing" | "faq" | "about";
 
 interface Props {
   active?: NavId;
+  /** Islands cannot read `Astro.locals`, so <SiteHeader> passes the request locale in. */
+  locale: Locale;
 }
 
-const NAV: { id: NavId; label: string; href: string; Icon: typeof Home }[] = [
-  { id: "home", label: "Start", href: "/", Icon: Home },
-  { id: "fleet", label: "Flota", href: "/fleet", Icon: Truck },
-  { id: "pricing", label: "Cennik", href: "/pricing", Icon: Receipt },
-  { id: "faq", label: "FAQ", href: "/faq", Icon: HelpCircle },
-  { id: "about", label: "O nas", href: "/about", Icon: Info },
+// Same nav model as <SiteHeader>, keyed rather than literal: the `fleet` NAV
+// ITEM translates to "Fleet" while <Brand> below keeps the untranslated brand.
+const NAV: { id: NavId; key: "home" | "fleet" | "pricing" | "faq" | "about"; href: string; Icon: typeof Home }[] = [
+  { id: "home", key: "home", href: "/", Icon: Home },
+  { id: "fleet", key: "fleet", href: "/fleet", Icon: Truck },
+  { id: "pricing", key: "pricing", href: "/pricing", Icon: Receipt },
+  { id: "faq", key: "faq", href: "/faq", Icon: HelpCircle },
+  { id: "about", key: "about", href: "/about", Icon: Info },
 ];
 
-export default function MobileNav({ active }: Props) {
+export default function MobileNav({ active, locale }: Props) {
+  const t = translator(locale, navCopy);
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -59,7 +66,7 @@ export default function MobileNav({ active }: Props) {
       {/* Hamburger → full-screen overlay. */}
       <button
         type="button"
-        aria-label="Menu"
+        aria-label={t("menu")}
         aria-expanded={open}
         onClick={() => {
           setOpen(true);
@@ -83,7 +90,7 @@ export default function MobileNav({ active }: Props) {
             </a>
             <button
               type="button"
-              aria-label="Zamknij menu"
+              aria-label={t("closeMenu")}
               onClick={() => {
                 setOpen(false);
               }}
@@ -107,7 +114,7 @@ export default function MobileNav({ active }: Props) {
                 )}
               >
                 <item.Icon className="size-7" />
-                {item.label}
+                {t(item.key)}
               </a>
             ))}
           </nav>

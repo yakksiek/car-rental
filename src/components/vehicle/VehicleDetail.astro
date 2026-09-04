@@ -7,7 +7,8 @@ import BookingWidget from "./BookingWidget.tsx";
 
 // others
 import type { Vehicle, VehicleBusyRange } from "../../types";
-import { categoryLabelPl, fuelLabelPl, formatPayloadKg, formatCargoDims, transmissionLabelPl } from "../../lib/format";
+import { formatPayloadKg, formatCargoDims } from "../../lib/format";
+import { categoryLabel, fuelLabel, transmissionLabel } from "../../lib/i18n/vehicle";
 
 // The vehicle detail page — also step 1 ("Daty") of the reservation flow
 // (design desktop-1). Left column: the hero (year · type, make + model title,
@@ -33,8 +34,8 @@ const title = [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join
 
 const specs = [
   { icon: "seats" as const, label: "Miejsca", value: vehicle.seats === null ? "—" : String(vehicle.seats) },
-  { icon: "transmission" as const, label: "Skrzynia", value: transmissionLabelPl(vehicle.transmission) },
-  { icon: "fuel" as const, label: "Paliwo", value: fuelLabelPl(vehicle.fuel_type) },
+  { icon: "transmission" as const, label: "Skrzynia", value: transmissionLabel(vehicle.transmission, locale) },
+  { icon: "fuel" as const, label: "Paliwo", value: fuelLabel(vehicle.fuel_type, locale) },
   { icon: "payload" as const, label: "Ładowność", value: formatPayloadKg(vehicle.payload_capacity_kg, locale) },
   {
     icon: "cargo" as const,
@@ -88,7 +89,7 @@ const trust = [
       <!-- Hero -->
       <header class="bg-card shadow-card rounded-3xl px-6 pt-8 pb-7 text-center lg:px-10 lg:pt-10 lg:pb-9">
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabelPl(vehicle.category)}
+          {vehicle.production_year ? `${vehicle.production_year} · ` : ""}{categoryLabel(vehicle.category, locale)}
         </p>
         <h1 class="text-foreground mt-2 text-4xl font-bold tracking-tight sm:text-5xl lg:text-[2.75rem]">{title}</h1>
 

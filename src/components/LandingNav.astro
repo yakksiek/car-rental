@@ -42,7 +42,7 @@ interface Props {
 }
 
 const { active = "home" } = Astro.props;
-const { locale } = Astro.locals;
+const { locale, t } = Astro.locals;
 
 // "Put me back where I was" after the switch; re-validated server-side.
 const redirect = Astro.url.pathname + Astro.url.search;
@@ -52,12 +52,13 @@ const PHONE_HREF = "tel:+48221002030";
 
 type NavId = "home" | "fleet" | "pricing" | "faq" | "about";
 
+// Same split as <SiteHeader>: the `fleet` NAV ITEM translates, <Brand> does not.
 const nav: { id: NavId; label: string; href: string }[] = [
-  { id: "home", label: "Start", href: "/" },
-  { id: "fleet", label: "Flota", href: "/fleet" },
-  { id: "pricing", label: "Cennik", href: "/pricing" },
-  { id: "faq", label: "FAQ", href: "/faq" },
-  { id: "about", label: "O nas", href: "/about" },
+  { id: "home", label: t("nav.home"), href: "/" },
+  { id: "fleet", label: t("nav.fleet"), href: "/fleet" },
+  { id: "pricing", label: t("nav.pricing"), href: "/pricing" },
+  { id: "faq", label: t("nav.faq"), href: "/faq" },
+  { id: "about", label: t("nav.about"), href: "/about" },
 ];
 ---
 
@@ -130,10 +131,10 @@ const nav: { id: NavId; label: string; href: string }[] = [
         href="/fleet"
         class="text-background hidden rounded-full bg-[var(--flota-ink-deep)] px-[22px] py-[13px] text-[14.5px] font-semibold whitespace-nowrap transition hover:opacity-90 @min-[1208px]:block"
       >
-        Przeglądaj flotę
+        {t("nav.browseFleet")}
       </a>
       <div class="@min-[1208px]:hidden">
-        <ActionMenu client:idle />
+        <ActionMenu client:idle locale={locale} />
       </div>
     </div>
   </div>
@@ -186,7 +187,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
 
     <div class="flex shrink-0 items-center gap-2 justify-self-end">
       <LangToggle client:idle locale={locale} redirect={redirect} tone="dark" />
-      <ActionMenu client:idle tone="dark" />
+      <ActionMenu client:idle locale={locale} tone="dark" />
     </div>
   </div>
 
@@ -201,11 +202,11 @@ const nav: { id: NavId; label: string; href: string }[] = [
 
     <div class="flex items-center gap-2">
       <LangToggle client:idle locale={locale} redirect={redirect} tone="dark" />
-      <ActionMenu client:idle tone="dark" />
+      <ActionMenu client:idle locale={locale} tone="dark" />
 
       <details class="group relative">
         <summary
-          aria-label="Menu"
+          aria-label={t("nav.menu")}
           class="flex size-10 list-none items-center justify-center rounded-[12px] bg-white/15 backdrop-blur-[6px] select-none [&::-webkit-details-marker]:hidden"
         >
           <svg

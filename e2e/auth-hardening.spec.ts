@@ -67,7 +67,7 @@ test("a recovery link opened in a signed-in browser is refused, and that session
   await page.goto(link);
 
   await page.waitForURL(/\/auth\/link-conflict/);
-  await expect(page.getByRole("heading", { name: "Ta przeglądarka jest już zalogowana" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re already signed in" })).toBeVisible();
 
   // It names the account that is IN THE WAY (the signed-in employee), not the
   // link's recipient — that is the whole point of the screen.
@@ -78,7 +78,7 @@ test("a recovery link opened in a signed-in browser is refused, and that session
   // untouched. If the callback had exchanged the token, this would now be the
   // fixture user's browser — or no session at all.
   await page.goto("/dashboard");
-  await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
 
 test("a recovery link is idempotent — reopening it renders the form again, and mints no session", async ({
@@ -93,7 +93,7 @@ test("a recovery link is idempotent — reopening it renders the form again, and
   // worth asserting — the refusal is what keeps a colleague's session intact.
   await page.goto(link);
   await page.waitForURL(/\/auth\/link-conflict/);
-  await expect(page.getByRole("button", { name: "Wyloguj się" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
   // A fresh context rather than clicking R11's own sign-out button: that button
   // posts to /api/auth/signout, which calls `signOut()` at supabase-js's default
@@ -106,7 +106,7 @@ test("a recovery link is idempotent — reopening it renders the form again, and
   await anonPage.goto(link);
   await anonPage.waitForURL(/\/auth\/reset-password/);
   await waitForIslands(anonPage);
-  await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toBeVisible();
+  await expect(anonPage.getByRole("heading", { name: "Set a new password" })).toBeVisible();
 
   // NO SESSION was minted by merely opening the link. Before invite-journey-fixes
   // this navigation answered 200 with the dashboard.
@@ -114,12 +114,13 @@ test("a recovery link is idempotent — reopening it renders the form again, and
   await anonPage.waitForURL(/\/auth\/signin/);
 
   // BUG 2, EXACTLY: the hire walked away without setting a password, and comes
-  // back to the same link. It must still work. This used to answer "Link wygasł",
+  // back to the same link. It must still work. This used to answer "This link has
+  // expired",
   // because the token was spent when the form first RENDERED.
   await anonPage.goto(link);
   await anonPage.waitForURL(/\/auth\/reset-password/);
   await waitForIslands(anonPage);
-  await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toBeVisible();
+  await expect(anonPage.getByRole("heading", { name: "Set a new password" })).toBeVisible();
 
   await anon.close();
 });
@@ -145,10 +146,10 @@ test("an INVITE link behaves the same — refused inside a session, idempotent o
   await anonPage.goto(link);
   await anonPage.waitForURL(/\/auth\/reset-password/);
   await waitForIslands(anonPage);
-  // Invite mode specifically — the welcome eyebrow and "Ustaw hasło", not the
-  // recovery screen's "Ustaw nowe hasło".
-  await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
+  // Invite mode specifically — the welcome eyebrow and "Set your password", not the
+  // recovery screen's "Set a new password".
+  await expect(anonPage.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await expect(anonPage.getByText("Welcome to Flota")).toBeVisible();
 
   // Idempotent, and still in INVITE mode on the second open — the type comes from
   // the cookie the callback stamped, which is re-resolved against the token every
@@ -156,8 +157,8 @@ test("an INVITE link behaves the same — refused inside a session, idempotent o
   await anonPage.goto(link);
   await anonPage.waitForURL(/\/auth\/reset-password/);
   await waitForIslands(anonPage);
-  await expect(anonPage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(anonPage.getByText("Witaj we Flocie")).toBeVisible();
+  await expect(anonPage.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await expect(anonPage.getByText("Welcome to Flota")).toBeVisible();
 
   await anon.close();
 });
@@ -191,12 +192,12 @@ test("a deactivated staffer on a live recovery link is told why, not shown the f
   // A real page, not a status. `Forbidden` is a 403 with no markup at all — the
   // exact thing this branch exists to replace.
   expect(response?.status()).toBe(200);
-  await expect(anonPage.getByRole("heading", { name: "Konto jest nieaktywne" })).toBeVisible();
+  await expect(anonPage.getByRole("heading", { name: "This account is inactive" })).toBeVisible();
 
   // And NOT the form. The island is server-rendered before it hydrates, so this
   // heading would already be in the HTML if the page had fallen through.
-  await expect(anonPage.getByRole("heading", { name: "Ustaw nowe hasło" })).toHaveCount(0);
-  await expect(anonPage.getByLabel("Nowe hasło")).toHaveCount(0);
+  await expect(anonPage.getByRole("heading", { name: "Set a new password" })).toHaveCount(0);
+  await expect(anonPage.getByLabel("New password")).toHaveCount(0);
 
   await anon.close();
 });

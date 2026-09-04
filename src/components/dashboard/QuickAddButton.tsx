@@ -11,10 +11,11 @@ import { QuickActionMenu } from "./QuickActionMenu";
 
 // others
 import { cn } from "../../lib/utils";
-import type { Locale } from "../../lib/i18n/types";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import { useFleetPicker } from "../hooks/useFleetPicker";
-import { DEMO_BLOCKED_MESSAGE } from "../../lib/staff-report";
-import { buildQuickActions, PROMOTED_ACTIONS, type PromotedActionKey, type ResolvedQuickAction } from "./quick-actions";
+import { demoBlockedMessage } from "../../lib/staff-report";
+import { buildQuickActions, promotedAction, type PromotedActionKey, type ResolvedQuickAction } from "./quick-actions";
 
 // The quick-action trigger (S-12b) — the design's `QuickAddButton`, ported at
 // the geometry in design-contract.md Surfaces 1–4.
@@ -44,14 +45,6 @@ import { buildQuickActions, PROMOTED_ACTIONS, type PromotedActionKey, type Resol
 // and stops covering the page. Radix already portals the desktop popover; these
 // two need it explicitly.
 
-const COPY = {
-  pill: "Nowe",
-  openMenu: "Szybka akcja",
-  eyebrow: "Szybka akcja",
-  emptyFleet: "Brak pojazdów do rezerwacji",
-  loadError: "Nie udało się pobrać floty. Spróbuj ponownie.",
-} as const;
-
 interface QuickAddButtonProps {
   mode: "desktop" | "mobile";
   /**
@@ -79,12 +72,13 @@ interface QuickAddButtonProps {
 }
 
 export default function QuickAddButton({ mode, promoted, isDemo = false, locale }: QuickAddButtonProps) {
+  const t = translator(locale, staff);
   const [open, setOpen] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const { vehicles, state, load } = useFleetPicker();
 
   const emptyFleet = state === "ready" && vehicles?.length === 0;
-  const items = buildQuickActions(promoted ? PROMOTED_ACTIONS[promoted] : undefined);
+  const items = buildQuickActions(locale, promoted ? promotedAction(promoted, locale) : undefined);
 
   const disabledKeys: Record<string, { hint?: string; pending?: boolean }> = {};
   if (state === "loading") {
@@ -95,7 +89,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
     // D3 `deviation(empty-state)` — the row goes disabled with a hint, but the
     // trigger and "Dodaj pojazd" stay: adding a vehicle is what fixes an empty
     // fleet, so this must not become S-12's whole-component `return null`.
-    disabledKeys.res = { hint: COPY.emptyFleet };
+    disabledKeys.res = { hint: t("emptyFleet") };
   }
   // The demo gate, reusing D3's exact affordance rather than inventing one: the
   // row goes disabled and its description slot carries the reason, which is what
@@ -105,12 +99,12 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
   // fenced, which is the point of showing the slice at all.
   if (isDemo) {
     if (promoted === "employee") {
-      disabledKeys.employee = { hint: DEMO_BLOCKED_MESSAGE };
+      disabledKeys.employee = { hint: demoBlockedMessage(locale) };
     }
     // `res` posts to /api/reservations/manual, which mails the
     // caller-supplied `customer_email`. That route is gated server-side, so
     // the row must not invite a click the server will 403.
-    disabledKeys.res = { hint: DEMO_BLOCKED_MESSAGE };
+    disabledKeys.res = { hint: demoBlockedMessage(locale) };
   }
 
   const pick = (item: ResolvedQuickAction) => {
@@ -144,7 +138,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
         // retryable (picking the row again re-requests); it never opens an
         // empty modal.
         <p role="status" className="text-primary px-3 pt-1 text-[11.5px]">
-          {COPY.loadError}
+          {t("fleetLoadError")}
         </p>
       )}
     </>
@@ -169,7 +163,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
       <>
         <Button
           type="button"
-          aria-label={COPY.openMenu}
+          aria-label={t("quickAction")}
           aria-expanded={open}
           onClick={() => {
             setOpen(true);
@@ -195,7 +189,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
               >
                 <span aria-hidden="true" className="mx-auto mb-3 block h-1 w-10 rounded-full bg-[var(--flota-hair)]" />
                 <div className="text-muted-foreground px-1.5 pb-1.5 text-[12px] font-bold tracking-[0.4px] uppercase">
-                  {COPY.eyebrow}
+                  {t("quickAction")}
                 </div>
                 {menu}
               </div>
@@ -217,7 +211,7 @@ export default function QuickAddButton({ mode, promoted, isDemo = false, locale 
             className="bg-foreground hover:bg-foreground/90 h-[38px] gap-[7px] rounded-[10px] py-0 pr-3.5 pl-3 text-[13px] font-[650] text-white shadow-none"
           >
             <Plus className="size-[15px]" />
-            {COPY.pill}
+            {t("quickAddPill")}
             <span className={cn("inline-flex transition-transform duration-150", open && "rotate-180")}>
               <ChevronDown className="size-[13px] text-white/70" />
             </span>

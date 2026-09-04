@@ -8,6 +8,9 @@ import { PasswordToggle } from "../auth/PasswordToggle";
 import { SubmitButton } from "../auth/SubmitButton";
 import { ServerError } from "../auth/ServerError";
 
+// others
+import type { Locale } from "../../lib/i18n/types";
+
 interface Props {
   serverError?: string | null;
   // Server-rendered markup slotted into the <form> from password.astro — today
@@ -15,6 +18,12 @@ interface Props {
   // rather than inventing a second pattern; Astro renders it to static HTML
   // before hydration, so it is inert as far as this island is concerned.
   children?: ReactNode;
+  /**
+   * Islands cannot read `Astro.locals`, so the page passes the request locale in.
+   * Only <PasswordToggle>'s aria-label needs it today — this form's own copy
+   * lands with the rest of the account screens in Phase 5.
+   */
+  locale: Locale;
 }
 
 // In-session change-password form (S-11, design-contract D6 — no mockup; forks the
@@ -23,7 +32,7 @@ interface Props {
 // the current password is verified server-side — the checks here are only to spare
 // an obviously-doomed round-trip. Plain useState: three fields is a small form (RHF
 // is reserved for 8+ per lessons).
-export default function ChangePasswordForm({ serverError, children }: Props) {
+export default function ChangePasswordForm({ serverError, children, locale }: Props) {
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -80,6 +89,7 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.current}
               onToggle={() => {
                 setShow((p) => ({ ...p, current: !p.current }));
@@ -102,6 +112,7 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.password}
               onToggle={() => {
                 setShow((p) => ({ ...p, password: !p.password }));
@@ -124,6 +135,7 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.confirm}
               onToggle={() => {
                 setShow((p) => ({ ...p, confirm: !p.confirm }));

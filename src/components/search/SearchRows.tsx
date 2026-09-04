@@ -4,9 +4,11 @@ import { ChevronRight, Truck } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
-import { estimatedTotal, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
-import type { Locale } from "../../lib/i18n/types";
-import { highlightSegments, relativeDayPl, searchDateRange } from "../../lib/search-format";
+import { estimatedTotal, formatPln, rentalDays } from "../../lib/format";
+import { reservationStatusLabel } from "../../lib/i18n/reservation";
+import { search } from "../../lib/i18n/search";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { highlightSegments, relativeDay, searchDateRange } from "../../lib/search-format";
 import type { SearchResultReservation, SearchResultReturn, SearchResultVehicle } from "../../types";
 
 // The three result rows of the ⌘K dropdown and its mobile full-screen twin, built
@@ -172,7 +174,7 @@ export function ReservationRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <MonoRef>{row.reference}</MonoRef>
-          <Pill label={reservationStatusLabelPl(row.status)} tone={RESERVATION_TONES[row.status]} />
+          <Pill label={reservationStatusLabel(row.status, locale)} tone={RESERVATION_TONES[row.status]} />
         </span>
         <span className="text-foreground mt-0.5 block truncate text-[13.5px] font-[600]">
           <Highlight text={row.customer_name} query={query} />
@@ -196,6 +198,7 @@ export function ReturnRow({
   locale,
   ...anchor
 }: { row: SearchResultReturn; query: string; today: string; locale: Locale } & RowAnchorProps) {
+  const t = translator(locale, search);
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
   const returned = row.status === "returned";
 
@@ -205,14 +208,14 @@ export function ReturnRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <MonoRef>{row.reference}</MonoRef>
-          <Pill label={returned ? "Zwrócono" : "Na dziś"} tone={returned ? "success" : "warning"} />
+          <Pill label={returned ? t("returned") : t("dueTodayPill")} tone={returned ? "success" : "warning"} />
         </span>
         <span className="text-foreground mt-0.5 block truncate text-[13.5px] font-[600]">
           <Highlight text={row.customer_name} query={query} />
         </span>
         <span className="text-muted-foreground block truncate text-[12px]">
           {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> ·{" "}
-          {relativeDayPl(row.return_date, today, locale)}
+          {relativeDay(row.return_date, today, locale)}
         </span>
       </span>
       <TrailingAffordance />

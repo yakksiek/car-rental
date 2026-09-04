@@ -30,7 +30,7 @@ const [profileResult, pending, overdueCount] = await Promise.all([
   countOverdueReturns(supabase),
 ]);
 
-const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+const { initials, displayName, roleLabel } = staffIdentity(user?.email, role, locale);
 const fullName = profileResult.data?.full_name ?? null;
 const name = fullName ?? displayName;
 

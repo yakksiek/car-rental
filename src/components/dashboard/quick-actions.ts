@@ -1,13 +1,21 @@
 // core
 import { CalendarDays, Truck, User, type LucideIcon } from "lucide-react";
 
+// others
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
+
 // The quick-action menu's canonical rows and the absorb merge (S-12b), kept out
 // of any component so the merge — the piece three mount sites depend on — is
 // unit-testable on its own.
 //
 // Ported from the design source `manual-reservation.jsx` (`MR_MENU` +
-// `QuickMenuList`'s `promoted` branch). Polish copy is canonical; the icons are
-// the source's `Icon.calendar` / `Icon.truck` mapped onto lucide.
+// `QuickMenuList`'s `promoted` branch); the icons are the source's
+// `Icon.calendar` / `Icon.truck` mapped onto lucide.
+//
+// The rows' labels are per-locale, so the canonical rows and the promoted ones
+// are FUNCTIONS of the locale rather than module constants. Nothing depended on
+// their identity — `buildQuickActions` already returned fresh objects.
 
 export interface QuickActionItem {
   key: string;
@@ -29,12 +37,21 @@ export type ResolvedQuickAction = QuickActionItem & { primary: boolean };
 /**
  * The two canonical rows, in order. `res` is primary — on desktop it is always
  * the crimson tile, because the desktop popover never absorbs (design contract
- * E12). Never mutated: `buildQuickActions` only ever reads it.
+ * E12). A fresh array each call: `buildQuickActions` only ever reads it.
  */
-export const QUICK_ACTIONS: QuickActionItem[] = [
-  { key: "res", icon: CalendarDays, label: "Nowa rezerwacja", desc: "Dodaj wynajem ręcznie" },
-  { key: "vehicle", icon: Truck, label: "Dodaj pojazd", desc: "Nowy pojazd do floty", href: "/dashboard/vehicles/new" },
-];
+export function quickActions(locale: Locale): QuickActionItem[] {
+  const t = translator(locale, staff);
+  return [
+    { key: "res", icon: CalendarDays, label: t("actionReservation"), desc: t("actionReservationDesc") },
+    {
+      key: "vehicle",
+      icon: Truck,
+      label: t("actionVehicle"),
+      desc: t("actionVehicleDesc"),
+      href: "/dashboard/vehicles/new",
+    },
+  ];
+}
 
 /** The canonical primary — `res`, matching `MR_MENU`'s `primary: true`. */
 const PRIMARY_KEY = "res";
@@ -48,13 +65,14 @@ const PRIMARY_KEY = "res";
  *
  * `QUICK_ACTIONS` is never mutated — every row is returned as a fresh object.
  */
-export function buildQuickActions(promoted?: QuickActionItem): ResolvedQuickAction[] {
+export function buildQuickActions(locale: Locale, promoted?: QuickActionItem): ResolvedQuickAction[] {
+  const canonical = quickActions(locale);
   if (!promoted) {
-    return QUICK_ACTIONS.map((item) => ({ ...item, primary: item.key === PRIMARY_KEY }));
+    return canonical.map((item) => ({ ...item, primary: item.key === PRIMARY_KEY }));
   }
   return [
     { ...promoted, primary: true },
-    ...QUICK_ACTIONS.filter((item) => item.key !== promoted.key).map((item) => ({ ...item, primary: false })),
+    ...canonical.filter((item) => item.key !== promoted.key).map((item) => ({ ...item, primary: false })),
   ];
 }
 
@@ -78,21 +96,24 @@ export type PromotedActionKey = "vehicle" | "employee";
  */
 export const ADD_EMPLOYEE_EVENT = "flota:add-employee";
 
-export const PROMOTED_ACTIONS: Record<PromotedActionKey, QuickActionItem> = {
-  vehicle: {
-    key: "vehicle",
-    icon: Truck,
-    label: "Dodaj pojazd",
-    desc: "Nowy pojazd do floty",
-    href: "/dashboard/vehicles/new",
-  },
-  employee: {
+export function promotedAction(key: PromotedActionKey, locale: Locale): QuickActionItem {
+  const t = translator(locale, staff);
+  if (key === "vehicle") {
+    return {
+      key: "vehicle",
+      icon: Truck,
+      label: t("actionVehicle"),
+      desc: t("actionVehicleDesc"),
+      href: "/dashboard/vehicles/new",
+    };
+  }
+  return {
     key: "employee",
     icon: User,
-    label: "Dodaj pracownika",
-    desc: "Zaproś do zespołu",
+    label: t("actionEmployee"),
+    desc: t("actionEmployeeDesc"),
     onPick: () => {
       window.dispatchEvent(new CustomEvent(ADD_EMPLOYEE_EVENT));
     },
-  },
-};
+  };
+}

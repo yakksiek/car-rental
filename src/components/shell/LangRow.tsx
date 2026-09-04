@@ -2,7 +2,8 @@
 import * as React from "react";
 
 // others
-import { LOCALE_ENDONYMS, type Locale } from "../../lib/i18n/types";
+import { LOCALE_ENDONYMS, translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import { cn } from "../../lib/utils";
 
 // The STAFF locale control (design `staff-desktop.jsx` `SidebarLangRow`), in the
@@ -66,6 +67,7 @@ function Spinner({ size }: { size: number }) {
 }
 
 export default function LangRow({ locale, redirect, variant }: Props) {
+  const t = translator(locale, staff);
   const [submitting, setSubmitting] = React.useState(false);
   // Two locales, so the switch target is simply "the other one".
   const next: Locale = locale === "en" ? "pl" : "en";
@@ -99,7 +101,7 @@ export default function LangRow({ locale, redirect, variant }: Props) {
       <button
         type="submit"
         disabled={submitting}
-        aria-label={sidebar ? "Change language" : undefined}
+        aria-label={sidebar ? t("changeLanguage") : undefined}
         className={cn(
           "flex items-center transition-colors disabled:opacity-60",
           sidebar
@@ -120,7 +122,9 @@ export default function LangRow({ locale, redirect, variant }: Props) {
           <span className="hidden lg:inline">{LOCALE_ENDONYMS[locale]}</span>
         ) : (
           <span className="min-w-0">
-            <span className="text-foreground block text-[13.5px] font-[650] tracking-[-0.15px]">Język</span>
+            <span className="text-foreground block text-[13.5px] font-[650] tracking-[-0.15px]">
+              {t("languageLabel")}
+            </span>
             <span className="text-muted-foreground mt-0.5 block text-[12px]">{LOCALE_ENDONYMS[locale]}</span>
           </span>
         )}

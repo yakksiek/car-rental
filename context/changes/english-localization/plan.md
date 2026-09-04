@@ -1388,40 +1388,40 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 3.1 Type check passes: `npx astro check`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 E2E suite green: `npm run test:e2e`
-- [x] 3.5 `grep -rn "HeaderContactToggle" src/` returns nothing
+- [x] 3.1 Type check passes: `npx astro check` — 0925f8e
+- [x] 3.2 Lint passes: `npm run lint` — 0925f8e
+- [x] 3.3 Build succeeds: `npm run build` — 0925f8e
+- [x] 3.4 E2E suite green: `npm run test:e2e` — 0925f8e
+- [x] 3.5 `grep -rn "HeaderContactToggle" src/` returns nothing — 0925f8e
 
 #### Manual
 
-- [x] 3.6 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
-- [x] 3.7 No header overflow at any width, including previously-overflowing states
-- [x] 3.8 `LangToggle` visible and operable at every public breakpoint
-- [x] 3.9 Staff sidebar control and account row both persist the choice
-- [x] 3.10 Switching locale preserves the current page, including on `/auth/*`
-- [x] 3.11 Regression gate: no nav wrap / height change at 768–790px or 840px, interaction exercised
-- [x] 3.12 Regression gate: landing phone reachable at ≥1136px, no width left with no phone affordance
-- [x] 3.13 Matches `design-contract.md`
+- [x] 3.6 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty — 0925f8e
+- [x] 3.7 No header overflow at any width, including previously-overflowing states — 0925f8e
+- [x] 3.8 `LangToggle` visible and operable at every public breakpoint — 0925f8e
+- [x] 3.9 Staff sidebar control and account row both persist the choice — 0925f8e
+- [x] 3.10 Switching locale preserves the current page, including on `/auth/*` — 0925f8e
+- [x] 3.11 Regression gate: no nav wrap / height change at 768–790px or 840px, interaction exercised — 0925f8e
+- [x] 3.12 Regression gate: landing phone reachable at ≥1136px, no width left with no phone affordance — 0925f8e
+- [x] 3.13 Matches `design-contract.md` — 0925f8e
 
 ### Phase 4: Recruiter Path to English
 
 #### Automated
 
-- [ ] 4.1 Type check passes: `npx astro check`
-- [ ] 4.2 Lint passes: `npm run lint`
-- [ ] 4.3 Unit + integration tests pass
-- [ ] 4.4 E2E suite green against English: `npm run test:e2e`
-- [ ] 4.5 Catalog key parity holds for every namespace touched
-- [ ] 4.10 `staff-admin`, `auth-hardening`, `quick-actions`, `demo-gate` re-anchored to English
+- [x] 4.1 Type check passes: `npx astro check`
+- [x] 4.2 Lint passes: `npm run lint`
+- [x] 4.3 Unit + integration tests pass
+- [x] 4.4 E2E suite green against English: `npm run test:e2e`
+- [x] 4.5 Catalog key parity holds for every namespace touched
+- [x] 4.10 `staff-admin`, `auth-hardening`, `quick-actions`, `demo-gate` re-anchored to English
 
 #### Manual
 
-- [ ] 4.6 Acceptance test: landing → footer → sign-in → Pulpit → nav, all English
-- [ ] 4.7 Switching to Polish restores previous copy exactly
-- [ ] 4.8 Seeded vehicle names read English; the two retained Polish rows render correctly
-- [ ] 4.9 Brand reads Flota; nav item reads Fleet
+- [x] 4.6 Acceptance test: landing → footer → sign-in → Pulpit → nav, all English
+- [x] 4.7 Switching to Polish restores previous copy exactly
+- [x] 4.8 Seeded vehicle names read English; the two retained Polish rows render correctly
+- [x] 4.9 Brand reads Flota; nav item reads Fleet
 
 ### Phase 5: Remaining App Copy
 

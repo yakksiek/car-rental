@@ -577,3 +577,47 @@ differ from both the current design source and the app in exactly that one respe
 else. Regenerating them needs `info-pages.jsx` on disk, which the harness above does not have.
 Treat them as current for geometry — every dimension was re-verified pixel-identical on 2026-09-02 —
 and stale for the caret alone.
+
+---
+
+## Copy decisions — Phase 4 (2026-09-02)
+
+The phase that turns the recruiter path English. Geometry is untouched — nothing below moves a
+pixel — so this section records only where the copy came from and where the design had no answer.
+
+### Harvested: `STR.EN` covers the public chrome and the whole auth flow
+
+Re-verified 2026-09-02 by key diff: **`STR.EN` and `STR.PL` hold 486 flattened keys each, exact
+parity** (the "248" above counted only the top level; the `proto` / `vform` / `auth` / `login` /
+`status` / `ret` / `types` sub-objects carry the rest). Every English string on the sign-in,
+forgot-password, check-email, expired, set-password, invite-accept, password-updated and
+link-conflict screens is `STR.EN.login.*` / `STR.EN.auth.*` verbatim, and the harvest is written up
+per-term in the change's `glossary.md`.
+
+### Design gaps this phase had to author
+
+Three, all of the same class as §2 item 9 — places the design source renders **Polish under EN**
+because a key is missing, so there was nothing to harvest:
+
+| Gap                       | What the design does                                                          | Shipped                                                 |
+| ------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `ActionMenu` row 1        | `t.callUs \|\| 'Zadzwoń'`, and `callUs` is in **neither** `STR` half          | `nav.call` — `Call` / `Zadzwoń` (from `STR.*.ret.call`) |
+| `LangToggle` `aria-label` | hardcoded `"Change language"` in **both** halves                              | `nav.changeLanguage` — the Polish half authored         |
+| Staff sidebar nav         | `staff-desktop.jsx` hardcodes its nav array and never reads `STR` (§2 item 9) | `i18n/staff.ts`, per `glossary.md` §3                   |
+
+The `LangToggle` line in "Implementation deviations — Phase 3" therefore reads `exact` for the
+English half only; its Polish half is new here. The row LABEL is unaffected — it is the endonym and
+never translates, which §"`SidebarLangRow` as shipped" already records.
+
+### One string changed outside the harvest
+
+`layout.tagline`'s English half moved from `"utility vehicle rental"` (invented at Phase 1) to
+`"commercial vehicle rental"`, because `STR.EN.tagline` is _"Commercial vehicles, by the day or the
+month."_ and the landing `<h1>` now reads **Commercial / vehicles** from it. A document title that
+disagreed with the page's own headline was the Phase 1 seeding's one un-harvested guess.
+
+### Not a design question
+
+Two rows of seeded vehicle data stay Polish on purpose — `MAN TGL Chłodnia` and
+`Scania P280 Skrzyniowy`. They are the standing demonstration of frame decision 2 (real user-entered
+text is never machine-translated), and they render under English chrome by design, not by omission.

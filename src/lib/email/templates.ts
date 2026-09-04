@@ -1,13 +1,6 @@
 // others
-import {
-  estimatedTotal,
-  formatDuration,
-  formatInteger,
-  formatPln,
-  plural,
-  rejectionReasonLabelPl,
-  rentalDays,
-} from "../format";
+import { estimatedTotal, formatDuration, formatInteger, formatPln, plural, rentalDays } from "../format";
+import { rejectionReasonLabel } from "../i18n/reservation";
 import type { PluralForms } from "../format";
 import type { Locale } from "../i18n/types";
 import type { RejectionReason } from "../../types";
@@ -158,7 +151,7 @@ export interface ReservationRejectedParams {
 
 /** Rejection email: the request could not be confirmed, with the canned reason. */
 export function reservationRejectedEmail(params: ReservationRejectedParams): EmailContent {
-  const reasonLabel = rejectionReasonLabelPl(params.reason);
+  const reasonLabel = rejectionReasonLabel(params.reason, ARTIFACT_LOCALE);
   const noteLine = params.note ? `Szczegóły: ${params.note}` : null;
 
   const subject = `FleetRent — wniosek ${params.reference} odrzucony`;

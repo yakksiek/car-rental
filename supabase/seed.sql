@@ -17,6 +17,18 @@
 
 -- ---------------------------------------------------------------------------
 -- vehicles — one+ per category, full pricing, one retired (is_active = false)
+--
+-- *** `name` reads ENGLISH, with TWO rows deliberately left in Polish. ***
+-- Seeded vehicle names are fixture data we control, not text a user typed, so
+-- they follow the chrome (english-localization Phase 4 §5). The two exceptions —
+-- `MAN TGL Chłodnia` and `Scania P280 Skrzyniowy` — are the change's standing
+-- proof of frame decision 2: real user-entered text is NEVER machine-translated,
+-- so English chrome around a Polish value is the CORRECT outcome, and one of the
+-- two carries a diacritic so the encoding path is exercised with it. Do not
+-- "finish the job" by translating them.
+--
+-- `protocol_damages.location` further down stays Polish for the same reason, and
+-- because it is the diacritic fixture the PDF path is proved against.
 -- ---------------------------------------------------------------------------
 
 insert into vehicles (
@@ -45,7 +57,7 @@ insert into vehicles (
   -- passenger_van
   (
     '33333333-3333-3333-3333-333333333333',
-    'Volkswagen Crafter 9-osobowy', 'WX 3102P', 'passenger_van', 'Volkswagen', 'Crafter', 2023, 'diesel',
+    'Volkswagen Crafter 9-seater', 'WX 3102P', 'passenger_van', 'Volkswagen', 'Crafter', 2023, 'diesel',
     900.00, null, null, null,
     '{"https://picsum.photos/seed/crafter-1/960/600","https://picsum.photos/seed/crafter-2/960/600","https://picsum.photos/seed/crafter-3/960/600","https://picsum.photos/seed/crafter-4/960/600"}',
     279.00, 6500.00, 2200.00, 1.30, 350,
@@ -54,7 +66,7 @@ insert into vehicles (
   -- car_transporter
   (
     '44444444-4444-4444-4444-444444444444',
-    'Iveco Daily Autolaweta', 'WX 8867L', 'car_transporter', 'Iveco', 'Daily', 2020, 'diesel',
+    'Iveco Daily Car Transporter', 'WX 8867L', 'car_transporter', 'Iveco', 'Daily', 2020, 'diesel',
     2800.00, 600.00, 210.00, null,
     '{"https://picsum.photos/seed/daily-1/960/600","https://picsum.photos/seed/daily-2/960/600","https://picsum.photos/seed/daily-3/960/600"}',
     349.00, 8200.00, 3000.00, 1.80, 250,
@@ -63,6 +75,7 @@ insert into vehicles (
   -- refrigerated_truck
   (
     '55555555-5555-5555-5555-555555555555',
+    -- RETAINED IN POLISH on purpose (see the block comment above).
     'MAN TGL Chłodnia', 'WX 4415R', 'refrigerated_truck', 'MAN', 'TGL', 2021, 'diesel',
     3500.00, 720.00, 245.00, 260.00,
     '{"https://picsum.photos/seed/tgl-1/960/600","https://picsum.photos/seed/tgl-2/960/600","https://picsum.photos/seed/tgl-3/960/600"}',
@@ -72,6 +85,7 @@ insert into vehicles (
   -- flatbed_truck
   (
     '66666666-6666-6666-6666-666666666666',
+    -- RETAINED IN POLISH on purpose (see the block comment above).
     'Scania P280 Skrzyniowy', 'WX 9038S', 'flatbed_truck', 'Scania', 'P280', 2019, 'diesel',
     8000.00, 760.00, 248.00, null,
     '{"https://picsum.photos/seed/scania-1/960/600","https://picsum.photos/seed/scania-2/960/600","https://picsum.photos/seed/scania-3/960/600"}',
@@ -82,7 +96,7 @@ insert into vehicles (
   -- filtering later: it must NOT appear in `where is_active = true` queries.
   (
     '77777777-7777-7777-7777-777777777777',
-    'Fiat Ducato (wycofany)', 'WX 2276D', 'cargo_van', 'Fiat', 'Ducato', 2016, 'diesel',
+    'Fiat Ducato (retired)', 'WX 2276D', 'cargo_van', 'Fiat', 'Ducato', 2016, 'diesel',
     1200.00, 320.00, 170.00, 185.00,
     '{}', 179.00, 4200.00, 1500.00, 1.00, 300,
     3, 'manual', false

@@ -5,7 +5,8 @@ import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { reservationStatusLabel } from "../../lib/i18n/reservation";
 import { dayMonthShort } from "../../lib/format-date";
 import type { ReservationStatus, ReservationStatusView } from "../../types";
 
@@ -26,7 +27,7 @@ const { locale } = Astro.locals;
 
 // Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
 // produces; confirmed/rejected/cancelled arrive with S-03. The WORDING now comes
-// from `reservationStatusLabelPl` so the S-13 search rows cannot drift from it;
+// from `reservationStatusLabel` so the S-13 search rows cannot drift from it;
 // the tint stays here because each surface's pill idiom differs.
 const PILL_CLASSES: Record<ReservationStatus, string> = {
   pending: "bg-warning/10 text-warning",
@@ -34,7 +35,7 @@ const PILL_CLASSES: Record<ReservationStatus, string> = {
   rejected: "bg-destructive/10 text-destructive",
   cancelled: "bg-destructive/10 text-destructive",
 };
-const pill = { label: reservationStatusLabelPl(view.status), classes: PILL_CLASSES[view.status] };
+const pill = { label: reservationStatusLabel(view.status, locale), classes: PILL_CLASSES[view.status] };
 
 const pickup = fromIsoDate(view.pickup_date);
 const returnDate = fromIsoDate(view.return_date);

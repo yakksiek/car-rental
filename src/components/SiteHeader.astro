@@ -34,22 +34,22 @@ interface Props {
 }
 
 const { active } = Astro.props;
-const { locale } = Astro.locals;
+const { locale, t } = Astro.locals;
 
 // "Put me back where I was" after the switch. Re-validated server-side by
 // `safeInternalPath`, so a tampered value can only resolve to an internal path.
 // The query string rides along: a filtered `/fleet?type=cargo` must survive.
 const redirect = Astro.url.pathname + Astro.url.search;
 
-// Polish is still canonical here — the nav copy moves into the catalog with the
-// rest of the public surfaces (the "Flota" nav item becomes "Fleet" while the
-// BRAND stays "Flota"; identical string, opposite requirement).
+// The "Flota" nav item becomes "Fleet" while <Brand> keeps the untranslated
+// BRAND — identical string, opposite requirement, which is why they live in
+// different catalog namespaces (`nav` vs `layout`).
 const nav: { id: NavId; label: string; href: string }[] = [
-  { id: "home", label: "Start", href: "/" },
-  { id: "fleet", label: "Flota", href: "/fleet" },
-  { id: "pricing", label: "Cennik", href: "/pricing" },
-  { id: "faq", label: "FAQ", href: "/faq" },
-  { id: "about", label: "O nas", href: "/about" },
+  { id: "home", label: t("nav.home"), href: "/" },
+  { id: "fleet", label: t("nav.fleet"), href: "/fleet" },
+  { id: "pricing", label: t("nav.pricing"), href: "/pricing" },
+  { id: "faq", label: t("nav.faq"), href: "/faq" },
+  { id: "about", label: t("nav.about"), href: "/about" },
 ];
 ---
 
@@ -102,11 +102,11 @@ const nav: { id: NavId; label: string; href: string }[] = [
           href="/fleet"
           class="info-cta bg-ink-deep h-[44px] shrink-0 items-center rounded-full px-[22px] text-[14.5px] font-semibold whitespace-nowrap text-white"
         >
-          Zarezerwuj
+          {t("nav.reserve")}
         </a>
 
         <div class="info-toggle shrink-0">
-          <ActionMenu client:idle />
+          <ActionMenu client:idle locale={locale} />
         </div>
       </div>
     </div>
@@ -135,8 +135,8 @@ const nav: { id: NavId; label: string; href: string }[] = [
 
     <div class="flex items-center gap-2">
       <LangToggle client:idle locale={locale} redirect={redirect} />
-      <ActionMenu client:idle />
-      <MobileNav active={active} client:idle />
+      <ActionMenu client:idle locale={locale} />
+      <MobileNav active={active} locale={locale} client:idle />
     </div>
   </div>
 </header>

@@ -11,7 +11,11 @@ import { defineDict } from "./types";
 // namespaces — see the plan's "Critical Implementation Details".
 export const layout = defineDict({
   en: {
-    tagline: "utility vehicle rental",
+    // "commercial", not "utility": `STR.EN.tagline` reads "Commercial
+    // vehicles, by the day or the month.", and the landing <h1> now says the
+    // same — a document title that disagreed with the page's own headline was
+    // the Phase 1 seeding's one un-harvested guess.
+    tagline: "commercial vehicle rental",
     // Banner label before a missing-config message.
     noticePrefix: "Note:",
     // Fallback link text when a config entry supplies no label of its own.

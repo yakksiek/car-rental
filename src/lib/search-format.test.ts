@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 // others
-import { highlightSegments, relativeDayPl, searchDateRange } from "./search-format";
+import { highlightSegments, relativeDay, searchDateRange } from "./search-format";
 
 // Unit suite for the search rows' pure presentation helpers (S-13 Phase 3). These
 // carry the two things most likely to break silently in a result row: the date
@@ -43,27 +43,34 @@ describe("searchDateRange", () => {
   });
 });
 
-describe("relativeDayPl", () => {
+describe("relativeDay", () => {
   const TODAY = "2026-08-10";
 
   it("words the day relative to today inside the ±1 window", () => {
-    expect(relativeDayPl("2026-08-10", TODAY, "pl")).toBe("dziś");
-    expect(relativeDayPl("2026-08-09", TODAY, "pl")).toBe("wczoraj");
-    expect(relativeDayPl("2026-08-11", TODAY, "pl")).toBe("jutro");
+    expect(relativeDay("2026-08-10", TODAY, "pl")).toBe("dziś");
+    expect(relativeDay("2026-08-09", TODAY, "pl")).toBe("wczoraj");
+    expect(relativeDay("2026-08-11", TODAY, "pl")).toBe("jutro");
   });
 
   it("falls back to an abbreviated date beyond that window", () => {
-    expect(relativeDayPl("2026-08-07", TODAY, "pl")).toBe("07 sie");
-    expect(relativeDayPl("2026-09-01", TODAY, "pl")).toBe("01 wrz");
+    expect(relativeDay("2026-08-07", TODAY, "pl")).toBe("07 sie");
+    expect(relativeDay("2026-09-01", TODAY, "pl")).toBe("01 wrz");
   });
 
   it("crosses month and year boundaries without drifting", () => {
-    expect(relativeDayPl("2026-07-31", "2026-08-01", "pl")).toBe("wczoraj");
-    expect(relativeDayPl("2026-01-01", "2025-12-31", "pl")).toBe("jutro");
+    expect(relativeDay("2026-07-31", "2026-08-01", "pl")).toBe("wczoraj");
+    expect(relativeDay("2026-01-01", "2025-12-31", "pl")).toBe("jutro");
+  });
+
+  it("words the same three days in English", () => {
+    expect(relativeDay("2026-08-10", TODAY, "en")).toBe("today");
+    expect(relativeDay("2026-08-09", TODAY, "en")).toBe("yesterday");
+    expect(relativeDay("2026-08-11", TODAY, "en")).toBe("tomorrow");
+    expect(relativeDay("2026-08-07", TODAY, "en")).toBe("07 Aug");
   });
 
   it("returns a dash for a malformed date", () => {
-    expect(relativeDayPl("", TODAY, "pl")).toBe("—");
+    expect(relativeDay("", TODAY, "pl")).toBe("—");
   });
 });
 

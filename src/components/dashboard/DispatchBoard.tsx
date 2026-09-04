@@ -11,7 +11,8 @@ import DispatchSchedule, { MobileScheduleSection, MobileSection, toPickupItem, t
 import { cn } from "../../lib/utils";
 import { isSectionVisible } from "../../lib/dispatch-board";
 import type { DayCounts, ScheduleGroups, SectionKey } from "../../lib/dispatch-board";
-import type { Locale } from "../../lib/i18n/types";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import type { PendingReservation } from "../../types";
 
 // The dispatch cockpit's single island. It owns both breakpoints so the compact
@@ -38,12 +39,17 @@ export interface DispatchBoardProps {
   locale: Locale;
 }
 
-/** The four mobile chips, in order; the fill is per-chip tone (design-contract §F). */
-const CHIPS: { key: SectionKey; label: string; selectedFill: string }[] = [
-  { key: "wszystko", label: "Wszystko", selectedFill: "bg-foreground" },
-  { key: "wydania", label: "Wydania", selectedFill: "bg-primary" },
-  { key: "zwroty", label: "Zwroty", selectedFill: "bg-foreground" },
-  { key: "wnioski", label: "Wnioski", selectedFill: "bg-warning" },
+// The four mobile chips, in order; the fill is per-chip tone (design-contract §F).
+//
+// The `SectionKey`s stay POLISH (`wszystko` / `wydania` / …): they are the
+// `?section` URL parameter's values, not copy. Translating them would break every
+// deep-link already in the wild and would make the URL vary by locale for no
+// gain — only `labelKey` is copy.
+const CHIPS: { key: SectionKey; labelKey: keyof typeof staff.en; selectedFill: string }[] = [
+  { key: "wszystko", labelKey: "chipAll", selectedFill: "bg-foreground" },
+  { key: "wydania", labelKey: "navPickups", selectedFill: "bg-primary" },
+  { key: "zwroty", labelKey: "navReturns", selectedFill: "bg-foreground" },
+  { key: "wnioski", labelKey: "navRequests", selectedFill: "bg-warning" },
 ];
 
 /** One chip: a white card pill unselected, a tone fill with white text selected. */
@@ -91,6 +97,7 @@ export default function DispatchBoard({
   initialSection = "wszystko",
   locale,
 }: DispatchBoardProps) {
+  const t = translator(locale, staff);
   const [section, setSection] = React.useState<SectionKey>(initialSection);
 
   // Mirror the active chip into `?section` — `history.replaceState`, not a
@@ -127,13 +134,13 @@ export default function DispatchBoard({
     <>
       {/* ── Desktop cockpit (lg+; the page owns the width, so `lg:` is safe) ── */}
       <div className="hidden lg:block">
-        <StatCards counts={counts} />
+        <StatCards counts={counts} locale={locale} />
         <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
           <div>
             <h2 className="text-muted-foreground mb-3 text-[13px] font-bold tracking-[0.4px] uppercase">
-              Harmonogram na dziś
+              {t("scheduleHeading")}
             </h2>
-            <DispatchSchedule groups={groups} today={today} origin={origin} />
+            <DispatchSchedule groups={groups} today={today} origin={origin} locale={locale} />
           </div>
           <NeedDecisionPanel reservations={pending} locale={locale} />
         </div>
@@ -145,7 +152,7 @@ export default function DispatchBoard({
           {CHIPS.map((chip) => (
             <Chip
               key={chip.key}
-              label={chip.label}
+              label={t(chip.labelKey)}
               count={chipCounts[chip.key]}
               selected={section === chip.key}
               selectedFill={chip.selectedFill}
@@ -158,17 +165,29 @@ export default function DispatchBoard({
 
         <div className="mt-5">
           {isSectionVisible(section, "wydania") && (
-            <MobileScheduleSection kind="pickups" label="Wydania" total={counts.pickups} items={pickupItems} />
+            <MobileScheduleSection
+              kind="pickups"
+              label={t("navPickups")}
+              total={counts.pickups}
+              items={pickupItems}
+              locale={locale}
+            />
           )}
           {isSectionVisible(section, "zwroty") && (
-            <MobileScheduleSection kind="returns" label="Zwroty" total={counts.returns} items={returnItems} />
+            <MobileScheduleSection
+              kind="returns"
+              label={t("navReturns")}
+              total={counts.returns}
+              items={returnItems}
+              locale={locale}
+            />
           )}
-          {/* Wnioski sits in the amber tinted panel like the other two sections; the
-              band carries the title and the "Otwórz" link, so `NeedDecisionPanel`
+          {/* Requests sits in the amber tinted panel like the other two sections; the
+              band carries the title and the "open" link, so `NeedDecisionPanel`
               renders its cards without its own header (its empty state is kept). */}
           {isSectionVisible(section, "wnioski") && (
             <MobileSection
-              title={`Wnioski · ${counts.wnioski}`}
+              title={`${t("navRequests")} · ${counts.wnioski}`}
               icon={Bell}
               tint="amber"
               action={
@@ -177,7 +196,7 @@ export default function DispatchBoard({
                     href="/dashboard/reservations?from=pulpit"
                     className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
                   >
-                    Otwórz
+                    {t("open")}
                     <ArrowRight className="size-3.5" />
                   </a>
                 )

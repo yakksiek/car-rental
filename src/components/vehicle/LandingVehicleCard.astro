@@ -5,7 +5,8 @@ import SpecIcon from "./SpecIcon.astro";
 
 // others
 import type { Vehicle } from "../../types";
-import { categoryLabelPl, formatPln, fuelLabelPl, formatPayloadKg, transmissionLabelPl } from "../../lib/format";
+import { formatPln, formatPayloadKg } from "../../lib/format";
+import { categoryLabel, fuelLabel, transmissionLabel } from "../../lib/i18n/vehicle";
 import { vehicleSlug } from "../../lib/slug";
 
 // Landing-only "Popularne" card (S8) — a FORK of the shared VehicleCard (which backs
@@ -23,13 +24,13 @@ interface Props {
 }
 
 const { vehicle } = Astro.props;
-const { locale } = Astro.locals;
+const { locale, t } = Astro.locals;
 
 // Title = make + model on one line (e.g. "Renault Master"); subtitle = category · year
-// (e.g. "Furgon · 2021"), matching the live design's descriptor + year — the category
+// (e.g. "Cargo van · 2021"), matching the live design's descriptor + year — the category
 // is the descriptor our data model carries.
 const title = [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ");
-const subtitle = [categoryLabelPl(vehicle.category), vehicle.production_year].filter(Boolean).join(" · ");
+const subtitle = [categoryLabel(vehicle.category, locale), vehicle.production_year].filter(Boolean).join(" · ");
 const slug = vehicleSlug(vehicle.make ?? vehicle.name, vehicle.model ?? "");
 const href = `/fleet/${vehicle.id}/${slug}`;
 
@@ -39,8 +40,8 @@ const photo = vehicle.photos.length > 0 ? vehicle.photos[0] : null;
 
 const specs = [
   { icon: "seats" as const, value: vehicle.seats === null ? "—" : String(vehicle.seats) },
-  { icon: "transmission" as const, value: transmissionLabelPl(vehicle.transmission) },
-  { icon: "fuel" as const, value: fuelLabelPl(vehicle.fuel_type) },
+  { icon: "transmission" as const, value: transmissionLabel(vehicle.transmission, locale) },
+  { icon: "fuel" as const, value: fuelLabel(vehicle.fuel_type, locale) },
   { icon: "payload" as const, value: formatPayloadKg(vehicle.payload_capacity_kg, locale) },
 ];
 ---
@@ -104,14 +105,16 @@ const specs = [
         class="mt-3.5 flex flex-col items-stretch gap-3.5 @min-[280px]:flex-row @min-[280px]:items-end @min-[280px]:justify-between @min-[280px]:gap-3 @min-[400px]:items-center"
       >
         <div class="text-foreground text-[24px] leading-none font-bold tracking-tight @min-[400px]:text-[22px]">
-          <span class="text-muted-foreground hidden text-[12px] font-medium @min-[400px]:inline">od </span>{
-            formatPln(vehicle.daily_rate, locale)
-          }<span class="text-muted-foreground text-[13px] font-medium">&nbsp;/dzień</span>
+          <span class="text-muted-foreground hidden text-[12px] font-medium @min-[400px]:inline">
+            {t("vehicle.from")}{" "}
+          </span>{formatPln(vehicle.daily_rate, locale)}<span class="text-muted-foreground text-[13px] font-medium"
+            >&nbsp;{t("vehicle.perDay")}</span
+          >
         </div>
         <span
           class="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-[12px] bg-[var(--flota-ink-deep)] px-3.5 text-[13.5px] font-[650] text-white @min-[280px]:w-auto @min-[400px]:h-10 @min-[400px]:rounded-[11px] @min-[400px]:text-[14px]"
         >
-          Rezerwuj
+          {t("vehicle.reserve")}
           <svg
             class="size-3.5"
             viewBox="0 0 24 24"

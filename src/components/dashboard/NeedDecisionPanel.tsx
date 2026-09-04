@@ -12,29 +12,18 @@ import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatPln, rentalDays } from "../../lib/format";
 import { dayMonthRange } from "../../lib/format-date";
-import type { Locale } from "../../lib/i18n/types";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { PendingReservation, RejectionReason } from "../../types";
 
 // The dashboard "Need a decision" panel (S-03 follow-up L3). The design's staff
 // dashboard leads with this: the pending queue surfaced as a quick-action
-// mini-list with inline Odrzuć/Zatwierdź + an "Otwórz →" link to the full queue.
+// mini-list with inline reject/approve + an "open →" link to the full queue.
 // It reuses the one decision mechanism (useReservationDecision + ReasonSheet +
 // ResultOverlay) the queue and calendar share; only the local view state is
 // wired here. The rest of the dispatch dashboard (greeting, Pickups/Returns/
 // Overdue tiles, Today's Schedule) needs S-05/S-06/S-07 data and stays deferred.
-
-const COPY = {
-  title: "Wymaga decyzji",
-  open: "Otwórz",
-  empty: "Brak oczekujących wniosków",
-  emptyHint: "Nowe zgłoszenia pojawią się tutaj.",
-  approve: "Zatwierdź",
-  reject: "Odrzuć",
-  more: "Zobacz wszystkie",
-  alreadyHandled: "Ten wniosek został już rozpatrzony przez kogoś innego.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-} as const;
 
 // How many cards to preview before deferring to the full queue.
 const PREVIEW_LIMIT = 4;
@@ -50,9 +39,9 @@ function formatRange(pickup: string, returnDate: string, locale: Locale): string
   return dayMonthRange(from, to, locale, { pad: true });
 }
 
-function vehicleName(r: PendingReservation): string {
+function vehicleName(r: PendingReservation, fallback: string): string {
   const label = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ");
-  return label === "" ? "Pojazd" : label;
+  return label === "" ? fallback : label;
 }
 
 function DecisionCard({
@@ -68,6 +57,7 @@ function DecisionCard({
   onReject: () => void;
   locale: Locale;
 }) {
+  const t = translator(locale, staff);
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
   const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days), locale);
 
@@ -86,7 +76,8 @@ function DecisionCard({
       <div className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs">
         <Calendar className="size-3.5 shrink-0" />
         <span className="truncate">
-          {formatRange(reservation.pickup_date, reservation.return_date, locale)} · {vehicleName(reservation)}
+          {formatRange(reservation.pickup_date, reservation.return_date, locale)} ·{" "}
+          {vehicleName(reservation, t("vehicleFallback"))}
         </span>
         <span className="text-foreground ml-auto shrink-0 text-sm font-bold tracking-tight">{total}</span>
       </div>
@@ -97,11 +88,11 @@ function DecisionCard({
           disabled={busy}
           onClick={onReject}
         >
-          {COPY.reject}
+          {t("reject")}
         </Button>
         <Button className="h-10 flex-[1.6]" disabled={busy} onClick={onApprove}>
           <Check className="size-4" />
-          {COPY.approve}
+          {t("approve")}
         </Button>
       </div>
     </div>
@@ -123,6 +114,7 @@ export default function NeedDecisionPanel({
    */
   showHeader?: boolean;
 }) {
+  const t = translator(locale, staff);
   const [reservations, setReservations] = React.useState<PendingReservation[]>(initial);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
@@ -146,10 +138,10 @@ export default function NeedDecisionPanel({
     }
     if (outcome.status === "already_decided") {
       removeFromQueue(id);
-      setBanner(COPY.alreadyHandled);
+      setBanner(t("alreadyHandled"));
       return;
     }
-    setBanner(COPY.genericError);
+    setBanner(t("genericError"));
   }
 
   function onResultDone() {
@@ -168,13 +160,15 @@ export default function NeedDecisionPanel({
     <div className="relative">
       {showHeader && (
         <div className="mb-3 flex items-center justify-between px-1">
-          <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">{COPY.title}</span>
+          <span className="text-muted-foreground text-[13px] font-bold tracking-wide uppercase">
+            {t("decisionTitle")}
+          </span>
           {count > 0 && (
             <a
               href="/dashboard/reservations?from=pulpit"
               className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
             >
-              {COPY.open}
+              {t("open")}
               <ArrowRight className="size-3.5" />
             </a>
           )}
@@ -189,8 +183,8 @@ export default function NeedDecisionPanel({
 
       {count === 0 ? (
         <div className={cn(cardClass, "flex flex-col items-center justify-center px-6 py-10 text-center")}>
-          <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
-          <div className="text-muted-foreground mt-1 text-sm">{COPY.emptyHint}</div>
+          <div className="text-foreground text-base font-[650]">{t("decisionEmpty")}</div>
+          <div className="text-muted-foreground mt-1 text-sm">{t("decisionEmptyHint")}</div>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -211,7 +205,7 @@ export default function NeedDecisionPanel({
               href="/dashboard/reservations?from=pulpit"
               className="text-muted-foreground hover:text-foreground py-1 text-center text-sm font-medium"
             >
-              {COPY.more} ({count}) →
+              {t("seeAll")} ({count}) →
             </a>
           )}
         </div>

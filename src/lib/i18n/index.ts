@@ -22,8 +22,15 @@
 
 // others
 import { api } from "./api";
+import { auth } from "./auth";
 import { config } from "./config";
+import { footer } from "./footer";
+import { landing } from "./landing";
 import { layout } from "./layout";
+import { nav } from "./nav";
+import { search } from "./search";
+import { staff } from "./staff";
+import { vehicle } from "./vehicle";
 import { DEFAULT_LOCALE, type Dict, type Locale } from "./types";
 
 export { DEFAULT_LOCALE, LOCALES, defineDict, isLocale, translator } from "./types";
@@ -32,7 +39,7 @@ export { LOCALE_COOKIE, resolveLocale } from "./resolve";
 export type { LocaleSignals } from "./resolve";
 
 // Register every namespace here. The key becomes the `ns.` prefix of its keys.
-const NAMESPACES = { api, config, layout };
+const NAMESPACES = { api, auth, config, footer, landing, layout, nav, search, staff, vehicle };
 
 type Namespaces = typeof NAMESPACES;
 

@@ -34,14 +34,14 @@ test.use({ storageState: "playwright/.auth/admin.json" });
  * Open the add-employee dialog.
  *
  * S-12b Phase 6 retired this page's own "Dodaj pracownika" button: the action is
- * now the promoted first row of the shell's `＋ Nowe` quick-add menu, and reaches
+ * now the promoted first row of the shell's `＋ New` quick-add menu, and reaches
  * the roster island through a `CustomEvent` (the pill is a different island). The
  * entry point moved; the dialog and everything past it did not — which is why
  * this is one helper rather than a change to five tests.
  */
 async function openAddEmployee(page: Page) {
-  await page.getByRole("button", { name: "Nowe" }).click();
-  await page.getByRole("button", { name: /Dodaj pracownika/ }).click();
+  await page.getByRole("button", { name: "New" }).click();
+  await page.getByRole("button", { name: /Add employee/ }).click();
 }
 
 const SEED_ADMIN_EMAIL = "admin@fleetrent.test";
@@ -49,8 +49,9 @@ const SEED_ADMIN_EMAIL = "admin@fleetrent.test";
 test("admin adds an employee → a DODANY row appears, and the row's only action is to invite", async ({ page }) => {
   // The two-step add (invite-journey-fixes phase 8): step 1 creates the account
   // and sends nothing, so the roster's third state has to exist and the row must
-  // offer `Wyślij zaproszenie` — NOT `Resetuj hasło`, which would send a
-  // recovery link to someone who has never had a password.
+  // offer `Send invite` — NOT `Resetuj hasło` (that one is still Polish until
+  // Phase 5), which would send a recovery link to someone who has never had a
+  // password.
   const email = `e2e-add-${Date.now()}-${Math.floor(Math.random() * 1e6)}@fleetrent.test`;
   try {
     await page.goto("/dashboard/staff");
@@ -66,7 +67,7 @@ test("admin adds an employee → a DODANY row appears, and the row's only action
     await expect(row).toBeVisible();
     await expect(row.getByText("DODANY")).toBeVisible();
     // The first-send wording — a DODANY row has had nothing sent for it yet.
-    await expect(row.getByRole("button", { name: "Wyślij zaproszenie", exact: true })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Send invite", exact: true })).toBeVisible();
     await expect(row.getByRole("button", { name: "Resetuj hasło" })).toHaveCount(0);
   } finally {
     await deleteStaffByEmail(email);
@@ -97,13 +98,13 @@ test("admin sends the invitation → the row becomes ZAPROSZONY and the emailed 
     await expect(row.getByText("DODANY")).toBeVisible();
 
     // Step 2: the explicit send.
-    await row.getByRole("button", { name: "Wyślij zaproszenie", exact: true }).click();
-    await expect(page.getByText("Wysłano zaproszenie.")).toBeVisible();
+    await row.getByRole("button", { name: "Send invite", exact: true }).click();
+    await expect(page.getByText("Invitation sent.")).toBeVisible();
     await expect(row.getByText("ZAPROSZONY")).toBeVisible();
     // The action re-labels itself once something HAS been sent, so the row never
     // invites a second send in wording that implies a first one.
-    await expect(row.getByRole("button", { name: "Wyślij ponownie zaproszenie" })).toBeVisible();
-    await expect(row.getByRole("button", { name: "Wyślij zaproszenie", exact: true })).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Resend invite" })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Send invite", exact: true })).toHaveCount(0);
 
     // The hire opens the real emailed link in their OWN browser — a fresh
     // signed-out context, never by signing this one out (that would revoke the
@@ -115,24 +116,24 @@ test("admin sends the invitation → the row becomes ZAPROSZONY and the emailed 
       await hirePage.goto(link);
       await hirePage.waitForURL(/\/auth\/reset-password\?mode=invite/);
       await waitForIslands(hirePage);
-      await expect(hirePage.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-      await expect(hirePage.getByText("Witaj we Flocie")).toBeVisible();
+      await expect(hirePage.getByRole("heading", { name: "Set your password" })).toBeVisible();
+      await expect(hirePage.getByText("Welcome to Flota")).toBeVisible();
       // The account box names the hire the admin typed, by their initials.
       await expect(hirePage.getByText("RZ", { exact: true })).toBeVisible();
 
-      await fillHydrated(hirePage.getByRole("textbox", { name: "Nowe hasło" }), password);
-      await fillHydrated(hirePage.getByRole("textbox", { name: "Potwierdź hasło" }), password);
-      await hirePage.getByRole("button", { name: "Aktywuj konto" }).click();
+      await fillHydrated(hirePage.getByRole("textbox", { name: "New password" }), password);
+      await fillHydrated(hirePage.getByRole("textbox", { name: "Confirm password" }), password);
+      await hirePage.getByRole("button", { name: "Activate account" }).click();
       await hirePage.waitForURL(/\/auth\/reset-password\?done=1/);
 
       // The assertion of record: the password they just set signs them in.
       await hirePage.goto("/auth/signin");
       await waitForIslands(hirePage);
-      await fillHydrated(hirePage.getByRole("textbox", { name: "E-mail służbowy" }), email);
-      await fillHydrated(hirePage.getByRole("textbox", { name: "Hasło" }), password);
-      await hirePage.getByRole("button", { name: "Zaloguj się" }).click();
+      await fillHydrated(hirePage.getByRole("textbox", { name: "Work email" }), email);
+      await fillHydrated(hirePage.getByRole("textbox", { name: "Password" }), password);
+      await hirePage.getByRole("button", { name: "Sign in" }).click();
       await hirePage.waitForURL("/dashboard");
-      await expect(hirePage.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+      await expect(hirePage.getByRole("button", { name: "Sign out" })).toBeVisible();
     } finally {
       await hire.close();
     }
@@ -143,8 +144,8 @@ test("admin sends the invitation → the row becomes ZAPROSZONY and the emailed 
     await waitForIslands(page);
     await expect(row.getByText("AKTYWNY")).toBeVisible();
     await expect(row.getByRole("button", { name: "Resetuj hasło" })).toBeVisible();
-    await expect(row.getByRole("button", { name: "Wyślij zaproszenie", exact: true })).toHaveCount(0);
-    await expect(row.getByRole("button", { name: "Wyślij ponownie zaproszenie" })).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Send invite", exact: true })).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Resend invite" })).toHaveCount(0);
   } finally {
     await deleteStaffByEmail(email);
   }
@@ -247,7 +248,7 @@ test("a dropped connection reports inside the add modal, on top of the overlay �
 
     // Located by its copy, not by `role="alert"` — the layout's missing-config
     // banner is an alert too, so the role alone is ambiguous on this page.
-    const error = page.getByText("Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.");
+    const error = page.getByText("Could not create the account. Check your connection and try again.");
     await expect(error).toBeVisible();
     // Present is not the same as readable — this is the assertion that matters.
     expect(await isTopmostAtItsOwnCentre(error)).toBe(true);
@@ -287,7 +288,7 @@ test("a provisioning failure reports inside the add modal, keeping the form the 
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();
 
-    const error = page.getByText("Nie udało się utworzyć konta. Spróbuj ponownie.");
+    const error = page.getByText("Could not create the account. Try again.");
     await expect(error).toBeVisible();
     expect(await isTopmostAtItsOwnCentre(error)).toBe(true);
 
@@ -319,12 +320,12 @@ test("a duplicate still reports inline under the e-mail field, unchanged", async
     await fillHydrated(page.getByLabel("ADRES E-MAIL"), email);
     await page.getByRole("button", { name: "Dodaj", exact: true }).click();
 
-    const dupError = page.getByText("Ten adres e-mail jest już w zespole.");
+    const dupError = page.getByText("This email is already on the team.");
     await expect(dupError).toBeVisible();
     expect(await isTopmostAtItsOwnCentre(dupError)).toBe(true);
     // Field-level, not form-level: the form slot must stay empty. Both §9.4
     // strings share this lead clause, so one assertion covers the pair.
-    await expect(page.getByText(/^Nie udało się utworzyć konta\./)).toHaveCount(0);
+    await expect(page.getByText(/^Could not create the account\./)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Dodaj", exact: true })).toBeDisabled();
   } finally {
     await page.unroute("**/api/staff");
@@ -366,7 +367,7 @@ test("a failed remove reports inside the remove modal, with the typed confirmati
     await fillHydrated(page.getByLabel("WPISZ E-MAIL, ABY POTWIERDZIĆ"), email);
     await page.getByRole("button", { name: "Usuń", exact: true }).click();
 
-    const error = page.getByText("Nie udało się usunąć pracownika. Sprawdź połączenie i spróbuj ponownie.");
+    const error = page.getByText("Could not remove the employee. Check your connection and try again.");
     await expect(error).toBeVisible();
     // Present is not the same as readable — the assertions that matter.
     expect(await isInViewport(error)).toBe(true);
@@ -403,7 +404,7 @@ test("the last-admin refusal still swaps modals rather than reporting in the for
     await page.getByRole("button", { name: "Usuń", exact: true }).click();
 
     await expect(page.getByText("Nie można usunąć ostatniego administratora")).toBeVisible();
-    await expect(page.getByText(/^Nie udało się usunąć pracownika\./)).toHaveCount(0);
+    await expect(page.getByText(/^Could not remove the employee\./)).toHaveCount(0);
     await expect(row).toBeVisible();
   } finally {
     await page.unroute("**/api/staff/*/deactivate");
@@ -441,9 +442,9 @@ test.describe("the row actions' banner is reachable from the row that set it", (
       const scrollY = await scrollToBottom(page);
       expect(scrollY, "the roster must actually scroll or this proves nothing").toBeGreaterThan(200);
 
-      await page.getByRole("button", { name: "Wyślij zaproszenie", exact: true }).last().click();
+      await page.getByRole("button", { name: "Send invite", exact: true }).last().click();
 
-      const banner = page.getByText("Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.");
+      const banner = page.getByText("Could not save your change. Check your connection and try again.");
       await expect(banner).toBeVisible();
       // THE PHASE-10 ASSERTIONS. Before the fix this banner sat at top -424 with
       // `elementFromPoint` answering `null`, and `toBeVisible()` passed anyway.
@@ -490,9 +491,9 @@ test.describe("the row actions' banner is reachable from the row that set it", (
       const scrollY = await scrollToBottom(page);
       expect(scrollY, "the roster must actually scroll or this proves nothing").toBeGreaterThan(200);
 
-      await page.getByRole("button", { name: "Wyślij zaproszenie", exact: true }).last().click();
+      await page.getByRole("button", { name: "Send invite", exact: true }).last().click();
 
-      const banner = page.getByText("Wysłano zaproszenie.");
+      const banner = page.getByText("Invitation sent.");
       await expect(banner).toBeVisible();
       expect(await isInViewport(banner), "banner is outside the viewport").toBe(true);
       expect(await isTopmostAtItsOwnCentre(banner), "banner is covered").toBe(true);

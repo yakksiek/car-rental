@@ -21,7 +21,7 @@ import { cn } from "../lib/utils";
 // (verbatim) — they encode a length-discount ladder and single global values we do
 // not store. Money always routes through formatPln (never .toFixed()).
 
-const pricing = await getCategoryPricing(Astro.locals.supabase);
+const pricing = await getCategoryPricing(Astro.locals.supabase, locale);
 
 interface Tier {
   icon: InfoIconName;

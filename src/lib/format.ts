@@ -1,6 +1,5 @@
 // others
 import type { Locale } from "./i18n/types";
-import type { RejectionReason, ReservationStatus, Transmission, VehicleCategory } from "../types";
 
 // Pure, I/O-free presentation helpers for the public catalog. Two quirks they
 // own so call sites don't have to:
@@ -19,8 +18,8 @@ import type { RejectionReason, ReservationStatus, Transmission, VehicleCategory 
 // phrase differently belongs in a catalog namespace, reached by the caller. See
 // the accessor-boundary note in `src/lib/i18n/types.ts`.
 //
-// The Polish enum labels at the bottom are the last vocabulary left here; they
-// move to a catalog namespace with the rest of the copy.
+// The Polish enum labels this module used to carry at the bottom are GONE — they
+// live in `src/lib/i18n/{vehicle,reservation}.ts` now, reached by the caller.
 
 const DASH = "—"; // shown for absent values
 
@@ -213,82 +212,4 @@ export function formatPayloadKg(value: string | number | null | undefined, local
     return DASH;
   }
   return `${formatInteger(value, locale)} kg`;
-}
-
-const CATEGORY_LABELS_PL: Record<VehicleCategory, string> = {
-  cargo_van: "Furgon",
-  passenger_van: "Bus osobowy",
-  car_transporter: "Autolaweta",
-  refrigerated_truck: "Chłodnia",
-  flatbed_truck: "Skrzyniowy",
-};
-
-/** Polish label for a vehicle category enum value. */
-export function categoryLabelPl(category: VehicleCategory): string {
-  return CATEGORY_LABELS_PL[category];
-}
-
-const TRANSMISSION_LABELS_PL: Record<Transmission, string> = {
-  manual: "Manualna",
-  automatic: "Automatyczna",
-};
-
-/** Polish label for a transmission enum value; dash when absent. */
-export function transmissionLabelPl(transmission: Transmission | null | undefined): string {
-  if (!transmission) {
-    return DASH;
-  }
-  return TRANSMISSION_LABELS_PL[transmission];
-}
-
-// `fuel_type` is a free-text column (not an enum); map the known values and fall
-// back to the raw string (capitalized) for anything unseeded.
-const FUEL_LABELS_PL: Record<string, string> = {
-  diesel: "Diesel",
-  petrol: "Benzyna",
-  benzyna: "Benzyna",
-  gasoline: "Benzyna",
-  electric: "Elektryczny",
-  hybrid: "Hybryda",
-  lpg: "LPG",
-};
-
-/** Polish label for a free-text fuel type; dash when absent. */
-export function fuelLabelPl(fuel: string | null | undefined): string {
-  if (!fuel) {
-    return DASH;
-  }
-  const key = fuel.trim().toLowerCase();
-  return FUEL_LABELS_PL[key] ?? fuel.charAt(0).toUpperCase() + fuel.slice(1);
-}
-
-// Canonical Polish labels for the four canned rejection reasons (S-03). Single
-// source for the reject-reason sheet (Phase 4) and the rejection email (Phase 3).
-const REJECTION_REASON_LABELS_PL: Record<RejectionReason, string> = {
-  dates_unavailable: "Daty już niedostępne",
-  no_category: "Brak wymaganej kategorii",
-  vehicle_withdrawn: "Pojazd wycofany",
-  other: "Inny",
-};
-
-/** Polish label for a rejection-reason enum value. */
-export function rejectionReasonLabelPl(reason: RejectionReason): string {
-  return REJECTION_REASON_LABELS_PL[reason];
-}
-
-// Canonical Polish labels for the reservation status pill. Extracted from
-// `ReservationStatusCard.astro`, which owned the only copy, so the S-13 search
-// result rows show the SAME words as the status card rather than a second map
-// that can drift. Tints stay per-surface (each pill idiom differs); only the
-// wording is shared.
-const RESERVATION_STATUS_LABELS_PL: Record<ReservationStatus, string> = {
-  pending: "Oczekuje",
-  confirmed: "Potwierdzone",
-  rejected: "Odrzucone",
-  cancelled: "Anulowane",
-};
-
-/** Polish label for a reservation status enum value. */
-export function reservationStatusLabelPl(status: ReservationStatus): string {
-  return RESERVATION_STATUS_LABELS_PL[status];
 }
