@@ -24,6 +24,28 @@ import { validation } from "./i18n/validation";
 // and the NIP cap describe a Polish depot's customers, not the reader's language
 // (frame decision 3). Only the messages localize.
 
+/**
+ * Which rental terms a customer accepted, stamped onto `reservations.terms_version`
+ * beside the existing `terms_accepted_at` (frame decision 4). `terms_accepted_at`
+ * on its own records only THAT someone agreed, never to what — so a past consent
+ * stops being attributable the moment the text changes.
+ *
+ * *** Bump this whenever the copy in `src/lib/i18n/terms.ts` changes. *** The two
+ * files name each other for that reason: the version is meaningless if it can
+ * drift from the document it names.
+ *
+ * The `-sample` suffix is not decoration. `/terms` is placeholder text (frame
+ * decision 4 again: make the gap visible, do not paper over it), so every row
+ * written today records permanently that what was accepted was a sample — which
+ * is exactly what a real terms rollout would want to be able to tell apart.
+ *
+ * It lives HERE rather than beside the page because this module is the one
+ * contract that owns the reservation POST, `terms_accepted` included, and both
+ * the page and the route import it. It is a bare string constant, so the island
+ * that already imports this module pays nothing for it.
+ */
+export const TERMS_VERSION = "sample-1.0";
+
 // Optional B2B field caps (Phase 5). Generous — these only guard against abuse,
 // not format; a private customer leaves them empty.
 const COMPANY_MAX = 200;

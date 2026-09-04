@@ -62,6 +62,10 @@ export async function createReservationRequest(
     // confirmation mail is sent days later by staff who cannot know what
     // language the customer read the site in.
     p_locale: input.locale,
+    // Consent attribution: `terms_accepted_at` records only THAT someone agreed.
+    // These two record to what, and in which language they read it.
+    p_terms_version: input.terms_version,
+    p_terms_locale: input.terms_locale,
   });
   if (error) {
     throw error;

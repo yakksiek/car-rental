@@ -1,16 +1,18 @@
 // core
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 // others
 import { POST as localePOST } from "../../src/pages/api/locale";
+import { POST as reservationFunnelPOST } from "../../src/pages/api/reservations";
+import { TERMS_VERSION } from "../../src/lib/reservation-schema";
 import { resolveLocale } from "../../src/lib/i18n/resolve";
 import { DEFAULT_LOCALE } from "../../src/lib/i18n/types";
 import { as, serviceClient } from "../helpers/clients";
 import { anonContext, asContext, cookieOptions } from "../helpers/context";
 
-// The locale dimension's DB half (english-localization Phase 1).
+// The locale dimension's DB half (english-localization Phases 1 and 7).
 //
-// Three things the unit suite cannot reach, because each needs the real
+// Four things the unit suite cannot reach, because each needs the real
 // database or the real route handler:
 //
 //   1. `set_profile_locale` is the seam that makes `profiles.locale` writable at
@@ -25,6 +27,10 @@ import { anonContext, asContext, cookieOptions } from "../helpers/context";
 //   3. `POST /api/locale` is deliberately public (no auth gate) — the two guards
 //      that remain, the CSRF check and the redirect sanitiser, therefore carry
 //      all of the weight.
+//   4. Consent attribution (Phase 7). `terms_version` / `terms_locale` are
+//      filled by the funnel HANDLER and normalised inside the RPC, so the wiring
+//      only exists above the route and below the service — neither end alone can
+//      show what actually landed in the row.
 
 // `serviceClient()` is constructed without the Database generic, so its rows
 // arrive as `any`. Narrow through an `unknown` parameter, the idiom
@@ -262,5 +268,123 @@ describe("POST /api/locale", () => {
     expect(context.cookies.get("locale")?.value).toBe("pl");
     // Survives a cleared cookie because it is on the row, not only in the jar.
     expect(await storedLocale(userId)).toBe("pl");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Consent attribution (Phase 7, frame decision 4)
+// ---------------------------------------------------------------------------
+//
+// `terms_accepted_at` records only THAT someone agreed, never to WHAT — and the
+// document it referred to did not exist in the repo at all until `/terms` landed
+// this phase. `terms_version` + `terms_locale` close that: a past consent stays
+// attributable to the exact text, in the exact language, that was put in front
+// of the customer.
+//
+// This needs the real route AND the real database. The columns are filled inside
+// `create_reservation_request`, which normalises an unrecognised locale away
+// rather than raising, and the values are supplied by the HANDLER — never read
+// off the body — so nothing below the route can prove the wiring. The sharp case
+// is a Polish reader: `locale`, `terms_locale` and the emailed language must all
+// be `pl` while the app default is `en`, which is the whole point of the
+// dimension.
+
+describe("consent attribution — which terms, in which language", () => {
+  const CONSENT_VEHICLE_ID = "dddddddd-0000-0000-0000-0000000000e1";
+  const FUTURE_PICKUP = "2032-03-01";
+  const FUTURE_RETURN = "2032-03-08";
+
+  /** A complete, schema-valid funnel body. Consent columns are NOT in it — that is the point. */
+  function funnelBody() {
+    return {
+      vehicle_id: CONSENT_VEHICLE_ID,
+      pickup: FUTURE_PICKUP,
+      return: FUTURE_RETURN,
+      customer_name: "Consent Probe",
+      customer_email: "consent.probe@example.com",
+      customer_phone: "+48600100200",
+      terms_accepted: true,
+    };
+  }
+
+  async function clearReservations() {
+    const { error } = await serviceClient().from("reservations").delete().eq("vehicle_id", CONSENT_VEHICLE_ID);
+    if (error) {
+      throw error;
+    }
+  }
+
+  /** The stored consent row, read out of band (service role bypasses RLS). */
+  async function storedConsent(): Promise<Record<string, unknown>> {
+    const { data, error } = await serviceClient()
+      .from("reservations")
+      .select("locale, terms_version, terms_locale, terms_accepted_at")
+      .eq("vehicle_id", CONSENT_VEHICLE_ID)
+      .single();
+    if (error) {
+      throw error;
+    }
+    return data;
+  }
+
+  beforeAll(async () => {
+    await clearReservations();
+    await serviceClient().from("vehicles").delete().eq("id", CONSENT_VEHICLE_ID);
+    const { error } = await serviceClient().from("vehicles").insert({
+      id: CONSENT_VEHICLE_ID,
+      name: "Consent Harness Vehicle",
+      plate: "ZZ CONS01",
+      category: "cargo_van",
+      daily_rate: 100,
+      monthly_rate: 2000,
+      deposit: 500,
+      per_extra_km_rate: 1,
+      is_active: true,
+    });
+    if (error) {
+      throw error;
+    }
+  });
+
+  afterEach(clearReservations);
+
+  afterAll(async () => {
+    await clearReservations();
+    await serviceClient().from("vehicles").delete().eq("id", CONSENT_VEHICLE_ID);
+  });
+
+  it("stamps the version and the language the customer actually read", async () => {
+    const res = await reservationFunnelPOST(
+      anonContext({ method: "POST", path: "/api/reservations", body: funnelBody(), locale: "pl" }),
+    );
+    expect(res.status).toBe(201);
+
+    const row = await storedConsent();
+    expect(row.terms_version).toBe(TERMS_VERSION);
+    // A Polish reader, while the app default is English: the reservation, the
+    // consent and every later email all follow THIS, not the default.
+    expect(row.terms_locale).toBe("pl");
+    expect(row.locale).toBe("pl");
+    // The pre-existing timestamp is untouched — these columns sit beside it.
+    expect(row.terms_accepted_at).not.toBeNull();
+  });
+
+  it("takes both values from the SERVER, not the body — a crafted payload cannot pick them", async () => {
+    // The claim: accepted an unpublished version, in a language the funnel was
+    // never rendered in. Both must be ignored; the session is `en`.
+    const res = await reservationFunnelPOST(
+      anonContext({
+        method: "POST",
+        path: "/api/reservations",
+        body: { ...funnelBody(), terms_version: "v999-crafted", terms_locale: "pl", locale: "pl" },
+        locale: "en",
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const row = await storedConsent();
+    expect(row.terms_version).toBe(TERMS_VERSION);
+    expect(row.terms_locale).toBe("en");
+    expect(row.locale).toBe("en");
   });
 });

@@ -515,7 +515,26 @@ export default function ReservationForm(props: Props) {
                     className="mt-0.5"
                   />
                   <Label htmlFor="terms_accepted" className="text-foreground text-sm leading-snug font-medium">
-                    {t("terms")}
+                    {t("termsPrefix")}{" "}
+                    {/* The document itself is the link, so the checkbox stops
+                        asking for consent to something with no address. It opens
+                        in a NEW TAB: `/reserve` holds every typed field in island
+                        state, so navigating away in this tab would discard the
+                        whole form. `stopPropagation` keeps the click from also
+                        toggling the checkbox through the enclosing <Label>. */}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                    >
+                      {t("termsLink")}
+                      <span className="sr-only"> {t("termsNewTab")}</span>
+                    </a>
+                    {t("termsSuffix")}
                   </Label>
                 </div>
                 {fieldErrors.terms_accepted && (

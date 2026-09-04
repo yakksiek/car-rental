@@ -6,7 +6,7 @@ import { api } from "../../lib/i18n/api";
 import { translator } from "../../lib/i18n/types";
 import { sendEmail } from "../../lib/email";
 import { reservationReceivedEmail } from "../../lib/email/templates";
-import { reservationRequestSchema } from "../../lib/reservation-schema";
+import { reservationRequestSchema, TERMS_VERSION } from "../../lib/reservation-schema";
 import { createReservationRequest, isVehicleAvailable } from "../../lib/services/reservations";
 import { getVehicleById } from "../../lib/services/vehicles";
 
@@ -97,7 +97,22 @@ export const POST: APIRoute = async (context) => {
   // crafted payload from choosing what language we write to a stranger in.
   // This is the funnel's only chance to record it; the confirmation is sent days
   // later by staff who cannot know.
-  const result = await createReservationRequest(supabase, { ...input, locale: context.locals.locale });
+  //
+  // The consent attribution rides the same rule and for the same reason. Both
+  // values describe what the SERVER rendered on `/terms` — the version constant
+  // it exports and the locale it rendered the funnel in — so neither is read off
+  // the body. A body field here would let a crafted payload record a consent to
+  // a document that was never shown, which is precisely the claim these columns
+  // exist to be able to make. (The window where a deploy bumps `TERMS_VERSION`
+  // between render and submit is real and knowingly accepted: this is an
+  // SSR'd page, so it is minutes wide, and a stamp one version ahead is a far
+  // smaller lie than an attacker-chosen one.)
+  const result = await createReservationRequest(supabase, {
+    ...input,
+    locale: context.locals.locale,
+    terms_version: TERMS_VERSION,
+    terms_locale: context.locals.locale,
+  });
   if (result.status === "conflict") {
     return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }

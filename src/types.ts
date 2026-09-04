@@ -61,6 +61,13 @@ export interface CreateReservationInput {
   // schema: the route supplies it from `context.locals.locale`, so a crafted
   // payload cannot pick what language we mail a stranger in.
   locale: Locale;
+  // Consent attribution (Phase 7, frame decision 4): WHICH terms, in WHICH
+  // language, beside the existing `terms_accepted_at`. Supplied by the route
+  // from `TERMS_VERSION` and the session locale for the same reason `locale`
+  // above is — they describe what the server rendered, so a crafted payload
+  // cannot claim a consent that was never shown.
+  terms_version: string;
+  terms_locale: Locale;
   // Optional B2B fields (S-02 Phase 5): captured on the form, stored for later
   // invoicing (company/VAT) and surfaced to staff in S-03 (notes). Empty when
   // a private customer skips them.

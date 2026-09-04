@@ -1522,44 +1522,44 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 6.1 Type check passes: `npx astro check`
-- [x] 6.2 Lint passes: `npm run lint`
-- [x] 6.3 Unit tests pass including email and PDF specs in both locales
-- [x] 6.4 Integration tests pass including protocol-email specs
-- [x] 6.5 PDF renders the full diacritic set in both locales
-- [x] 6.6 `grep -rn "FleetRent" src/ public/` returns nothing
-- [x] 6.13 Integration test: a `locale:'pl'` reservation emails Polish from an `en` session
-- [x] 6.15 Full `src/**` Polish sweep passes (deferred from Phase 5)
+- [x] 6.1 Type check passes: `npx astro check` — da3f80a
+- [x] 6.2 Lint passes: `npm run lint` — da3f80a
+- [x] 6.3 Unit tests pass including email and PDF specs in both locales — da3f80a
+- [x] 6.4 Integration tests pass including protocol-email specs — da3f80a
+- [x] 6.5 PDF renders the full diacritic set in both locales — da3f80a
+- [x] 6.6 `grep -rn "FleetRent" src/ public/` returns nothing — da3f80a
+- [x] 6.13 Integration test: a `locale:'pl'` reservation emails Polish from an `en` session — da3f80a
+- [x] 6.15 Full `src/**` Polish sweep passes (deferred from Phase 5) — da3f80a
 
 #### Manual
 
-- [x] 6.7 Polish reservation emails Polish even when accepted from an English dashboard
-- [x] 6.8 English reservation produces an English email and PDF
-- [x] 6.9 Issued PDF re-download is byte-identical — not re-rendered
-- [x] 6.10 `protocols.locale` stamped correctly on new protocols
-- [x] 6.11 Invite and recovery emails bilingual with working links (throwaway account only)
-- [x] 6.12 Polish free-text damage note renders inside an English PDF
-- [x] 6.14 Manual-booking modal carries a customer-language field, defaulting to `pl`
+- [x] 6.7 Polish reservation emails Polish even when accepted from an English dashboard — da3f80a
+- [x] 6.8 English reservation produces an English email and PDF — da3f80a
+- [x] 6.9 Issued PDF re-download is byte-identical — not re-rendered — da3f80a
+- [x] 6.10 `protocols.locale` stamped correctly on new protocols — da3f80a
+- [x] 6.11 Invite and recovery emails bilingual with working links (throwaway account only) — da3f80a
+- [x] 6.12 Polish free-text damage note renders inside an English PDF — da3f80a
+- [x] 6.14 Manual-booking modal carries a customer-language field, defaulting to `pl` — da3f80a
 
 ### Phase 7: `/terms` + Verification Pass
 
 #### Automated
 
-- [ ] 7.1 Migration state current: `npx supabase migration list --linked`
-- [ ] 7.2 Type check passes: `npx astro check`
-- [ ] 7.3 Lint passes: `npm run lint`
-- [ ] 7.4 Unit tests pass including the parity test
-- [ ] 7.5 Integration tests pass
-- [ ] 7.6 Full E2E green in English and the PL smoke spec green
-- [ ] 7.7 Build succeeds: `npm run build`
+- [x] 7.1 Migration state current: `npx supabase migration list --linked`
+- [x] 7.2 Type check passes: `npx astro check`
+- [x] 7.3 Lint passes: `npm run lint`
+- [x] 7.4 Unit tests pass including the parity test
+- [x] 7.5 Integration tests pass
+- [x] 7.6 Full E2E green in English and the PL smoke spec green
+- [x] 7.7 Build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 7.8 `/terms` renders in both locales, sample text clearly marked
-- [ ] 7.9 Checkbox links to it; submission records version, terms locale and reservation locale
-- [ ] 7.10 Full recruiter journey clean in English and in Polish
-- [ ] 7.11 Header vision-diff empty minus recorded deviations
-- [ ] 7.12 Deployed: migrations pushed **and** verified with `supabase migration list --linked`
+- [x] 7.8 `/terms` renders in both locales, sample text clearly marked
+- [x] 7.9 Checkbox links to it; submission records version, terms locale and reservation locale
+- [x] 7.10 Full recruiter journey clean in English and in Polish
+- [x] 7.11 Header vision-diff empty minus recorded deviations
+- [x] 7.12 Deployed: migrations pushed **and** verified with `supabase migration list --linked`
 
 ### Phase 8: Manual-Booking Validation Feedback
 

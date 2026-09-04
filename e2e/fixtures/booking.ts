@@ -187,3 +187,93 @@ export async function deleteVehicle(vehicleId: string): Promise<void> {
   await db.from("reservations").delete().eq("vehicle_id", vehicleId);
   await db.from("vehicles").delete().eq("id", vehicleId);
 }
+
+export interface TodayPickup {
+  vehicleId: string;
+  reservationId: string;
+  reference: string;
+}
+
+/**
+ * A vehicle carrying one CONFIRMED reservation whose pickup is TODAY, so it
+ * appears in `list_dispatch_today` and its `/dashboard/pickups/<id>` issue
+ * protocol screen resolves instead of 404ing.
+ *
+ * `current_date` is evaluated by Postgres, so the day is computed in UTC to
+ * match it rather than in the runner's local zone — the two disagree for a
+ * couple of hours every night, and a fixture that 404s only after 22:00 is worse
+ * than one that never works.
+ *
+ * A dedicated vehicle per call, like `createBookedVehicle`: the dispatch list is
+ * global, so a shared row would make two specs contend for the same worklist
+ * under `fullyParallel`.
+ *
+ * `locale: "pl"` is not incidental. It is the CUSTOMER's language, which the
+ * protocol screen reads separately from the employee's session locale, so a
+ * Polish reservation is what makes the two visible as different things.
+ *
+ * Tear down with `deleteVehicle`.
+ */
+export async function createTodayPickup(): Promise<TodayPickup> {
+  const db = serviceClient();
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+  const today = new Date();
+  const iso = (offsetDays: number) =>
+    new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + offsetDays))
+      .toISOString()
+      .slice(0, 10);
+
+  const { data: vehicle, error: vehicleError } = await db
+    .from("vehicles")
+    .insert({
+      name: `E2E Dispatch ${stamp}`,
+      plate: `E2E ${stamp}`,
+      category: "cargo_van",
+      make: "E2E",
+      model: "Dispatch",
+      production_year: 2024,
+      fuel_type: "diesel",
+      payload_capacity_kg: 1000,
+      cargo_length_cm: 400,
+      cargo_width_cm: 170,
+      cargo_height_cm: 190,
+      photos: [],
+      daily_rate: 200,
+      monthly_rate: 5000,
+      deposit: 1500,
+      per_extra_km_rate: 1.0,
+      km_limit: 300,
+      seats: 3,
+      transmission: "manual",
+      is_active: true,
+    })
+    .select("id")
+    .single();
+  if (vehicleError) {
+    throw new Error(`fixture: dispatch vehicle insert failed — ${vehicleError.message}`);
+  }
+
+  const reference = `E2E-PL-${stamp}`;
+  const { data: reservation, error: reservationError } = await db
+    .from("reservations")
+    .insert({
+      vehicle_id: vehicle.id,
+      customer_name: "Łukasz Wiśniewski",
+      customer_email: `e2e-pl-${stamp}@example.test`,
+      customer_phone: "+48600100200",
+      pickup_date: iso(0),
+      return_date: iso(3),
+      status: "confirmed",
+      reference,
+      access_token: randomUUID(),
+      locale: "pl",
+    })
+    .select("id")
+    .single();
+  if (reservationError) {
+    await db.from("vehicles").delete().eq("id", vehicle.id);
+    throw new Error(`fixture: dispatch reservation insert failed — ${reservationError.message}`);
+  }
+
+  return { vehicleId: vehicle.id, reservationId: reservation.id, reference };
+}

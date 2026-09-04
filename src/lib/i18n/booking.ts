@@ -68,8 +68,18 @@ export const booking = defineDict({
     branch: "Branch",
     branchValue: "Warsaw · Mokotów",
     deposit: "Deposit",
-    // The rental terms page is Phase 7's `/terms`.
-    terms: "I accept the rental terms.",
+    // The consent checkbox, split so the document itself is the LINK rather
+    // than a sentence sitting next to one. Assembled as
+    // `termsPrefix` + " " + <a href="/terms">termsLink</a> + `termsSuffix`, with
+    // the space supplied by JSX so neither half carries a trailing one. `/terms`
+    // exists as of Phase 7 — until then this checkbox asked customers to accept
+    // a document that was nowhere in the repo (frame decision 4).
+    termsPrefix: "I accept the",
+    termsLink: "rental terms",
+    termsSuffix: ".",
+    // Appended `sr-only`: the link opens in a new tab so a half-filled form is
+    // not thrown away, and a screen-reader user gets no other warning of that.
+    termsNewTab: "(opens in a new tab)",
     reserveReassurance: "No payment now — we confirm availability by email, usually within the hour.",
     fixFields: "Correct the highlighted fields.",
     genericError: "Something went wrong. Try again.",
@@ -162,7 +172,10 @@ export const booking = defineDict({
     branch: "Oddział",
     branchValue: "Warszawa · Mokotów",
     deposit: "Kaucja",
-    terms: "Akceptuję regulamin wynajmu.",
+    termsPrefix: "Akceptuję",
+    termsLink: "regulamin wynajmu",
+    termsSuffix: ".",
+    termsNewTab: "(otwiera się w nowej karcie)",
     reserveReassurance: "Bez płatności teraz — potwierdzimy dostępność e-mailem, zwykle w godzinę.",
     fixFields: "Popraw zaznaczone pola.",
     genericError: "Coś poszło nie tak. Spróbuj ponownie.",

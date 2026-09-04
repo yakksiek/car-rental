@@ -38,6 +38,7 @@ import { protocol } from "./protocol";
 import { search } from "./search";
 import { staff } from "./staff";
 import { staffAdmin } from "./staff-admin";
+import { terms } from "./terms";
 import { validation } from "./validation";
 import { vehicle } from "./vehicle";
 import { DEFAULT_LOCALE, type Dict, type Locale } from "./types";
@@ -48,7 +49,14 @@ export { LOCALE_COOKIE, resolveLocale } from "./resolve";
 export type { LocaleSignals } from "./resolve";
 
 // Register every namespace here. The key becomes the `ns.` prefix of its keys.
-const NAMESPACES = {
+//
+// EXPORTED for `./parity.test.ts`, which walks this map rather than a list of
+// its own: a namespace added here is covered by the key-parity and Polish-
+// leakage gates the moment it is registered, with nothing to remember. A
+// hand-maintained list in the test could only check the namespaces someone
+// remembered to add to it — which is the failure mode the gate exists for.
+// Nothing in the app should import it; use `useTranslations` / `translator`.
+export const NAMESPACES = {
   api,
   auth,
   booking,
@@ -66,6 +74,7 @@ const NAMESPACES = {
   search,
   staff,
   staffAdmin,
+  terms,
   validation,
   vehicle,
 };
