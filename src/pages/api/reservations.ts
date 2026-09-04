@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { sendEmail } from "../../lib/email";
 import { reservationReceivedEmail } from "../../lib/email/templates";
 import { reservationRequestSchema } from "../../lib/reservation-schema";
@@ -19,13 +21,6 @@ import { getVehicleById } from "../../lib/services/vehicles";
 //   (f) confirmation email through the dev/log seam — a send failure is logged
 //       and never fails the request.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  conflict: "Pojazd właśnie został zarezerwowany w wybranym terminie. Zmień daty i spróbuj ponownie.",
-  unavailable: "Ten pojazd nie jest już dostępny.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -41,18 +36,20 @@ function fieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: the browser sends Origin on every cross-site POST; reject anything
   // not same-origin before doing any work (dev origin is http://localhost:4321).
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (b) Honeypot: a non-empty `company_url` is a bot. Return a success-shaped
@@ -70,7 +67,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // (c) Validate — the same schema the island runs client-side.
-  const parsed = reservationRequestSchema.safeParse(payload);
+  const parsed = reservationRequestSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: fieldErrors(parsed.error.issues) });
   }
@@ -82,23 +79,23 @@ export const POST: APIRoute = async (context) => {
   // here anyway because the confirmation email needs its display fields.
   const vehicle = await getVehicleById(supabase, input.vehicle_id);
   if (!vehicle) {
-    return json(409, { error: MSG.unavailable, reason: "unavailable" });
+    return json(409, { error: t("vehicleUnavailable"), reason: "unavailable" });
   }
 
   // (d) Pre-check: friendly early exit when the range was just taken.
   const available = await isVehicleAvailable(supabase, input.vehicle_id, input.pickup, input.return);
   if (!available) {
-    return json(409, { error: MSG.conflict, reason: "conflict" });
+    return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }
 
   // (e) The atomic write — a lost race still lands here as a typed `conflict`,
   // never a 500 (the EXCLUDE constraint is the truth; first insert wins).
   const result = await createReservationRequest(supabase, input);
   if (result.status === "conflict") {
-    return json(409, { error: MSG.conflict, reason: "conflict" });
+    return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }
   if (result.status === "unavailable") {
-    return json(409, { error: MSG.unavailable, reason: "unavailable" });
+    return json(409, { error: t("vehicleUnavailable"), reason: "unavailable" });
   }
 
   // (f) Confirmation email with the durable status link. Best-effort: the

@@ -14,7 +14,7 @@ import { countOverdueReturns, getProtocol } from "../../../lib/services/protocol
 import { listPendingReservations } from "../../../lib/services/reservations";
 import { resolveBackTarget } from "../../../lib/back-target";
 import { PHOTO_SLOTS } from "../../../lib/protocol-schema";
-import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protocol-labels";
+import { damageTypeLabel, photoSlotLabel } from "../../../lib/i18n/protocol";
 
 // Read-only view of an issued protocol (S-05 Phase 6). Gated to `employee` by the
 // middleware (/dashboard prefix); `get_protocol` is role-gated too, so a non-staff
@@ -27,7 +27,7 @@ import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../../lib/protoc
 // No early `return` in frontmatter: a top-level return crashes
 // `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`. The 404
 // follows the `Astro.response.status` pattern used elsewhere.
-const { user, role, supabase, locale } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 const { id } = Astro.params;
 
 // Nav badge counts for the shell (S-07 added the overdue one; S-12b adds the
@@ -55,6 +55,7 @@ if (!protocol) {
 const back = resolveBackTarget(
   Astro.url.searchParams.get("from"),
   protocol?.type === "return" ? "/dashboard/returns" : "/dashboard/pickups",
+  locale,
 );
 
 const BUCKET = "protocols";
@@ -86,7 +87,7 @@ const sign = (path: string | null): string | null => (path ? (signedByPath.get(p
 const photos: ProtocolViewPhoto[] = protocol
   ? PHOTO_SLOTS.map((slot) => {
       const match = protocol.photos.find((p) => p.slot === slot);
-      return { slot, label: PHOTO_SLOT_LABELS_PL[slot], url: match ? sign(match.path) : null };
+      return { slot, label: photoSlotLabel(slot, locale), url: match ? sign(match.path) : null };
     })
   : [];
 
@@ -94,7 +95,7 @@ const damages: ProtocolViewDamage[] = protocol
   ? protocol.damages.map((d) => ({
       id: d.id,
       type: d.type,
-      typeLabel: DAMAGE_TYPE_LABELS_PL[d.type],
+      typeLabel: damageTypeLabel(d.type, locale),
       location: d.location,
       size: d.size,
       photoUrls: d.photos.map((p) => sign(p)).filter((u): u is string => u !== null),
@@ -118,7 +119,7 @@ const baseline = isReturn ? await getProtocol(supabase, protocol.baseline_protoc
 const baselineDamages: ProtocolViewBaselineDamage[] = baseline
   ? baseline.damages.map((d) => ({
       id: d.id,
-      typeLabel: DAMAGE_TYPE_LABELS_PL[d.type],
+      typeLabel: damageTypeLabel(d.type, locale),
       location: d.location,
       size: d.size,
     }))
@@ -127,10 +128,14 @@ const baselineDamages: ProtocolViewBaselineDamage[] = baseline
 const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filter(Boolean).join(" ") : "";
 ---
 
-<Layout title={protocol ? `Protokół ${protocol.reference} — Flota` : "Nie znaleziono — Flota"}>
+<Layout
+  title={protocol
+    ? `${t("dashboard.protocolPageTitle")} ${protocol.reference} — Flota`
+    : `${t("dashboard.notFoundTitle")} — Flota`}
+>
   <StaffShell
     active={isReturn ? "returns" : "pickups"}
-    title="Protokół"
+    title={t("dashboard.protocolPageTitle")}
     user={user}
     role={role}
     pendingCount={pending.length}
@@ -171,10 +176,8 @@ const vehicle = protocol ? [protocol.vehicle_make, protocol.vehicle_model].filte
         />
       ) : (
         <main class="mx-auto flex min-h-[60vh] max-w-[460px] flex-col justify-center px-5 text-center">
-          <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono protokołu</h1>
-          <p class="text-muted-foreground mt-1.5 text-[13px]">
-            Ten protokół nie istnieje albo nie masz do niego dostępu.
-          </p>
+          <h1 class="text-foreground text-[21px] font-bold tracking-tight">{t("dashboard.protocolNotFoundTitle")}</h1>
+          <p class="text-muted-foreground mt-1.5 text-[13px]">{t("dashboard.protocolNotFoundBody")}</p>
           <a
             href={back.href}
             class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"

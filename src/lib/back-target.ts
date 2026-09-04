@@ -1,4 +1,7 @@
 // others
+import { dashboard } from "./i18n/dashboard";
+import { translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
 import { safeRedirectPath } from "./safe-redirect";
 
 // Where a protocol / handover screen's "back" affordance returns to.
@@ -6,7 +9,7 @@ import { safeRedirectPath } from "./safe-redirect";
 // These screens used to be reachable from exactly one place — their own worklist —
 // so every back link was hardcoded to it. The dispatch cockpit (`/dashboard`) made
 // them reachable from a SECOND entry point, and a fixed target then strands the
-// user on a page they never came from ("open a return from the pulpit, press back,
+// user on a page they never came from ("open a return from the cockpit, press back,
 // land on the returns queue").
 //
 // The origin therefore travels in the URL as `?from=<path>`, validated by the same
@@ -22,11 +25,11 @@ import { safeRedirectPath } from "./safe-redirect";
 /** The query key carrying the originating path. */
 export const FROM_PARAM = "from";
 
-/** Known origins get their own wording; anything else falls back to a bare "Wróć". */
-const BACK_LABELS: Record<string, string> = {
-  "/dashboard": "Wróć do pulpitu",
-  "/dashboard/pickups": "Wróć do wydań",
-  "/dashboard/returns": "Wróć do zwrotów",
+/** Known origins get their own wording; anything else falls back to a bare "Back". */
+const BACK_LABEL_KEYS: Partial<Record<string, "backToDashboard" | "backToPickups" | "backToReturns">> = {
+  "/dashboard": "backToDashboard",
+  "/dashboard/pickups": "backToPickups",
+  "/dashboard/returns": "backToReturns",
 };
 
 export interface BackTarget {
@@ -42,16 +45,18 @@ export interface BackTarget {
  * that is actually navigated to, which also fixes the pre-existing mismatch where
  * the handover screens said "Wróć do pulpitu" while linking to a queue.
  */
-export function resolveBackTarget(raw: string | null | undefined, fallback: string): BackTarget {
+export function resolveBackTarget(raw: string | null | undefined, fallback: string, locale: Locale): BackTarget {
+  const t = translator(locale, dashboard);
   // `safeRedirectPath` answers with DEFAULT_POST_LOGIN ("/dashboard") for junk, which
   // is not what a screen whose default is a worklist wants — so only trust it when a
   // value was actually supplied AND it survived unchanged.
   const href = raw && safeRedirectPath(raw) === raw ? raw : fallback;
   // The origin may carry state in its query (the cockpit sends back the active
   // `?section` so the chip survives the round trip), so key the wording on the
-  // PATH alone — otherwise every stateful origin degrades to a bare "Wróć".
+  // PATH alone — otherwise every stateful origin degrades to a bare "Back".
   const pathname = href.split(/[?#]/)[0];
-  return { href, label: BACK_LABELS[pathname] ?? "Wróć" };
+  const key = BACK_LABEL_KEYS[pathname];
+  return { href, label: key ? t(key) : t("back") };
 }
 
 /** Append `?from=<origin>` to a link so the destination can find its way back. */

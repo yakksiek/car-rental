@@ -13,14 +13,16 @@ import { validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
 import { dayFull, dayMonthShort, monthYearLong } from "../../lib/format-date";
+import { booking } from "../../lib/i18n/booking";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 import { cn } from "../../lib/utils";
 
-// Step 1 of the reservation flow ("Daty") — lives on the vehicle detail page
+// Step 1 of the reservation flow (dates) — lives on the vehicle detail page
 // (design desktop-1). A sticky right-column card on desktop, an inline block +
 // sticky bottom bar on mobile. The visitor confirms a date range here; the
-// "Zarezerwuj" action carries the vehicle id + chosen dates to /reserve, which
-// resumes at step 2 ("Twoje dane"). The calendar greys out past dates AND the
+// reserve action carries the vehicle id + chosen dates to /reserve, which
+// resumes at step 2 (the customer's own details). The calendar greys out past dates AND the
 // vehicle's already-taken dates (pending + confirmed), Booking.com style, so a
 // visitor never picks an unavailable range (Phase 6). Pricing, estimate, and
 // date semantics reuse the same helpers the funnel and the EXCLUDE constraint
@@ -39,40 +41,6 @@ interface Props {
   /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
   locale: Locale;
 }
-
-const COPY = {
-  perDay: "/doba",
-  perMonth: "/mies",
-  rangeLabel: "Termin",
-  pickup: "Odbiór",
-  return: "Zwrot",
-  chooseRange: "Wybierz daty odbioru i zwrotu",
-  deposit: "Kaucja (zwrotna)",
-  estimate: "Szacunkowa cena",
-  cta: "Zarezerwuj",
-  reassurance: "Bez konta · darmowa anulacja do 24h przed odbiorem",
-  // Shown when a completed range collides with a booking on a changeover day (the
-  // `checkRangeBookable` veto), keyed to which boundary failed so the hint is
-  // specific rather than generic. Polish-canonical tone.
-  changeoverPickupTaken: "Wybrany dzień odbioru jest niedostępny. Wybierz inny termin.",
-  changeoverReturnTaken: "Wybrany dzień zwrotu jest niedostępny. Wybierz inny termin.",
-  changeoverSpansBooked: "Wybrany termin jest niedostępny. Wybierz inne daty.",
-  // Per-day aria-label suffixes for the two half-available changeover states, so
-  // SR/keyboard users get the start-only/end-only signal the half-cell can't convey.
-  pickupOnlyLabel: "dostępny tylko jako dzień odbioru",
-  returnOnlyLabel: "dostępny tylko jako dzień zwrotu",
-  // Legend decoding the calendar's grey treatments for sighted users.
-  legendBlocked: "niedostępny",
-  legendPickupOnly: "tylko odbiór",
-  legendReturnOnly: "tylko zwrot",
-} as const;
-
-// Maps each range-conflict reason to its inline hint (see `checkRangeBookable`).
-const CHANGEOVER_HINT: Record<RangeConflict, string> = {
-  pickupTaken: COPY.changeoverPickupTaken,
-  returnTaken: COPY.changeoverReturnTaken,
-  spansBooked: COPY.changeoverSpansBooked,
-};
 
 const arrow = (
   <svg
@@ -99,6 +67,14 @@ export default function BookingWidget({
   busyRanges = [],
   locale,
 }: Props) {
+  const t = translator(locale, booking);
+  // Maps each range-conflict reason to its inline hint (see `checkRangeBookable`).
+  const CHANGEOVER_HINT: Record<RangeConflict, string> = {
+    pickupTaken: t("changeoverPickupTaken"),
+    returnTaken: t("changeoverReturnTaken"),
+    spansBooked: t("changeoverSpansBooked"),
+  };
+
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initialPickup);
     const to = fromIsoDate(initialReturn);
@@ -163,7 +139,7 @@ export default function BookingWidget({
   const total = hasEstimate ? estimatedTotal(dailyRate, days) : 0;
 
   function handleReserve() {
-    const check = validateDateRange(pickupIso, returnIso);
+    const check = validateDateRange(pickupIso, returnIso, locale);
     if (!check.ok || !pickupIso || !returnIso) {
       setError(check.ok ? null : check.error);
       return;
@@ -179,12 +155,12 @@ export default function BookingWidget({
     <dl className="divide-y divide-[var(--flota-hair-2)]">
       <div className="flex items-center justify-between gap-3 py-3">
         <dt className="text-muted-foreground text-sm font-medium">
-          {hasEstimate ? `${formatPln(dailyRate, locale)} × ${formatDuration(days, locale)}` : COPY.chooseRange}
+          {hasEstimate ? `${formatPln(dailyRate, locale)} × ${formatDuration(days, locale)}` : t("chooseRange")}
         </dt>
         <dd className="text-foreground text-sm font-semibold">{hasEstimate ? formatPln(total, locale) : "—"}</dd>
       </div>
       <div className="flex items-center justify-between gap-3 py-3">
-        <dt className="text-muted-foreground text-sm font-medium">{COPY.deposit}</dt>
+        <dt className="text-muted-foreground text-sm font-medium">{t("depositRefundable")}</dt>
         <dd className="text-foreground text-sm font-semibold">{formatPln(deposit, locale)}</dd>
       </div>
     </dl>
@@ -196,19 +172,19 @@ export default function BookingWidget({
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-foreground text-2xl font-bold tracking-tight">
           {formatPln(dailyRate, locale)}
-          <span className="text-muted-foreground text-sm font-medium"> {COPY.perDay}</span>
+          <span className="text-muted-foreground text-sm font-medium"> {t("perDay")}</span>
         </p>
         <p className="text-muted-foreground text-sm font-medium">
           {formatPln(monthlyRate, locale)}
-          {COPY.perMonth}
+          {t("perMonth")}
         </p>
       </div>
 
       {/* Selected-range fields */}
       <div className="mt-4 grid grid-cols-2 gap-2">
         {[
-          { label: COPY.pickup, value: range?.from ? `${dayMonthShort(range.from, locale)} · 14:00` : "—" },
-          { label: COPY.return, value: range?.to ? `${dayMonthShort(range.to, locale)} · 10:00` : "—" },
+          { label: t("pickup"), value: range?.from ? `${dayMonthShort(range.from, locale)} · 14:00` : "—" },
+          { label: t("return"), value: range?.to ? `${dayMonthShort(range.to, locale)} · 10:00` : "—" },
         ].map((field) => (
           <div key={field.label} className="rounded-xl border border-[var(--flota-hair-2)] px-3 py-2">
             <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">{field.label}</div>
@@ -270,10 +246,10 @@ export default function BookingWidget({
             labelDayButton: (date, modifiers) => {
               const base = dayFull(date, locale);
               if (modifiers.pickupOnly) {
-                return `${base}, ${COPY.pickupOnlyLabel}`;
+                return `${base}, ${t("pickupOnlyLabel")}`;
               }
               if (modifiers.returnOnly) {
-                return `${base}, ${COPY.returnOnlyLabel}`;
+                return `${base}, ${t("returnOnlyLabel")}`;
               }
               return base;
             },
@@ -292,9 +268,9 @@ export default function BookingWidget({
       {availability.size > 0 && (
         <ul className="text-muted-foreground mx-auto mt-3 flex max-w-[300px] flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] font-medium">
           {[
-            { label: COPY.legendBlocked, swatch: "bg-[var(--muted)]" },
-            { label: COPY.legendPickupOnly, swatch: "cell-pickup-only" },
-            { label: COPY.legendReturnOnly, swatch: "cell-return-only" },
+            { label: t("legendBlocked"), swatch: "bg-[var(--muted)]" },
+            { label: t("legendPickupOnly"), swatch: "cell-pickup-only" },
+            { label: t("legendReturnOnly"), swatch: "cell-return-only" },
           ].map((item) => (
             <li key={item.label} className="flex items-center gap-1.5">
               <span
@@ -311,7 +287,7 @@ export default function BookingWidget({
 
       {/* Estimated total */}
       <div className="flex items-center justify-between gap-3 border-t border-[var(--flota-hair-2)] pt-4">
-        <span className="text-foreground text-sm font-semibold">{COPY.estimate}</span>
+        <span className="text-foreground text-sm font-semibold">{t("estimate")}</span>
         <span className="text-foreground text-xl font-bold tracking-tight">
           {hasEstimate ? formatPln(total, locale) : "—"}
         </span>
@@ -326,7 +302,7 @@ export default function BookingWidget({
         disabled={!hasEstimate}
         className="bg-primary text-primary-foreground rounded-button mt-4 hidden h-12 w-full items-center justify-center gap-2 px-6 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)] disabled:opacity-50 lg:flex"
       >
-        {COPY.cta}
+        {t("cta")}
         {arrow}
       </button>
 
@@ -343,7 +319,7 @@ export default function BookingWidget({
         >
           <path d="M5 13l4 4 10-10" />
         </svg>
-        {COPY.reassurance}
+        {t("reassurance")}
       </p>
 
       {/* Mobile/tablet sticky CTA (matches funnel step 2/3): a crimson estimate
@@ -353,7 +329,7 @@ export default function BookingWidget({
         <div className="mx-auto max-w-3xl px-5 pt-4 pb-4 sm:px-8">
           <div className="bg-primary text-primary-foreground rounded-button flex items-center justify-between gap-4 px-5 py-4">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
+              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{t("estimate")}</div>
               <div className="mt-0.5 font-bold tracking-tight">
                 {/* The bare number and its unit are two type sizes, so the amount
                     comes from `formatPlnAmount` (which never appends the unit)
@@ -370,7 +346,9 @@ export default function BookingWidget({
                   {formatDuration(days, locale)} × {formatPln(dailyRate, locale)}
                 </div>
               )}
-              <div>+ kaucja {formatPln(deposit, locale)}</div>
+              <div>
+                {t("statusPlusDeposit")} {formatPln(deposit, locale)}
+              </div>
             </div>
           </div>
           <button
@@ -379,7 +357,7 @@ export default function BookingWidget({
             disabled={!hasEstimate}
             className="bg-primary text-primary-foreground rounded-button mt-2 flex h-13 w-full items-center justify-center gap-2 px-6 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)] disabled:opacity-50"
           >
-            {COPY.cta}
+            {t("cta")}
             {arrow}
           </button>
         </div>

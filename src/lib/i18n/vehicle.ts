@@ -135,6 +135,8 @@ export const vehicle = defineDict({
     searchDatesAny: "Any dates",
     // Single fixed branch — no location concept in the schema yet.
     searchBranch: "Branch",
+    // The single fixed depot. The city translates; the district is a proper noun.
+    searchBranchValue: "Warsaw · Mokotów",
     searchSubmit: "Search",
   },
   pl: {
@@ -147,6 +149,7 @@ export const vehicle = defineDict({
     searchDates: "Daty",
     searchDatesAny: "Dowolne daty",
     searchBranch: "Oddział",
+    searchBranchValue: "Warszawa · Mokotów",
     searchSubmit: "Szukaj",
   },
 });

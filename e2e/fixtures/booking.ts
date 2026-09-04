@@ -120,14 +120,17 @@ export async function createBookedVehicle(): Promise<BookedVehicle> {
  * A RETIRED vehicle that lands at the BOTTOM of `/dashboard/vehicles`.
  *
  * `listFleet` orders by `name` ascending, and the one retired vehicle in the seed
- * (`Fiat Ducato (retired)`) therefore sorts FIRST — so its `Przywróć` sits near
+ * (`Fiat Ducato (retired)`) therefore sorts FIRST — so its `Restore` sits near
  * the top of the list and its banner happens to be in view. That is a property of
  * the fixture, not of the design (invite-journey-fixes plan, phase 11: "what the
  * seed understates"), and a spec resting on it would pass whether or not the fix
  * exists. The `Ż` prefix puts this row last under the DB's collation, which is
- * what puts the control below the fold and the banner off-screen without it.
+ * what puts the control below the fold and the banner off-screen without it. The
+ * prefix survives english-localization's seed rewrite deliberately: the seed's
+ * vehicle NAMES read English now, but `Ż` still sorts after every ASCII letter,
+ * so the row is still last.
  *
- * Retired rather than active because `Przywróć` is only rendered for a retired
+ * Retired rather than active because `Restore` is only rendered for a retired
  * row, and `is_active: false` additionally keeps the row out of
  * `getCategoryCounts` (active-only) and out of the public catalog — so it cannot
  * move a pill count or a listing another spec reads under `fullyParallel`.

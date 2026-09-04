@@ -26,9 +26,9 @@ import { fromIsoDate } from "../../lib/date-iso";
 // the layout's <ClientRouter />; FilterBar is intentionally NOT persisted so it
 // remounts and re-reads `initial` from the live URL on every navigation.
 
-const { supabase, locale } = Astro.locals;
+const { supabase, locale, t } = Astro.locals;
 const filters = parseFilters(Astro.url.searchParams);
-const dateCheck = validateDateRange(filters.pickup, filters.return);
+const dateCheck = validateDateRange(filters.pickup, filters.return, locale);
 
 let vehicles: Vehicle[] = [];
 let dateError: string | null = null;
@@ -52,10 +52,10 @@ const CATEGORIES: VehicleCategory[] = [
 // Per-type fleet sizes for the tab counts (design screens 02/08: `label · N`).
 const counts = await getCategoryCounts(supabase);
 
-// Tab model: "Wszystkie" (grid icon) + one per category (silhouette icon). The
+// Tab model: an "all" tab (grid icon) + one per category (silhouette icon). The
 // count is the fleet size for that type, independent of the active filters.
 const tabs: { category: VehicleCategory | null; label: string; count: number }[] = [
-  { category: null, label: "Wszystkie", count: counts.total },
+  { category: null, label: t("fleet.tabAll"), count: counts.total },
   ...CATEGORIES.map((category) => ({
     category,
     label: categoryLabel(category, locale),
@@ -104,15 +104,15 @@ function rangeLabel(pickup: string, returnDate: string): string {
 }
 
 const SORT_LABELS: Record<CatalogSort, string> = {
-  price_asc: "Cena: rosnąco",
-  price_desc: "Cena: malejąco",
+  price_asc: t("fleet.sortPriceAsc"),
+  price_desc: t("fleet.sortPriceDesc"),
 };
 
 const chipClass =
   "bg-card text-foreground hover:border-foreground/25 inline-flex items-center gap-1.5 rounded-full border border-[var(--flota-hair)] px-3.5 py-1.5 text-[13px] font-semibold transition-colors";
 ---
 
-<Layout title="Flota — przeglądaj pojazdy">
+<Layout title={t("fleet.catalogTitle")}>
   <SiteHeader active="fleet" />
 
   <main class="max-w-app mx-auto px-5 pb-16 sm:px-8 lg:px-12">
@@ -173,7 +173,9 @@ const chipClass =
     {
       hasActiveFilters && (
         <div class="flex flex-wrap items-center gap-2 pb-6">
-          <span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Aktywne filtry:</span>
+          <span class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            {t("fleet.activeFilters")}
+          </span>
           {filters.category && (
             <a href={withoutFilter({ category: null })} class:list={chipClass}>
               {categoryLabel(filters.category, locale)}
@@ -192,7 +194,7 @@ const chipClass =
           )}
           {filters.minPayload !== null && (
             <a href={withoutFilter({ minPayload: null })} class:list={chipClass}>
-              od {formatPayloadKg(filters.minPayload, locale)}
+              {t("fleet.fromPayload")} {formatPayloadKg(filters.minPayload, locale)}
               <span aria-hidden="true" class="text-base leading-none">
                 ×
               </span>
@@ -207,15 +209,14 @@ const chipClass =
             </a>
           )}
           <a href="/fleet" class="text-muted-foreground hover:text-foreground ml-1 text-sm font-medium hover:underline">
-            Wyczyść wszystko
+            {t("fleet.clearAll")}
           </a>
         </div>
       )
     }
 
     <!-- Results. The mock is silent on the empty / date-error states; these are
-         designed on-brand (centered card in the results region, existing Polish
-         copy). No loading treatment is warranted — results are SSR'd, so a filter
+         designed on-brand (centered card in the results region, catalog copy). No loading treatment is warranted — results are SSR'd, so a filter
          apply navigates straight to the rendered page (no client-side fetch). -->
     {
       dateError ? (
@@ -237,7 +238,7 @@ const chipClass =
             </svg>
           </span>
           <p class="text-foreground text-lg font-bold tracking-tight">{dateError}</p>
-          <p class="text-muted-foreground text-sm">Popraw zakres dat, aby zobaczyć dostępne pojazdy.</p>
+          <p class="text-muted-foreground text-sm">{t("fleet.fixDates")}</p>
         </div>
       ) : vehicles.length === 0 ? (
         <div class="bg-card shadow-card mx-auto flex max-w-md flex-col items-center gap-3 rounded-[22px] px-6 py-16 text-center">
@@ -256,8 +257,8 @@ const chipClass =
               <path d="M21 21l-4.3-4.3" />
             </svg>
           </span>
-          <p class="text-foreground text-lg font-bold tracking-tight">Brak pojazdów spełniających kryteria</p>
-          <p class="text-muted-foreground text-sm">Zmień filtry lub zakres dat, aby zobaczyć więcej.</p>
+          <p class="text-foreground text-lg font-bold tracking-tight">{t("fleet.emptyTitle")}</p>
+          <p class="text-muted-foreground text-sm">{t("fleet.emptyBody")}</p>
         </div>
       ) : (
         <div class="grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-3">

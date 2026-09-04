@@ -7,11 +7,14 @@ import { Button } from "../ui/button";
 
 // others
 import { cn } from "../../lib/utils";
+import { protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 
 // The three post-submit overlays and the conflict screen. Bottom sheet on mobile,
 // centred 460px modal on desktop — the same shell as the damage editor.
 //
-// Every variant says "Protokół zapisany" first, because in all three the handover
+// Every variant says "protocol stored" first, because in all three the handover
 // has already committed. That is the whole point of the commit-then-best-effort
 // ordering: the vehicle physically changed hands, and a provider 503 or a thrown
 // PDF build must read as a recoverable follow-up, never as a failed handover.
@@ -45,43 +48,46 @@ interface Copy {
   secondary?: string;
 }
 
-const COPY: Record<OverlayVariant, Copy> = {
-  sent: {
-    tone: "ok",
-    icon: <Check className="size-7" />,
-    title: "Protokół wysłany",
-    sub: "Wysłany do klienta i zapisany jako PDF.",
-    badges: [
-      { tone: "ok", label: "Protokół zapisany" },
-      { tone: "ok", label: "Dostarczono" },
-    ],
-    primary: "Gotowe",
-  },
-  email: {
-    tone: "bad",
-    icon: <TriangleAlert className="size-7" />,
-    title: "Nie udało się wysłać e-maila",
-    sub: "Protokół jest zapisany i podpisany. Możesz wysłać ponownie teraz lub później.",
-    badges: [
-      { tone: "ok", label: "Protokół zapisany" },
-      { tone: "bad", label: "E-mail niewysłany" },
-    ],
-    primary: "Wyślij ponownie",
-    secondary: "Później",
-  },
-  pdf: {
-    tone: "warn",
-    icon: <TriangleAlert className="size-7" />,
-    title: "Nie udało się wygenerować PDF",
-    sub: "Protokół został zapisany. Wygeneruj PDF ponownie, aby wysłać klientowi.",
-    badges: [
-      { tone: "ok", label: "Protokół zapisany" },
-      { tone: "warn", label: "Błąd PDF" },
-    ],
-    primary: "Spróbuj ponownie",
-    secondary: "Później",
-  },
-};
+function copyFor(locale: Locale): Record<OverlayVariant, Copy> {
+  const t = translator(locale, protocol);
+  return {
+    sent: {
+      tone: "ok",
+      icon: <Check className="size-7" />,
+      title: t("overlaySentTitle"),
+      sub: t("overlaySentSub"),
+      badges: [
+        { tone: "ok", label: t("badgeStored") },
+        { tone: "ok", label: t("badgeDelivered") },
+      ],
+      primary: t("overlayDone"),
+    },
+    email: {
+      tone: "bad",
+      icon: <TriangleAlert className="size-7" />,
+      title: t("overlayEmailTitle"),
+      sub: t("overlayEmailSub"),
+      badges: [
+        { tone: "ok", label: t("badgeStored") },
+        { tone: "bad", label: t("badgeEmailNotSent") },
+      ],
+      primary: t("overlayResend"),
+      secondary: t("overlayLater"),
+    },
+    pdf: {
+      tone: "warn",
+      icon: <TriangleAlert className="size-7" />,
+      title: t("overlayPdfTitle"),
+      sub: t("overlayPdfSub"),
+      badges: [
+        { tone: "ok", label: t("badgeStored") },
+        { tone: "warn", label: t("badgePdfError") },
+      ],
+      primary: t("overlayRetry"),
+      secondary: t("overlayLater"),
+    },
+  };
+}
 
 function Sheet({ children }: { children: React.ReactNode }) {
   return (
@@ -106,6 +112,7 @@ export function ResultOverlay({
   pdfFilename,
   onPrimary,
   onSecondary,
+  locale,
 }: {
   variant: OverlayVariant;
   customerEmail: string;
@@ -115,8 +122,11 @@ export function ResultOverlay({
   pdfFilename?: string;
   onPrimary: () => void;
   onSecondary: () => void;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
-  const copy = COPY[variant];
+  const t = translator(locale, protocol);
+  const copy = copyFor(locale)[variant];
   // Offer the in-session download wherever a PDF was actually produced (`sent` /
   // `email`). The `pdf` variant is the one where generation failed — nothing to
   // download, so the button stays absent there rather than linking to a stale blob.
@@ -131,7 +141,11 @@ export function ResultOverlay({
       {/* Only the `email` variant attempted (and failed) a send, so only it names
           the recipient — as "not sent", matching the badge. The `pdf` variant never
           reached the send step, so it shows no recipient line at all. */}
-      {variant === "email" && <p className="text-muted-foreground mt-1 text-[12px]">Nie wysłano do {customerEmail}</p>}
+      {variant === "email" && (
+        <p className="text-muted-foreground mt-1 text-[12px]">
+          {t("overlayNotSentTo")} {customerEmail}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         {copy.badges.map((badge) => (
@@ -152,7 +166,7 @@ export function ResultOverlay({
           {busy ? (
             <>
               <span className="border-background/30 border-t-background size-4 animate-spin rounded-full border-2" />
-              Wysyłanie…
+              {t("sending")}
             </>
           ) : (
             copy.primary
@@ -162,7 +176,7 @@ export function ResultOverlay({
           <Button asChild variant="outline" className="h-11 w-full">
             <a href={pdfHref ?? undefined} download={pdfFilename}>
               <Download className="size-4" />
-              Pobierz PDF
+              {t("downloadPdf")}
             </a>
           </Button>
         )}
@@ -184,42 +198,47 @@ export function ResultOverlay({
  *
  * Copy + the back link default to the issue form (S-05); the return form (S-06)
  * overrides `description` / `backHref` for its own worklist and wording — the
- * `Otwórz protokół` link (`/dashboard/protocols/<id>`) is shared by both.
+ * open-protocol link (`/dashboard/protocols/<id>`) is shared by both.
  */
 export function ConflictScreen({
   reference,
   plate,
   protocolId,
-  description = "Dla tej rezerwacji wydano już protokół — każde wydanie może mieć tylko jeden.",
+  locale,
+  description,
   backHref = "/dashboard/pickups",
 }: {
   reference: string;
   plate: string;
   protocolId: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
   description?: string;
   backHref?: string;
 }) {
+  const t = translator(locale, protocol);
+  const body = description ?? t("conflictIssueBody");
   return (
     <div className="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 py-10 text-center">
       <span className={cn("mx-auto flex size-16 items-center justify-center rounded-full", TONE.warn)}>
         <TriangleAlert className="size-7" />
       </span>
-      <h1 className="text-foreground mt-4 text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
-      <p className="text-muted-foreground mt-1.5 text-[13px]">{description}</p>
+      <h1 className="text-foreground mt-4 text-[21px] font-bold tracking-tight">{t("conflictTitle")}</h1>
+      <p className="text-muted-foreground mt-1.5 text-[13px]">{body}</p>
 
       <div className="border-border bg-card shadow-card mt-5 flex items-center justify-between gap-3 rounded-[14px] border p-4">
         <span className="text-foreground text-[14px] font-semibold tracking-tight">
           {reference} · <span className="font-mono">{plate}</span>
         </span>
-        <Badge tone="ok">Protokół zapisany</Badge>
+        <Badge tone="ok">{t("badgeStored")}</Badge>
       </div>
 
       <div className="mt-6 flex flex-col gap-2.5">
         <Button asChild className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full">
-          <a href={`/dashboard/protocols/${protocolId}`}>Otwórz protokół</a>
+          <a href={`/dashboard/protocols/${protocolId}`}>{t("openProtocol")}</a>
         </Button>
         <Button asChild variant="ghost" className="h-11 w-full">
-          <a href={backHref}>Wróć do pulpitu</a>
+          <a href={backHref}>{t("backToDashboard")}</a>
         </Button>
       </div>
     </div>

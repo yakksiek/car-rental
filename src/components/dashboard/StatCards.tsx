@@ -99,10 +99,10 @@ export default function StatCards({ counts, locale }: { counts: DayCounts; local
       Icon: ArrowRight,
     },
     {
-      href: "/dashboard/reservations?from=pulpit",
+      href: "/dashboard/reservations?from=dashboard",
       label: t("navRequests"),
       subLabel: t("pendingSub"),
-      value: counts.wnioski,
+      value: counts.requests,
       accent: "bg-warning",
       numberTone: "text-warning",
       Icon: List,

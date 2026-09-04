@@ -33,7 +33,7 @@ export interface DispatchBoardProps {
   today: string;
   // Seeded server-side from `?section` (parsed in dashboard.astro) so a deep-link
   // renders pre-filtered with no hydration flash — a client-only `window.location`
-  // read would differ from the SSR'd HTML. `wszystko` = all sections.
+  // read would differ from the SSR'd HTML. `all` = every section.
   initialSection?: SectionKey;
   /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
   locale: Locale;
@@ -41,15 +41,15 @@ export interface DispatchBoardProps {
 
 // The four mobile chips, in order; the fill is per-chip tone (design-contract §F).
 //
-// The `SectionKey`s stay POLISH (`wszystko` / `wydania` / …): they are the
-// `?section` URL parameter's values, not copy. Translating them would break every
-// deep-link already in the wild and would make the URL vary by locale for no
-// gain — only `labelKey` is copy.
+// The `SectionKey`s are the `?section` URL parameter's values, not copy — the URL
+// must NOT vary by locale, so they stay fixed English tokens in both. (They were
+// Polish until Phase 5; the rename is a one-time correction, not a translation.)
+// Only `labelKey` is copy.
 const CHIPS: { key: SectionKey; labelKey: keyof typeof staff.en; selectedFill: string }[] = [
-  { key: "wszystko", labelKey: "chipAll", selectedFill: "bg-foreground" },
-  { key: "wydania", labelKey: "navPickups", selectedFill: "bg-primary" },
-  { key: "zwroty", labelKey: "navReturns", selectedFill: "bg-foreground" },
-  { key: "wnioski", labelKey: "navRequests", selectedFill: "bg-warning" },
+  { key: "all", labelKey: "chipAll", selectedFill: "bg-foreground" },
+  { key: "pickups", labelKey: "navPickups", selectedFill: "bg-primary" },
+  { key: "returns", labelKey: "navReturns", selectedFill: "bg-foreground" },
+  { key: "requests", labelKey: "navRequests", selectedFill: "bg-warning" },
 ];
 
 /** One chip: a white card pill unselected, a tone fill with white text selected. */
@@ -94,7 +94,7 @@ export default function DispatchBoard({
   counts,
   groups,
   today,
-  initialSection = "wszystko",
+  initialSection = "all",
   locale,
 }: DispatchBoardProps) {
   const t = translator(locale, staff);
@@ -106,7 +106,7 @@ export default function DispatchBoard({
   const selectSection = React.useCallback((next: SectionKey) => {
     setSection(next);
     const url = new URL(window.location.href);
-    if (next === "wszystko") {
+    if (next === "all") {
       url.searchParams.delete("section");
     } else {
       url.searchParams.set("section", next);
@@ -115,17 +115,17 @@ export default function DispatchBoard({
   }, []);
 
   const chipCounts: Record<SectionKey, number> = {
-    wszystko: counts.all,
-    wydania: counts.pickups,
-    zwroty: counts.returns,
-    wnioski: counts.wnioski,
+    all: counts.all,
+    pickups: counts.pickups,
+    returns: counts.returns,
+    requests: counts.requests,
   };
 
   // What a row hands the destination as its `?from`. Derived from the section STATE,
   // not `window.location`, so the SSR'd href and the first client render agree (no
   // hydration mismatch) and the active chip survives the round trip: leave the
   // cockpit on "Zwroty", press back on the protocol screen, land back on "Zwroty".
-  const origin = section === "wszystko" ? "/dashboard" : `/dashboard?section=${section}`;
+  const origin = section === "all" ? "/dashboard" : `/dashboard?section=${section}`;
 
   const pickupItems = groups.pickups.rows.map((row) => toPickupItem(row, origin));
   const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today, origin));
@@ -164,7 +164,7 @@ export default function DispatchBoard({
         </div>
 
         <div className="mt-5">
-          {isSectionVisible(section, "wydania") && (
+          {isSectionVisible(section, "pickups") && (
             <MobileScheduleSection
               kind="pickups"
               label={t("navPickups")}
@@ -173,7 +173,7 @@ export default function DispatchBoard({
               locale={locale}
             />
           )}
-          {isSectionVisible(section, "zwroty") && (
+          {isSectionVisible(section, "returns") && (
             <MobileScheduleSection
               kind="returns"
               label={t("navReturns")}
@@ -185,15 +185,15 @@ export default function DispatchBoard({
           {/* Requests sits in the amber tinted panel like the other two sections; the
               band carries the title and the "open" link, so `NeedDecisionPanel`
               renders its cards without its own header (its empty state is kept). */}
-          {isSectionVisible(section, "wnioski") && (
+          {isSectionVisible(section, "requests") && (
             <MobileSection
-              title={`${t("navRequests")} · ${counts.wnioski}`}
+              title={`${t("navRequests")} · ${counts.requests}`}
               icon={Bell}
               tint="amber"
               action={
-                counts.wnioski > 0 && (
+                counts.requests > 0 && (
                   <a
-                    href="/dashboard/reservations?from=pulpit"
+                    href="/dashboard/reservations?from=dashboard"
                     className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
                   >
                     {t("open")}

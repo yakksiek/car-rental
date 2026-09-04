@@ -31,7 +31,7 @@ interface Deps {
   uploadPdf: (protocolId: string) => Promise<string>;
 }
 
-/** Steps 3–5, extracted so the `pdf` overlay's `Spróbuj ponownie` replays exactly them. */
+/** Steps 3–5, extracted so the `pdf` overlay's retry replays exactly them. */
 export async function finalizeReturnProtocol(protocolId: string, deps: Deps): Promise<ProtocolSubmitOutcome> {
   try {
     const path = await deps.uploadPdf(protocolId);

@@ -16,21 +16,23 @@ import type { CatalogSort, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { dayMonthShort } from "../../lib/format-date";
+import { fleet } from "../../lib/i18n/fleet";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 
 // The catalog's only interactive piece — the restyled filter card (design
 // ScreenDesktopFleet / ScreenTabletFleet / ScreenMobileFleet). It stages
 // date-range / minimum-payload / price-sort locally and commits to the URL on an
-// explicit "Zastosuj" — one navigation per deliberate change. It is NOT
+// explicit Apply — one navigation per deliberate change. It is NOT
 // `transition:persist`ed: it remounts on every navigation and re-derives its state
 // from `initial` (the current URL filters), so category-pill and apply navigations
 // never leave it stale. Inline date validation mirrors `validateDateRange` so the
 // picker can't submit a range the RPC would choke on.
 //
 // Each trigger is a `FilterBtn`: a white pill on the grey card (desktop/tablet) that
-// morphs into a full-width row on mobile (< sm). Termin keeps its calendar icon on
-// mobile with a left-aligned value; Ładowność / Sortowanie drop the icon and lay
-// out label-left / value-right. "Zastosuj" is inline-right on desktop and a
+// morphs into a full-width row on mobile (< sm). The date field keeps its calendar
+// icon on mobile with a left-aligned value; payload / sorting drop the icon and lay
+// out label-left / value-right. Apply is inline-right on desktop and a
 // full-width row on tablet + mobile.
 
 interface Props {
@@ -39,19 +41,9 @@ interface Props {
   locale: Locale;
 }
 
-const PAYLOAD_OPTIONS = [
-  { value: "any", label: "dowolna" },
-  { value: "500", label: "500+ kg" },
-  { value: "1000", label: "1000+ kg" },
-  { value: "1500", label: "1500+ kg" },
-  { value: "2000", label: "2000+ kg" },
-  { value: "3000", label: "3000+ kg" },
-];
-
-const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
-  { value: "price_asc", label: "Cena: rosnąco" },
-  { value: "price_desc", label: "Cena: malejąco" },
-];
+// Only the "any" row carries a word; the rest are `N+ kg`, identical in both
+// locales (`kg` is a unit, not a translatable noun).
+const PAYLOAD_VALUES = ["500", "1000", "1500", "2000", "3000"] as const;
 
 // Shared FilterBtn chrome: full-width row (mobile) → content-hugging auto pill that
 // wraps (sm+); the fields never stretch to fill the row (design F6). The chevron rides
@@ -59,8 +51,8 @@ const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
 // uppercase label. The `data-[size=default]:*`
 // heights are load-bearing: <SelectTrigger> stamps `data-[size=default]:h-9`, which
 // (same modifier, differing base) tailwind-merge can't dedupe against a plain
-// `h-[52px]`, so the Ładowność/Sortowanie pills collapsed to 36px. Overriding with
-// the same modifier drops it and re-aligns them to Termin's 50/52px. `py-0` kills
+// `h-[52px]`, so the payload/sorting pills collapsed to 36px. Overriding with
+// the same modifier drops it and re-aligns them to the date field's 50/52px. `py-0` kills
 // the trigger's inherited `py-2`.
 const fieldShell =
   "bg-card flex h-[50px] w-full items-center gap-2.5 rounded-[13px] px-4 py-0 text-left whitespace-nowrap border border-[var(--flota-hair)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 data-[size=default]:h-[50px] sm:h-[52px] sm:w-auto sm:flex-none sm:gap-[11px] sm:rounded-full sm:pr-[14px] sm:pl-2 sm:shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:data-[size=default]:h-[52px]";
@@ -68,6 +60,16 @@ const fieldShell =
 const fieldLabel = "text-[10px] leading-none text-muted-foreground uppercase sm:tracking-[0.5px]";
 
 export default function FilterBar({ initial, locale }: Props) {
+  const t = translator(locale, fleet);
+  const payloadOptions = [
+    { value: "any", label: t("payloadAny") },
+    ...PAYLOAD_VALUES.map((value) => ({ value, label: `${value}+ kg` })),
+  ];
+  const sortOptions: { value: CatalogSort; label: string }[] = [
+    { value: "price_asc", label: t("sortPriceAsc") },
+    { value: "price_desc", label: t("sortPriceDesc") },
+  ];
+
   const [range, setRange] = React.useState<DateRange | undefined>(() => {
     const from = fromIsoDate(initial.pickup);
     const to = fromIsoDate(initial.return);
@@ -88,13 +90,13 @@ export default function FilterBar({ initial, locale }: Props) {
       ? `${dayMonthShort(range.from, locale)} – ${dayMonthShort(range.to, locale)}`
       : range?.from
         ? `${dayMonthShort(range.from, locale)} – …`
-        : "Wybierz daty";
+        : t("pickDates");
 
   function handleApply() {
     const pickup = range?.from ? toIsoDate(range.from) : null;
     const returnDate = range?.to ? toIsoDate(range.to) : null;
 
-    const check = validateDateRange(pickup, returnDate);
+    const check = validateDateRange(pickup, returnDate, locale);
     if (!check.ok) {
       setError(check.error);
       return;
@@ -119,15 +121,15 @@ export default function FilterBar({ initial, locale }: Props) {
     <div className="flex flex-col gap-2">
       <div className="bg-secondary flex flex-col gap-2 rounded-[18px] border border-[var(--flota-hair-2)] p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5 sm:p-3 sm:pr-[14px] sm:pl-5 lg:flex-nowrap">
         {/* "Filtry": a text eyebrow on mobile, a dark round chip + label on sm+. */}
-        <span className={cn(fieldLabel, "text-[11px] font-bold tracking-[1px] sm:hidden")}>Filtry</span>
+        <span className={cn(fieldLabel, "text-[11px] font-bold tracking-[1px] sm:hidden")}>{t("filters")}</span>
         <div className="hidden shrink-0 items-center gap-[9px] sm:flex">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--flota-ink-deep)] text-white">
             <SlidersHorizontal className="size-4" />
           </span>
-          <span className="text-[12px] font-bold tracking-[0.4px]">Filtry</span>
+          <span className="text-[12px] font-bold tracking-[0.4px]">{t("filters")}</span>
         </div>
 
-        {/* Termin — date range (Popover + Calendar). Icon stays on mobile. */}
+        {/* Date range (Popover + Calendar). Icon stays on mobile. */}
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
             <button type="button" className={fieldShell}>
@@ -135,7 +137,7 @@ export default function FilterBar({ initial, locale }: Props) {
                 <CalendarIcon className="size-4" />
               </span>
               <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                <span className={cn(fieldLabel, "hidden font-bold sm:block")}>Termin</span>
+                <span className={cn(fieldLabel, "hidden font-bold sm:block")}>{t("dates")}</span>
                 <span className="flex items-center gap-1.5">
                   <span
                     className={cn(
@@ -169,7 +171,7 @@ export default function FilterBar({ initial, locale }: Props) {
           </PopoverContent>
         </Popover>
 
-        {/* Ładowność — minimum payload. No icon on mobile; label-left / value-right. */}
+        {/* Minimum payload. No icon on mobile; label-left / value-right. */}
         <Select value={minPayload} onValueChange={setMinPayload}>
           <SelectTrigger className={cn(fieldShell, "sm:[&>svg]:hidden")}>
             <span className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -183,7 +185,7 @@ export default function FilterBar({ initial, locale }: Props) {
                     "text-foreground sm:text-muted-foreground text-[14.5px] font-semibold normal-case sm:text-[10px] sm:font-bold sm:uppercase",
                   )}
                 >
-                  Ładowność
+                  {t("payload")}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span
@@ -201,7 +203,7 @@ export default function FilterBar({ initial, locale }: Props) {
             </span>
           </SelectTrigger>
           <SelectContent>
-            {PAYLOAD_OPTIONS.map((opt) => (
+            {payloadOptions.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -209,7 +211,7 @@ export default function FilterBar({ initial, locale }: Props) {
           </SelectContent>
         </Select>
 
-        {/* Sortowanie — price sort. Same shape as Ładowność. */}
+        {/* Price sort. Same shape as the payload field. */}
         <Select
           value={sort}
           onValueChange={(value) => {
@@ -228,11 +230,11 @@ export default function FilterBar({ initial, locale }: Props) {
                     "text-foreground sm:text-muted-foreground text-[14.5px] font-semibold normal-case sm:text-[10px] sm:font-bold sm:uppercase",
                   )}
                 >
-                  Sortowanie
+                  {t("sorting")}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className={cn("text-[14px]", sort === "" ? "text-muted-foreground font-medium" : "font-[650]")}>
-                    <SelectValue placeholder="domyślne" />
+                    <SelectValue placeholder={t("sortDefault")} />
                   </span>
                   <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
                 </span>
@@ -240,7 +242,7 @@ export default function FilterBar({ initial, locale }: Props) {
             </span>
           </SelectTrigger>
           <SelectContent>
-            {SORT_OPTIONS.map((opt) => (
+            {sortOptions.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
               </SelectItem>
@@ -248,7 +250,7 @@ export default function FilterBar({ initial, locale }: Props) {
           </SelectContent>
         </Select>
 
-        {/* Zastosuj — inline-right on desktop, full-width row on tablet + mobile. */}
+        {/* Apply — inline-right on desktop, full-width row on tablet + mobile. */}
         <Button
           type="button"
           onClick={handleApply}
@@ -258,10 +260,10 @@ export default function FilterBar({ initial, locale }: Props) {
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-              Szukam…
+              {t("applying")}
             </span>
           ) : (
-            "Zastosuj"
+            t("apply")
           )}
         </Button>
       </div>

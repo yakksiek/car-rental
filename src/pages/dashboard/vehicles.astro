@@ -13,7 +13,7 @@ import { countOverdueReturns } from "../../lib/services/protocols";
 // `employee` by the middleware (src/lib/access.ts → /dashboard prefix); this page
 // SSR-loads the full fleet (including retired, now visible to staff after the
 // RLS broadening) plus the active-fleet category counts, then mounts the island.
-const { user, role, supabase, locale } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 
 const [vehicles, counts, pending, overdueCount] = await Promise.all([
   listFleet(supabase, { includeRetired: true }),
@@ -22,13 +22,13 @@ const [vehicles, counts, pending, overdueCount] = await Promise.all([
   countOverdueReturns(supabase),
 ]);
 
-const subtitle = `${counts.total} aktywnych pojazdów`;
+const subtitle = `${String(counts.total)} ${t("dashboard.fleetActiveVehicles")}`;
 ---
 
-<Layout title="Zarządzanie flotą — Flota">
+<Layout title={`${t("dashboard.fleetManageTitle")} — Flota`}>
   <StaffShell
     active="fleet"
-    title="Zarządzanie flotą"
+    title={t("dashboard.fleetManageTitle")}
     subtitle={subtitle}
     promotedAction="vehicle"
     user={user}

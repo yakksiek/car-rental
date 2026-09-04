@@ -11,6 +11,8 @@ import { defineDict } from "./types";
 // Authored — the design's `search-flow.jsx` is Polish-only, like the staff nav.
 export const search = defineDict({
   en: {
+    // The inactive-vehicle pill on a fleet result row.
+    retired: "Retired",
     placeholder: "Search reservations, vehicles, plates…",
     ariaLabel: "Search",
     clear: "Clear",
@@ -42,6 +44,7 @@ export const search = defineDict({
     dayTomorrow: "tomorrow",
   },
   pl: {
+    retired: "Wycofany",
     placeholder: "Szukaj rezerwacji, pojazdu, rejestracji…",
     ariaLabel: "Szukaj",
     clear: "Wyczyść",

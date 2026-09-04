@@ -8,7 +8,8 @@ import { DeliveryBadge, deliveryBadge } from "./DeliveryBadge";
 
 // others
 import { cn } from "../../lib/utils";
-import { fuelLabelPl } from "../../lib/protocol-labels";
+import { fuelLevelLabel, protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
 import { formatInteger } from "../../lib/format";
 import { dateTimeCompany } from "../../lib/format-date";
 import type { Locale } from "../../lib/i18n/types";
@@ -182,10 +183,22 @@ function SummaryRow({ label, text, bad }: { label: string; text: string; bad: bo
  * fuel), mirroring the return form's condition cards: `Przy wydaniu <base>` on the
  * left, the live delta chip on the right. Rendered only on return rows.
  */
-function CompareFoot({ base, text, bad }: { base: React.ReactNode; text: string; bad: boolean }) {
+function CompareFoot({
+  base,
+  text,
+  bad,
+  locale,
+}: {
+  base: React.ReactNode;
+  text: string;
+  bad: boolean;
+  locale: Locale;
+}) {
   return (
     <div className="border-border mt-3 flex items-center justify-between gap-2 border-t pt-3">
-      <span className="text-muted-foreground text-[12px]">Przy wydaniu {base}</span>
+      <span className="text-muted-foreground text-[12px]">
+        {translator(locale, protocol)("atPickup")} {base}
+      </span>
       <DeltaChip text={text} bad={bad} />
     </div>
   );
@@ -209,23 +222,26 @@ function formatSignedAt(signedAt: string, locale: Locale): string {
 
 export default function ProtocolView(props: ProtocolViewProps) {
   const { locale } = props;
+  // Memoized so the `useCallback`s below can list it honestly without losing
+  // their memo — `translator` is a pure two-property lookup.
+  const t = React.useMemo(() => translator(locale, protocol), [locale]);
   const { busy, resend } = useResendEmail();
   const [deliveryStatus, setDeliveryStatus] = React.useState<string | null>(props.deliveryStatus);
   const [error, setError] = React.useState<string | null>(null);
 
-  const badge = deliveryBadge(props.pdfPath, deliveryStatus);
+  const badge = deliveryBadge(props.pdfPath, deliveryStatus, locale);
   const canResend = Boolean(props.pdfPath) && badge.tone !== "ok";
 
   // ── Return-view specifics (S-06). Absent `kind` ⇒ the issue view, unchanged. ──
   const isReturn = props.kind === "return";
-  const title = isReturn ? "Protokół zwrotu" : "Protokół wydania";
+  const title = isReturn ? t("returnTitle") : t("issueTitle");
   // Resolved by the page from `?from` (the cockpit is a second entry point), with
   // the kind-matched worklist as its fallback — see `lib/back-target.ts`.
   const backHref = props.back?.href ?? (isReturn ? "/dashboard/returns" : "/dashboard/pickups");
-  const backLabel = props.back?.label ?? (isReturn ? "Wróć do zwrotów" : "Wróć do wydań");
-  const contextLabel = isReturn ? "Zwrot" : "Odbiór";
+  const backLabel = props.back?.label ?? (isReturn ? t("backToReturns") : t("backToPickups"));
+  const contextLabel = isReturn ? t("returnAt") : t("pickupAt");
   const contextTime = isReturn ? (props.returnTime ?? "10:00") : props.pickupTime;
-  const pdfFilename = `protokol-${isReturn ? "zwrotu" : "wydania"}-${props.reference}.pdf`;
+  const pdfFilename = `${isReturn ? t("filenameReturn") : t("filenameIssue")}-${props.reference}.pdf`;
 
   // The comparison summary — computed by the SAME pure `computeReturnDeltas` the form,
   // the PDF and the email use, so all four surfaces render identical numbers. The
@@ -250,12 +266,8 @@ export default function ProtocolView(props: ProtocolViewProps) {
       setDeliveryStatus("sent");
       return;
     }
-    setError(
-      outcome.status === "no_pdf"
-        ? "Brak zapisanego PDF — wygeneruj go ponownie."
-        : "Nie udało się wysłać. Spróbuj ponownie.",
-    );
-  }, [props.protocolId, resend]);
+    setError(outcome.status === "no_pdf" ? t("resendNoPdf") : t("resendFailed"));
+  }, [props.protocolId, resend, t]);
 
   // ── Shared building blocks ────────────────────────────────────────────────────
 
@@ -269,7 +281,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
     <Button asChild variant="outline" className="h-10">
       <a href={props.pdfUrl} target="_blank" rel="noopener noreferrer" download={pdfFilename}>
         <Download className="size-4" />
-        Pobierz PDF
+        {t("downloadPdf")}
       </a>
     </Button>
   ) : null;
@@ -285,12 +297,12 @@ export default function ProtocolView(props: ProtocolViewProps) {
       {busy ? (
         <>
           <span className="border-background/30 border-t-background size-4 animate-spin rounded-full border-2" />
-          Wysyłanie…
+          {t("sending")}
         </>
       ) : (
         <>
           <RefreshCw className="size-4" />
-          Wyślij ponownie
+          {t("resend")}
         </>
       )}
     </Button>
@@ -301,13 +313,14 @@ export default function ProtocolView(props: ProtocolViewProps) {
   // `order-*` so a mobile `display:contents` interleave stays 1·2·3·4·summary). The
   // return-only bits inside (`comparison`, `isReturn`) are false on an issue row.
   const sectionCondition = (
-    <Section n={1} title="Stan techniczny" className="order-1">
+    <Section n={1} title={t("conditionTitle")} className="order-1">
       <div className="grid grid-cols-2 gap-5">
         {/* Odometer — current readout + (return only) the baseline reference + km-driven delta. */}
         <div>
-          <Readout label="Licznik" value={`${formatInteger(props.odometerKm, locale)} km`} />
+          <Readout label={t("odometer")} value={`${formatInteger(props.odometerKm, locale)} km`} />
           {comparison && deltas && (
             <CompareFoot
+              locale={locale}
               base={
                 <>
                   <span className="text-foreground font-mono font-semibold">
@@ -322,9 +335,9 @@ export default function ProtocolView(props: ProtocolViewProps) {
           )}
         </div>
         <div>
-          <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">Poziom paliwa</span>
+          <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">{t("fuelLevel")}</span>
           <div className="text-foreground mt-1 text-[27px] leading-none font-bold tracking-tight tabular-nums">
-            {fuelLabelPl(props.fuelEighths)}
+            {fuelLevelLabel(props.fuelEighths, locale)}
           </div>
           <div className="mt-2 flex gap-[3px]">
             {FUEL_SEGMENTS.map((i) => (
@@ -340,6 +353,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
           {/* Fuel baseline reference + change delta (return only). */}
           {comparison && deltas && (
             <CompareFoot
+              locale={locale}
               base={<span className="text-foreground font-mono font-semibold">{comparison.baselineFuelEighths}/8</span>}
               text={formatFuelDelta(deltas.fuelDelta)}
               bad={deltas.flags.fuelAdverse}
@@ -353,7 +367,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
   const sectionPhotos = (
     <Section
       n={2}
-      title="Zdjęcia pojazdu"
+      title={t("photosTitle")}
       className="order-2"
       action={<span className="text-muted-foreground font-mono text-[12px] font-bold">{props.photos.length}/6</span>}
     >
@@ -364,7 +378,9 @@ export default function ProtocolView(props: ProtocolViewProps) {
               {photo.url ? (
                 <img src={photo.url} alt={photo.label} className="size-full object-cover" />
               ) : (
-                <div className="text-muted-foreground flex size-full items-center justify-center text-[11px]">Brak</div>
+                <div className="text-muted-foreground flex size-full items-center justify-center text-[11px]">
+                  {t("photoNone")}
+                </div>
               )}
             </div>
             <figcaption className="text-muted-foreground mt-1 text-[10px] font-semibold tracking-wide uppercase">
@@ -377,13 +393,13 @@ export default function ProtocolView(props: ProtocolViewProps) {
   );
 
   const sectionDamage = (
-    <Section n={3} title="Uszkodzenia" className="order-3">
+    <Section n={3} title={t("damageTitle")} className="order-3">
       {/* Baseline reference (return rows) — the issue damage list, read-only,
-          mirroring the return form's `Uszkodzenia z protokołu wydania` panel. */}
+          mirroring the return form's baseline-damage panel. */}
       {isReturn && props.baselineDamages && props.baselineDamages.length > 0 && (
         <div className="border-border bg-background mb-3 rounded-[14px] border p-3.5">
           <p className="text-muted-foreground mb-2 text-[11px] font-[650] tracking-[0.01em] uppercase">
-            Uszkodzenia z protokołu wydania
+            {t("damageBaselineHeading")}
           </p>
           <div className="flex flex-col gap-1.5">
             {props.baselineDamages.map((baseline) => (
@@ -393,7 +409,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
                   {baseline.size ? ` (${baseline.size})` : ""}
                 </span>
                 <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-0.5 text-[11px] font-bold tracking-[0.04em] uppercase">
-                  Istniejące
+                  {t("damageExisting")}
                 </span>
               </div>
             ))}
@@ -402,14 +418,12 @@ export default function ProtocolView(props: ProtocolViewProps) {
       )}
 
       {props.damages.length === 0 ? (
-        <p className="text-muted-foreground text-[13px]">
-          {isReturn ? "Nie dodano nowych uszkodzeń." : "Brak uszkodzeń."}
-        </p>
+        <p className="text-muted-foreground text-[13px]">{isReturn ? t("damageEmptyReturn") : t("damageEmptyIssue")}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {props.damages.map((damage) => {
             // On return rows, the persisted `baselineDamageId` is the static tag:
-            // truthy ⇒ carried over (`Istniejące`), falsy ⇒ new (`Nowe`). Issue rows
+            // truthy ⇒ carried over (Existing), falsy ⇒ new (New). Issue rows
             // carry no tag, so the row renders exactly as it did in S-05.
             const existing = Boolean(damage.baselineDamageId);
             return (
@@ -428,7 +442,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
                           : "text-primary bg-[var(--flota-danger-soft)]",
                       )}
                     >
-                      {existing ? "Istniejące" : "Nowe"}
+                      {existing ? t("damageExisting") : t("damageNew")}
                     </span>
                   )}
                 </div>
@@ -438,7 +452,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
                       <img
                         key={url}
                         src={url}
-                        alt={`${damage.typeLabel} — zdjęcie ${i + 1}`}
+                        alt={`${damage.typeLabel} — ${t("damagePhotos")} ${String(i + 1)}`}
                         className="size-16 rounded-[8px] object-cover"
                       />
                     ))}
@@ -453,7 +467,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
   );
 
   const sectionSignature = (
-    <Section n={4} title="Podpis" className="order-4">
+    <Section n={4} title={t("signatureTitle")} className="order-4">
       <div className="flex items-center gap-2 text-[13px]">
         <span
           className={cn(
@@ -463,17 +477,19 @@ export default function ProtocolView(props: ProtocolViewProps) {
         >
           <Check className="size-3.5" />
         </span>
-        <span className="text-foreground">Klient potwierdził stan pojazdu i warunki najmu.</span>
+        <span className="text-foreground">{t("ackConfirmed")}</span>
       </div>
       <div className="border-border bg-background mt-3 rounded-[12px] border p-3">
         {props.signatureUrl ? (
-          <img src={props.signatureUrl} alt="Podpis klienta" className="h-32 w-full object-contain" />
+          <img src={props.signatureUrl} alt={t("signatureImageAlt")} className="h-32 w-full object-contain" />
         ) : (
-          <div className="text-muted-foreground flex h-32 items-center justify-center text-[13px]">Brak podpisu</div>
+          <div className="text-muted-foreground flex h-32 items-center justify-center text-[13px]">
+            {t("signatureMissing")}
+          </div>
         )}
       </div>
       <p className="text-muted-foreground mt-2 text-[12px]">
-        Podpisał(a) {props.customerName} · {formatSignedAt(props.signedAt, locale)}
+        {t("signedBy")} {props.customerName} · {formatSignedAt(props.signedAt, locale)}
       </p>
     </Section>
   );
@@ -483,14 +499,12 @@ export default function ProtocolView(props: ProtocolViewProps) {
   // to the bottom of the right column (desktop) / the scroll (mobile).
   const darkSummary = deltas ? (
     <section className="bg-foreground shadow-card order-last rounded-[16px] p-5 sm:p-[22px]">
-      <h2 className="text-background/70 text-[11px] font-bold tracking-[0.06em] uppercase">
-        Porównanie wydanie → zwrot
-      </h2>
+      <h2 className="text-background/70 text-[11px] font-bold tracking-[0.06em] uppercase">{t("comparisonTitle")}</h2>
       <div className="mt-3 flex flex-col gap-2.5">
-        <SummaryRow label="Przejechano" text={formatKmDriven(deltas.kmDriven, locale)} bad={false} />
-        <SummaryRow label="Zmiana paliwa" text={formatFuelDelta(deltas.fuelDelta)} bad={deltas.flags.fuelAdverse} />
+        <SummaryRow label={t("distanceDriven")} text={formatKmDriven(deltas.kmDriven, locale)} bad={false} />
+        <SummaryRow label={t("fuelChange")} text={formatFuelDelta(deltas.fuelDelta)} bad={deltas.flags.fuelAdverse} />
         <SummaryRow
-          label="Nowe uszkodzenia"
+          label={t("comparisonNewDamage")}
           text={formatNewDamageCount(deltas.newDamageCount)}
           bad={deltas.flags.damageAdverse}
         />
@@ -504,7 +518,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
       <main className="mx-auto w-full max-w-[1180px] px-4 py-6">
         {/* Form-style header — back ‹ / title + context / close × (circular buttons). */}
         <div className="border-border bg-card shadow-card mb-4 flex items-center justify-between gap-3 rounded-[16px] border px-4 py-3.5 sm:px-6">
-          <a href={backHref} aria-label="Wróć" className={iconBtn}>
+          <a href={backHref} aria-label={t("back")} className={iconBtn}>
             <ArrowLeft className="size-[18px]" />
           </a>
           <div className="min-w-0 text-center sm:text-left">
@@ -514,7 +528,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
               <span className="font-mono">{props.plate}</span> · {contextLabel} {contextTime}
             </p>
           </div>
-          <a href={backHref} aria-label="Zamknij" className={iconBtn}>
+          <a href={backHref} aria-label={t("close")} className={iconBtn}>
             <X className="size-[18px]" />
           </a>
         </div>
@@ -523,7 +537,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
         <div className="border-border bg-card shadow-card mb-4 rounded-[16px] border p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
-              <DeliveryBadge pdfPath={props.pdfPath} deliveryStatus={deliveryStatus} />
+              <DeliveryBadge pdfPath={props.pdfPath} deliveryStatus={deliveryStatus} locale={locale} />
               <span className="text-muted-foreground truncate text-[13px]">{props.customerEmail}</span>
             </div>
             {(resendButton !== null || pdfButton !== null) && (
@@ -575,7 +589,7 @@ export default function ProtocolView(props: ProtocolViewProps) {
               <span className="font-mono">{props.plate}</span> · {contextLabel} {contextTime}
             </p>
           </div>
-          <DeliveryBadge pdfPath={props.pdfPath} deliveryStatus={deliveryStatus} />
+          <DeliveryBadge pdfPath={props.pdfPath} deliveryStatus={deliveryStatus} locale={locale} />
         </div>
 
         {(pdfButton !== null || resendButton !== null) && (

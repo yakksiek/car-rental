@@ -1409,40 +1409,40 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 4.1 Type check passes: `npx astro check`
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Unit + integration tests pass
-- [x] 4.4 E2E suite green against English: `npm run test:e2e`
-- [x] 4.5 Catalog key parity holds for every namespace touched
-- [x] 4.10 `staff-admin`, `auth-hardening`, `quick-actions`, `demo-gate` re-anchored to English
+- [x] 4.1 Type check passes: `npx astro check` — d146e49
+- [x] 4.2 Lint passes: `npm run lint` — d146e49
+- [x] 4.3 Unit + integration tests pass — d146e49
+- [x] 4.4 E2E suite green against English: `npm run test:e2e` — d146e49
+- [x] 4.5 Catalog key parity holds for every namespace touched — d146e49
+- [x] 4.10 `staff-admin`, `auth-hardening`, `quick-actions`, `demo-gate` re-anchored to English — d146e49
 
 #### Manual
 
-- [x] 4.6 Acceptance test: landing → footer → sign-in → Pulpit → nav, all English
-- [x] 4.7 Switching to Polish restores previous copy exactly
-- [x] 4.8 Seeded vehicle names read English; the two retained Polish rows render correctly
-- [x] 4.9 Brand reads Flota; nav item reads Fleet
+- [x] 4.6 Acceptance test: landing → footer → sign-in → Pulpit → nav, all English — d146e49
+- [x] 4.7 Switching to Polish restores previous copy exactly — d146e49
+- [x] 4.8 Seeded vehicle names read English; the two retained Polish rows render correctly — d146e49
+- [x] 4.9 Brand reads Flota; nav item reads Fleet — d146e49
 
 ### Phase 5: Remaining App Copy
 
 #### Automated
 
-- [ ] 5.1 Type check passes: `npx astro check`
-- [ ] 5.2 Lint passes: `npm run lint`
-- [ ] 5.3 Unit + integration tests pass
-- [ ] 5.4 Full E2E suite green against English: `npm run test:e2e`
-- [ ] 5.5 Build succeeds: `npm run build`
-- [ ] 5.6 Scripted sweep of `src/pages/**` + `src/components/**` finds no Polish outside catalog `pl` blocks and comments
-- [ ] 5.12 `contract-surfaces.md` updated for the four surfaces whose exports gained a locale parameter
-- [ ] 5.13 Island chunk sizes compared against `island-baseline.md` — no material growth
+- [x] 5.1 Type check passes: `npx astro check`
+- [x] 5.2 Lint passes: `npm run lint`
+- [x] 5.3 Unit + integration tests pass
+- [x] 5.4 Full E2E suite green against English: `npm run test:e2e`
+- [x] 5.5 Build succeeds: `npm run build`
+- [x] 5.6 Scripted sweep of `src/pages/**` + `src/components/**` finds no Polish outside catalog `pl` blocks and comments
+- [x] 5.12 `contract-surfaces.md` updated for the four surfaces whose exports gained a locale parameter
+- [x] 5.13 Island chunk sizes compared against `island-baseline.md` — no material growth
 
 #### Manual
 
-- [ ] 5.7 Every dashboard route and public page walked in English — no leakage
-- [ ] 5.8 Full protocol flow walked in English
-- [ ] 5.9 Validation errors localize on reservation, vehicle and protocol forms
-- [ ] 5.10 API errors localize
-- [ ] 5.11 Vehicle detail URLs unchanged — no slug regression
+- [x] 5.7 Every dashboard route and public page walked in English — no leakage
+- [x] 5.8 Full protocol flow walked in English
+- [x] 5.9 Validation errors localize on reservation, vehicle and protocol forms
+- [x] 5.10 API errors localize
+- [x] 5.11 Vehicle detail URLs unchanged — no slug regression
 
 ### Phase 6: Outbound Artifacts + Brand
 

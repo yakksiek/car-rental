@@ -8,6 +8,8 @@ import { Button } from "../ui/button";
 // others
 import { cn } from "../../lib/utils";
 import { timeCompany } from "../../lib/format-date";
+import { protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 
 // Signature capture (S-05 Phase 5), as a full-screen signing modal rather than an
@@ -32,7 +34,7 @@ interface FieldProps {
   customerName: string;
   invalid?: boolean;
   /**
-   * Render as a grey inset (no `Podpis` label, `bg-background` fill) for use inside a
+   * Render as a grey inset (no signature label, `bg-background` fill) for use inside a
    * white section card — the return form's §4. Default (issue form) is the standalone
    * white box with its own label.
    */
@@ -54,11 +56,14 @@ function signedTime(signedAt: string, locale: Locale): string {
 
 /** The inline Section-4 control: a prompt button when empty, a summary once signed. */
 export function SignatureField({ signedAt, customerName, invalid, inset, onSigned, locale }: FieldProps) {
+  const t = translator(locale, protocol);
   const [open, setOpen] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-2">
-      {!inset && <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">Podpis</span>}
+      {!inset && (
+        <span className="text-muted-foreground text-[11px] font-[650] tracking-[0.01em]">{t("signature")}</span>
+      )}
 
       {signedAt ? (
         <div
@@ -69,7 +74,7 @@ export function SignatureField({ signedAt, customerName, invalid, inset, onSigne
         >
           <span className="text-success flex items-center gap-2 text-[13px] font-semibold">
             <Check className="size-4 shrink-0" />
-            Podpisał(a) {customerName} · o {signedTime(signedAt, locale)}
+            {t("signedBy")} {customerName} · {signedTime(signedAt, locale)}
           </span>
           <button
             type="button"
@@ -78,7 +83,7 @@ export function SignatureField({ signedAt, customerName, invalid, inset, onSigne
             }}
             className="text-primary shrink-0 text-[12px] font-semibold"
           >
-            Zmień
+            {t("signatureChange")}
           </button>
         </div>
       ) : (
@@ -100,15 +105,16 @@ export function SignatureField({ signedAt, customerName, invalid, inset, onSigne
             )}
           >
             <PenLine className="text-muted-foreground size-5" />
-            <span className="text-foreground text-[13px] font-semibold">Poproś klienta o podpis</span>
-            <span className="text-muted-foreground text-[12px]">Otwórz pełny ekran podpisu</span>
+            <span className="text-foreground text-[13px] font-semibold">{t("signaturePromptTitle")}</span>
+            <span className="text-muted-foreground text-[12px]">{t("signaturePromptSub")}</span>
           </button>
-          {invalid && <p className="text-destructive text-sm font-medium">Wymagany podpis</p>}
+          {invalid && <p className="text-destructive text-sm font-medium">{t("signatureRequired")}</p>}
         </>
       )}
 
       {open && (
         <SignatureModal
+          locale={locale}
           onConfirm={onSigned}
           onClose={() => {
             setOpen(false);
@@ -125,9 +131,11 @@ const MAX_DPR = 2;
 interface ModalProps {
   onConfirm: (png: Blob) => Promise<boolean>;
   onClose: () => void;
+  locale: Locale;
 }
 
-function SignatureModal({ onConfirm, onClose }: ModalProps) {
+function SignatureModal({ onConfirm, onClose, locale }: ModalProps) {
+  const t = translator(locale, protocol);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const drawing = React.useRef(false);
   const dpr = React.useRef(1);
@@ -238,7 +246,7 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
     canvas.toBlob((blob) => {
       if (!blob) {
         setBusy(false);
-        setError("Nie udało się odczytać podpisu. Spróbuj ponownie.");
+        setError(t("signatureReadFailed"));
         return;
       }
       // The signature canvas is the one blob the island mints itself, so it must
@@ -249,7 +257,7 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
         if (ok) {
           onClose();
         } else {
-          setError("Nie udało się zapisać podpisu. Spróbuj ponownie.");
+          setError(t("signatureSaveFailed"));
         }
       });
     }, "image/png");
@@ -259,10 +267,10 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
     <div className="sm:bg-foreground/40 fixed inset-0 z-50 flex flex-col sm:items-center sm:justify-center">
       <div className="bg-card shadow-overlay flex h-full w-full flex-col sm:h-[540px] sm:max-w-[600px] sm:rounded-[18px]">
         <header className="border-border flex items-center justify-between border-b px-4 py-3.5">
-          <h2 className="text-foreground text-[16px] font-bold tracking-tight">Podpis klienta</h2>
+          <h2 className="text-foreground text-[16px] font-bold tracking-tight">{t("signatureSheetTitle")}</h2>
           <button
             type="button"
-            aria-label="Zamknij"
+            aria-label={t("close")}
             onClick={onClose}
             className="border-border bg-card text-foreground hover:bg-background flex size-9 items-center justify-center rounded-[10px] border"
           >
@@ -270,13 +278,13 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
           </button>
         </header>
 
-        <p className="text-muted-foreground px-4 pt-3 text-[13px]">Poproś klienta, aby podpisał się w polu poniżej.</p>
+        <p className="text-muted-foreground px-4 pt-3 text-[13px]">{t("signatureSheetHint")}</p>
 
         <div className="relative min-h-0 flex-1 p-4">
           <canvas
             ref={canvasRef}
             tabIndex={-1}
-            aria-label="Pole podpisu klienta"
+            aria-label={t("signatureFieldLabel")}
             style={{ touchAction: "none" }}
             className="border-border bg-card size-full rounded-[14px] border border-dashed"
             onPointerDown={handleDown}
@@ -286,7 +294,7 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
           />
           {!hasInk && (
             <p className="text-muted-foreground pointer-events-none absolute inset-0 flex items-center justify-center text-[13px]">
-              Rysuj palcem, myszką lub gładzikiem
+              {t("signatureDrawHint")}
             </p>
           )}
         </div>
@@ -301,7 +309,7 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
             disabled={!hasInk || busy}
             onClick={clearCanvas}
           >
-            Wyczyść
+            {t("signatureClear")}
           </Button>
           <Button
             type="button"
@@ -313,12 +321,12 @@ function SignatureModal({ onConfirm, onClose }: ModalProps) {
             {busy ? (
               <>
                 <span className="border-background/30 border-t-background size-4 animate-spin rounded-full border-2" />
-                Zapisywanie…
+                {t("saving")}
               </>
             ) : (
               <>
                 <Check className="size-4" />
-                Zatwierdź podpis
+                {t("signatureConfirm")}
               </>
             )}
           </Button>

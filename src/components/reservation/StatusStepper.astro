@@ -4,7 +4,7 @@ import { cn } from "../../lib/utils";
 import { stepperFor, type StepState } from "../../lib/reservation-status";
 import type { ReservationStatus } from "../../types";
 
-// The "CO DALEJ" section. Two layouts driven by the same Phase-2 step model
+// The "what happens next" section. Two layouts driven by the same Phase-2 step model
 // (`stepperFor`):
 //   • Mobile (< lg, design mobile-4): a vertical stepper — numbered circles
 //     joined by a connecting line, title + description to the right.
@@ -20,8 +20,9 @@ interface Props {
 }
 
 const { status, class: className } = Astro.props;
+const { locale, t } = Astro.locals;
 
-const steps = stepperFor(status);
+const steps = stepperFor(status, locale);
 
 // Number-badge styling per state (shared by both layouts).
 const BADGE: Record<StepState, string> = {
@@ -32,7 +33,9 @@ const BADGE: Record<StepState, string> = {
 ---
 
 <section class:list={cn(className)}>
-  <h2 class="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">Co dalej</h2>
+  <h2 class="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+    {t("booking.stepperHeading")}
+  </h2>
 
   <!-- Mobile: vertical stepper (design mobile-4). -->
   <ol class="mt-4 lg:hidden">

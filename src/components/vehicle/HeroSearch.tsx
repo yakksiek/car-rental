@@ -30,9 +30,8 @@ import { categoryLabel, vehicle } from "../../lib/i18n/vehicle";
 // accessor boundary in `lib/i18n/types.ts`. It reads the `vehicle` namespace,
 // NOT `landing`: the latter is ~35 keys of marketing prose the rest of the page
 // renders server-side, and importing it here cost +1 394 B gzip for six field
-// labels. `validateDateRange`'s message is still Polish — `catalog-filters.ts`
-// is a named contract surface whose locale parameter lands with the rest of the
-// lib labels in Phase 5 §5.
+// labels. `validateDateRange` reports in the active locale (Phase 5 §5 gave that
+// named contract surface its locale parameter).
 
 const CATEGORIES: VehicleCategory[] = [
   "cargo_van",
@@ -67,7 +66,7 @@ export default function HeroSearch({ category = null, locale }: Props) {
     const pickup = range?.from ? toIsoDate(range.from) : null;
     const returnDate = range?.to ? toIsoDate(range.to) : null;
 
-    const check = validateDateRange(pickup, returnDate);
+    const check = validateDateRange(pickup, returnDate, locale);
     if (!check.ok) {
       setError(check.error);
       return;
@@ -154,7 +153,9 @@ export default function HeroSearch({ category = null, locale }: Props) {
           <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">
             {t("searchBranch")}
           </div>
-          <div className="text-foreground mt-1 truncate text-[15px] font-bold xl:text-[14.5px]">Warszawa · Mokotów</div>
+          <div className="text-foreground mt-1 truncate text-[15px] font-bold xl:text-[14.5px]">
+            {t("searchBranchValue")}
+          </div>
         </div>
 
         {/* Search */}

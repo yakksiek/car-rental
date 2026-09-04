@@ -18,7 +18,7 @@ import type { DispatchReturnRow, DispatchRow, PendingReservation } from "../type
 export interface DayCounts {
   pickups: number;
   returns: number;
-  wnioski: number;
+  requests: number;
   overdue: number;
   all: number;
 }
@@ -26,7 +26,7 @@ export interface DayCounts {
 /**
  * Day totals — the row count of the view each card/chip opens, matching the
  * `ReturnQueue` convention (badge = rows shown) and the mockups. `pickups` is all
- * of today's dispatch rows, `returns` all due-or-overdue rows, `wnioski` all
+ * of today's dispatch rows, `returns` all due-or-overdue rows, `requests` all
  * pending requests, `overdue` the overdue subset (counted by the DB, passed in),
  * and `all` the sum of the three views. "What's left" is expressed only by the
  * schedule's progress label, never by these numbers.
@@ -40,7 +40,7 @@ export function dayCounts(
   return {
     pickups: pickups.length,
     returns: returns.length,
-    wnioski: pending.length,
+    requests: pending.length,
     overdue: overdueCount,
     all: pickups.length + returns.length + pending.length,
   };
@@ -105,20 +105,24 @@ export function scheduleGroups(
   };
 }
 
-/** The mobile chip filter — single-select, `wszystko` showing all three sections. */
-export type SectionKey = "wszystko" | "wydania" | "zwroty" | "wnioski";
+// The `?section` chip filter's keys. These are URL tokens, not copy — they were
+// Polish (`wszystko` / `wydania` / `zwroty` / `wnioski`) until
+// english-localization Phase 5 and are renamed here so the Polish sweep stays
+// honest about what is and is not translatable.
+/** The mobile chip filter — single-select, `all` showing all three sections. */
+export type SectionKey = "all" | "pickups" | "returns" | "requests";
 
-/** The three filterable sections; `wszystko` is the "no filter" key. */
-export type SectionName = Exclude<SectionKey, "wszystko">;
+/** The three filterable sections; `all` is the "no filter" key. */
+export type SectionName = Exclude<SectionKey, "all">;
 
-const SECTION_KEYS: readonly SectionKey[] = ["wszystko", "wydania", "zwroty", "wnioski"];
+const SECTION_KEYS: readonly SectionKey[] = ["all", "pickups", "returns", "requests"];
 
-/** Validate a raw `?section` param; junk / absent → `wszystko` (all sections). */
+/** Validate a raw `?section` param; junk / absent → `all` (every section). */
 export function parseSection(raw: string | null | undefined): SectionKey {
-  return SECTION_KEYS.includes(raw as SectionKey) ? (raw as SectionKey) : "wszystko";
+  return SECTION_KEYS.includes(raw as SectionKey) ? (raw as SectionKey) : "all";
 }
 
-/** Which sections a given chip shows — `wszystko` shows all three, else just its own. */
+/** Which sections a given chip shows — `all` shows all three, else just its own. */
 export function isSectionVisible(active: SectionKey, section: SectionName): boolean {
-  return active === "wszystko" || active === section;
+  return active === "all" || active === section;
 }

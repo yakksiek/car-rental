@@ -165,7 +165,7 @@ export default function NeedDecisionPanel({
           </span>
           {count > 0 && (
             <a
-              href="/dashboard/reservations?from=pulpit"
+              href="/dashboard/reservations?from=dashboard"
               className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
             >
               {t("open")}
@@ -202,7 +202,7 @@ export default function NeedDecisionPanel({
           ))}
           {overflow > 0 && (
             <a
-              href="/dashboard/reservations?from=pulpit"
+              href="/dashboard/reservations?from=dashboard"
               className="text-muted-foreground hover:text-foreground py-1 text-center text-sm font-medium"
             >
               {t("seeAll")} ({count}) →
@@ -213,6 +213,7 @@ export default function NeedDecisionPanel({
 
       {reasonForId && (
         <ReasonSheet
+          locale={locale}
           busy={busy}
           onClose={() => {
             setReasonForId(null);
@@ -221,7 +222,7 @@ export default function NeedDecisionPanel({
         />
       )}
 
-      {result && <ResultOverlay status={result} onDone={onResultDone} />}
+      {result && <ResultOverlay locale={locale} status={result} onDone={onResultDone} />}
     </div>
   );
 }

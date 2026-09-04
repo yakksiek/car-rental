@@ -45,7 +45,10 @@ export const staff = defineDict({
     // Deliberately static, not time-of-day derived: the server runs UTC while
     // the depot lives in Europe/Warsaw (design-contract deviation 3).
     greeting: "Good morning",
-    dashSubtitle: "Here’s your day at the Warszawa depot",
+    dashSubtitle: "Here’s your day at the Warsaw depot",
+    // The depot under the identity chip's role label. The city translates; the
+    // depot is single and fixed, like the public site's `Warsaw · Mokotów`.
+    depot: "Warsaw",
     search: "Search",
 
     // ── Stat cards + mobile chips ──────────────────────────────────────────
@@ -111,6 +114,7 @@ export const staff = defineDict({
 
     greeting: "Dzień dobry",
     dashSubtitle: "Oto Twój dzień w oddziale Warszawa",
+    depot: "Warszawa",
     search: "Szukaj",
 
     today: "Dziś",

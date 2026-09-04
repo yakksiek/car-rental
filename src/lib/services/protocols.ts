@@ -7,6 +7,8 @@ import { protocolIssuedEmail, protocolReturnedEmail } from "../email/templates";
 import { computeReturnDeltas } from "../protocol-delta";
 import { PHOTO_SLOTS } from "../protocol-schema";
 import type { ProtocolInput } from "../protocol-schema";
+import { protocol as protocolCatalog } from "../i18n/protocol";
+import { translator } from "../i18n/types";
 import { captionOf } from "../returns-filter";
 import type { ReturnProtocolInput } from "../return-protocol-schema";
 import { sendTracked } from "./email-delivery";
@@ -49,6 +51,16 @@ const SIGNED_URL_TTL_SECONDS = 300;
 
 const TEMPLATE = "protocol_issued";
 const TEMPLATE_RETURN = "protocol_returned";
+// The PDF's attachment filename. It rides `ARTIFACT_LOCALE`'s sibling rule: a
+// protocol's language is a property of the DOCUMENT, and every stored PDF is
+// Polish until Phase 6 §2 stamps `protocols.locale` and renders on it. Pinned
+// here rather than read from the sender's session for the same reason
+// `media/protocol-pdf.ts` pins its own.
+const ARTIFACT_FILENAME = {
+  issue: translator("pl", protocolCatalog)("filenameIssue"),
+  return: translator("pl", protocolCatalog)("filenameReturn"),
+} as const;
+
 const ENTITY_TYPE = "protocol";
 
 /**
@@ -292,7 +304,7 @@ export async function resendProtocolEmail(
       entityType: ENTITY_TYPE,
       entityId: protocolId,
       template: TEMPLATE_RETURN,
-      attachments: [{ path: signed.signedUrl, filename: `protokol-zwrotu-${protocol.reference}.pdf` }],
+      attachments: [{ path: signed.signedUrl, filename: `${ARTIFACT_FILENAME.return}-${protocol.reference}.pdf` }],
     });
   }
 
@@ -310,7 +322,7 @@ export async function resendProtocolEmail(
     entityType: ENTITY_TYPE,
     entityId: protocolId,
     template: TEMPLATE,
-    attachments: [{ path: signed.signedUrl, filename: `protokol-wydania-${protocol.reference}.pdf` }],
+    attachments: [{ path: signed.signedUrl, filename: `${ARTIFACT_FILENAME.issue}-${protocol.reference}.pdf` }],
   });
 }
 

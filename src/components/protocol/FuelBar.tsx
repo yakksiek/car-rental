@@ -1,6 +1,8 @@
 // others
 import { cn } from "../../lib/utils";
-import { fuelLabelPl } from "../../lib/protocol-labels";
+import { fuelLevelLabel, protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 
 // Eight tappable segments — the design's fuel gauge. Buttons, not a range input:
 // an employee in the rain hits a 22px-tall target, not a slider thumb. Each
@@ -14,13 +16,16 @@ interface Props {
   value: number | undefined;
   onChange: (value: number) => void;
   invalid?: boolean;
-  /** Render the `Poziom paliwa` label uppercase + letter-spaced (the return form's condition cards). */
+  /** Render the fuel-level label uppercase + letter-spaced (the return form's condition cards). */
   uppercaseLabel?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 const SEGMENTS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-export function FuelBar({ value, onChange, invalid, uppercaseLabel }: Props) {
+export function FuelBar({ value, onChange, invalid, uppercaseLabel, locale }: Props) {
+  const t = translator(locale, protocol);
   return (
     <div className="flex flex-col gap-2">
       <span
@@ -29,15 +34,15 @@ export function FuelBar({ value, onChange, invalid, uppercaseLabel }: Props) {
           uppercaseLabel && "tracking-[0.06em] uppercase",
         )}
       >
-        Poziom paliwa
+        {t("fuelLevel")}
       </span>
       <span className="text-foreground text-[27px] leading-none font-bold tracking-tight tabular-nums">
-        {value === undefined ? "—" : fuelLabelPl(value)}
+        {value === undefined ? "—" : fuelLevelLabel(value, locale)}
       </span>
       <div
         id="fuelEighths"
         role="group"
-        aria-label="Poziom paliwa"
+        aria-label={t("fuelLevel")}
         aria-invalid={invalid ?? undefined}
         tabIndex={-1}
         className="mt-1 flex gap-[3px]"

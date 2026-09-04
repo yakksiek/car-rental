@@ -3,6 +3,8 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { isRoleSufficient } from "../../lib/access";
 import { MIN_QUERY_LENGTH, searchStaff } from "../../lib/services/search";
 
@@ -31,11 +33,13 @@ function json(status: number, body: unknown): Response {
 const EMPTY_RESULTS = { reservations: [], returns: [], vehicles: [] };
 
 export const GET: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   if (!context.locals.user) {
-    return json(401, { error: "Wymagane logowanie." });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!isRoleSufficient(context.locals.role, "employee")) {
-    return json(403, { error: "Brak uprawnień." });
+    return json(403, { error: t("forbidden") });
   }
 
   // The two length failures are NOT the same event, so they do not share a response.
@@ -44,7 +48,7 @@ export const GET: APIRoute = async (context) => {
   // one schema cannot answer with two statuses.
   const raw = context.url.searchParams.get("q") ?? "";
   if (raw.trim().length > MAX_QUERY_LENGTH) {
-    return json(400, { error: "Zapytanie jest za długie." });
+    return json(400, { error: t("queryTooLong") });
   }
 
   const parsed = querySchema.safeParse({ q: raw });

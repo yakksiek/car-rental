@@ -1,26 +1,25 @@
 // core
 import { z } from "zod";
 
+// others
+import { LOCALES, translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
+import { validation } from "./i18n/validation";
+
 // The single create/edit contract for a vehicle (S-04), shared by the VehicleForm
 // island (client-side inline errors) and POST/PATCH /api/vehicles (the trust
 // boundary) — mirrors reservation-schema.ts. Money + dimension fields arrive as
 // strings (form inputs / JSON), so every numeric field coerces a trimmed string
 // and validates the resulting number; the schema OUTPUT is `number | null`, so a
 // parsed payload drops straight onto the typed `vehicles` Insert/Update row with
-// no mapping layer. Blank optional fields normalize to `null`. Polish copy is
-// canonical.
-
-const MSG = {
-  name: "Podaj nazwę pojazdu.",
-  plate: "Podaj numer rejestracyjny.",
-  category: "Wybierz kategorię pojazdu.",
-  rate: "Podaj dodatnią kwotę.",
-  transmission: "Wybierz skrzynię biegów.",
-  year: "Podaj poprawny rok produkcji.",
-  intNonNeg: "Podaj liczbę całkowitą nie mniejszą niż 0.",
-  numNonNeg: "Podaj wartość nie mniejszą niż 0.",
-  url: "Podaj poprawny adres URL zdjęcia.",
-} as const;
+// no mapping layer. Blank optional fields normalize to `null`.
+//
+// **The schema is now reached through `vehicleInputSchema(locale)`.** zod bakes
+// each message into the schema object at construction, so a localized message
+// cannot be a lookup at parse time — one schema per locale is built once at
+// module load and handed out by locale. Messages resolve through the ISLAND-SAFE
+// accessor (`translator`, not the composed catalog) because `VehicleForm` imports
+// this module; see `i18n/types.ts`.
 
 // Mirrors the `vehicle_category` / `transmission_type` DB enums. Hard-coded here
 // (not derived from the generated types) because z.enum needs a literal tuple;
@@ -88,43 +87,57 @@ function optionalText() {
   return z.preprocess(emptyToUndefined, z.string().trim().optional()).transform((value) => value ?? null);
 }
 
-export const vehicleInputSchema = z.object({
-  // Required identity + pricing. `plate` is unique in the DB — the fleet holds
-  // many identical models, so it is the only field that tells two of them apart
-  // on the dispatch list and the protocol PDF (S-05).
-  name: z.string(MSG.name).trim().min(1, MSG.name),
-  plate: z.string(MSG.plate).trim().min(1, MSG.plate),
-  category: z.enum(VEHICLE_CATEGORIES, MSG.category),
-  daily_rate: requiredPositive(MSG.rate),
-  monthly_rate: requiredPositive(MSG.rate),
-  deposit: requiredPositive(MSG.rate),
-  per_extra_km_rate: requiredPositive(MSG.rate),
-  // Optional specification.
-  make: optionalText(),
-  model: optionalText(),
-  production_year: optionalNumber(MSG.year, { int: true, min: MIN_YEAR, max: MAX_YEAR }),
-  fuel_type: optionalText(),
-  transmission: z
-    .preprocess(emptyToUndefined, z.enum(TRANSMISSIONS, MSG.transmission).optional())
-    .transform((value) => value ?? null),
-  seats: optionalNumber(MSG.intNonNeg, { int: true, min: 0 }),
-  // Optional capacity / dimensions (numeric(10,2) → non-negative).
-  payload_capacity_kg: optionalNumber(MSG.numNonNeg, { min: 0 }),
-  cargo_length_cm: optionalNumber(MSG.numNonNeg, { min: 0 }),
-  cargo_width_cm: optionalNumber(MSG.numNonNeg, { min: 0 }),
-  cargo_height_cm: optionalNumber(MSG.numNonNeg, { min: 0 }),
-  km_limit: optionalNumber(MSG.intNonNeg, { int: true, min: 0 }),
-  // Photos are URLs in v1 (object storage is S-05). The island splits a textarea
-  // into one URL per line; an empty list is valid. Restrict the scheme to http(s)
-  // so non-fetchable/unsafe URIs (javascript:/data:/mailto:) fail closed — these
-  // strings are rendered as <img src> on the public catalog.
-  photos: z
-    .array(z.url({ protocol: /^https?$/, error: MSG.url }))
-    .optional()
-    .default([]),
-});
+function build(locale: Locale) {
+  const t = translator(locale, validation);
+  return z.object({
+    // Required identity + pricing. `plate` is unique in the DB — the fleet holds
+    // many identical models, so it is the only field that tells two of them apart
+    // on the dispatch list and the protocol PDF (S-05).
+    name: z.string(t("vehicleName")).trim().min(1, t("vehicleName")),
+    plate: z.string(t("plate")).trim().min(1, t("plate")),
+    category: z.enum(VEHICLE_CATEGORIES, t("category")),
+    daily_rate: requiredPositive(t("rate")),
+    monthly_rate: requiredPositive(t("rate")),
+    deposit: requiredPositive(t("rate")),
+    per_extra_km_rate: requiredPositive(t("rate")),
+    // Optional specification.
+    make: optionalText(),
+    model: optionalText(),
+    production_year: optionalNumber(t("year"), { int: true, min: MIN_YEAR, max: MAX_YEAR }),
+    fuel_type: optionalText(),
+    transmission: z
+      .preprocess(emptyToUndefined, z.enum(TRANSMISSIONS, t("transmission")).optional())
+      .transform((value) => value ?? null),
+    seats: optionalNumber(t("intNonNeg"), { int: true, min: 0 }),
+    // Optional capacity / dimensions (numeric(10,2) → non-negative).
+    payload_capacity_kg: optionalNumber(t("numNonNeg"), { min: 0 }),
+    cargo_length_cm: optionalNumber(t("numNonNeg"), { min: 0 }),
+    cargo_width_cm: optionalNumber(t("numNonNeg"), { min: 0 }),
+    cargo_height_cm: optionalNumber(t("numNonNeg"), { min: 0 }),
+    km_limit: optionalNumber(t("intNonNeg"), { int: true, min: 0 }),
+    // Photos are URLs in v1 (object storage is S-05). The island splits a textarea
+    // into one URL per line; an empty list is valid. Restrict the scheme to http(s)
+    // so non-fetchable/unsafe URIs (javascript:/data:/mailto:) fail closed — these
+    // strings are rendered as <img src> on the public catalog.
+    photos: z
+      .array(z.url({ protocol: /^https?$/, error: t("url") }))
+      .optional()
+      .default([]),
+  });
+}
 
-export type VehicleInput = z.infer<typeof vehicleInputSchema>;
+type VehicleSchema = ReturnType<typeof build>;
+
+// Built once per locale at module load. Two zod objects is a cheaper constant
+// than rebuilding one on every keystroke the RHF resolver validates.
+const SCHEMAS = Object.fromEntries(LOCALES.map((locale) => [locale, build(locale)])) as Record<Locale, VehicleSchema>;
+
+/** The create/edit contract, with its messages in `locale`. */
+export function vehicleInputSchema(locale: Locale): VehicleSchema {
+  return SCHEMAS[locale];
+}
+
+export type VehicleInput = z.infer<VehicleSchema>;
 
 /**
  * First zod message per top-level field — the shared shape the VehicleForm island

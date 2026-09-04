@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 // others
+import { api } from "../../../lib/i18n/api";
+import { translator } from "../../../lib/i18n/types";
 import { isRoleSufficient } from "../../../lib/access";
 import type { Database } from "../../../db/database.types";
 import { reservationRejectedEmail } from "../../../lib/email/templates";
@@ -22,29 +24,23 @@ import type { DecisionEmailPayload } from "../../../types";
 //       to status codes — including the friendly already-decided 409,
 //   (e) Phase 3 adds a best-effort confirm/reject email after a committed flip.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe żądanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono rezerwacji.",
-  alreadyDecided: "Ten wniosek został już rozpatrzony.",
-  invalidReason: "Wybierz prawidłowy powód odrzucenia.",
-} as const;
-
 const REJECTION_REASONS = ["dates_unavailable", "no_category", "vehicle_withdrawn", "other"] as const;
 
 // `reject` requires a reason; `confirm` ignores it. The refine mirrors the RPC's
 // invalid_reason guard so a malformed reject is caught before the round-trip.
-const decisionSchema = z
-  .object({
-    decision: z.enum(["confirm", "reject"]),
-    reason: z.enum(REJECTION_REASONS).optional(),
-    note: z.string().trim().max(500).optional(),
-  })
-  .refine((body) => body.decision !== "reject" || body.reason !== undefined, {
-    message: "Wybierz powód odrzucenia.",
-    path: ["reason"],
-  });
+// Built per request because zod bakes the message in at construction.
+function decisionSchema(t: ReturnType<typeof translator<(typeof api)["en"]>>) {
+  return z
+    .object({
+      decision: z.enum(["confirm", "reject"]),
+      reason: z.enum(REJECTION_REASONS).optional(),
+      note: z.string().trim().max(500).optional(),
+    })
+    .refine((body) => body.decision !== "reject" || body.reason !== undefined, {
+      message: t("chooseRejectionReason"),
+      path: ["reason"],
+    });
+}
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -103,31 +99,33 @@ function fieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record
 }
 
 export const PATCH: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Role gate: employee or above. The fail-closed default (null role) is 403.
   if (!isRoleSufficient(context.locals.role, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badRequest") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badRequest"), errors: {} });
   }
 
   // (c) Validate the decision verb + conditional reason.
-  const parsed = decisionSchema.safeParse(payload);
+  const parsed = decisionSchema(t).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: fieldErrors(parsed.error.issues) });
   }
@@ -145,12 +143,12 @@ export const PATCH: APIRoute = async (context) => {
       await notifyCustomer(context.locals.supabase, id, result.status, result.email, reason, note, context.url.origin);
       return json(200, { status: result.status });
     case "already_decided":
-      return json(409, { error: MSG.alreadyDecided, reason: "already_decided" });
+      return json(409, { error: t("alreadyDecided"), reason: "already_decided" });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("reservationNotFound") });
     case "invalid_reason":
-      return json(400, { error: MSG.invalidReason, errors: { reason: MSG.invalidReason } });
+      return json(400, { error: t("invalidReason"), errors: { reason: t("invalidReason") } });
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
   }
 };

@@ -49,8 +49,8 @@ const firstName = displayName.split(" ")[0];
 const eyebrow = dateEyebrow(now, locale);
 
 // Parse `?section` server-side and hand the island a typed initial value, so a
-// deep-link (e.g. `?section=wydania`) renders pre-filtered with no client-only read
-// → no hydration flash. Junk validates away to `wszystko` (all sections).
+// deep-link (e.g. `?section=pickups`) renders pre-filtered with no client-only read
+// → no hydration flash. Junk validates away to `all` (every section).
 const initialSection = parseSection(Astro.url.searchParams.get("section"));
 
 // Pulpit is the app's ONLY search entry point, so it is also where ⌘K lands when it

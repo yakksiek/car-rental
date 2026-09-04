@@ -206,7 +206,11 @@ describe("risk #3: return email is attempted, surfaces failure, carries the righ
     // is derived from exactly (`pdf_path`, newest delivery status) and reads `bad`.
     const pdfPath = await storedPdfPath();
     expect(pdfPath).toBe(PDF_PATH);
-    expect(deliveryBadge(pdfPath, rows[0].status)).toEqual({ tone: "bad", label: "E-mail niewysłany" });
+    // The badge is locale-aware since english-localization Phase 5; the DEFAULT
+    // locale is what an employee sees on a fresh cockpit, so that is the arm
+    // asserted here. The Polish twin is covered by the catalog's parity test.
+    expect(deliveryBadge(pdfPath, rows[0].status, "en")).toEqual({ tone: "bad", label: "Email not sent" });
+    expect(deliveryBadge(pdfPath, rows[0].status, "pl")).toEqual({ tone: "bad", label: "E-mail niewysłany" });
   });
 
   it("CORRECT PAYLOAD — the message carries the customer, this return's PDF, and diacritics intact", async () => {

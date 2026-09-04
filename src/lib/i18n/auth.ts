@@ -95,6 +95,16 @@ export const auth = defineDict({
     passwordTooShort: "Password must be at least 6 characters",
     passwordMismatch: "The passwords do not match",
 
+    // ── In-session change password (`account/ChangePasswordForm`) ──────────
+    // The signed-in form asks for the current password first, which the reset
+    // and invite flows cannot (there is no session to confirm against).
+    currentPasswordLabel: "Current password",
+    currentPasswordPlaceholder: "Your current password",
+    currentPasswordRequired: "Enter your current password",
+    confirmNewPasswordLabel: "Repeat the new password",
+    confirmNewPasswordPlaceholder: "Repeat the new password",
+    changePasswordSubmit: "Change password",
+
     // ── Password updated (R4) ──────────────────────────────────────────────
     doneTitle: "Password updated",
     doneSub: "You can now sign in with your new password.",
@@ -201,6 +211,13 @@ export const auth = defineDict({
     confirmPlaceholder: "Powtórz hasło",
     passwordTooShort: "Hasło musi mieć co najmniej 6 znaków",
     passwordMismatch: "Hasła nie są takie same",
+
+    currentPasswordLabel: "Obecne hasło",
+    currentPasswordPlaceholder: "Twoje obecne hasło",
+    currentPasswordRequired: "Podaj obecne hasło",
+    confirmNewPasswordLabel: "Powtórz nowe hasło",
+    confirmNewPasswordPlaceholder: "Powtórz nowe hasło",
+    changePasswordSubmit: "Zmień hasło",
 
     doneTitle: "Hasło zaktualizowane",
     doneSub: "Możesz teraz zalogować się nowym hasłem.",

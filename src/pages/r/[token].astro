@@ -10,7 +10,7 @@ import StatusStepper from "../../components/reservation/StatusStepper.astro";
 import { getReservationStatus } from "../../lib/services/reservations";
 
 // Tokenized reservation status route (design screens 06 / mobile-4 / desktop-3).
-// One screen, two arrivals: the post-submit "Zgłoszenie przyjęte" landing and the
+// One screen, two arrivals: the post-submit "request received" landing and the
 // durable status link the confirmation email carries. The `access_token` path
 // segment is the only credential — resolution crosses the RLS boundary through
 // the `get_reservation_status` definer RPC (`reservations` stays anon-denied),
@@ -18,7 +18,7 @@ import { getReservationStatus } from "../../lib/services/reservations";
 // a bearer secret, so the page is marked noindex.
 
 const { token } = Astro.params;
-const supabase = Astro.locals.supabase;
+const { supabase, t } = Astro.locals;
 
 const view = token ? await getReservationStatus(supabase, token) : null;
 
@@ -26,7 +26,7 @@ if (!view) {
   Astro.response.status = 404;
 }
 
-const title = view ? `Zgłoszenie ${view.reference}` : "Nie znaleziono zgłoszenia";
+const title = view ? `${t("booking.statusTitlePrefix")} ${view.reference}` : t("booking.statusNotFoundTitle");
 ---
 
 <Layout title={`${title} — Flota`}>
@@ -44,7 +44,7 @@ const title = view ? `Zgłoszenie ${view.reference}` : "Nie znaleziono zgłoszen
             href="/fleet"
             class="bg-foreground text-background rounded-button inline-flex h-12 w-full items-center justify-center gap-1.5 px-6 text-sm font-semibold sm:w-auto sm:px-8"
           >
-            Wróć do floty
+            {t("fleet.backToFleet")}
             <svg
               class="size-3.5"
               viewBox="0 0 24 24"
@@ -62,16 +62,14 @@ const title = view ? `Zgłoszenie ${view.reference}` : "Nie znaleziono zgłoszen
       </main>
     ) : (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
-        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono zgłoszenia</h1>
-        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
-          To zgłoszenie nie istnieje lub link jest nieprawidłowy. Sprawdź adres z e-maila potwierdzającego.
-        </p>
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("fleet.notFoundEyebrow")}</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">{t("booking.statusNotFoundTitle")}</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">{t("booking.statusNotFoundBody")}</p>
         <a
           href="/fleet"
           class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
         >
-          Wróć do floty
+          {t("fleet.backToFleet")}
         </a>
       </main>
     )

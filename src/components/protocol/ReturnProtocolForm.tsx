@@ -21,7 +21,8 @@ import { SignatureField } from "./SignaturePad";
 // others
 import { cn } from "../../lib/utils";
 import { buildProtocolPdf } from "../../lib/media/protocol-pdf";
-import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL } from "../../lib/protocol-labels";
+import { damageTypeLabel, photoSlotLabel, protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
 import { computeReturnDeltas } from "../../lib/protocol-delta";
 import { formatFuelDelta, formatKmDriven, formatNewDamageCount } from "../../lib/return-form";
 import { PHOTO_SLOTS } from "../../lib/protocol-schema";
@@ -137,6 +138,9 @@ function SummaryRow({ label, text, tone }: { label: string; text: string; tone: 
 }
 
 export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back, locale }: Props) {
+  // Memoized so the `useCallback`s below can list it honestly without losing
+  // their memo — `translator` is a pure two-property lookup.
+  const t = React.useMemo(() => translator(locale, protocol), [locale]);
   const backHref = back?.href ?? "/dashboard/returns";
   // Minted once, before the first byte is uploaded — RHF needs it in defaultValues
   // at construction (before any media callback that reads the form could exist).
@@ -164,7 +168,11 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
     // `returnProtocolSchema` sees the *input* side (odometer as a string, ids/paths
     // the form fills in as it goes) and yields `ReturnProtocolInput`; the resolver
     // is asserted across that boundary once, here — as in the issue form.
-    resolver: zodResolver(returnProtocolSchema) as unknown as Resolver<FormValues, unknown, ReturnProtocolInput>,
+    resolver: zodResolver(returnProtocolSchema(locale)) as unknown as Resolver<
+      FormValues,
+      unknown,
+      ReturnProtocolInput
+    >,
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
@@ -309,7 +317,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
     async (id: string) => {
       const input = committed.current;
       if (!input) {
-        throw new Error("Brak danych protokołu.");
+        throw new Error(t("missingProtocolData"));
       }
       // Recompute the deltas from the committed numbers, so the PDF's comparison
       // section matches what the form showed (one helper, three consumers).
@@ -363,7 +371,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
       });
       return uploadObject(client, paths.pdfPath("return", id), pdf);
     },
-    [bytesOf, client, ctx],
+    [bytesOf, client, ctx, t],
   );
 
   // Release the PDF object URL on unmount (a client-side SPA nav would leak it).
@@ -412,7 +420,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
         scrollToFirstError((key) => Boolean(outcome.errors[key]));
         return;
       case "error":
-        setSubmitError(outcome.message ?? "Coś poszło nie tak. Spróbuj ponownie.");
+        setSubmitError(outcome.message ?? t("genericError"));
     }
   }
 
@@ -444,7 +452,8 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
         reference={ctx.reference}
         plate={ctx.plate}
         protocolId={conflictId}
-        description="Dla tej rezerwacji istnieje już protokół zwrotu — każdy zwrot może mieć tylko jeden."
+        description={t("conflictReturnBody")}
+        locale={locale}
         backHref={backHref}
       />
     );
@@ -465,20 +474,20 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <a
             href={backHref}
-            aria-label="Wróć"
+            aria-label={t("back")}
             className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >
             <ArrowLeft className="size-[18px]" />
           </a>
           <div className="min-w-0 flex-1 text-center">
-            <h1 className="text-foreground truncate text-[17px] font-bold tracking-tight">Protokół zwrotu</h1>
+            <h1 className="text-foreground truncate text-[17px] font-bold tracking-tight">{t("returnTitle")}</h1>
             <p className="text-muted-foreground hidden truncate text-[12px] sm:block">
-              {ctx.reference} · {ctx.customerName} · {ctx.vehicle} · {ctx.plate} · Zwrot {ctx.returnTime}
+              {ctx.reference} · {ctx.customerName} · {ctx.vehicle} · {ctx.plate} · {t("returnAt")} {ctx.returnTime}
             </p>
           </div>
           <a
             href={backHref}
-            aria-label="Zamknij"
+            aria-label={t("close")}
             className="bg-card text-foreground hover:bg-background shadow-card sm:border-border flex size-10 shrink-0 items-center justify-center rounded-full sm:rounded-[11px] sm:border sm:shadow-none"
           >
             <X className="size-[18px]" />
@@ -503,7 +512,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
               </span>
             </p>
             <p className="text-muted-foreground mt-0.5 truncate text-[12px]">
-              {ctx.reference} · {ctx.customerName} · Zwrot {ctx.returnTime}
+              {ctx.reference} · {ctx.customerName} · {t("returnAt")} {ctx.returnTime}
             </p>
           </div>
         </div>
@@ -511,19 +520,14 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
         {(isSubmitted && Object.keys(errors).length > 0) || submitError ? (
           <p className="bg-destructive/10 text-destructive mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium">
             <TriangleAlert className="size-4 shrink-0" />
-            {submitError ?? "Sprawdź podświetlone pola"}
+            {submitError ?? t("fixHighlighted")}
           </p>
         ) : null}
 
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1.35fr_1fr] lg:items-start lg:gap-7">
           <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
-            {/* ── 1. Stan techniczny ───────────────────────────────────────── */}
-            <Section
-              n={1}
-              title="Stan techniczny"
-              sub="Wartości porównane automatycznie z protokołem wydania."
-              className="order-1"
-            >
+            {/* ── 1. Condition ─────────────────────────────────────────────── */}
+            <Section n={1} title={t("conditionTitle")} sub={t("conditionSubReturn")} className="order-1">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 {/* Odometer — current value entered fresh; baseline shown read-only.
                     A cohesive grey card wraps label + big input + a 2-row labelled
@@ -535,14 +539,14 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   )}
                 >
                   <Label htmlFor="odometerKm" className={UP_LABEL}>
-                    Licznik
+                    {t("odometer")}
                   </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="odometerKm"
                       inputMode="numeric"
                       autoComplete="off"
-                      placeholder="Wpisz odczyt"
+                      placeholder={t("odometerPlaceholder")}
                       aria-invalid={Boolean(errors.odometerKm)}
                       value={formatOdometer(odometer, locale)}
                       onChange={(event) => {
@@ -554,21 +558,17 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   </div>
                   <div className="border-border flex flex-col gap-1.5 border-t pt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={UP_LABEL}>Przy wydaniu</span>
+                      <span className={UP_LABEL}>{t("atPickup")}</span>
                       <span className="text-foreground font-mono text-[12px] font-semibold">
                         {formatOdometer(String(ctx.baselineOdometerKm), locale)} km
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={UP_LABEL}>Przejechano</span>
+                      <span className={UP_LABEL}>{t("distanceDriven")}</span>
                       <DeltaChip text={kmText} tone="neutral" />
                     </div>
                   </div>
-                  {odometerLow && (
-                    <p className="text-warning text-[12px] font-medium">
-                      Licznik niższy niż przy wydaniu — sprawdź odczyt.
-                    </p>
-                  )}
+                  {odometerLow && <p className="text-warning text-[12px] font-medium">{t("odometerBelowBaseline")}</p>}
                   {errors.odometerKm && (
                     <p className="text-destructive flex items-center gap-1.5 text-sm font-medium">
                       <TriangleAlert className="size-4 shrink-0" />
@@ -586,6 +586,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   )}
                 >
                   <FuelBar
+                    locale={locale}
                     value={fuelEighths}
                     invalid={Boolean(errors.fuelEighths)}
                     uppercaseLabel
@@ -595,13 +596,13 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   />
                   <div className="border-border flex flex-col gap-1.5 border-t pt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={UP_LABEL}>Przy wydaniu</span>
+                      <span className={UP_LABEL}>{t("atPickup")}</span>
                       <span className="text-foreground font-mono text-[12px] font-semibold">
                         {ctx.baselineFuelEighths}/8
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={UP_LABEL}>Zmiana paliwa</span>
+                      <span className={UP_LABEL}>{t("fuelChange")}</span>
                       <DeltaChip text={fuelText} tone={fuelTone} />
                     </div>
                   </div>
@@ -615,11 +616,11 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
               </div>
             </Section>
 
-            {/* ── 3. Uszkodzenia ───────────────────────────────────────────── */}
+            {/* ── 3. Damage ───────────────────────────────────────────────── */}
             <Section
               n={3}
-              title="Uszkodzenia"
-              sub="Zapisz każdy ślad osobno — zwrot porówna się z tą listą."
+              title={t("damageTitle")}
+              sub={t("damageSub")}
               className="order-3"
               aside={
                 // Desktop keeps the add-button in the section header; mobile moves it
@@ -631,29 +632,29 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   onClick={openNewDamage}
                 >
                   <Plus className="size-3.5" />
-                  Dodaj uszkodzenie
+                  {t("damageAdd")}
                 </Button>
               }
             >
               {/* Mobile add-damage — full-width, above the baseline panel (the mockup). */}
               <Button type="button" variant="outline" onClick={openNewDamage} className="mb-3 w-full sm:hidden">
                 <Plus className="size-3.5" />
-                Dodaj uszkodzenie
+                {t("damageAdd")}
               </Button>
 
               {/* Baseline reference — read-only, never editable (FR-007). */}
               {ctx.baselineDamages.length > 0 && (
                 <div className="border-border bg-background mb-3 rounded-[14px] border p-3.5">
-                  <p className={cn(LABEL_CLASS, "mb-2 uppercase")}>Uszkodzenia z protokołu wydania</p>
+                  <p className={cn(LABEL_CLASS, "mb-2 uppercase")}>{t("damageBaselineHeading")}</p>
                   <div className="flex flex-col gap-1.5">
                     {ctx.baselineDamages.map((baseline) => (
                       <div key={baseline.id} className="flex items-center justify-between gap-2">
                         <span className="text-foreground line-clamp-2 min-w-0 text-[13px]">
-                          {[DAMAGE_TYPE_LABELS_PL[baseline.type], baseline.location].join(" — ")}
+                          {[damageTypeLabel(baseline.type, locale), baseline.location].join(" — ")}
                           {baseline.size ? ` (${baseline.size})` : ""}
                         </span>
                         <span className="text-muted-foreground shrink-0 rounded-[7px] bg-[var(--flota-neutral-soft)] px-2 py-0.5 text-[11px] font-bold tracking-[0.04em] uppercase">
-                          Istniejące
+                          {t("damageExisting")}
                         </span>
                       </div>
                     ))}
@@ -663,11 +664,12 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
 
               <div id="damages" tabIndex={-1} className="flex flex-col gap-2">
                 {damages.fields.length === 0 ? (
-                  <DamageEmpty returnMode />
+                  <DamageEmpty returnMode locale={locale} />
                 ) : (
                   damages.fields.map((field) => (
                     <DamageRow
                       key={field._key}
+                      locale={locale}
                       damage={field}
                       returnMode
                       preview={field.photos[0] ? previews[field.photos[0]] : undefined}
@@ -691,18 +693,18 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                 user design decision 2026-07-20, recorded in design-contract.md §3/§4. */}
             <section className="bg-foreground shadow-card order-last rounded-[18px] p-5 sm:p-[22px]">
               <h2 className="text-background/70 text-[11px] font-bold tracking-[0.06em] uppercase">
-                Porównanie wydanie → zwrot
+                {t("comparisonTitle")}
               </h2>
               {summaryEmpty ? (
                 <p className="text-background/70 mt-3 rounded-[12px] bg-white/5 px-4 py-3 text-[13px]">
-                  Wprowadź bieżące wartości, aby zobaczyć porównanie
+                  {t("comparisonEmpty")}
                 </p>
               ) : (
                 <div className="mt-3 flex flex-col gap-2.5">
-                  <SummaryRow label="Przejechano" text={kmText} tone="neutral" />
-                  <SummaryRow label="Zmiana paliwa" text={fuelText} tone={fuelTone} />
+                  <SummaryRow label={t("distanceDriven")} text={kmText} tone="neutral" />
+                  <SummaryRow label={t("fuelChange")} text={fuelText} tone={fuelTone} />
                   <SummaryRow
-                    label="Nowe uszkodzenia"
+                    label={t("comparisonNewDamage")}
                     text={formatNewDamageCount(deltas.newDamageCount)}
                     tone={damageTone}
                   />
@@ -710,11 +712,11 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
               )}
             </section>
 
-            {/* ── 2. Zdjęcia pojazdu ───────────────────────────────────────── */}
+            {/* ── 2. Vehicle photos ──────────────────────────────────────── */}
             <Section
               n={2}
-              title="Zdjęcia pojazdu"
-              sub="Sześć bazowych ujęć pojazdu przy zwrocie."
+              title={t("photosTitle")}
+              sub={t("photosSubReturn")}
               className="order-2"
               aside={
                 <span
@@ -727,7 +729,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                 </span>
               }
             >
-              <PhotoDropZone onFiles={fillFreeSlots} />
+              <PhotoDropZone onFiles={fillFreeSlots} locale={locale} />
               <div id="photos-grid" tabIndex={-1} className="grid grid-cols-3 gap-2">
                 {PHOTO_SLOTS.map((slot) => {
                   const tile = tiles[slot] ?? IDLE;
@@ -736,7 +738,8 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                     <PhotoSlot
                       key={slot}
                       slot={slot}
-                      label={PHOTO_SLOT_LABELS_PL[slot]}
+                      locale={locale}
+                      label={photoSlotLabel(slot, locale)}
                       state={path ? "done" : tile.state}
                       pct={tile.pct}
                       preview={path ? previews[path] : undefined}
@@ -749,15 +752,13 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                   );
                 })}
               </div>
-              {errors.photos && (
-                <p className="text-destructive mt-3 text-sm font-medium">Wykonaj wszystkie sześć zdjęć pojazdu.</p>
-              )}
+              {errors.photos && <p className="text-destructive mt-3 text-sm font-medium">{t("photosRequired")}</p>}
             </Section>
 
             {/* ── 4. Podpis ────────────────────────────────────────────────── */}
             {/* A white section card (like §1–§3), with the ack + signature as grey
                 insets inside it — matching the mockup on both breakpoints. */}
-            <Section n={4} title="Podpis" sub="Klient potwierdza powyższy stan i składa podpis." className="order-4">
+            <Section n={4} title={t("signatureTitle")} sub={t("signatureSub")} className="order-4">
               <label
                 htmlFor="customerAck"
                 className="border-border bg-background mb-3 flex items-center gap-3 rounded-[14px] border p-4"
@@ -770,9 +771,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
                     setValue("customerAck", checked === true, { shouldValidate: isSubmitted });
                   }}
                 />
-                <span className="text-foreground text-[13px] font-medium">
-                  Klient potwierdza stan pojazdu i warunki najmu.
-                </span>
+                <span className="text-foreground text-[13px] font-medium">{t("ackLabel")}</span>
               </label>
               {errors.customerAck && (
                 <p className="text-destructive mb-3 text-sm font-medium">{errors.customerAck.message}</p>
@@ -805,14 +804,14 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
             {submitting ? (
               <>
                 <span className="border-primary-foreground/30 border-t-primary-foreground size-4 animate-spin rounded-full border-2" />
-                Wysyłanie…
+                {t("sending")}
               </>
             ) : (
               <>
                 <Check className="size-4" />
-                {/* Mobile submit is the long label; desktop uses the terse `Zakończ i wyślij` (contract §4). */}
-                <span className="sm:hidden">Potwierdź zwrot i wyślij</span>
-                <span className="hidden sm:inline">Zakończ i wyślij</span>
+                {/* Mobile submit names the action; desktop uses the terse form (contract §4). */}
+                <span className="sm:hidden">{t("submitReturnShort")}</span>
+                <span className="hidden sm:inline">{t("submitReturnLong")}</span>
               </>
             )}
           </Button>
@@ -834,16 +833,18 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
           onCancel={() => {
             setEditing(null);
           }}
+          locale={locale}
         />
       )}
 
       {overlay && (
         <ResultOverlay
           variant={overlay}
+          locale={locale}
           customerEmail={ctx.customerEmail}
           busy={overlayBusy}
           pdfHref={pdfHref}
-          pdfFilename={`protokol-zwrotu-${ctx.reference}.pdf`}
+          pdfFilename={`${t("filenameReturn")}-${ctx.reference}.pdf`}
           onPrimary={() => void overlayPrimary()}
           onSecondary={backToDispatch}
         />

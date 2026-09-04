@@ -210,3 +210,79 @@ Worth recording because it is the failure mode the rule does NOT name: the acces
 shipping a locale's worth of prose to a browser. The rule that catches it is the narrower one — an
 island imports the SMALLEST namespace that covers it, and a namespace an island touches must not
 accumulate server-only copy.
+
+---
+
+## Phase 5 comparison (2026-09-04) — criterion 5.13
+
+The gate this file exists for. Same command, same tooling, `dist/client/_astro/*.js`
+after `npm run build`, on top of `d146e49`. Phase 5 is the phase that put copy into
+every remaining island, so it is the one with something to prove.
+
+| chunk                 | baseline raw | now raw |    Δ raw | baseline gzip | now gzip |     Δ gzip |
+| --------------------- | -----------: | ------: | -------: | ------------: | -------: | ---------: |
+| `format`              |        1 406 |   1 099 | **−307** |           816 |      605 |   **−211** |
+| `BookingWidget`       |        7 857 |   7 290 |     −567 |         2 787 |    2 573 |       −214 |
+| `FleetList`           |       10 876 |  10 554 |     −322 |         3 778 |    3 465 |       −313 |
+| `GlobalSearch`        |       28 312 |  29 354 |   +1 042 |         9 768 |   10 109 |       +341 |
+| `HeroSearch`          |        3 777 |   3 838 |      +61 |         1 578 |    1 568 |        −10 |
+| `PendingQueue`        |       19 363 |  16 586 |   −2 777 |         5 560 |    4 336 |     −1 224 |
+| `ReservationCalendar` |      338 251 | 338 130 |     −121 |       107 175 |  107 056 |       −119 |
+| `ReservationForm`     |       15 083 |  14 414 |     −669 |         4 450 |    3 989 |       −461 |
+| `StaffList`           |       24 550 |  28 771 |   +4 221 |         7 172 |    8 470 | **+1 298** |
+| `VehicleForm`         |       11 742 |  11 222 |     −520 |         4 285 |    3 920 |       −365 |
+
+**`format` is flat at 1 099 / 605 — unchanged from the Phase 4 interim reading.**
+That is the load-bearing number: it is the chunk 11 islands share, so a
+composed-map leak moves it first and moves it for all of them at once. It did not
+move, and no island's `COPY` object was replaced by something bigger than itself.
+
+**Seven of the ten went DOWN**, which is the shape to expect: each island's
+module-level `COPY` literal left the island's own chunk for a shared namespace
+chunk that its siblings also use. `PendingQueue` (−1 224 B gzip) is the clearest
+case — its ~45-key `COPY` map moved into `dashboard`, which `ReturnQueue`,
+`PickupQueue`, `ReservationCalendar` and `ManualReservationModal` now share.
+
+### The namespace chunks Rollup emitted
+
+Per-domain namespacing is doing exactly what it was designed to do — each
+namespace is its own shared chunk, and an island pays only for the ones it imports:
+
+```
+booking       6 184 / 2 489    protocol     10 300 / 3 647
+dashboard    12 493 / 4 300    reservation     614 /   375
+fleet         2 890 / 1 327    search          233 /   218
+fleet-admin   3 781 / 1 646    staff         3 057 / 1 383
+format-date   1 867 /   813    types           228 /   199
+nav             605 /   374    validation    2 937 / 1 267
+                               vehicle       1 441 /   703
+```
+
+`staff-admin` and `auth` have no chunk of their own — Rollup folded each into its
+single consumer (`StaffList`, the auth forms).
+
+### The one island that grew, and why it is the right growth
+
+**`StaffList` +1 276 B gzip.** It is the sole consumer of `staff-admin` (≈60 keys ×
+2 locales), so Rollup inlined the namespace rather than emitting a shared chunk —
+the +1 276 B _is_ that namespace. Nothing else reaches it, so there is no
+amortisation to be had and no smaller namespace to move to: every key is roster
+chrome the roster renders. `GlobalSearch` +336 B gzip is the same story one size
+down (the `search` namespace plus `dashboard` arriving through `SearchRows`).
+
+### The leak check, run explicitly
+
+The six SERVER-ONLY namespaces must never appear in a client chunk — they are the
+proof that no island reached the composed `i18n/index.ts`:
+
+```bash
+for ns in api config info landing layout footer; do ls dist/client/_astro/$ns.*.js; done
+#   → all six absent
+
+grep -rl "noticePrefix\|pricingHeading\|storyHeading" dist/client/_astro/*.js
+#   → no match: not one line of server-only copy is in any client chunk
+```
+
+`info` alone is ~90 keys of marketing prose in two languages. Its absence from
+every browser bundle is the boundary rule holding under the phase that stressed it
+hardest.

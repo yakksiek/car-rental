@@ -7,7 +7,7 @@ import type { PDFFont, PDFImage, PDFPage } from "pdf-lib";
 import { formatInteger, plural } from "../format";
 import type { PluralForms } from "../format";
 import type { Locale } from "../i18n/types";
-import { DAMAGE_TYPE_LABELS_PL, PHOTO_SLOT_LABELS_PL, fuelLabelPl } from "../protocol-labels";
+import { damageTypeLabel, fuelLevelLabel, photoSlotLabel } from "../i18n/protocol";
 import type { PdfFonts } from "./fonts";
 import { loadPdfFonts } from "./fonts";
 import type { ProtocolDamageType, ProtocolPhotoSlot } from "../../types";
@@ -217,7 +217,7 @@ function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
   w.field("Pojazd", data.vehicle);
   w.field("Rejestracja", data.plate, { bold: true });
   w.field("Stan licznika", `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km`);
-  w.field("Poziom paliwa", fuelLabelPl(data.fuelEighths));
+  w.field("Poziom paliwa", fuelLevelLabel(data.fuelEighths, ARTIFACT_LOCALE));
   w.gap(10);
 }
 
@@ -234,9 +234,12 @@ function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparis
 
   w.field(
     "Przy wydaniu",
-    `${formatKm(c.baselineOdometerKm, ARTIFACT_LOCALE)} km · ${fuelLabelPl(c.baselineFuelEighths)}`,
+    `${formatKm(c.baselineOdometerKm, ARTIFACT_LOCALE)} km · ${fuelLevelLabel(c.baselineFuelEighths, ARTIFACT_LOCALE)}`,
   );
-  w.field("Przy zwrocie", `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km · ${fuelLabelPl(data.fuelEighths)}`);
+  w.field(
+    "Przy zwrocie",
+    `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km · ${fuelLevelLabel(data.fuelEighths, ARTIFACT_LOCALE)}`,
+  );
   w.gap(8);
 
   w.field("Przejechano", `${signedKm(c.kmDriven, ARTIFACT_LOCALE)} km`);
@@ -259,7 +262,7 @@ function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparis
       const isNew = !damage.baselineDamageId;
       const tag = isNew ? "Nowe" : "Istniejące";
       w.ensure(LINE);
-      w.text(`${index + 1}. ${DAMAGE_TYPE_LABELS_PL[damage.type]} — ${damage.location}${size} — ${tag}`, {
+      w.text(`${index + 1}. ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} — ${damage.location}${size} — ${tag}`, {
         size: BODY_SIZE,
         color: isNew ? CRIMSON : INK_2,
       });
@@ -280,7 +283,7 @@ function drawDamages(w: Writer, data: ProtocolPdfData): void {
   for (const [index, damage] of data.damages.entries()) {
     const size = damage.size ? ` (${damage.size})` : "";
     w.ensure(LINE * 2);
-    w.text(`${index + 1}. ${DAMAGE_TYPE_LABELS_PL[damage.type]} — ${damage.location}${size}`, {
+    w.text(`${index + 1}. ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} — ${damage.location}${size}`, {
       size: BODY_SIZE,
       color: INK,
     });
@@ -322,10 +325,10 @@ async function drawSignature(w: Writer, doc: PDFDocument, data: ProtocolPdfData)
 
 async function drawPhotoGrid(w: Writer, doc: PDFDocument, data: ProtocolPdfData): Promise<void> {
   const tiles: { label: string; jpeg: Uint8Array }[] = [
-    ...data.photos.map((photo) => ({ label: PHOTO_SLOT_LABELS_PL[photo.slot], jpeg: photo.jpeg })),
+    ...data.photos.map((photo) => ({ label: photoSlotLabel(photo.slot, ARTIFACT_LOCALE), jpeg: photo.jpeg })),
     ...data.damages.flatMap((damage, index) =>
       damage.photos.map((jpeg, n) => ({
-        label: `Uszkodzenie ${index + 1} — ${DAMAGE_TYPE_LABELS_PL[damage.type]} (${n + 1})`,
+        label: `Uszkodzenie ${index + 1} — ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} (${n + 1})`,
         jpeg,
       })),
     ),

@@ -21,10 +21,11 @@ import { SignatureField } from "./SignaturePad";
 // others
 import { cn } from "../../lib/utils";
 import { buildProtocolPdf } from "../../lib/media/protocol-pdf";
-import { PHOTO_SLOT_LABELS_PL } from "../../lib/protocol-labels";
+import { photoSlotLabel, protocol } from "../../lib/i18n/protocol";
 import { PHOTO_SLOTS, protocolInputSchema } from "../../lib/protocol-schema";
 import type { ProtocolInput } from "../../lib/protocol-schema";
 import { allSlotsFilled, formatOdometer, parseOdometer, randomUuid } from "../../lib/protocol-form";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 import { resendProtocolEmail, useProtocolSubmit } from "../hooks/useProtocolSubmit";
 import { IDLE, useProtocolMedia } from "../hooks/useProtocolMedia";
@@ -98,6 +99,9 @@ const ERROR_ORDER: (keyof FormValues)[] = [
 const ERROR_ANCHOR: Partial<Record<keyof FormValues, string>> = { photos: "photos-grid", damages: "damages" };
 
 export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, locale }: Props) {
+  // Memoized so the `useCallback`s below can list it honestly without losing
+  // their memo — `translator` is a pure two-property lookup.
+  const t = React.useMemo(() => translator(locale, protocol), [locale]);
   const backHref = back?.href ?? "/dashboard/pickups";
   // Minted once, before the first byte is uploaded: this id keys every storage
   // object, and an id generated inside `create_protocol` would arrive too late.
@@ -111,7 +115,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
   const [conflictId, setConflictId] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   // An object URL for the just-built PDF, so the `sent` / `email` overlay can offer
-  // a "Pobierz PDF" download without a round-trip — the blob is already in hand.
+  // a download without a round-trip — the blob is already in hand.
   // Session-scoped only: the durable "open it months later" path is the Phase 6
   // view-protocol screen, which re-mints a signed URL server-side on each visit.
   const [pdfHref, setPdfHref] = React.useState<string | null>(null);
@@ -128,7 +132,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
     // `protocolInputSchema` sees the *input* side (odometer as a string, ids and
     // paths the form fills in as it goes) and yields `ProtocolInput`. The two
     // shapes differ, so the resolver is asserted across that boundary once, here.
-    resolver: zodResolver(protocolInputSchema) as unknown as Resolver<FormValues, unknown, ProtocolInput>,
+    resolver: zodResolver(protocolInputSchema(locale)) as unknown as Resolver<FormValues, unknown, ProtocolInput>,
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
@@ -232,7 +236,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
     async (id: string) => {
       const input = committed.current;
       if (!input) {
-        throw new Error("Brak danych protokołu.");
+        throw new Error(t("missingProtocolData"));
       }
       const pdf = await buildProtocolPdf({
         reference: ctx.reference,
@@ -266,7 +270,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
       // `allowed_mime_types` reads exactly that, so it is passed through untouched.
       return uploadObject(client, pdfPath(id), pdf);
     },
-    [bytesOf, client, ctx],
+    [bytesOf, client, ctx, t],
   );
 
   // Release the PDF object URL when the island unmounts (browsers auto-revoke on
@@ -316,7 +320,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
         scrollToFirstError((key) => Boolean(outcome.errors[key]));
         return;
       case "error":
-        setSubmitError(outcome.message ?? "Coś poszło nie tak. Spróbuj ponownie.");
+        setSubmitError(outcome.message ?? t("genericError"));
     }
   }
 
@@ -344,7 +348,15 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
   }
 
   if (conflictId) {
-    return <ConflictScreen backHref={backHref} reference={ctx.reference} plate={ctx.plate} protocolId={conflictId} />;
+    return (
+      <ConflictScreen
+        backHref={backHref}
+        reference={ctx.reference}
+        plate={ctx.plate}
+        protocolId={conflictId}
+        locale={locale}
+      />
+    );
   }
 
   const odometerDigits = parseOdometer(odometer);
@@ -363,20 +375,20 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <a
             href={backHref}
-            aria-label="Wróć"
+            aria-label={t("back")}
             className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
           >
             <ArrowLeft className="size-[18px]" />
           </a>
           <div className="min-w-0 text-center sm:text-left">
-            <h1 className="text-foreground truncate text-[17px] font-bold tracking-tight">Protokół wydania</h1>
+            <h1 className="text-foreground truncate text-[17px] font-bold tracking-tight">{t("issueTitle")}</h1>
             <p className="text-muted-foreground hidden truncate text-[12px] sm:block">
-              {ctx.reference} · {ctx.customerName} · {ctx.vehicle} · {ctx.plate} · Odbiór {ctx.pickupTime}
+              {ctx.reference} · {ctx.customerName} · {ctx.vehicle} · {ctx.plate} · {t("pickupAt")} {ctx.pickupTime}
             </p>
           </div>
           <a
             href={backHref}
-            aria-label="Zamknij"
+            aria-label={t("close")}
             className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border"
           >
             <X className="size-[18px]" />
@@ -391,14 +403,14 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
             {ctx.reference} · {ctx.customerName}
           </p>
           <p className="text-muted-foreground mt-0.5 text-[12px]">
-            {ctx.vehicle} · <span className="font-mono">{ctx.plate}</span> · Odbiór {ctx.pickupTime}
+            {ctx.vehicle} · <span className="font-mono">{ctx.plate}</span> · {t("pickupAt")} {ctx.pickupTime}
           </p>
         </div>
 
         {(isSubmitted && Object.keys(errors).length > 0) || submitError ? (
           <p className="bg-destructive/10 text-destructive mb-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium">
             <TriangleAlert className="size-4 shrink-0" />
-            {submitError ?? "Sprawdź podświetlone pola"}
+            {submitError ?? t("fixHighlighted")}
           </p>
         ) : null}
 
@@ -409,17 +421,12 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
             section 3. */}
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1.35fr_1fr] lg:items-start lg:gap-7">
           <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
-            {/* ── 1. Stan techniczny ───────────────────────────────────────── */}
-            <Section
-              n={1}
-              title="Stan techniczny"
-              sub="Licznik, paliwo i istniejące uszkodzenia. Zdjęcia można zrobić telefonem lub wgrać tutaj."
-              className="order-1"
-            >
+            {/* ── 1. Condition ─────────────────────────────────────────────── */}
+            <Section n={1} title={t("conditionTitle")} sub={t("conditionSub")} className="order-1">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="odometerKm" className={LABEL_CLASS}>
-                    Licznik
+                    {t("odometer")}
                   </Label>
                   {/* `flex-1` grows the box to fill the cell, so its bottom lands on
                     the fuel bar's E/F line (the taller fuel column sets the height).
@@ -446,8 +453,8 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                   </div>
                   {rollback && (
                     <p className="text-warning text-[12px] font-medium">
-                      Poprzedni odczyt to {formatOdometer(String(ctx.lastOdometerKm), locale)} km — sprawdź, czy licznik
-                      się zgadza.
+                      {t("odometerRollback")} {formatOdometer(String(ctx.lastOdometerKm), locale)}{" "}
+                      {t("odometerRollbackTail")}
                     </p>
                   )}
                   {/* The grown input already pushes this to the bottom, level with
@@ -464,6 +471,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                   directly under the bar rather than dropping to a full-width row. */}
                 <div className="flex flex-col gap-2">
                   <FuelBar
+                    locale={locale}
                     value={fuelEighths}
                     invalid={Boolean(errors.fuelEighths)}
                     onChange={(value) => {
@@ -480,11 +488,11 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
               </div>
             </Section>
 
-            {/* ── 3. Uszkodzenia ───────────────────────────────────────────── */}
+            {/* ── 3. Damage ───────────────────────────────────────────────── */}
             <Section
               n={3}
-              title="Uszkodzenia"
-              sub="Zapisz każdy ślad osobno — zwrot porówna się z tą listą."
+              title={t("damageTitle")}
+              sub={t("damageSub")}
               className="order-3"
               aside={
                 <Button
@@ -499,17 +507,18 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                   }}
                 >
                   <Plus className="size-3.5" />
-                  Dodaj uszkodzenie
+                  {t("damageAdd")}
                 </Button>
               }
             >
               <div id="damages" tabIndex={-1} className="flex flex-col gap-2">
                 {damages.fields.length === 0 ? (
-                  <DamageEmpty />
+                  <DamageEmpty locale={locale} />
                 ) : (
                   damages.fields.map((field) => (
                     <DamageRow
                       key={field._key}
+                      locale={locale}
                       damage={field}
                       preview={field.photos[0] ? previews[field.photos[0]] : undefined}
                       onOpen={() => {
@@ -525,11 +534,11 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
           </div>
 
           <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
-            {/* ── 2. Zdjęcia pojazdu ───────────────────────────────────────── */}
+            {/* ── 2. Vehicle photos ──────────────────────────────────────── */}
             <Section
               n={2}
-              title="Zdjęcia pojazdu"
-              sub="Sześć bazowych ujęć pojazdu."
+              title={t("photosTitle")}
+              sub={t("photosSub")}
               className="order-2"
               aside={
                 <span
@@ -542,7 +551,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                 </span>
               }
             >
-              <PhotoDropZone onFiles={fillFreeSlots} />
+              <PhotoDropZone onFiles={fillFreeSlots} locale={locale} />
               <div id="photos-grid" tabIndex={-1} className="grid grid-cols-3 gap-2">
                 {PHOTO_SLOTS.map((slot) => {
                   const tile = tiles[slot] ?? IDLE;
@@ -551,7 +560,8 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                     <PhotoSlot
                       key={slot}
                       slot={slot}
-                      label={PHOTO_SLOT_LABELS_PL[slot]}
+                      locale={locale}
+                      label={photoSlotLabel(slot, locale)}
                       state={path ? "done" : tile.state}
                       pct={tile.pct}
                       preview={path ? previews[path] : undefined}
@@ -564,16 +574,14 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                   );
                 })}
               </div>
-              {errors.photos && (
-                <p className="text-destructive mt-3 text-sm font-medium">Wykonaj wszystkie sześć zdjęć pojazdu.</p>
-              )}
+              {errors.photos && <p className="text-destructive mt-3 text-sm font-medium">{t("photosRequired")}</p>}
             </Section>
 
-            {/* ── 4. Podpis ────────────────────────────────────────────────── */}
+            {/* ── 4. Signature ───────────────────────────────────────────── */}
             <Section
               n={4}
-              title="Podpis"
-              sub="Klient potwierdza powyższy stan i składa podpis."
+              title={t("signatureTitle")}
+              sub={t("signatureSub")}
               card={false}
               className="order-4 px-0 sm:px-0"
             >
@@ -589,9 +597,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
                     setValue("customerAck", checked === true, { shouldValidate: isSubmitted });
                   }}
                 />
-                <span className="text-foreground text-[13px] font-medium">
-                  Klient potwierdza stan pojazdu i warunki najmu.
-                </span>
+                <span className="text-foreground text-[13px] font-medium">{t("ackLabel")}</span>
               </label>
               {errors.customerAck && (
                 <p className="text-destructive mb-3 text-sm font-medium">{errors.customerAck.message}</p>
@@ -622,12 +628,12 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
             {submitting ? (
               <>
                 <span className="border-background/30 border-t-background size-4 animate-spin rounded-full border-2" />
-                Wysyłanie…
+                {t("sending")}
               </>
             ) : (
               <>
                 <MessageSquare className="size-4" />
-                Potwierdź wydanie i wyślij
+                {t("submitIssue")}
               </>
             )}
           </Button>
@@ -647,16 +653,18 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
           onCancel={() => {
             setEditing(null);
           }}
+          locale={locale}
         />
       )}
 
       {overlay && (
         <ResultOverlay
           variant={overlay}
+          locale={locale}
           customerEmail={ctx.customerEmail}
           busy={overlayBusy}
           pdfHref={pdfHref}
-          pdfFilename={`protokol-wydania-${ctx.reference}.pdf`}
+          pdfFilename={`${t("filenameIssue")}-${ctx.reference}.pdf`}
           onPrimary={() => void overlayPrimary()}
           onSecondary={backToDispatch}
         />

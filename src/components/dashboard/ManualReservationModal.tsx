@@ -10,13 +10,10 @@ import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
 import { checkRangeBookable } from "../../lib/availability";
-import {
-  AVAILABILITY_COPY,
-  canCreateReservation,
-  resolveAvailability,
-  type AvailabilityState,
-} from "../../lib/manual-availability";
+import { canCreateReservation, resolveAvailability, type AvailabilityState } from "../../lib/manual-availability";
 import { dayMonthShort, dayMonthYearShort } from "../../lib/format-date";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
@@ -34,51 +31,6 @@ import type { PickerVehicle } from "../../types";
 // all required (the mockup enables on a name alone); D2 plain conflict message,
 // no clashing-booking card and no "next free" hint; D3 no "Pojazd w serwisie"
 // state (only active vehicles are selectable); D5 no company/VAT/notes.
-
-// Verbatim Polish copy — canonical, transcribed from the design source.
-const COPY = {
-  // The daily-rate suffix. `format.ts`'s `formatDailyRate` used to bake it into
-  // the number; a digit-arranging helper has no business owning a word a caller
-  // could phrase differently, so the composition moves here (the shape `FleetList`
-  // already used) and the helper is gone.
-  perDay: "/doba",
-  title: "Nowa rezerwacja",
-  badge: "Ręczna",
-  subtitle: "Wynajem dodawany przez pracownika",
-  close: "Zamknij",
-  vehicle: "Pojazd",
-  term: "Termin",
-  hours: "Odbiór od 14:00 · zwrot do 10:00",
-  // D18: every source board carries a range, so the empty field is undrawn. A
-  // single field reading "— – —" looks broken rather than empty, so it prompts
-  // instead — which is also what the one control now has to say for itself,
-  // the two Odbiór / Zwrot captions having gone with the second field.
-  pickRange: "Wybierz termin",
-  customer: "Klient",
-  namePlaceholder: "Imię i nazwisko / firma",
-  phonePlaceholder: "Telefon",
-  emailPlaceholder: "E-mail",
-  avIdle: "Wybierz pojazd i termin, aby sprawdzić dostępność.",
-  avChecking: "Sprawdzanie dostępności…",
-  avAvailable: "Termin wolny",
-  avConflict: "Termin zajęty",
-  avConflictSub: "Ten pojazd ma już rezerwację w wybranych dniach.",
-  avError: AVAILABILITY_COPY.readFailed,
-  submit: "Utwórz rezerwację",
-  submitting: "Tworzenie…",
-  doneTitle: "Rezerwacja utworzona",
-  doneSub: "Termin zablokowany w kalendarzu. Klient dostanie potwierdzenie e-mailem.",
-  seeCalendar: "Zobacz w kalendarzu",
-  done: "Gotowe",
-  // D19 — undrawn in the source. A failed read strands the vehicle in `error`
-  // (the effect is keyed on `vehicleId`, so re-selecting the same one is a
-  // no-op); this is the way out that is not "switch vehicle and back". Shared
-  // with the picker, which offers the same action — see `AVAILABILITY_COPY`.
-  avRetry: AVAILABILITY_COPY.retry,
-  errorCreate: "Nie udało się utworzyć rezerwacji. Spróbuj ponownie.",
-  errorConflict: "Termin został właśnie zajęty. Wybierz inny termin.",
-  errorUnavailable: "Ten pojazd nie jest już dostępny.",
-} as const;
 
 /** `"Renault Master"`, falling back to the fleet name when make/model are absent. */
 function vehicleTitle(vehicle: PickerVehicle): string {
@@ -99,14 +51,23 @@ function formatDayFull(iso: string, locale: Locale): string {
 
 // ── availability panel ───────────────────────────────────────────────────────
 
-function MrAvailability({ availability, onRetry }: { availability: AvailabilityState; onRetry: () => void }) {
+function MrAvailability({
+  availability,
+  onRetry,
+  locale,
+}: {
+  availability: AvailabilityState;
+  onRetry: () => void;
+  locale: Locale;
+}) {
+  const t = translator(locale, dashboard);
   const box = "flex items-start gap-[11px] rounded-[13px] px-[13px] py-3 md:px-[15px] md:py-[13px]";
 
   if (availability.state === "idle") {
     return (
       <div className={cn(box, "bg-secondary")}>
         <CalendarDays className="text-muted-foreground size-[18px] shrink-0" />
-        <div className="text-muted-foreground pt-px text-[12.5px] font-[540]">{COPY.avIdle}</div>
+        <div className="text-muted-foreground pt-px text-[12.5px] font-[540]">{t("avIdle")}</div>
       </div>
     );
   }
@@ -115,7 +76,7 @@ function MrAvailability({ availability, onRetry }: { availability: AvailabilityS
     return (
       <div className={cn(box, "bg-secondary items-center")}>
         <span className="size-[17px] shrink-0 animate-spin rounded-full border-2 border-[var(--flota-hair)] border-t-[var(--flota-ink-2)] [animation-duration:0.7s]" />
-        <div className="text-[12.5px] font-semibold text-[var(--flota-ink-2)]">{COPY.avChecking}</div>
+        <div className="text-[12.5px] font-semibold text-[var(--flota-ink-2)]">{t("avChecking")}</div>
       </div>
     );
   }
@@ -128,7 +89,7 @@ function MrAvailability({ availability, onRetry }: { availability: AvailabilityS
         <AlertTriangle className="text-warning size-[18px] shrink-0" />
         <div className="pt-px">
           <div className="text-warning text-[12.5px] font-semibold">
-            {availability.state === "invalid" ? availability.message : COPY.avError}
+            {availability.state === "invalid" ? availability.message : t("availabilityReadFailed")}
           </div>
           {/* `invalid` is a bad range, which no amount of re-reading fixes —
               only the failed read gets the retry. */}
@@ -138,7 +99,7 @@ function MrAvailability({ availability, onRetry }: { availability: AvailabilityS
               onClick={onRetry}
               className="text-warning mt-1 text-[12.5px] font-bold underline underline-offset-2"
             >
-              {COPY.avRetry}
+              {t("availabilityRetry")}
             </button>
           )}
         </div>
@@ -151,8 +112,8 @@ function MrAvailability({ availability, onRetry }: { availability: AvailabilityS
       <div className={cn(box, "bg-[var(--flota-danger-soft)]")}>
         <AlertTriangle className="text-destructive size-[18px] shrink-0" />
         <div className="pt-px">
-          <div className="text-destructive text-[13px] font-bold tracking-[-0.1px]">{COPY.avConflict}</div>
-          <div className="text-destructive mt-0.5 text-[12px] opacity-85">{COPY.avConflictSub}</div>
+          <div className="text-destructive text-[13px] font-bold tracking-[-0.1px]">{t("avConflict")}</div>
+          <div className="text-destructive mt-0.5 text-[12px] opacity-85">{t("avConflictSub")}</div>
         </div>
       </div>
     );
@@ -167,7 +128,7 @@ function MrAvailability({ availability, onRetry }: { availability: AvailabilityS
   return (
     <div className={cn(box, "items-center bg-[var(--flota-success-soft)]")}>
       <Check className="text-success size-[18px] shrink-0" />
-      <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{COPY.avAvailable}</div>
+      <div className="text-success text-[13px] font-bold tracking-[-0.1px]">{t("avAvailable")}</div>
     </div>
   );
 }
@@ -192,6 +153,7 @@ function DonePanel({
   onClose: () => void;
   locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const days = rentalDays(pickup, returnDate);
 
   return (
@@ -200,14 +162,14 @@ function DonePanel({
         <div className="mx-auto mb-4 flex size-[62px] items-center justify-center rounded-full bg-[var(--flota-success-soft)]">
           <Check className="text-success size-[30px]" />
         </div>
-        <div className="text-foreground text-[21px] font-bold tracking-[-0.5px]">{COPY.doneTitle}</div>
-        <div className="mt-[7px] text-[13.5px] leading-[1.5] text-[var(--flota-ink-2)]">{COPY.doneSub}</div>
+        <div className="text-foreground text-[21px] font-bold tracking-[-0.5px]">{t("manualDoneTitle")}</div>
+        <div className="mt-[7px] text-[13.5px] leading-[1.5] text-[var(--flota-ink-2)]">{t("manualDoneSub")}</div>
 
         <div className="bg-background mt-5 mb-[22px] rounded-[14px] p-4 text-left">
           <div className="flex items-center justify-between">
             <span className="text-foreground font-mono text-[13px] font-bold">{reference}</span>
             <span className="bg-accent text-primary rounded-full px-2 py-[3px] text-[10px] font-bold tracking-[0.4px] uppercase">
-              {COPY.badge}
+              {t("manualBadgeLabel")}
             </span>
           </div>
           <div className="text-foreground mt-2.5 text-sm font-[650] tracking-[-0.2px]">{customerName}</div>
@@ -223,14 +185,14 @@ function DonePanel({
             href="/dashboard/calendar"
             className="bg-card flex h-[46px] flex-1 items-center justify-center rounded-md border border-[var(--flota-hair)] text-sm font-semibold text-[var(--flota-ink-2)]"
           >
-            {COPY.seeCalendar}
+            {t("manualSeeCalendar")}
           </a>
           <button
             type="button"
             onClick={onClose}
             className="bg-primary flex h-[46px] flex-1 items-center justify-center rounded-md text-sm font-[650] text-white"
           >
-            {COPY.done}
+            {t("manualDone")}
           </button>
         </div>
       </div>
@@ -250,6 +212,7 @@ export function ManualReservationModal({
   /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
   locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const [vehicleId, setVehicleId] = React.useState(vehicles[0]?.id ?? "");
   const [pickup, setPickup] = React.useState("");
   const [returnDate, setReturnDate] = React.useState("");
@@ -292,7 +255,7 @@ export function ManualReservationModal({
   // The panel's answer, resolved locally against the vehicle's busy ranges — the
   // same half-day rules the calendar cells draw and the EXCLUDE constraint
   // enforces, so the panel can never contradict the days shown under it.
-  const resolved = resolveAvailability(vehicleId, pickup, returnDate, ranges, rangesState);
+  const resolved = resolveAvailability(vehicleId, pickup, returnDate, ranges, rangesState, locale);
 
   // The create (or the pre-flight) is the newer, authoritative answer about this
   // range, so it overrides the resolver — otherwise the employee would see a
@@ -346,7 +309,7 @@ export function ManualReservationModal({
   };
   // The same schema the endpoint validates with, so the button cannot enable on
   // input the server would reject (D1: all three customer fields required).
-  const customerValid = manualReservationSchema.safeParse(payload).success;
+  const customerValid = manualReservationSchema(locale).safeParse(payload).success;
   const canCreate = canCreateReservation(availability, customerValid);
 
   const days = pickup && returnDate ? Math.max(rentalDays(pickup, returnDate), 0) : 0;
@@ -361,7 +324,7 @@ export function ManualReservationModal({
       ? `${formatDayShort(pickup, locale)} – ${formatDayFull(returnDate, locale)}`
       : pickup
         ? formatDayFull(pickup, locale)
-        : COPY.pickRange;
+        : t("manualPickRange");
 
   async function submit() {
     setBanner(null);
@@ -376,7 +339,7 @@ export function ManualReservationModal({
     setPreflighting(false);
     if (fresh && !checkRangeBookable(fresh, pickup, returnDate).ok) {
       markConflict();
-      setBanner(COPY.errorConflict);
+      setBanner(t("manualErrorConflict"));
       return;
     }
 
@@ -390,15 +353,15 @@ export function ManualReservationModal({
     // banner — and `canCreate` falls false, disarming an identical retry.
     if (outcome.status === "conflict") {
       markConflict();
-      setBanner(COPY.errorConflict);
+      setBanner(t("manualErrorConflict"));
       return;
     }
     if (outcome.status === "unavailable") {
       markConflict();
-      setBanner(COPY.errorUnavailable);
+      setBanner(t("manualErrorUnavailable"));
       return;
     }
-    setBanner(COPY.errorCreate);
+    setBanner(t("manualErrorCreate"));
   }
 
   if (created) {
@@ -439,19 +402,19 @@ export function ManualReservationModal({
           <div>
             <div className="flex items-center gap-[9px]">
               <span className="text-foreground text-[18px] font-bold tracking-[-0.4px] md:text-[19px]">
-                {COPY.title}
+                {t("manualTitle")}
               </span>
               <span className="bg-accent text-primary rounded-full px-2 py-[3px] text-[9.5px] font-bold tracking-[0.4px] uppercase">
-                {COPY.badge}
+                {t("manualBadgeLabel")}
               </span>
             </div>
-            <div className="text-muted-foreground mt-[3px] text-[12.5px]">{COPY.subtitle}</div>
+            <div className="text-muted-foreground mt-[3px] text-[12.5px]">{t("manualSubtitle")}</div>
           </div>
           <button
             type="button"
             onClick={busy ? undefined : onClose}
             disabled={busy}
-            aria-label={COPY.close}
+            aria-label={t("close")}
             className="bg-card flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-[var(--flota-hair)] disabled:opacity-40"
           >
             <X className="size-4 text-[var(--flota-ink-2)]" />
@@ -464,7 +427,7 @@ export function ManualReservationModal({
             {/* Pojazd */}
             <div>
               <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
-                {COPY.vehicle}
+                {t("manualVehicle")}
               </div>
               <div className="bg-background relative flex items-center gap-3 rounded-[13px] px-3 py-2.5">
                 <div className="bg-card shadow-card flex h-[42px] w-16 shrink-0 items-center justify-center rounded-[9px]">
@@ -474,7 +437,7 @@ export function ManualReservationModal({
                   <div className="text-foreground text-sm font-[650] tracking-[-0.2px]">{vehicleTitle(vehicle)}</div>
                   <div className="text-muted-foreground mt-0.5 text-[11.5px]">
                     <span className="font-mono">{vehicle.plate}</span> · {formatPln(vehicle.daily_rate, locale)}
-                    {COPY.perDay}
+                    {t("perDay")}
                   </div>
                 </div>
                 <span className="bg-card shadow-card flex size-[30px] shrink-0 items-center justify-center rounded-sm">
@@ -484,7 +447,7 @@ export function ManualReservationModal({
                     over the card, so the styling is exact and the control stays
                     natively keyboard- and screen-reader-accessible. */}
                 <select
-                  aria-label={COPY.vehicle}
+                  aria-label={t("manualVehicle")}
                   value={vehicleId}
                   disabled={busy}
                   onChange={(e) => {
@@ -507,7 +470,7 @@ export function ManualReservationModal({
                 id="mr-term-label"
                 className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase"
               >
-                {COPY.term}
+                {t("manualTerm")}
               </div>
 
               {/* ONE field. The picker sets both ends of the range, so a second
@@ -576,10 +539,11 @@ export function ManualReservationModal({
                 )}
               </div>
 
-              <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{COPY.hours}</div>
+              <div className="text-muted-foreground mt-2 text-[11.5px] font-[540]">{t("manualHours")}</div>
               <div className="mt-2.5">
                 <MrAvailability
                   availability={availability}
+                  locale={locale}
                   onRetry={() => {
                     void refetch();
                   }}
@@ -590,12 +554,12 @@ export function ManualReservationModal({
             {/* Klient */}
             <div>
               <div className="text-muted-foreground mb-2 text-[11px] font-bold tracking-[0.4px] uppercase">
-                {COPY.customer}
+                {t("manualCustomer")}
               </div>
               <div className="flex flex-col gap-2">
                 <input
-                  aria-label={COPY.namePlaceholder}
-                  placeholder={COPY.namePlaceholder}
+                  aria-label={t("manualNamePlaceholder")}
+                  placeholder={t("manualNamePlaceholder")}
                   value={name}
                   disabled={busy}
                   onChange={(e) => {
@@ -605,8 +569,8 @@ export function ManualReservationModal({
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
-                    aria-label={COPY.phonePlaceholder}
-                    placeholder={COPY.phonePlaceholder}
+                    aria-label={t("manualPhonePlaceholder")}
+                    placeholder={t("manualPhonePlaceholder")}
                     inputMode="tel"
                     value={phone}
                     disabled={busy}
@@ -616,8 +580,8 @@ export function ManualReservationModal({
                     className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
                   />
                   <input
-                    aria-label={COPY.emailPlaceholder}
-                    placeholder={COPY.emailPlaceholder}
+                    aria-label={t("manualEmailPlaceholder")}
+                    placeholder={t("manualEmailPlaceholder")}
                     inputMode="email"
                     value={email}
                     disabled={busy}
@@ -666,12 +630,12 @@ export function ManualReservationModal({
             {busy ? (
               <>
                 <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                {COPY.submitting}
+                {t("manualSubmitting")}
               </>
             ) : (
               <>
                 <Check className="size-4" />
-                {COPY.submit}
+                {t("manualSubmit")}
               </>
             )}
           </button>

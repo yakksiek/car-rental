@@ -30,34 +30,36 @@ describe("staffCountLabel", () => {
 describe("formatLastActive (active)", () => {
   const base = { status: "active" as const, invitedAt: null };
   it("just signed in → przed chwilą", () => {
-    expect(formatLastActive({ ...base, lastSignInAt: ago(30_000) }, NOW)).toBe("przed chwilą");
-    expect(formatLastActive({ ...base, lastSignInAt: null }, NOW)).toBe("przed chwilą");
+    expect(formatLastActive({ ...base, lastSignInAt: ago(30_000) }, NOW, "pl")).toBe("przed chwilą");
+    expect(formatLastActive({ ...base, lastSignInAt: null }, NOW, "pl")).toBe("przed chwilą");
   });
   it("minutes / hours", () => {
-    expect(formatLastActive({ ...base, lastSignInAt: ago(12 * 60_000) }, NOW)).toBe("12 min temu");
-    expect(formatLastActive({ ...base, lastSignInAt: ago(2 * 3_600_000) }, NOW)).toBe("2 godz. temu");
+    expect(formatLastActive({ ...base, lastSignInAt: ago(12 * 60_000) }, NOW, "pl")).toBe("12 min temu");
+    expect(formatLastActive({ ...base, lastSignInAt: ago(2 * 3_600_000) }, NOW, "pl")).toBe("2 godz. temu");
   });
   it("yesterday / days", () => {
-    expect(formatLastActive({ ...base, lastSignInAt: ago(25 * 3_600_000) }, NOW)).toBe("wczoraj");
-    expect(formatLastActive({ ...base, lastSignInAt: ago(3 * 86_400_000) }, NOW)).toBe("3 dni temu");
+    expect(formatLastActive({ ...base, lastSignInAt: ago(25 * 3_600_000) }, NOW, "pl")).toBe("wczoraj");
+    expect(formatLastActive({ ...base, lastSignInAt: ago(3 * 86_400_000) }, NOW, "pl")).toBe("3 dni temu");
   });
 });
 
 describe("formatLastActive (invited)", () => {
   it("renders zaproszenie · N dni temu", () => {
-    expect(formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(2 * 86_400_000) }, NOW)).toBe(
+    expect(formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(2 * 86_400_000) }, NOW, "pl")).toBe(
       "zaproszenie · 2 dni temu",
     );
-    expect(formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(60_000) }, NOW)).toBe(
+    expect(formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(60_000) }, NOW, "pl")).toBe(
       "zaproszenie · dziś",
     );
   });
 
   it("drops the 'zaproszenie' prefix when invitePrefix is false (next to the badge)", () => {
     const m = { status: "invited" as const, lastSignInAt: null, invitedAt: ago(2 * 86_400_000) };
-    expect(formatLastActive(m, NOW, { invitePrefix: false })).toBe("2 dni temu");
+    expect(formatLastActive(m, NOW, "pl", { invitePrefix: false })).toBe("2 dni temu");
     expect(
-      formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(60_000) }, NOW, { invitePrefix: false }),
+      formatLastActive({ status: "invited", lastSignInAt: null, invitedAt: ago(60_000) }, NOW, "pl", {
+        invitePrefix: false,
+      }),
     ).toBe("dziś");
   });
 });
@@ -66,15 +68,15 @@ describe("formatLastActive (created — the two-step add's first step)", () => {
   const created = { status: "created" as const, lastSignInAt: null, invitedAt: null };
 
   it("renders an em dash — nothing has been sent for this account yet", () => {
-    expect(formatLastActive(created, NOW)).toBe("—");
-    expect(formatLastActive(created, NOW, { invitePrefix: false })).toBe("—");
+    expect(formatLastActive(created, NOW, "pl")).toBe("—");
+    expect(formatLastActive(created, NOW, "pl", { invitePrefix: false })).toBe("—");
   });
 
   it("does not fall through to the active branch's 'przed chwilą'", () => {
     // The active branch answers "przed chwilą" for a null lastSignInAt, which
     // would read as a sign-in that never happened.
-    expect(formatLastActive(created, NOW)).not.toBe(
-      formatLastActive({ status: "active", lastSignInAt: null, invitedAt: null }, NOW),
+    expect(formatLastActive(created, NOW, "pl")).not.toBe(
+      formatLastActive({ status: "active", lastSignInAt: null, invitedAt: null }, NOW, "pl"),
     );
   });
 });

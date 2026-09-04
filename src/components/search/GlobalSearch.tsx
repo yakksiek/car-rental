@@ -42,7 +42,7 @@ import type { SearchResults } from "../../types";
 export const SEARCH_OPEN_EVENT = "flota:search-open";
 
 /** Where ⌘K sends a desktop user who is on a page with no search field. */
-const PULPIT_WITH_SEARCH = "/dashboard?search=1";
+const DASHBOARD_WITH_SEARCH = "/dashboard?search=1";
 
 /** The `search`-namespace translator the sub-components take instead of a locale. */
 type Translate = (key: keyof typeof search.en) => string;
@@ -168,7 +168,7 @@ export default function GlobalSearch({
     if (!field) {
       // Nothing to anchor a popover to and no input to focus on this page, so the
       // shortcut takes the user where both exist and asks Pulpit to open on arrival.
-      window.location.assign(PULPIT_WITH_SEARCH);
+      window.location.assign(DASHBOARD_WITH_SEARCH);
       return;
     }
     setDesktopOpen(true);
@@ -449,7 +449,7 @@ function ResultGroups({
         <Command.Group heading={<GroupHeader icon={Truck} label={t("vehicles")} count={results.vehicles.length} />}>
           {results.vehicles.map((row) => (
             <Command.Item key={row.id} value={`vehicle-${row.id}`} onSelect={go(searchHref.vehicle(row))} asChild>
-              <VehicleRow row={row} query={query} />
+              <VehicleRow row={row} query={query} locale={locale} />
             </Command.Item>
           ))}
         </Command.Group>

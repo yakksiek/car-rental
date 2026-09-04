@@ -23,13 +23,21 @@
 // others
 import { api } from "./api";
 import { auth } from "./auth";
+import { booking } from "./booking";
 import { config } from "./config";
+import { dashboard } from "./dashboard";
+import { fleet } from "./fleet";
+import { fleetAdmin } from "./fleet-admin";
 import { footer } from "./footer";
+import { info } from "./info";
 import { landing } from "./landing";
 import { layout } from "./layout";
 import { nav } from "./nav";
+import { protocol } from "./protocol";
 import { search } from "./search";
 import { staff } from "./staff";
+import { staffAdmin } from "./staff-admin";
+import { validation } from "./validation";
 import { vehicle } from "./vehicle";
 import { DEFAULT_LOCALE, type Dict, type Locale } from "./types";
 
@@ -39,7 +47,26 @@ export { LOCALE_COOKIE, resolveLocale } from "./resolve";
 export type { LocaleSignals } from "./resolve";
 
 // Register every namespace here. The key becomes the `ns.` prefix of its keys.
-const NAMESPACES = { api, auth, config, footer, landing, layout, nav, search, staff, vehicle };
+const NAMESPACES = {
+  api,
+  auth,
+  booking,
+  config,
+  dashboard,
+  fleet,
+  fleetAdmin,
+  footer,
+  info,
+  landing,
+  layout,
+  nav,
+  protocol,
+  search,
+  staff,
+  staffAdmin,
+  validation,
+  vehicle,
+};
 
 type Namespaces = typeof NAMESPACES;
 

@@ -15,7 +15,7 @@ import { vehiclesToResources } from "../../lib/calendar/map";
 // initial window's vehicles (resource rows) + reservations, then mount the
 // client:only island (the lib never SSRs in workerd). The island refetches on
 // navigation via GET /api/reservations/calendar.
-const { user, role, supabase, locale } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 const pendingCount = (await listPendingReservations(supabase)).length;
 const overdueCount = await countOverdueReturns(supabase);
 
@@ -50,11 +50,11 @@ const resources = vehiclesToResources(vehicles);
 const reservations = await listReservationsForCalendar(supabase, isoDate(windowStart), isoDate(windowEnd));
 ---
 
-<Layout title="Kalendarz — Flota">
+<Layout title={`${t("dashboard.calendarTitle")} — Flota`}>
   <StaffShell
     active="cal"
-    title="Kalendarz"
-    subtitle="Oś czasu rezerwacji według pojazdów"
+    title={t("dashboard.calendarTitle")}
+    subtitle={t("dashboard.calendarSubtitle")}
     user={user}
     role={role}
     pendingCount={pendingCount}
@@ -67,8 +67,8 @@ const reservations = await listReservationsForCalendar(supabase, isoDate(windowS
           title stays optically centred (S-12b). */
       }
       <header class="relative mb-4 text-center md:hidden">
-        <h1 class="text-foreground text-xl font-bold tracking-tight">Kalendarz</h1>
-        <p class="text-muted-foreground mt-1 text-sm">Oś czasu rezerwacji według pojazdów</p>
+        <h1 class="text-foreground text-xl font-bold tracking-tight">{t("dashboard.calendarTitle")}</h1>
+        <p class="text-muted-foreground mt-1 text-sm">{t("dashboard.calendarSubtitle")}</p>
         <div class="absolute top-1/2 right-0 -translate-y-1/2">
           <QuickAddButton client:load mode="mobile" locale={locale} />
         </div>

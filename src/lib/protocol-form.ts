@@ -8,7 +8,7 @@ import type { ProtocolPhotoSlot } from "../types";
 // rather than inside the island so they are unit-testable in the `unit` project,
 // which runs `src/**/*.test.ts` under node with no DOM.
 //
-// The Polish labels themselves live in `protocol-labels.ts` and are shared with
+// The labels themselves live in `i18n/protocol.ts` and are shared with
 // the PDF, so a slot can never be named one thing on screen and another in the
 // customer's only copy of the evidence.
 

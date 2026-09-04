@@ -23,7 +23,7 @@ interface Props {
 }
 
 const { view } = Astro.props;
-const { locale } = Astro.locals;
+const { locale, t } = Astro.locals;
 
 // Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
 // produces; confirmed/rejected/cancelled arrive with S-03. The WORDING now comes
@@ -66,8 +66,8 @@ const deposit = formatPln(view.vehicle_deposit, locale);
     </svg>
   </span>
   <p class="text-primary mt-5 font-mono text-sm font-medium tracking-wide">{view.reference}</p>
-  <h1 class="text-foreground mt-1 font-serif text-4xl tracking-tight">Zgłoszenie przyjęte</h1>
-  <p class="text-muted-foreground mt-2 text-sm">Bez konta — wszystko potwierdzimy e-mailem.</p>
+  <h1 class="text-foreground mt-1 font-serif text-4xl tracking-tight">{t("booking.statusReceived")}</h1>
+  <p class="text-muted-foreground mt-2 text-sm">{t("booking.statusReceivedSub")}</p>
   <span
     class:list={cn(
       "mt-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide uppercase",
@@ -90,7 +90,7 @@ const deposit = formatPln(view.vehicle_deposit, locale);
     </div>
     <div class="shrink-0 text-right">
       <p class="text-foreground text-lg font-bold tracking-tight">{total}</p>
-      <p class="text-muted-foreground text-xs">+ kaucja {deposit}</p>
+      <p class="text-muted-foreground text-xs">{t("booking.statusPlusDeposit")} {deposit}</p>
     </div>
   </div>
 
@@ -109,7 +109,8 @@ const deposit = formatPln(view.vehicle_deposit, locale);
       <path d="M3 7l9 6 9-6"></path>
     </svg>
     <span class="truncate">
-      Potwierdzenie wysłaliśmy na <strong class="text-foreground font-semibold">{view.customer_email}</strong>
+      {t("booking.statusEmailedBefore")}
+      <strong class="text-foreground font-semibold">{view.customer_email}</strong>
     </span>
   </div>
 </div>

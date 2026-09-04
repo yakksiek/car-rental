@@ -96,6 +96,13 @@ describe("overdueDaysLabel", () => {
     expect(overdueDaysLabel(overdue, TODAY, "pl")).toBe("3 dni po terminie");
   });
 
+  it("reads its English twin under `en`", () => {
+    expect(overdueDaysLabel(row({ return_protocol_id: null, return_date: "2026-07-22" }), TODAY, "en")).toBe(
+      "1 day overdue",
+    );
+    expect(overdueDaysLabel(overdue, TODAY, "en")).toBe("3 days overdue");
+  });
+
   it("is null for due and returned rows (they carry no overdue label)", () => {
     expect(overdueDaysLabel(dueToday, TODAY, "pl")).toBeNull();
     expect(overdueDaysLabel(returned, TODAY, "pl")).toBeNull();

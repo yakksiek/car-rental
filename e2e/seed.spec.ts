@@ -101,10 +101,10 @@ test("a confirmed booking blocks its interior days but leaves changeover days bo
   // is half-free — its morning belongs to the old booking, its afternoon does
   // not — so it must remain selectable, and announce itself as pickup-only.
   await expect(dayButton(page, booked.bookedTo)).toBeEnabled();
-  await expect(dayButton(page, booked.bookedTo)).toHaveAccessibleName(/dostępny tylko jako dzień odbioru/);
+  await expect(dayButton(page, booked.bookedTo)).toHaveAccessibleName(/available as a pickup day only/);
 
   // Symmetrically, the booking's pickup day stays valid as a new *return*.
-  await expect(dayButton(page, booked.bookedFrom)).toHaveAccessibleName(/dostępny tylko jako dzień zwrotu/);
+  await expect(dayButton(page, booked.bookedFrom)).toHaveAccessibleName(/available as a return day only/);
 
   // Action: book back-to-back — pick up at 14:00 on the very day the previous
   // rental returns at 10:00. The EXCLUDE constraint permits this; before F1 was
@@ -115,7 +115,7 @@ test("a confirmed booking blocks its interior days but leaves changeover days bo
   // Assertion: the funnel actually accepts the range and carries it forward.
   // A greyed-out changeover day would leave this button disabled and never
   // navigate — which is precisely how the risk shows up to a customer.
-  const reserve = page.getByRole("button", { name: "Zarezerwuj" });
+  const reserve = page.getByRole("button", { name: "Reserve" });
   await expect(reserve).toBeEnabled();
   await reserve.click();
 

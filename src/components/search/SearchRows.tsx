@@ -231,7 +231,13 @@ export function ReturnRow({
  * `Mercedes-Benz` / `Sprinter`). The `Wycofany` pill is the whole of D9: the design
  * has no retired state because its demo fleet has no retired vehicle.
  */
-export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle; query: string } & RowAnchorProps) {
+export function VehicleRow({
+  row,
+  query,
+  locale,
+  ...anchor
+}: { row: SearchResultVehicle; query: string; locale: Locale } & RowAnchorProps) {
+  const t = translator(locale, search);
   return (
     <a href={searchHref.vehicle(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
@@ -251,7 +257,7 @@ export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle
           </span>
         </span>
       </span>
-      {!row.is_active && <Pill label="Wycofany" tone="neutral" />}
+      {!row.is_active && <Pill label={t("retired")} tone="neutral" />}
       <TrailingAffordance />
     </a>
   );

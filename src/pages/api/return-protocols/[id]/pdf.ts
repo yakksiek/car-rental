@@ -3,6 +3,8 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { requireRole } from "../../../../lib/access";
 import { isValidObjectPath } from "../../../../lib/protocol-storage-paths";
 import { resendProtocolEmail, setProtocolPdf } from "../../../../lib/services/protocols";
@@ -23,16 +25,6 @@ import { resendProtocolEmail, setProtocolPdf } from "../../../../lib/services/pr
 //
 // Gate order per lessons.md, vehicles two-step (401 anon / 403 wrong role).
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono protokołu.",
-  badPath: "Nieprawidłowa ścieżka pliku.",
-  noPdf: "Protokół nie ma zapisanego pliku PDF.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -44,55 +36,57 @@ function json(status: number, body: unknown): Response {
  * another's evidence. `isValidObjectPath` is the shared checker — **no inline
  * `return/` literal here** (the return analogue of the issue route's guard).
  */
-function pdfPathSchema(protocolId: string) {
+function pdfPathSchema(protocolId: string, t: ReturnType<typeof translator<(typeof api)["en"]>>) {
   return z.object({
     path: z
-      .string(MSG.badPath)
+      .string(t("badPath"))
       .trim()
-      .refine((path) => isValidObjectPath("return", protocolId, path) && path.endsWith(".pdf"), MSG.badPath),
+      .refine((path) => isValidObjectPath("return", protocolId, path) && path.endsWith(".pdf"), t("badPath")),
   });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-staff role 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (c) Validate the storage path against this protocol's `return/` folder.
-  const parsed = pdfPathSchema(id).safeParse(payload);
+  const parsed = pdfPathSchema(id, t).safeParse(payload);
   if (!parsed.success) {
-    return json(400, { errors: { path: MSG.badPath } });
+    return json(400, { errors: { path: t("badPath") } });
   }
 
   // (d) Store the path. Idempotent — a retry overwrites it with the same value.
   const stored = await setProtocolPdf(context.locals.supabase, id, parsed.data.path);
   if (stored.status === "not_found") {
-    return json(404, { error: MSG.notFound });
+    return json(404, { error: t("protocolNotFound") });
   }
   if (stored.status === "unauthorized") {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   // (e) Now that the object exists and its path is recorded, mint a short-TTL
@@ -107,10 +101,10 @@ export const POST: APIRoute = async (context) => {
     case "no_pdf":
       // Unreachable: `set_protocol_pdf` just succeeded. Kept so the union stays
       // exhaustive if the service's tags change.
-      return json(409, { error: MSG.noPdf, status: "no_pdf" });
+      return json(409, { error: t("noPdf"), status: "no_pdf" });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("protocolNotFound") });
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
   }
 };

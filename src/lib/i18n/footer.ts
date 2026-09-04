@@ -28,6 +28,8 @@ export const footer = defineDict({
     contact: "Contact",
     staffZone: "Employee zone",
     open247: "Open 24/7",
+    // The one depot. The city translates; the street name is a proper noun.
+    address: "Al. Jerozolimskie 200, Warsaw",
     rights: "All rights reserved.",
   },
   pl: {
@@ -45,6 +47,7 @@ export const footer = defineDict({
     contact: "Kontakt",
     staffZone: "Strefa pracownika",
     open247: "Czynne 24/7",
+    address: "Al. Jerozolimskie 200, Warszawa",
     rights: "Wszelkie prawa zastrzeżone.",
   },
 });

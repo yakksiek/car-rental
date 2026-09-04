@@ -2,6 +2,9 @@
 import { Constants } from "../db/database.types";
 import type { CatalogSort, VehicleCategory, VehicleFilters } from "../types";
 import { bookingWindow } from "./availability";
+import { translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
+import { validation } from "./i18n/validation";
 
 // Single source for catalog state in the URL. The fleet listing reads filters
 // from `Astro.url.searchParams`; the filter island writes them back via
@@ -21,13 +24,9 @@ export const PARAM = {
 
 const VALID_SORTS: readonly CatalogSort[] = ["price_asc", "price_desc"];
 
-// Polish validation copy (canonical UI language).
-const MSG = {
-  incomplete: "Wybierz datę odbioru i datę zwrotu.",
-  invalidFormat: "Nieprawidłowy format daty.",
-  pastPickup: "Data odbioru nie może być w przeszłości.",
-  returnBeforePickup: "Data zwrotu musi być późniejsza niż data odbioru.",
-} as const;
+// The date rule's four messages. Resolved through the ISLAND-SAFE accessor:
+// `FilterBar`, `HeroSearch` and `BookingWidget` all import this module, so it
+// must never reach the composed catalog (Phase 1 §1's boundary rule).
 
 type DateRangeResult = { ok: true } | { ok: false; error: string };
 
@@ -116,27 +115,29 @@ export function serializeFilters(filters: VehicleFilters): URLSearchParams {
 export function validateDateRange(
   pickup: string | null,
   returnDate: string | null,
+  locale: Locale,
   today: string = todayIso(),
 ): DateRangeResult {
+  const t = translator(locale, validation);
   // No range at all → fine; the listing path runs unfiltered by date.
   if (!pickup && !returnDate) {
     return { ok: true };
   }
   // A half-filled range is incomplete.
   if (!pickup || !returnDate) {
-    return { ok: false, error: MSG.incomplete };
+    return { ok: false, error: t("dateIncomplete") };
   }
   if (!isValidIsoDate(pickup) || !isValidIsoDate(returnDate)) {
-    return { ok: false, error: MSG.invalidFormat };
+    return { ok: false, error: t("date") };
   }
   if (pickup < today) {
-    return { ok: false, error: MSG.pastPickup };
+    return { ok: false, error: t("datePastPickup") };
   }
   // Reuse the half-open booking window: a valid rental needs start < end, which
   // rejects both return < pickup and a same-day (return == pickup) range.
   const window = bookingWindow(pickup, returnDate);
   if (window.start >= window.end) {
-    return { ok: false, error: MSG.returnBeforePickup };
+    return { ok: false, error: t("dateReturnBeforePickup") };
   }
   return { ok: true };
 }

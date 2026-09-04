@@ -10,6 +10,9 @@ import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { dayMonthShortPadded } from "../../lib/format-date";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { rejectionReasonLabel } from "../../lib/i18n/reservation";
+import { translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { CalendarReservation, RejectionReason } from "../../types";
@@ -20,33 +23,41 @@ import type { CalendarReservation, RejectionReason } from "../../types";
 // single copy of each; the calendar drives the whole flow through CalendarDecision.
 // All of them decide through the one useReservationDecision hook.
 
-export const DECISION_COPY = {
-  approve: "Zatwierdź",
-  reject: "Odrzuć",
-  close: "Zamknij",
-  reasonTitle: "Powód odrzucenia",
-  confirmReject: "Potwierdź odrzucenie",
-  noteLabel: "Dodaj szczegóły",
-  notePlaceholder: "Krótka informacja dla klienta…",
-  confirmedTitle: "Rezerwacja potwierdzona",
-  rejectedTitle: "Wniosek odrzucony",
-  notifiedSub: "Klient powiadomiony e-mailem.",
-  done: "Gotowe",
-  pickup: "Odbiór",
-  return: "Zwrot",
-  confirmedBadge: "POTWIERDZONA",
-  pendingBadge: "PENDING",
-  manualBadge: "Ręczna",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-  alreadyHandled: "Ten wniosek został już rozpatrzony przez kogoś innego.",
-} as const;
+/** The decision flow's copy, bound to one locale. Shared with `PendingQueue`. */
+export function decisionCopy(locale: Locale) {
+  const t = translator(locale, dashboard);
+  return {
+    approve: t("approve"),
+    reject: t("reject"),
+    close: t("close"),
+    reasonTitle: t("reasonTitle"),
+    confirmReject: t("confirmReject"),
+    noteLabel: t("noteLabel"),
+    notePlaceholder: t("notePlaceholder"),
+    confirmedTitle: t("confirmedTitle"),
+    rejectedTitle: t("rejectedTitle"),
+    notifiedSub: t("notifiedSub"),
+    done: t("done"),
+    pickup: t("pickup"),
+    return: t("return"),
+    confirmedBadge: t("confirmedBadge"),
+    pendingBadge: t("pendingBadge"),
+    manualBadge: t("manualBadge"),
+    genericError: t("genericError"),
+    alreadyHandled: t("alreadyHandled"),
+  } as const;
+}
 
-export const REASONS: { value: RejectionReason; label: string }[] = [
-  { value: "dates_unavailable", label: "Daty już niedostępne" },
-  { value: "no_category", label: "Brak wymaganej kategorii" },
-  { value: "vehicle_withdrawn", label: "Pojazd wycofany" },
-  { value: "other", label: "Inny" },
-];
+/**
+ * The four canned rejection reasons, in sheet order. The labels come from
+ * `i18n/reservation.ts` — the SAME map the rejection email renders, so the reason
+ * a customer reads cannot drift from the one an employee picked.
+ */
+export function rejectionReasons(locale: Locale): { value: RejectionReason; label: string }[] {
+  return REASON_VALUES.map((value) => ({ value, label: rejectionReasonLabel(value, locale) }));
+}
+
+const REASON_VALUES: RejectionReason[] = ["dates_unavailable", "no_category", "vehicle_withdrawn", "other"];
 
 function formatDayShort(iso: string, locale: Locale): string {
   const d = fromIsoDate(iso);
@@ -59,11 +70,15 @@ export function ReasonSheet({
   busy,
   onConfirm,
   onClose,
+  locale,
 }: {
   busy: boolean;
   onConfirm: (reason: RejectionReason, note: string) => void;
   onClose: () => void;
+  locale: Locale;
 }) {
+  const DECISION_COPY = decisionCopy(locale);
+  const REASONS = rejectionReasons(locale);
   const [reason, setReason] = React.useState<RejectionReason>(REASONS[0].value);
   const [note, setNote] = React.useState("");
 
@@ -142,7 +157,16 @@ export function ReasonSheet({
 
 // ── result overlay ───────────────────────────────────────────────────────────
 
-export function ResultOverlay({ status, onDone }: { status: "confirmed" | "rejected"; onDone: () => void }) {
+export function ResultOverlay({
+  status,
+  onDone,
+  locale,
+}: {
+  status: "confirmed" | "rejected";
+  onDone: () => void;
+  locale: Locale;
+}) {
+  const DECISION_COPY = decisionCopy(locale);
   const confirmed = status === "confirmed";
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center">
@@ -186,12 +210,15 @@ export function CalendarDecision({
   onDecided: (id: string, status: "confirmed" | "rejected") => void;
   locale: Locale;
 }) {
+  const DECISION_COPY = decisionCopy(locale);
   const { busy, decide } = useReservationDecision();
   const [reasonOpen, setReasonOpen] = React.useState(false);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
   const [banner, setBanner] = React.useState<string | null>(null);
 
-  const vehicle = [reservation.vehicle_make, reservation.vehicle_model].filter(Boolean).join(" ") || "Pojazd";
+  const vehicle =
+    [reservation.vehicle_make, reservation.vehicle_model].filter(Boolean).join(" ") ||
+    translator(locale, dashboard)("vehicleFallback");
   const isPending = reservation.status === "pending";
 
   async function run(decision: "confirm" | "reject", reason?: RejectionReason, note?: string) {
@@ -301,6 +328,7 @@ export function CalendarDecision({
 
       {reasonOpen && (
         <ReasonSheet
+          locale={locale}
           busy={busy}
           onClose={() => {
             setReasonOpen(false);
@@ -308,7 +336,7 @@ export function CalendarDecision({
           onConfirm={(reason, note) => run("reject", reason, note)}
         />
       )}
-      {result && <ResultOverlay status={result} onDone={finish} />}
+      {result && <ResultOverlay status={result} onDone={finish} locale={locale} />}
     </div>
   );
 }

@@ -19,7 +19,7 @@ import { countOverdueReturns } from "../../../../lib/services/protocols";
 // quick-add pill either. `searchHotkey={false}` on top of it — the shell still
 // MOUNTS <GlobalSearch> on this branch (mobile overlay), it just does not claim
 // ⌘K, which at desktop width would navigate away from a part-filled form.
-const { user, role, supabase, locale } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 const { id } = Astro.params;
 
 const vehicle = id ? await getVehicleById(supabase, id) : null;
@@ -29,7 +29,7 @@ if (!vehicle) {
 
 const pending = await listPendingReservations(supabase);
 const overdueCount = await countOverdueReturns(supabase);
-const title = vehicle ? "Edytuj pojazd" : "Nie znaleziono pojazdu";
+const title = vehicle ? t("dashboard.vehicleEditTitle") : t("dashboard.vehicleNotFoundTitle");
 ---
 
 <Layout title={`${title} — Flota`}>
@@ -49,16 +49,16 @@ const title = vehicle ? "Edytuj pojazd" : "Nie znaleziono pojazdu";
         <VehicleForm client:load mode="edit" vehicle={vehicle} locale={locale} />
       ) : (
         <main class="mx-auto max-w-2xl px-4 py-24 text-center">
-          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
-          <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
-          <p class="text-muted-foreground mx-auto mt-3 max-w-md">
-            Ten pojazd nie istnieje lub został usunięty z floty.
+          <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            {t("fleet.notFoundEyebrow")}
           </p>
+          <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">{t("dashboard.vehicleNotFoundTitle")}</h1>
+          <p class="text-muted-foreground mx-auto mt-3 max-w-md">{t("dashboard.vehicleNotFoundBody")}</p>
           <a
             href="/dashboard/vehicles"
             class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
           >
-            Wróć do floty
+            {t("fleet.backToFleet")}
           </a>
         </main>
       )

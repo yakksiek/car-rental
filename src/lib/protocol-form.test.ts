@@ -3,22 +3,25 @@ import { describe, expect, it } from "vitest";
 
 // others
 import { allSlotsFilled, filledSlotCount, formatOdometer, parseOdometer, randomUuid } from "./protocol-form";
-import { fuelLabelPl } from "./protocol-labels";
+import { fuelLevelLabel } from "./i18n/protocol";
 import { PHOTO_SLOTS } from "./protocol-schema";
 
 // The thousands separator `Intl` uses for `pl` (U+00A0). This module used to
 // hand-roll grouping with U+202F — narrow no-break — which no other module used.
 const NBSP = "\u00a0";
 
-describe("fuelLabelPl", () => {
+describe("fuelLevelLabel", () => {
   it("names the two ends", () => {
-    expect(fuelLabelPl(0)).toBe("0/8 · pusty");
-    expect(fuelLabelPl(8)).toBe("8/8 · pełny");
+    expect(fuelLevelLabel(0, "en")).toBe("0/8 · empty");
+    expect(fuelLevelLabel(0, "pl")).toBe("0/8 · pusty");
+    expect(fuelLevelLabel(8, "en")).toBe("8/8 · full");
+    expect(fuelLevelLabel(8, "pl")).toBe("8/8 · pełny");
   });
 
   it("leaves the middle unnamed", () => {
     for (let eighths = 1; eighths <= 7; eighths++) {
-      expect(fuelLabelPl(eighths)).toBe(`${eighths}/8`);
+      expect(fuelLevelLabel(eighths, "en")).toBe(`${eighths}/8`);
+      expect(fuelLevelLabel(eighths, "pl")).toBe(`${eighths}/8`);
     }
   });
 });
