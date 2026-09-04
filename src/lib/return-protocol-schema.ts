@@ -85,6 +85,9 @@ function build(locale: Locale) {
       signaturePath: storagePath,
       photos: photosSchema,
       damages: z.array(damageSchema).optional().default([]),
+      // The language the client rendered the PDF in — same contract as the issue
+      // schema's, seeded from `ReturnProtocolContext.documentLocale`.
+      locale: z.enum(LOCALES, t("language")),
     })
     .superRefine((input, ctx) => {
       // Pin every client-supplied path to this protocol's `return/` folder. Without

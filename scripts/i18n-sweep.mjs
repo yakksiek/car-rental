@@ -144,10 +144,19 @@ function harvestPolishWords() {
   for (const word of en) {
     pl.delete(word);
   }
-  // Two the catalog has no reason to carry, but a leak would: an `aria-label`
-  // on a header cell with no visible text, and the cockpit's old name.
+  // Words the catalog has no reason to carry, but a leak would: an `aria-label`
+  // on a header cell with no visible text, the cockpit's old name, and an
+  // INFLECTION the catalog only ever holds in another case.
+  //
+  // `kaucji` is the instructive one. The harvest matches exact word forms, so a
+  // catalog holding `kaucja` and `kaucją` does not detect the genitive — and the
+  // manual-reservation modal's footer read `+ 3 000 kaucji` through a clean
+  // sweep and a clean E2E run, in an otherwise fully English cockpit, until it
+  // was caught by eye in a screenshot (english-localization Phase 6). Add a form
+  // here whenever a leak turns out to be one the catalog declines a case of.
   pl.add("akcje");
   pl.add("pulpit");
+  pl.add("kaucji");
   return [...pl];
 }
 

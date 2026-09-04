@@ -101,8 +101,15 @@ function buildRequest(locale: Locale) {
 // is role-gated. Name + e-mail + phone are all required (design contract D1).
 // This schema is the trust boundary for POST /api/reservations/manual and the
 // modal island mirrors it client-side.
+//
+// **Plus the one field the public funnel does NOT carry: `locale`.** On the
+// funnel the sender is the customer, so the route takes their language off the
+// session and never trusts the body. Here the sender is an employee and the
+// language belongs to someone on the other end of a phone call, which only that
+// employee knows — so it is an answered question, and it travels in the body.
 function buildManual(locale: Locale) {
-  return z.object(bookingFields(translator(locale, validation))).superRefine(refineDateRange(locale));
+  const t = translator(locale, validation);
+  return z.object({ ...bookingFields(t), locale: z.enum(LOCALES, t("language")) }).superRefine(refineDateRange(locale));
 }
 
 type RequestSchema = ReturnType<typeof buildRequest>;

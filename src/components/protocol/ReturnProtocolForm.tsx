@@ -80,6 +80,9 @@ interface FormValues {
   signaturePath: string;
   photos: Partial<Record<ProtocolPhotoSlot, string>>;
   damages: DamageValue[];
+  // Hidden field, same contract as the issue form's: the CUSTOMER's language
+  // (`ctx.documentLocale`), not the employee's session `locale` prop.
+  locale: Locale;
 }
 
 /** Visual order — drives "scroll to and focus the first error" on a failed submit. */
@@ -186,6 +189,7 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
       signaturePath: "",
       photos: {},
       damages: [],
+      locale: ctx.documentLocale,
     },
   });
 
@@ -362,6 +366,8 @@ export default function ReturnProtocolForm({ ctx, supabaseUrl, supabaseKey, back
           damageAdverse: pdfDeltas.flags.damageAdverse,
           odometerSuspect: pdfDeltas.flags.odometerSuspect,
         },
+        // The CUSTOMER's language, matching what `create_return_protocol` stamped.
+        locale: ctx.documentLocale,
       });
       setPdfHref((prev) => {
         if (prev) {

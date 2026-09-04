@@ -37,6 +37,9 @@ function booking(pickup: string, returnDate: string): CreateReservationInput {
     customer_email: "overlap.test@example.com",
     customer_phone: "+48600000000",
     terms_accepted: true,
+    // The route supplies this from the session; the overlap rule is indifferent
+    // to it, so the fixture pins the app default rather than leaving it implicit.
+    locale: "en",
   };
 }
 

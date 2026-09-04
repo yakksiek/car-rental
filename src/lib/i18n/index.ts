@@ -26,6 +26,7 @@ import { auth } from "./auth";
 import { booking } from "./booking";
 import { config } from "./config";
 import { dashboard } from "./dashboard";
+import { email } from "./email";
 import { fleet } from "./fleet";
 import { fleetAdmin } from "./fleet-admin";
 import { footer } from "./footer";
@@ -41,7 +42,7 @@ import { validation } from "./validation";
 import { vehicle } from "./vehicle";
 import { DEFAULT_LOCALE, type Dict, type Locale } from "./types";
 
-export { DEFAULT_LOCALE, LOCALES, defineDict, isLocale, translator } from "./types";
+export { DEFAULT_LOCALE, LOCALES, asLocale, defineDict, isLocale, translator } from "./types";
 export type { Dict, Locale } from "./types";
 export { LOCALE_COOKIE, resolveLocale } from "./resolve";
 export type { LocaleSignals } from "./resolve";
@@ -53,6 +54,7 @@ const NAMESPACES = {
   booking,
   config,
   dashboard,
+  email,
   fleet,
   fleetAdmin,
   footer,

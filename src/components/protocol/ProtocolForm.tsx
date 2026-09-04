@@ -84,6 +84,11 @@ interface FormValues {
   signaturePath: string;
   photos: Partial<Record<ProtocolPhotoSlot, string>>;
   damages: DamageValue[];
+  // Hidden, like `protocolId` and `reservationId`: a fact about the booking that
+  // travels with the submit, not something the employee fills in. It is the
+  // CUSTOMER's language (`ctx.documentLocale`), which is why it is not the
+  // `locale` prop three lines up in the component signature.
+  locale: Locale;
 }
 
 /** Visual order — drives "scroll to and focus the first error" on a failed submit. */
@@ -145,6 +150,7 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
       signaturePath: "",
       photos: {},
       damages: [],
+      locale: ctx.documentLocale,
     },
   });
 
@@ -257,6 +263,10 @@ export default function ProtocolForm({ ctx, supabaseUrl, supabaseKey, back, loca
             photos: await Promise.all(damage.photos.map(bytesOf)),
           })),
         ),
+        // The CUSTOMER's language — the same value `input.locale` carried to
+        // `create_protocol`, so the stored bytes and the row's stamp can never
+        // disagree. NOT the `locale` prop, which is the employee's cockpit.
+        locale: ctx.documentLocale,
       });
       // Hold an object URL for the overlay's download. Revoke any prior one (a
       // retry rebuilds the PDF) so we never leak more than one.

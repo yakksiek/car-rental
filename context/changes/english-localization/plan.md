@@ -1220,6 +1220,80 @@ case the types cannot see.
 
 ---
 
+## Phase 8: Manual-Booking Validation Feedback
+
+### Overview
+
+The manual-reservation modal gates its submit on
+`manualReservationSchema(locale).safeParse(payload).success` and renders **nothing** when that
+fails, so a mistyped phone or e-mail leaves `Create reservation` dead with no message anywhere —
+while the availability panel keeps reading _"Dates are free"_, which actively suggests the form is
+fine. Measured 2026-09-04 during Phase 6's manual pass, with name, vehicle and an applied date range
+all valid:
+
+| customer input                      | submit       | what the UI says      |
+| ----------------------------------- | ------------ | --------------------- |
+| `+48 600 100 200` / valid address   | **enabled**  | Dates are free        |
+| `12345678` (8 digits, needs 9–15)   | **disabled** | Dates are free ← mute |
+| `manual.today.example.com` (no `@`) | **disabled** | Dates are free ← mute |
+
+**Pre-existing since S-12 — NOT introduced by this change.** `canCreate` and the absent error
+rendering predate the branch; Phase 6 §5 only added a third validated field (`locale`) to the same
+form, and that one carries a valid default so it can never be the silent failure. It is recorded
+here because this phase's own manual verification (6.14, and the 6.9/6.10/6.12 chain that needs a
+booking picking up today) is what surfaced it, and because the fix is on a surface Phase 6 touched.
+
+### Changes Required:
+
+#### 1. Per-field errors under the customer inputs
+
+**File**: `src/components/dashboard/ManualReservationModal.tsx`
+
+**Intent**: Say WHICH field is wrong, in the reader's locale.
+
+**Contract**: `manualReservationSchema` stays the single validation source for the island AND the
+route (the RHF lesson) — do **not** fork the rules into the component. The modal already runs
+`safeParse`; keep the result instead of its `.success` and map `error.issues` onto the three inputs,
+the same `Record<field, message>` shape `ReservationForm` renders and the same shape the route
+already returns on a 400. Every message exists in both halves of `i18n/validation` already
+(`name` / `email` / `phone`) — **no new catalog keys**.
+
+Show a field's error only once it has been touched or a submit has been attempted: a form that reds
+every input before the employee has typed is worse than the current silence. `canCreate` keeps
+gating the button exactly as it does now — this adds the explanation, it does not relax the gate.
+
+#### 2. Leave the availability panel alone
+
+**File**: same
+
+**Intent**: Do not "fix" the misleading half in the wrong place.
+
+**Contract**: The panel answers about the **range**, and it is answering correctly — the range IS
+free. Coupling it to customer-field validity would make one control report two unrelated facts. The
+contradiction disappears once §1 puts the real reason next to the field that owns it.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type check passes: `npx astro check`
+- Lint passes: `npm run lint`
+- Unit + integration tests pass
+- The existing route assertion still holds — `manual-reservation-api.test.ts`'s "a missing e-mail and
+  phone is 400 with per-field errors" already pins the shape the modal now renders, so client and
+  trust boundary are provably reporting the same fields
+
+#### Manual Verification:
+
+- An 8-digit phone shows its message under the phone field; the button stays disabled
+- Correcting it clears the message and enables the button
+- The same in both locales
+- No field reds before it has been touched
+
+**Implementation Note**: Independent of Phases 1–7 — it can land in any later batch.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -1427,45 +1501,45 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 5.1 Type check passes: `npx astro check`
-- [x] 5.2 Lint passes: `npm run lint`
-- [x] 5.3 Unit + integration tests pass
-- [x] 5.4 Full E2E suite green against English: `npm run test:e2e`
-- [x] 5.5 Build succeeds: `npm run build`
-- [x] 5.6 Scripted sweep of `src/pages/**` + `src/components/**` finds no Polish outside catalog `pl` blocks and comments
-- [x] 5.12 `contract-surfaces.md` updated for the four surfaces whose exports gained a locale parameter
-- [x] 5.13 Island chunk sizes compared against `island-baseline.md` — no material growth
+- [x] 5.1 Type check passes: `npx astro check` — 2872862
+- [x] 5.2 Lint passes: `npm run lint` — 2872862
+- [x] 5.3 Unit + integration tests pass — 2872862
+- [x] 5.4 Full E2E suite green against English: `npm run test:e2e` — 2872862
+- [x] 5.5 Build succeeds: `npm run build` — 2872862
+- [x] 5.6 Scripted sweep of `src/pages/**` + `src/components/**` finds no Polish outside catalog `pl` blocks and comments — 2872862
+- [x] 5.12 `contract-surfaces.md` updated for the four surfaces whose exports gained a locale parameter — 2872862
+- [x] 5.13 Island chunk sizes compared against `island-baseline.md` — no material growth — 2872862
 
 #### Manual
 
-- [x] 5.7 Every dashboard route and public page walked in English — no leakage
-- [x] 5.8 Full protocol flow walked in English
-- [x] 5.9 Validation errors localize on reservation, vehicle and protocol forms
-- [x] 5.10 API errors localize
-- [x] 5.11 Vehicle detail URLs unchanged — no slug regression
+- [x] 5.7 Every dashboard route and public page walked in English — no leakage — 2872862
+- [x] 5.8 Full protocol flow walked in English — 2872862
+- [x] 5.9 Validation errors localize on reservation, vehicle and protocol forms — 2872862
+- [x] 5.10 API errors localize — 2872862
+- [x] 5.11 Vehicle detail URLs unchanged — no slug regression — 2872862
 
 ### Phase 6: Outbound Artifacts + Brand
 
 #### Automated
 
-- [ ] 6.1 Type check passes: `npx astro check`
-- [ ] 6.2 Lint passes: `npm run lint`
-- [ ] 6.3 Unit tests pass including email and PDF specs in both locales
-- [ ] 6.4 Integration tests pass including protocol-email specs
-- [ ] 6.5 PDF renders the full diacritic set in both locales
-- [ ] 6.6 `grep -rn "FleetRent" src/ public/` returns nothing
-- [ ] 6.13 Integration test: a `locale:'pl'` reservation emails Polish from an `en` session
-- [ ] 6.15 Full `src/**` Polish sweep passes (deferred from Phase 5)
+- [x] 6.1 Type check passes: `npx astro check`
+- [x] 6.2 Lint passes: `npm run lint`
+- [x] 6.3 Unit tests pass including email and PDF specs in both locales
+- [x] 6.4 Integration tests pass including protocol-email specs
+- [x] 6.5 PDF renders the full diacritic set in both locales
+- [x] 6.6 `grep -rn "FleetRent" src/ public/` returns nothing
+- [x] 6.13 Integration test: a `locale:'pl'` reservation emails Polish from an `en` session
+- [x] 6.15 Full `src/**` Polish sweep passes (deferred from Phase 5)
 
 #### Manual
 
-- [ ] 6.7 Polish reservation emails Polish even when accepted from an English dashboard
-- [ ] 6.8 English reservation produces an English email and PDF
-- [ ] 6.9 Issued PDF re-download is byte-identical — not re-rendered
-- [ ] 6.10 `protocols.locale` stamped correctly on new protocols
-- [ ] 6.11 Invite and recovery emails bilingual with working links (throwaway account only)
-- [ ] 6.12 Polish free-text damage note renders inside an English PDF
-- [ ] 6.14 Manual-booking modal carries a customer-language field, defaulting to `pl`
+- [x] 6.7 Polish reservation emails Polish even when accepted from an English dashboard
+- [x] 6.8 English reservation produces an English email and PDF
+- [x] 6.9 Issued PDF re-download is byte-identical — not re-rendered
+- [x] 6.10 `protocols.locale` stamped correctly on new protocols
+- [x] 6.11 Invite and recovery emails bilingual with working links (throwaway account only)
+- [x] 6.12 Polish free-text damage note renders inside an English PDF
+- [x] 6.14 Manual-booking modal carries a customer-language field, defaulting to `pl`
 
 ### Phase 7: `/terms` + Verification Pass
 
@@ -1486,3 +1560,19 @@ by hand on hosted — never `supabase config push`.
 - [ ] 7.10 Full recruiter journey clean in English and in Polish
 - [ ] 7.11 Header vision-diff empty minus recorded deviations
 - [ ] 7.12 Deployed: migrations pushed **and** verified with `supabase migration list --linked`
+
+### Phase 8: Manual-Booking Validation Feedback
+
+#### Automated
+
+- [ ] 8.1 Type check passes: `npx astro check`
+- [ ] 8.2 Lint passes: `npm run lint`
+- [ ] 8.3 Unit + integration tests pass
+- [ ] 8.4 The route's per-field 400 shape still matches what the modal renders
+
+#### Manual
+
+- [ ] 8.5 A too-short phone reports under the phone field; the button stays disabled
+- [ ] 8.6 Correcting it clears the message and enables the button
+- [ ] 8.7 Both locales
+- [ ] 8.8 No field reds before it has been touched

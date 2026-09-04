@@ -286,3 +286,38 @@ grep -rl "noticePrefix\|pricingHeading\|storyHeading" dist/client/_astro/*.js
 `info` alone is ~90 keys of marketing prose in two languages. Its absence from
 every browser bundle is the boundary rule holding under the phase that stressed it
 hardest.
+
+---
+
+## Phase 6 reading — outbound artifacts (2026-09-04)
+
+Phase 6 is the last phase that puts catalog strings anywhere near a browser bundle, and the one
+place it does is the biggest chunk in the build: `media/protocol-pdf.ts` renders CLIENT-side, so the
+~20 PDF keys added to the `protocol` namespace ship with it. Same command, same tooling.
+
+| chunk                | baseline raw |   now raw | Δ raw | baseline gzip | now gzip | Δ gzip |
+| -------------------- | -----------: | --------: | ----: | ------------: | -------: | -----: |
+| `useProtocolMedia`   |    1 497 689 | 1 497 553 |  −136 |       621 029 |  620 630 |   −399 |
+| `ProtocolForm`       |       12 380 |    12 287 |   −93 |         4 859 |    4 587 |   −272 |
+| `ReturnProtocolForm` |       17 902 |    17 685 |  −217 |         6 138 |    5 781 |   −357 |
+| `format`             |        1 406 |     1 099 |  −307 |           816 |      605 |   −211 |
+
+**Every one of them went down, including the chunk that gained the keys.** The PDF chunk
+(`useProtocolMedia`, which carries pdf-lib + fontkit + `protocol-pdf.ts`) is 399 B gzip _smaller_
+than the Phase 1 baseline: the ~20 new catalog entries cost less than the Polish literals deleted
+from `protocol-pdf.ts`, and `PHOTO_FORMS` folded into the `photoCount*` keys `DamageEditor` was
+already carrying, so the two consumers now share one set of words instead of holding a copy each.
+
+`format` is unchanged from the Phase 4 reading (605 B gzip) — it is the chunk 11 islands share, so a
+composed-map leak moves it first. It did not move.
+
+The leak check still passes unchanged, and `email` — this phase's new namespace, 60 keys × 2
+locales of transactional prose — is server-only and must never appear in a client chunk:
+
+```bash
+for ns in api config info landing layout footer email; do ls dist/client/_astro/$ns.*.js; done
+#   → all seven absent
+
+grep -rl "receivedConfirmSoon\|issuedKeep\|comparisonHeading" dist/client/_astro/*.js
+#   → no match: not one line of email copy reaches the browser
+```

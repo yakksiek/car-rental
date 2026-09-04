@@ -1,5 +1,6 @@
 // core
 import type { Database } from "./db/database.types";
+import type { Locale } from "./lib/i18n/types";
 
 // Generated database contract — regenerate after any schema change with:
 //   supabase gen types typescript --linked > src/db/database.types.ts
@@ -55,6 +56,11 @@ export interface CreateReservationInput {
   customer_email: string;
   customer_phone: string;
   terms_accepted: boolean;
+  // The language the customer filled the funnel in, stamped on the row and read
+  // back by every outbound email for this reservation. NOT part of the POST body
+  // schema: the route supplies it from `context.locals.locale`, so a crafted
+  // payload cannot pick what language we mail a stranger in.
+  locale: Locale;
   // Optional B2B fields (S-02 Phase 5): captured on the form, stored for later
   // invoicing (company/VAT) and surfaced to staff in S-03 (notes). Empty when
   // a private customer skips them.
@@ -132,11 +138,18 @@ export interface ManualReservationInput {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  // The CUSTOMER's language — unlike the funnel's, this one IS part of the body,
+  // because only the employee on the phone knows it. It must never default to
+  // the employee's session locale: an English cockpit booking a Polish walk-in is
+  // precisely the case `reservations.locale` exists for, and this route mails
+  // that customer immediately.
+  locale: Locale;
 }
 
 // Typed union over the RPC's result tag. `created` carries the reservation id
 // (the `email_deliveries` entityId) plus a DecisionEmailPayload — the RPC returns
-// exactly the 11 columns `decide_reservation` does, which is what lets the
+// exactly the 12 columns `decide_reservation` does — `locale` included, as of
+// english-localization Phase 6 — which is what lets the
 // confirmed-email path be reused unchanged.
 export type ManualReservationResult =
   | { status: "created"; id: string; reference: string; token: string; email: DecisionEmailPayload }

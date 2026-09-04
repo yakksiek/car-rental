@@ -13,7 +13,7 @@ import { checkRangeBookable } from "../../lib/availability";
 import { canCreateReservation, resolveAvailability, type AvailabilityState } from "../../lib/manual-availability";
 import { dayMonthShort, dayMonthYearShort } from "../../lib/format-date";
 import { dashboard } from "../../lib/i18n/dashboard";
-import { translator } from "../../lib/i18n/types";
+import { LOCALES, LOCALE_ENDONYMS, translator } from "../../lib/i18n/types";
 import type { Locale } from "../../lib/i18n/types";
 import { manualReservationSchema } from "../../lib/reservation-schema";
 import { useManualReservation } from "../hooks/useManualReservation";
@@ -47,6 +47,76 @@ function formatDayShort(iso: string, locale: Locale): string {
 function formatDayFull(iso: string, locale: Locale): string {
   const date = fromIsoDate(iso);
   return date ? dayMonthYearShort(date, locale) : iso;
+}
+
+// ── customer language ────────────────────────────────────────────────────────
+
+/**
+ * Which language THIS customer is emailed in — the one field the public funnel
+ * has no equivalent of, because there the customer answers it by choosing the
+ * site's language.
+ *
+ * A segmented pair rather than a `<select>`: with exactly two options a select
+ * costs an extra interaction and hides the alternative, and the same reasoning
+ * already produced `LangToggle`'s caret-less toggle. Shaped as
+ * `role="group"` + `aria-pressed` toggles, matching `DamageEditor`'s
+ * classification chips — not `radiogroup`/`radio`, which would owe the reader
+ * arrow-key roving this repo has no implementation of.
+ *
+ * Both labels are ENDONYMS (`English` / `Polski`), never translated — same rule
+ * as the header and sidebar controls: a language name has to read in the
+ * language it names.
+ *
+ * `locale` is the EMPLOYEE's session (it renders the group's own label); `value`
+ * is the CUSTOMER's. They are deliberately independent, which is the whole point
+ * of the field.
+ */
+function CustomerLanguage({
+  locale,
+  value,
+  onChange,
+  busy,
+}: {
+  locale: Locale;
+  value: Locale;
+  onChange: (next: Locale) => void;
+  busy: boolean;
+}) {
+  const t = translator(locale, dashboard);
+  return (
+    <div className="mt-0.5 min-w-0">
+      <span id="mr-language-label" className="text-muted-foreground mb-1.5 block text-[11.5px] font-[540]">
+        {t("manualLanguage")}
+      </span>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="mr-language-label">
+        {LOCALES.map((option) => {
+          const on = option === value;
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={on}
+              disabled={busy}
+              onClick={() => {
+                onChange(option);
+              }}
+              className={cn(
+                "flex h-[42px] items-center justify-center rounded-[11px] border text-[13.5px] transition-colors",
+                "focus-visible:ring-2 focus-visible:ring-[var(--flota-ink-2)]/25 focus-visible:outline-none",
+                "disabled:opacity-60",
+                on
+                  ? "border-foreground bg-foreground text-background font-[650]"
+                  : "text-foreground bg-card hover:bg-background border-[var(--flota-hair)] font-[540]",
+              )}
+            >
+              {LOCALE_ENDONYMS[option]}
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-muted-foreground mt-1.5 text-[11.5px] font-[540]">{t("manualLanguageHint")}</div>
+    </div>
+  );
 }
 
 // ── availability panel ───────────────────────────────────────────────────────
@@ -219,6 +289,12 @@ export function ManualReservationModal({
   const [name, setName] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [email, setEmail] = React.useState("");
+  // *** Defaults to `pl`, NOT to `locale`. *** A walk-in at a Polish depot is the
+  // common case, so the field is a correction rather than a chore — and seeding
+  // it from the employee's session is exactly the bug `reservations.locale`
+  // exists to prevent: a recruiter reading the English cockpit would otherwise
+  // silently mail every phone-in customer in English.
+  const [customerLocale, setCustomerLocale] = React.useState<Locale>("pl");
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -306,6 +382,7 @@ export function ManualReservationModal({
     customer_name: name,
     customer_email: email,
     customer_phone: phone,
+    locale: customerLocale,
   };
   // The same schema the endpoint validates with, so the button cannot enable on
   // input the server would reject (D1: all three customer fields required).
@@ -591,6 +668,7 @@ export function ManualReservationModal({
                     className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
                   />
                 </div>
+                <CustomerLanguage locale={locale} value={customerLocale} onChange={setCustomerLocale} busy={busy} />
               </div>
             </div>
 
@@ -611,7 +689,7 @@ export function ManualReservationModal({
             <div className="text-foreground mt-px text-[18px] font-[750] tracking-[-0.5px] tabular-nums">
               {formatPln(total, locale)}{" "}
               <span className="text-muted-foreground text-[11.5px] font-semibold whitespace-nowrap">
-                + {formatPlnAmount(vehicle.deposit, locale)} kaucji
+                + {formatPlnAmount(vehicle.deposit, locale)} {t("manualDepositTail")}
               </span>
             </div>
           </div>

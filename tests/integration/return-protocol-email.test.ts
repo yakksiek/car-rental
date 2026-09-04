@@ -79,6 +79,9 @@ function body() {
       interior: `return/${RETURN_PROTOCOL_ID}/photo-interior.jpg`,
       dashboard: `return/${RETURN_PROTOCOL_ID}/photo-dashboard.jpg`,
     },
+    // R-0002 is the seeded ENGLISH reservation (supabase/seed.sql), so the return
+    // document and its covering mail are English.
+    locale: "en",
     damages: [
       {
         id: DAMAGE_ID,
@@ -232,9 +235,18 @@ describe("risk #3: return email is attempted, surfaces failure, carries the righ
     expect(message.attachments?.[0].path).toContain(PDF_PATH);
     expect(message.attachments?.[0].filename).toMatch(/\.pdf$/);
 
-    // Polish survives the send path (not just the DB): the subject is the return
-    // subject "protokół zwrotu", byte-for-byte — the encoding boundary this slice
-    // guards, proving the type-aware template selection landed on the return copy.
-    expect(message.subject).toContain("protokół zwrotu");
+    // The RETURN template was selected off the row's `type` — the point of the
+    // type-aware resend — and it rendered in the DOCUMENT's language: R-0002 is
+    // the seeded ENGLISH reservation, so an English subject here is the assertion,
+    // not a leak. The file the customer saves carries the same language.
+    expect(message.subject).toBe("Flota — return protocol R-0002");
+    expect(message.attachments?.[0].filename).toBe("protocol-return-R-0002.pdf");
+
+    // The diacritics-through-the-adapter proof this assertion used to carry has
+    // moved to its Polish twin: `protocol-email.test.ts` runs against R-0001, the
+    // seeded `pl` reservation, and still asserts a subject reading "protokół
+    // wydania" byte-for-byte. One integration case per locale, with the encoding
+    // boundary on the one that has characters to lose; the per-locale body copy is
+    // pinned in `src/lib/email/templates.test.ts`.
   });
 });

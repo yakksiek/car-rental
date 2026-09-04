@@ -7,6 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ProtocolForm from "../../../components/protocol/ProtocolForm";
 
 // others
+import { asLocale } from "../../../lib/i18n/types";
 import { listDispatchToday } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -64,6 +65,10 @@ const ctx = row
       // The booking's fixed hotel-style pickup hour, not `signed_at`.
       pickupTime: "14:00",
       lastOdometerKm: row.last_odometer_km,
+      // The CUSTOMER's language, off `reservations.locale` — deliberately NOT
+      // `locale` below, which is the employee's session and only decides what
+      // language the form's chrome is in.
+      documentLocale: asLocale(row.locale),
     }
   : null;
 ---

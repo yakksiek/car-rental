@@ -67,6 +67,21 @@ export function isLocale(value: unknown): value is Locale {
 }
 
 /**
+ * Read a STORED locale — a `text` column, which the generated database types
+ * surface as a bare `string` — as a `Locale`, falling back to the default.
+ *
+ * The fallback is unreachable in practice: `profiles.locale`,
+ * `reservations.locale` and `protocols.locale` each carry a `check (… in
+ * ('en','pl'))` constraint, so the database cannot hold anything else. It exists
+ * so a column that somehow did (a hand-run UPDATE, a restored dump) renders the
+ * app's default language rather than crashing an email send or a PDF build —
+ * these values are read on paths where there is no user to show an error to.
+ */
+export function asLocale(value: string | null | undefined): Locale {
+  return isLocale(value) ? value : DEFAULT_LOCALE;
+}
+
+/**
  * A translator bound to ONE namespace — the accessor anything an island can
  * reach must use. The island imports its own namespace module and takes
  * `locale` as a prop (it cannot read `Astro.locals`), so only that namespace

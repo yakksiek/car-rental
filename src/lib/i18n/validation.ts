@@ -40,6 +40,10 @@ export const validation = defineDict({
     // typing a colleague's address, not a customer typing their own.
     emailInvalid: "Invalid email address.",
     phone: "Enter a valid phone number.",
+    // The manual-booking modal's customer-language field. It is a two-option
+    // segmented control with a default, so this can only be reached by a crafted
+    // payload — the schema is still the trust boundary.
+    language: "Choose the customer's language.",
     // The rental terms live at `/terms`, which Phase 7 creates.
     terms: "Accept the rental terms.",
     honeypot: "Invalid request.",
@@ -85,6 +89,7 @@ export const validation = defineDict({
     email: "Podaj poprawny adres e-mail.",
     emailInvalid: "Nieprawidłowy adres e-mail.",
     phone: "Podaj poprawny numer telefonu.",
+    language: "Wybierz język klienta.",
     terms: "Zaakceptuj regulamin wynajmu.",
     honeypot: "Nieprawidłowe zgłoszenie.",
     company: "Nazwa firmy jest za długa.",

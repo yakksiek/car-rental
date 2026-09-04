@@ -174,6 +174,17 @@ export const dashboard = defineDict({
     manualNamePlaceholder: "Full name / company",
     manualPhonePlaceholder: "Phone",
     manualEmailPlaceholder: "Email",
+    // The customer-language field. It answers "what language do we write to THIS
+    // person in", which is a fact about the walk-in on the phone and not about
+    // the employee's cockpit — hence a field rather than an inherited default.
+    // The two option labels are ENDONYMS (`LOCALE_ENDONYMS`), never translated.
+    manualLanguage: "Customer language",
+    manualLanguageHint: "The language this customer is emailed in.",
+    // The footer total's tail: `1 745 zł + 3 000 deposit`. The amount is composed
+    // by the caller (`formatPlnAmount` drops the repeated `zł`), so this is the
+    // noun alone — in Polish the GENITIVE `kaucji`, which the nominative
+    // `deposit` key above cannot supply.
+    manualDepositTail: "deposit",
     avIdle: "Choose a vehicle and dates to check availability.",
     avChecking: "Checking availability…",
     avAvailable: "Dates are free",
@@ -377,6 +388,9 @@ export const dashboard = defineDict({
     manualNamePlaceholder: "Imię i nazwisko / firma",
     manualPhonePlaceholder: "Telefon",
     manualEmailPlaceholder: "E-mail",
+    manualLanguage: "Język klienta",
+    manualLanguageHint: "Język, w którym piszemy do tego klienta.",
+    manualDepositTail: "kaucji",
     avIdle: "Wybierz pojazd i termin, aby sprawdzić dostępność.",
     avChecking: "Sprawdzanie dostępności…",
     avAvailable: "Termin wolny",

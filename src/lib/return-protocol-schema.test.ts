@@ -39,6 +39,9 @@ function validInput(overrides: Record<string, unknown> = {}) {
     signaturePath: `${PREFIX}/signature.png`,
     photos: Object.fromEntries(PHOTO_SLOTS.map((slot) => [slot, `${PREFIX}/photo-${slot}.jpg`])),
     damages: [],
+    // The language the client rendered the PDF in — a required field since
+    // english-localization Phase 6, seeded from the reservation, not the session.
+    locale: "pl",
     ...overrides,
   };
 }

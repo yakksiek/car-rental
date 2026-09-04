@@ -67,6 +67,12 @@ function body() {
       interior: `issue/${PROTOCOL_ID}/photo-interior.jpg`,
       dashboard: `issue/${PROTOCOL_ID}/photo-dashboard.jpg`,
     },
+    // The language the client rendered the PDF in, stamped onto
+    // `protocols.locale`. R-0001 is the seeded POLISH reservation
+    // (supabase/seed.sql), and the page hands the island that value — so a Polish
+    // document is what this employee's submit produces regardless of the cockpit
+    // they are reading. The LOCALE test at the bottom pins exactly that.
+    locale: "pl",
     damages: [
       {
         id: DAMAGE_ID,
@@ -79,9 +85,17 @@ function body() {
   };
 }
 
-/** `POST /api/protocols` as a real employee. */
-async function submit() {
-  return protocolCreatePOST(await asContext("employee", { method: "POST", path: "/api/protocols", body: body() }));
+/**
+ * `POST /api/protocols` as a real employee.
+ *
+ * `asContext` defaults `locals.locale` to the app default (`en`), which is what
+ * an employee on a fresh cockpit actually has — so every call below is already
+ * the "English session" half of the cross-locale case.
+ */
+async function submit(overrides: Partial<ReturnType<typeof body>> = {}) {
+  return protocolCreatePOST(
+    await asContext("employee", { method: "POST", path: "/api/protocols", body: { ...body(), ...overrides } }),
+  );
 }
 
 /** `POST /api/protocols/[id]/pdf` as a real employee — stores the path, then sends. */
@@ -223,5 +237,45 @@ describe("risk #3: protocol email is attempted, surfaces failure, carries the ri
     // Polish survives the send path (not just the DB): the subject is byte-for-byte
     // "protokół wydania", the encoding boundary this whole slice guards.
     expect(message.subject).toContain("protokół wydania");
+  });
+
+  // ── english-localization Phase 6 ─────────────────────────────────────────
+  //
+  // The claim the whole `reservations.locale` / `protocols.locale` design exists
+  // to make: **an employee reading an English cockpit still mails a Polish
+  // customer in Polish.** Everything above already runs with `locals.locale` at
+  // the `en` default, so the two cases below differ only in the DOCUMENT's
+  // language — which is the variable that should decide, and the only one.
+  it("LOCALE — a `pl` document mails Polish even though the session is English", async () => {
+    const { messages } = captureEmails();
+
+    await submit({ locale: "pl" });
+    await uploadPdf();
+    await finalize();
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].subject).toBe("Flota — protokół wydania R-0001");
+    // The filename the customer saves is in the document's language too.
+    expect(messages[0].attachments?.[0].filename).toBe("protokol-wydania-R-0001.pdf");
+
+    // And the stamp on the row agrees with the mail — the resend path months
+    // later reads THIS, not the session that happens to trigger it.
+    const { data } = await svc.from("protocols").select("locale").eq("id", PROTOCOL_ID);
+    expect(rows<{ locale: string }>(data)[0]?.locale).toBe("pl");
+  });
+
+  it("LOCALE — an `en` document mails English from the same session", async () => {
+    const { messages } = captureEmails();
+
+    await submit({ locale: "en" });
+    await uploadPdf();
+    await finalize();
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].subject).toBe("Flota — pickup protocol R-0001");
+    expect(messages[0].attachments?.[0].filename).toBe("protocol-pickup-R-0001.pdf");
+
+    const { data } = await svc.from("protocols").select("locale").eq("id", PROTOCOL_ID);
+    expect(rows<{ locale: string }>(data)[0]?.locale).toBe("en");
   });
 });

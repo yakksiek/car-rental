@@ -18,10 +18,11 @@ import type { ProtocolDamageType, ProtocolPhotoSlot } from "../../types";
 // checked on BOTH axes, which is stronger than `Dict` parity (that only checks
 // `pl` covers `en`'s keys — it cannot know an enum member is missing from both).
 //
-// **The PDF still renders Polish.** `media/protocol-pdf.ts` calls these with its
-// `ARTIFACT_LOCALE` constant, pinned to `pl` until Phase 6 §2 stamps the real
-// `protocols.locale` — a protocol's language is a property of the DOCUMENT, not
-// of the employee's session, and no issued PDF is ever regenerated.
+// **The stored PDF reads this namespace too**, through `media/protocol-pdf.ts`,
+// on `protocols.locale` — a protocol's language is a property of the DOCUMENT,
+// not of the employee's session, and no issued PDF is ever regenerated. So the
+// form and the customer's copy of it are guaranteed to name the same slot, the
+// same damage type and the same fuel level the same way in either language.
 // ---------------------------------------------------------------------------
 
 const PHOTO_SLOT_LABELS: Record<Locale, Record<ProtocolPhotoSlot, string>> = {
@@ -231,6 +232,48 @@ export const protocol = defineDict({
     backToPickups: "Back to pickups",
     backToReturns: "Back to returns",
 
+    // ── The stored PDF (`media/protocol-pdf.ts`) ───────────────────────────
+    // The customer's ONLY copy of the evidence. Its language is a property of
+    // the DOCUMENT (`protocols.locale`), stamped once at signature time and
+    // never re-derived — an issued PDF is re-signed, never regenerated, so the
+    // declaration above the signature is always the one the customer read.
+    //
+    // Keys the PDF shares with the form deliberately are NOT duplicated here:
+    // `issueTitle` / `returnTitle` (the running document label), `conditionTitle`,
+    // `atPickup`, `distanceDriven`, `fuelChange`, `fuelLevel`,
+    // `comparisonNewDamage`, `damageTitle`, `damageNew`, `damageExisting`,
+    // `ackLabel` and the four `photoCount*` arms are read straight from above.
+    // That reuse is the point of this namespace: a slot named one thing on the
+    // form and another in the document is the failure it exists to prevent.
+    pdfIssueHeading: "Vehicle pickup protocol",
+    pdfReturnHeading: "Vehicle return protocol",
+    // `R-2401 · signed 10 Jul 2026, 14:08` — the line under the H1.
+    pdfSigned: "signed",
+    pdfCustomer: "Customer",
+    pdfVehicle: "Vehicle",
+    pdfPlate: "Registration",
+    // "Stan licznika" in the document, where the row has no column header to
+    // lean on — the form's tighter `odometer` ("Licznik") would read as a label
+    // for the number rather than for the reading.
+    pdfOdometer: "Odometer reading",
+    pdfComparisonHeading: "Compared with the pickup condition",
+    pdfAtReturn: "At return",
+    pdfOdometerSuspect: "The odometer is not higher than at pickup — check the reading.",
+    pdfReturnDamages: "Damage at return",
+    // Fills `Damage (…)` when there is none, so the heading never reads "(0)".
+    pdfNoDamage: "none",
+    pdfNoDamageBody: "No damage was recorded when the vehicle was handed over.",
+    pdfSeePhotos: "— see the photo documentation",
+    pdfSignatureHeading: "Customer signature",
+    pdfAckRefused: "The customer did NOT confirm the vehicle's condition.",
+    pdfPhotoDocumentation: "Photo documentation",
+    // Photo-grid tile caption: `Damage 2 — Scratch (1)`.
+    pdfDamageTile: "Damage {n} — {type} ({i})",
+    // Page footer, after the brand and the document label.
+    pdfPageOf: "page {n} of {total}",
+    // Zero fuel delta, so the comparison never reads a bare "0/8".
+    pdfNoChange: "no change",
+
     // ── PDF filename stems (`protocol-<stem>-<reference>.pdf`) ─────────────
     // ASCII-only, because this becomes a filename on the customer's device.
     filenameIssue: "protocol-pickup",
@@ -358,6 +401,27 @@ export const protocol = defineDict({
     resendFailed: "Nie udało się wysłać. Spróbuj ponownie.",
     backToPickups: "Wróć do wydań",
     backToReturns: "Wróć do zwrotów",
+
+    pdfIssueHeading: "Protokół wydania pojazdu",
+    pdfReturnHeading: "Protokół zwrotu pojazdu",
+    pdfSigned: "podpisano",
+    pdfCustomer: "Klient",
+    pdfVehicle: "Pojazd",
+    pdfPlate: "Rejestracja",
+    pdfOdometer: "Stan licznika",
+    pdfComparisonHeading: "Porównanie ze stanem wydania",
+    pdfAtReturn: "Przy zwrocie",
+    pdfOdometerSuspect: "Licznik nie jest wyższy niż przy wydaniu — sprawdź odczyt.",
+    pdfReturnDamages: "Uszkodzenia przy zwrocie",
+    pdfNoDamage: "brak",
+    pdfNoDamageBody: "Nie zapisano żadnych uszkodzeń przy wydaniu pojazdu.",
+    pdfSeePhotos: "— patrz dokumentacja zdjęciowa",
+    pdfSignatureHeading: "Podpis klienta",
+    pdfAckRefused: "Klient NIE potwierdził stanu pojazdu.",
+    pdfPhotoDocumentation: "Dokumentacja zdjęciowa",
+    pdfDamageTile: "Uszkodzenie {n} — {type} ({i})",
+    pdfPageOf: "strona {n} z {total}",
+    pdfNoChange: "bez zmian",
 
     filenameIssue: "protokol-wydania",
     filenameReturn: "protokol-zwrotu",

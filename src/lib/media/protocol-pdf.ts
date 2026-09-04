@@ -5,9 +5,10 @@ import type { PDFFont, PDFImage, PDFPage } from "pdf-lib";
 
 // others
 import { formatInteger, plural } from "../format";
-import type { PluralForms } from "../format";
+import { dateTimeCompany } from "../format-date";
+import { translator } from "../i18n/types";
 import type { Locale } from "../i18n/types";
-import { damageTypeLabel, fuelLevelLabel, photoSlotLabel } from "../i18n/protocol";
+import { damageTypeLabel, fuelLevelLabel, photoSlotLabel, protocol } from "../i18n/protocol";
 import type { PdfFonts } from "./fonts";
 import { loadPdfFonts } from "./fonts";
 import type { ProtocolDamageType, ProtocolPhotoSlot } from "../../types";
@@ -57,8 +58,7 @@ export interface ProtocolPdfDamage {
 
 /**
  * The baseline-vs-current comparison (S-06). Present ⇒ this is a **return**
- * document ("Protokół zwrotu"); absent ⇒ an **issue** document ("Protokół
- * wydania"). The numbers come from `computeReturnDeltas` (src/lib/protocol-delta.ts)
+ * document (`returnTitle`); absent ⇒ an **issue** document (`issueTitle`). The numbers come from `computeReturnDeltas` (src/lib/protocol-delta.ts)
  * — the same pure helper the return form and the email use, so the three cannot
  * disagree. The per-damage `existing | new` tags are read from `data.damages`
  * (each carrying `baselineDamageId`), not duplicated here.
@@ -102,29 +102,39 @@ export interface ProtocolPdfData {
   damages: ProtocolPdfDamage[];
   /**
    * When set, renders the return comparison section and switches every document
-   * title to "Protokół zwrotu". Its presence is the issue/return discriminator.
+   * title to the return wording. Its presence is the issue/return discriminator.
    */
   comparison?: ProtocolPdfComparison;
+  /**
+   * The language to render this document in — `reservations.locale`, threaded
+   * through `ProtocolContext.documentLocale` and stamped onto `protocols.locale`
+   * by the same submit that stores these bytes.
+   *
+   * **Never the employee's session locale.** The customer signs a declaration
+   * directly beneath their own signature; a recruiter reading an English cockpit
+   * must not make the next walk-in sign one in a language they did not read.
+   * Required rather than defaulted for exactly that reason — a default is how a
+   * caller silently gets this wrong.
+   */
+  locale: Locale;
 }
 
 // ---------------------------------------------------------------------------
 // Page geometry and tokens (mirrors the app's palette; see src/styles/global.css)
 // ---------------------------------------------------------------------------
 
+/** Bind the protocol copy to the language this document is being rendered in. */
+function copy(locale: Locale) {
+  return translator(locale, protocol);
+}
+
 /**
- * The language a stored protocol is rendered in — the same named seam
- * `email/templates.ts` carries, and deliberately a constant rather than a field on
- * `ProtocolPdfData`.
- *
- * A protocol PDF is the customer's copy of a document they physically signed, so
- * its language is a property of the PROTOCOL, never of the employee's session: a
- * recruiter reading an English cockpit must not make the next customer sign a
- * declaration in a language they did not read. `protocols.locale` (this change's
- * Phase 1 migration) is the real source; stamping it at render time and giving the
- * body its English twin is Phase 6 §2. Every already-issued PDF is Polish and
- * stays Polish — the plan is explicit that none is ever regenerated.
+ * The company name, on the document metadata and every page footer. NOT a
+ * catalog key: it is the brand, identical in both languages — unlike the cockpit
+ * nav item spelled the same way, which does translate ("Fleet"). The two are one
+ * string with opposite requirements, which is why they live apart.
  */
-const ARTIFACT_LOCALE: Locale = "pl";
+const BRAND = "Flota";
 
 const A4 = { width: 595.28, height: 841.89 } as const;
 const MARGIN = 48;
@@ -175,18 +185,24 @@ export async function buildProtocolPdf(data: ProtocolPdfData, fonts?: PdfFonts):
   const font = await doc.embedFont(regular, { subset: true });
   const fontBold = await doc.embedFont(bold, { subset: true });
 
+  const t = copy(data.locale);
+
   // The document kind is the presence of a comparison block: a return carries one,
-  // an issue never does. One title string threads through the metadata, the H1,
-  // and the page footer.
-  const title = data.comparison ? "Protokół zwrotu" : "Protokół wydania";
+  // an issue never does. Two labels thread out of it: the short one for the
+  // metadata and the page footer, the full one for the H1 and the subject.
+  const label = data.comparison ? t("returnTitle") : t("issueTitle");
+  const heading = data.comparison ? t("pdfReturnHeading") : t("pdfIssueHeading");
 
-  doc.setTitle(`${title} ${data.reference}`);
-  doc.setSubject(`${title} pojazdu`);
-  doc.setCreator("FleetRent");
+  doc.setTitle(`${label} ${data.reference}`);
+  doc.setSubject(heading);
+  // The BRAND, and it does not translate — `Flota` in both languages, unlike the
+  // cockpit nav item that reads "Fleet" in English (see the plan's brand/nav
+  // collision note).
+  doc.setCreator(BRAND);
 
-  const w = new Writer(doc, font, fontBold, title);
+  const w = new Writer(doc, font, fontBold, label, data.locale);
 
-  drawSummary(w, data, title);
+  drawSummary(w, data, heading);
   if (data.comparison) {
     drawComparison(w, data, data.comparison);
   }
@@ -204,20 +220,26 @@ export async function buildProtocolPdf(data: ProtocolPdfData, fonts?: PdfFonts):
 // Sections
 // ---------------------------------------------------------------------------
 
-function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
-  w.text(`${title} pojazdu`, { size: TITLE_SIZE, bold: true });
+function drawSummary(w: Writer, data: ProtocolPdfData, heading: string): void {
+  const { locale } = data;
+  const t = copy(locale);
+
+  w.text(heading, { size: TITLE_SIZE, bold: true });
   w.gap(4);
-  w.text(`${data.reference} · podpisano ${formatDateTime(data.signedAt)}`, { size: BODY_SIZE, color: MUTED });
+  w.text(`${data.reference} · ${t("pdfSigned")} ${formatSignedAt(data.signedAt, locale)}`, {
+    size: BODY_SIZE,
+    color: MUTED,
+  });
   w.gap(16);
   w.rule();
   w.gap(14);
 
-  w.heading("Stan techniczny");
-  w.field("Klient", data.customerName);
-  w.field("Pojazd", data.vehicle);
-  w.field("Rejestracja", data.plate, { bold: true });
-  w.field("Stan licznika", `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km`);
-  w.field("Poziom paliwa", fuelLevelLabel(data.fuelEighths, ARTIFACT_LOCALE));
+  w.heading(t("conditionTitle"));
+  w.field(t("pdfCustomer"), data.customerName);
+  w.field(t("pdfVehicle"), data.vehicle);
+  w.field(t("pdfPlate"), data.plate, { bold: true });
+  w.field(t("pdfOdometer"), `${formatKm(data.odometerKm, locale)} km`);
+  w.field(t("fuelLevel"), fuelLevelLabel(data.fuelEighths, locale));
   w.gap(10);
 }
 
@@ -230,39 +252,39 @@ function drawSummary(w: Writer, data: ProtocolPdfData, title: string): void {
  * plus the suspect note, never a hard block — soft warnings only, per FR).
  */
 function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparison): void {
-  w.heading("Porównanie ze stanem wydania");
+  const { locale } = data;
+  const t = copy(locale);
+
+  w.heading(t("pdfComparisonHeading"));
 
   w.field(
-    "Przy wydaniu",
-    `${formatKm(c.baselineOdometerKm, ARTIFACT_LOCALE)} km · ${fuelLevelLabel(c.baselineFuelEighths, ARTIFACT_LOCALE)}`,
+    t("atPickup"),
+    `${formatKm(c.baselineOdometerKm, locale)} km · ${fuelLevelLabel(c.baselineFuelEighths, locale)}`,
   );
-  w.field(
-    "Przy zwrocie",
-    `${formatKm(data.odometerKm, ARTIFACT_LOCALE)} km · ${fuelLevelLabel(data.fuelEighths, ARTIFACT_LOCALE)}`,
-  );
+  w.field(t("pdfAtReturn"), `${formatKm(data.odometerKm, locale)} km · ${fuelLevelLabel(data.fuelEighths, locale)}`);
   w.gap(8);
 
-  w.field("Przejechano", `${signedKm(c.kmDriven, ARTIFACT_LOCALE)} km`);
+  w.field(t("distanceDriven"), `${signedKm(c.kmDriven, locale)} km`);
   if (c.odometerSuspect) {
-    w.text("Licznik nie jest wyższy niż przy wydaniu — sprawdź odczyt.", {
+    w.text(t("pdfOdometerSuspect"), {
       size: SMALL_SIZE,
       color: WARNING,
       indent: 120,
     });
   }
-  w.field("Zmiana paliwa", signedEighths(c.fuelDelta), c.fuelAdverse ? { bold: true, color: WARNING } : {});
-  w.field("Nowe uszkodzenia", String(c.newDamageCount), c.damageAdverse ? { bold: true, color: WARNING } : {});
+  w.field(t("fuelChange"), signedEighths(c.fuelDelta, locale), c.fuelAdverse ? { bold: true, color: WARNING } : {});
+  w.field(t("comparisonNewDamage"), String(c.newDamageCount), c.damageAdverse ? { bold: true, color: WARNING } : {});
   w.gap(10);
 
   if (data.damages.length > 0) {
-    w.text("Uszkodzenia przy zwrocie", { size: HEADING_SIZE, bold: true });
+    w.text(t("pdfReturnDamages"), { size: HEADING_SIZE, bold: true });
     w.gap(6);
     for (const [index, damage] of data.damages.entries()) {
       const size = damage.size ? ` (${damage.size})` : "";
       const isNew = !damage.baselineDamageId;
-      const tag = isNew ? "Nowe" : "Istniejące";
+      const tag = isNew ? t("damageNew") : t("damageExisting");
       w.ensure(LINE);
-      w.text(`${index + 1}. ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} — ${damage.location}${size} — ${tag}`, {
+      w.text(`${index + 1}. ${damageTypeLabel(damage.type, locale)} — ${damage.location}${size} — ${tag}`, {
         size: BODY_SIZE,
         color: isNew ? CRIMSON : INK_2,
       });
@@ -272,10 +294,13 @@ function drawComparison(w: Writer, data: ProtocolPdfData, c: ProtocolPdfComparis
 }
 
 function drawDamages(w: Writer, data: ProtocolPdfData): void {
-  w.heading(`Uszkodzenia (${data.damages.length === 0 ? "brak" : data.damages.length})`);
+  const { locale } = data;
+  const t = copy(locale);
+
+  w.heading(`${t("damageTitle")} (${data.damages.length === 0 ? t("pdfNoDamage") : data.damages.length})`);
 
   if (data.damages.length === 0) {
-    w.text("Nie zapisano żadnych uszkodzeń przy wydaniu pojazdu.", { size: BODY_SIZE, color: INK_2 });
+    w.text(t("pdfNoDamageBody"), { size: BODY_SIZE, color: INK_2 });
     w.gap(10);
     return;
   }
@@ -283,19 +308,16 @@ function drawDamages(w: Writer, data: ProtocolPdfData): void {
   for (const [index, damage] of data.damages.entries()) {
     const size = damage.size ? ` (${damage.size})` : "";
     w.ensure(LINE * 2);
-    w.text(`${index + 1}. ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} — ${damage.location}${size}`, {
+    w.text(`${index + 1}. ${damageTypeLabel(damage.type, locale)} — ${damage.location}${size}`, {
       size: BODY_SIZE,
       color: INK,
     });
     if (damage.photos.length > 0) {
-      w.text(
-        `${damage.photos.length} ${photoCountWord(damage.photos.length, ARTIFACT_LOCALE)} — patrz dokumentacja zdjęciowa`,
-        {
-          size: SMALL_SIZE,
-          color: MUTED,
-          indent: 12,
-        },
-      );
+      w.text(`${damage.photos.length} ${photoCountWord(damage.photos.length, locale)} ${t("pdfSeePhotos")}`, {
+        size: SMALL_SIZE,
+        color: MUTED,
+        indent: 12,
+      });
     }
     w.gap(4);
   }
@@ -303,16 +325,21 @@ function drawDamages(w: Writer, data: ProtocolPdfData): void {
 }
 
 async function drawSignature(w: Writer, doc: PDFDocument, data: ProtocolPdfData): Promise<void> {
+  const { locale } = data;
+  const t = copy(locale);
   const signature = await doc.embedPng(tighten(data.signaturePng));
   const scaled = fit(signature, 220, 70);
 
   w.ensure(scaled.height + LINE * 4 + 20);
-  w.heading("Podpis klienta");
+  w.heading(t("pdfSignatureHeading"));
 
+  // The declaration the customer's signature sits directly beneath — which is
+  // the single strongest reason this whole file renders in the DOCUMENT's
+  // language and not the reader's.
   if (data.customerAck) {
-    w.text("Klient potwierdza stan pojazdu i warunki najmu.", { size: BODY_SIZE, color: INK_2 });
+    w.text(t("ackLabel"), { size: BODY_SIZE, color: INK_2 });
   } else {
-    w.text("Klient NIE potwierdził stanu pojazdu.", { size: BODY_SIZE, color: CRIMSON, bold: true });
+    w.text(t("pdfAckRefused"), { size: BODY_SIZE, color: CRIMSON, bold: true });
   }
   w.gap(8);
 
@@ -320,15 +347,20 @@ async function drawSignature(w: Writer, doc: PDFDocument, data: ProtocolPdfData)
   w.gap(4);
   w.rule(240);
   w.gap(5);
-  w.text(`${data.customerName} · ${formatDateTime(data.signedAt)}`, { size: SMALL_SIZE, color: MUTED });
+  w.text(`${data.customerName} · ${formatSignedAt(data.signedAt, locale)}`, { size: SMALL_SIZE, color: MUTED });
 }
 
 async function drawPhotoGrid(w: Writer, doc: PDFDocument, data: ProtocolPdfData): Promise<void> {
+  const { locale } = data;
+  const t = copy(locale);
   const tiles: { label: string; jpeg: Uint8Array }[] = [
-    ...data.photos.map((photo) => ({ label: photoSlotLabel(photo.slot, ARTIFACT_LOCALE), jpeg: photo.jpeg })),
+    ...data.photos.map((photo) => ({ label: photoSlotLabel(photo.slot, locale), jpeg: photo.jpeg })),
     ...data.damages.flatMap((damage, index) =>
       damage.photos.map((jpeg, n) => ({
-        label: `Uszkodzenie ${index + 1} — ${damageTypeLabel(damage.type, ARTIFACT_LOCALE)} (${n + 1})`,
+        label: t("pdfDamageTile")
+          .replace("{n}", String(index + 1))
+          .replace("{type}", damageTypeLabel(damage.type, locale))
+          .replace("{i}", String(n + 1)),
         jpeg,
       })),
     ),
@@ -339,7 +371,7 @@ async function drawPhotoGrid(w: Writer, doc: PDFDocument, data: ProtocolPdfData)
   }
 
   w.newPage();
-  w.text("Dokumentacja zdjęciowa", { size: TITLE_SIZE, bold: true });
+  w.text(t("pdfPhotoDocumentation"), { size: TITLE_SIZE, bold: true });
   w.gap(4);
   w.text(`${data.reference} · ${data.plate}`, { size: BODY_SIZE, color: MUTED });
   w.gap(16);
@@ -398,8 +430,10 @@ class Writer {
     private doc: PDFDocument,
     readonly font: PDFFont,
     readonly fontBold: PDFFont,
-    /** Document label for the page footer, e.g. `"Protokół wydania"` / `"Protokół zwrotu"`. */
+    /** Document label for the page footer, e.g. `"Pickup protocol"` / `"Protokół zwrotu"`. */
     private docLabel: string,
+    /** The DOCUMENT's language — the footer's `page n of m` reads from it. */
+    private locale: Locale,
   ) {
     this.page = this.addPage();
     this.cursor = A4.height - MARGIN;
@@ -486,8 +520,10 @@ class Writer {
 
   /** Stamp `n / total` on every page. Only correct once no more pages will be added. */
   finish(): void {
+    const pageOf = copy(this.locale)("pdfPageOf");
     this.pages.forEach((page, index) => {
-      page.drawText(`FleetRent · ${this.docLabel} · strona ${index + 1} z ${this.pages.length}`, {
+      const counter = pageOf.replace("{n}", String(index + 1)).replace("{total}", String(this.pages.length));
+      page.drawText(`${BRAND} · ${this.docLabel} · ${counter}`, {
         x: MARGIN,
         y: MARGIN - 14,
         size: SMALL_SIZE,
@@ -570,31 +606,49 @@ function signedKm(km: number, locale: Locale): string {
   return `${km > 0 ? "+" : "-"}${formatKm(Math.abs(km), locale)}`;
 }
 
-/** Signed fuel-eighths change: `bez zmian` / `+2/8` / `-4/8` (ASCII sign, subset-safe). */
-function signedEighths(delta: number): string {
+/** Signed fuel-eighths change: `no change` / `+2/8` / `-4/8` (ASCII sign, subset-safe). */
+function signedEighths(delta: number, locale: Locale): string {
   if (delta === 0) {
-    return "bez zmian";
+    return copy(locale)("pdfNoChange");
   }
   return `${delta > 0 ? "+" : "-"}${Math.abs(delta)}/8`;
 }
 
-/** ISO → `DD.MM.YYYY, HH:MM` in the viewer's local time (the depot's, in practice). */
-function formatDateTime(iso: string): string {
-  const date = new Date(iso);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}, ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+/**
+ * The signature instant, in the COMPANY's zone and the document's language —
+ * `10 lip 2026, 14:08` / `10 Jul 2026, 14:08`.
+ *
+ * Two changes from the hand-rolled `DD.MM.YYYY, HH:MM` this replaced. The zone is
+ * now pinned rather than the renderer's: a signature is a company-anchored event
+ * (locale lesson), and the read-only view already shows it that way through this
+ * same `dateTimeCompany` — the PDF and the screen were quietly disagreeing about
+ * both the format and the zone. And the separator is folded the way `formatKm`
+ * folds its grouping space: some CLDR versions emit a NARROW no-break space
+ * (U+202F) around the time, which is outside the embedded font subset and would
+ * draw a tofu box in the middle of the timestamp under the customer's signature.
+ */
+function formatSignedAt(iso: string, locale: Locale): string {
+  return dateTimeCompany(new Date(iso), locale).replace(/\u202F/g, "\u00A0");
 }
 
-const PHOTO_FORMS: Record<Locale, PluralForms> = {
-  en: { one: "photo", other: "photos" },
-  pl: { one: "zdjęcie", few: "zdjęcia", many: "zdjęć", other: "zdjęć" },
-};
-
 /**
- * `1` → `zdjęcie`, `2–4` → `zdjęcia`, otherwise `zdjęć`. The 12–14 exception used
- * to be open-coded here; `Intl.PluralRules` supplies it now via the shared
- * `plural`, leaving this function owning only the words.
+ * `1` → `zdjęcie`, `2–4` → `zdjęcia`, otherwise `zdjęć`; `photo` / `photos` under
+ * `en`. The 12–14 exception used to be open-coded here; `Intl.PluralRules`
+ * supplies it now via the shared `plural`, which falls back to `other` for the
+ * categories a locale does not select — so passing all four arms is right for
+ * both languages.
+ *
+ * The words come from the catalog rather than a table of its own: the damage
+ * editor's photo strip counts the same things with the same nouns
+ * (`DamageEditor.tsx` `photoCount`), and this document is the customer's copy of
+ * what that editor recorded.
  */
 function photoCountWord(count: number, locale: Locale): string {
-  return plural(count, locale, PHOTO_FORMS[locale]);
+  const t = copy(locale);
+  return plural(count, locale, {
+    one: t("photoCountOne"),
+    few: t("photoCountFew"),
+    many: t("photoCountMany"),
+    other: t("photoCountOther"),
+  });
 }

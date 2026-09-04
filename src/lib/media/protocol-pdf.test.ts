@@ -1,8 +1,11 @@
 // core
 import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 
 // others
+import { LOCALES } from "../i18n/types";
+import type { Locale } from "../i18n/types";
 import { loadPdfFonts } from "./fonts";
 import { buildProtocolPdf } from "./protocol-pdf";
 import type { ProtocolPdfData } from "./protocol-pdf";
@@ -20,6 +23,13 @@ import type { ProtocolPdfData } from "./protocol-pdf";
 // tests exercise the REAL embedded fonts (`loadPdfFonts` reads the same `?inline`
 // data URIs the island ships) rather than a stand-in read off disk — a test that
 // proved a *different* font renders Polish would prove nothing at all.
+//
+// **The diacritic fixture stays in BOTH locales** (english-localization Phase 6).
+// An English document is not a Polish-free one: the chrome translates, but the
+// customer's name and their free-text damage notes are whatever they actually
+// are, so an `en` render hits exactly the same font boundary. Rendering the set
+// only under `pl` would leave the English path — now the default — untested
+// against the failure this file exists for.
 
 const LOWER = "ąćęłńóśźż";
 const UPPER = "ĄĆĘŁŃÓŚŹŻ";
@@ -84,8 +94,18 @@ function protocolData(overrides: Partial<ProtocolPdfData> = {}): ProtocolPdfData
       },
       { type: "dent", location: "wgniecenie na tylnej klapie", size: null, photos: [] },
     ],
+    // The DOCUMENT's language. Defaults to `pl` here so the existing cases keep
+    // exercising the Polish render they were written for; the locale-specific
+    // cases below pass it explicitly.
+    locale: "pl",
     ...overrides,
   };
+}
+
+/** The document title pdf-lib wrote into the PDF's metadata. */
+async function titleOf(pdf: Blob): Promise<string | undefined> {
+  const doc = await PDFDocument.load(await pdf.arrayBuffer());
+  return doc.getTitle();
 }
 
 /** `%PDF-` — the five bytes every reader looks for at offset 0. */
@@ -108,6 +128,32 @@ describe("buildProtocolPdf", () => {
     ["a vehicle name", (value: string) => protocolData({ vehicle: value })],
   ])("accepts the full diacritic set in %s", async (_field, build) => {
     await expect(buildProtocolPdf(build(DIACRITICS))).resolves.toBeInstanceOf(Blob);
+  });
+
+  // The Phase 6 criterion, and the reason it is worth its own case rather than
+  // riding the fixture default: an ENGLISH protocol still carries a Polish
+  // customer and Polish free text, so it meets the WinAnsi boundary the same way.
+  // A green suite that only ever rendered `pl` would say nothing about the locale
+  // the app now defaults to.
+  it.each(LOCALES)("renders the full diacritic set in %s", async (locale: Locale) => {
+    const pdf = await buildProtocolPdf(
+      protocolData({
+        locale,
+        customerName: `Zażółć Gęślą Jaźń ${DIACRITICS}`,
+        damages: [damageWith(`zarysowanie — ${DIACRITICS}`, DIACRITICS)],
+      }),
+    );
+
+    expect(await header(pdf)).toBe("%PDF-");
+    expect(pdf.size).toBeGreaterThan(3000);
+  });
+
+  it("renders the document in the locale it is given, not a pinned one", async () => {
+    // The metadata title is the cheapest place to read the rendered language back
+    // out: the page text is inside a compressed content stream, but `setTitle`
+    // threads the same `issueTitle` / `returnTitle` the H1 and the footer use.
+    expect(await titleOf(await buildProtocolPdf(protocolData({ locale: "pl" })))).toBe("Protokół wydania R-2401");
+    expect(await titleOf(await buildProtocolPdf(protocolData({ locale: "en" })))).toBe("Pickup protocol R-2401");
   });
 
   it("returns a Blob typed application/pdf", async () => {
@@ -160,10 +206,11 @@ describe("buildProtocolPdf", () => {
 
 describe("buildProtocolPdf — return comparison (S-06)", () => {
   // A return document carries a `comparison` block (its presence flips every title
-  // to "Protokół zwrotu") and per-damage `baselineDamageId` marking each row
+  // to the return wording) and per-damage `baselineDamageId` marking each row
   // existing/new. The comparison section draws baseline-vs-current, the three
-  // deltas, and the tagged damage list — all Polish, so the same encoding boundary
-  // that guards the issue PDF guards this section too.
+  // deltas, and the tagged damage list — and its damage locations are free text in
+  // either locale, so the same encoding boundary that guards the issue PDF guards
+  // this section too.
   function returnData(overrides: Partial<ProtocolPdfData> = {}): ProtocolPdfData {
     return protocolData({
       odometerKm: 42_850,
@@ -198,11 +245,16 @@ describe("buildProtocolPdf — return comparison (S-06)", () => {
     });
   }
 
-  it("renders the comparison section with every Polish diacritic without throwing", async () => {
-    const pdf = await buildProtocolPdf(returnData());
+  it.each(LOCALES)("renders the comparison section with every Polish diacritic in %s", async (locale: Locale) => {
+    const pdf = await buildProtocolPdf(returnData({ locale }));
 
     expect(await header(pdf)).toBe("%PDF-");
     expect(pdf.size).toBeGreaterThan(3000);
+  });
+
+  it("titles the return document from the same locale", async () => {
+    expect(await titleOf(await buildProtocolPdf(returnData({ locale: "pl" })))).toBe("Protokół zwrotu R-2401");
+    expect(await titleOf(await buildProtocolPdf(returnData({ locale: "en" })))).toBe("Return protocol R-2401");
   });
 
   it("draws a real section — the return document is larger than the same data without a comparison", async () => {

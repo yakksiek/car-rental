@@ -483,6 +483,7 @@ export type Database = {
           customer_email: string
           customer_name: string
           id: string
+          locale: string
           pickup_date: string
           reference: string
           result: string
@@ -570,6 +571,7 @@ export type Database = {
           access_token: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           result: string
@@ -595,6 +597,7 @@ export type Database = {
           delivery_status: string
           fuel_eighths: number
           id: string
+          locale: string
           odometer_km: number
           pdf_path: string
           photos: Json
@@ -637,6 +640,7 @@ export type Database = {
           baseline_protocol_id: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           reservation_id: string
@@ -662,6 +666,7 @@ export type Database = {
           delivery_created_at: string
           delivery_status: string
           last_odometer_km: number
+          locale: string
           pdf_path: string
           pickup_date: string
           protocol_id: string

@@ -7,6 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ReturnProtocolForm from "../../../components/protocol/ReturnProtocolForm";
 
 // others
+import { asLocale } from "../../../lib/i18n/types";
 import { getReturnBaseline } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -64,6 +65,9 @@ const ctx = baseline
       baselineOdometerKm: baseline.baseline_odometer_km,
       baselineFuelEighths: baseline.baseline_fuel_eighths,
       baselineDamages: baseline.baseline_damages,
+      // The CUSTOMER's language — see the pickup page: independent of `locale`,
+      // which is the employee's session.
+      documentLocale: asLocale(baseline.locale),
     }
   : null;
 ---

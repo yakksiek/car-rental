@@ -89,6 +89,14 @@ function build(locale: Locale) {
       signaturePath: storagePath,
       photos: photosSchema,
       damages: z.array(damageSchema).optional().default([]),
+      // The language the CLIENT rendered the PDF in — stamped onto
+      // `protocols.locale` by the RPC, so the column describes the stored bytes
+      // rather than being re-derived later from a reservation that might since
+      // have changed. The form seeds it from `ProtocolContext.documentLocale`
+      // (`reservations.locale`), never from the employee's session; the RPC
+      // normalises an unrecognised value, so this is the shape check, not the
+      // authority.
+      locale: z.enum(LOCALES, t("language")),
     })
     .superRefine((input, ctx) => {
       // Pin every client-supplied path to this protocol's `issue/` folder. Without

@@ -90,7 +90,14 @@ export const POST: APIRoute = async (context) => {
 
   // (e) The atomic write — a lost race still lands here as a typed `conflict`,
   // never a 500 (the EXCLUDE constraint is the truth; first insert wins).
-  const result = await createReservationRequest(supabase, input);
+  //
+  // The locale is stamped from the SESSION, not from the body: on this one path
+  // the sender IS the customer, so the language they read the funnel in is the
+  // language they want to be mailed in — and taking it server-side keeps a
+  // crafted payload from choosing what language we write to a stranger in.
+  // This is the funnel's only chance to record it; the confirmation is sent days
+  // later by staff who cannot know.
+  const result = await createReservationRequest(supabase, { ...input, locale: context.locals.locale });
   if (result.status === "conflict") {
     return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }
@@ -115,6 +122,7 @@ export const POST: APIRoute = async (context) => {
       pickup: input.pickup,
       return: input.return,
       dailyRate: vehicle.daily_rate,
+      locale: context.locals.locale,
     });
     await sendEmail({ to: input.customer_email, ...content });
   } catch (error) {

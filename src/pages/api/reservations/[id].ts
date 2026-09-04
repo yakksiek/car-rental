@@ -5,7 +5,7 @@ import { z } from "zod";
 
 // others
 import { api } from "../../../lib/i18n/api";
-import { translator } from "../../../lib/i18n/types";
+import { asLocale, translator } from "../../../lib/i18n/types";
 import { isRoleSufficient } from "../../../lib/access";
 import type { Database } from "../../../db/database.types";
 import { reservationRejectedEmail } from "../../../lib/email/templates";
@@ -79,6 +79,9 @@ async function notifyCustomer(
     // default defensively so the template never receives undefined.
     reason: reason ?? "other",
     note,
+    // The CUSTOMER's language off the RPC payload — never `context.locals.locale`,
+    // which is the deciding employee's.
+    locale: asLocale(email.locale),
   });
 
   await sendTracked(client, email.customer_email, content, {
