@@ -203,6 +203,51 @@ function MrAvailability({
   );
 }
 
+// ── customer-field errors ────────────────────────────────────────────────────
+
+/** The three inputs a per-field message can hang under — the schema's key names. */
+type CustomerField = "customer_name" | "customer_phone" | "customer_email";
+
+const CUSTOMER_FIELDS = ["customer_name", "customer_phone", "customer_email"] as const;
+
+/**
+ * First zod message per top-level field, e.g. `{ customer_phone: "Podaj…" }` —
+ * deliberately the SAME shape `POST /api/reservations/manual` returns on a 400
+ * (`api/reservations/manual.ts:32`) and the same one `ReservationForm` renders,
+ * so the island and the trust boundary can only ever report the same fields.
+ * Issues on `vehicle_id` / `pickup` / `return` land in the map too and are simply
+ * not read — the range has its own panel, which answers about the range.
+ */
+function firstIssuePerField(issues: { path: PropertyKey[]; message: string }[]): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of issues) {
+    const key = String(issue.path[0] ?? "form");
+    errors[key] ??= issue.message;
+  }
+  return errors;
+}
+
+/** `mrInputFull` — the shared customer-input shape (S-12 contract, Surface 2). */
+const MR_INPUT =
+  "text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none aria-invalid:border-destructive";
+
+/**
+ * The message under an input. `deviation(undrawn-state)`: the S-12 source draws
+ * no invalid field, so this takes the modal's own idioms — the `11.5px` of the
+ * hints beside it, the `font-semibold` + `text-destructive` of the create-failure
+ * banner below it.
+ */
+function FieldError({ id, message }: { id: string; message: string | undefined }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <p id={id} className="text-destructive mt-1.5 text-[11.5px] font-semibold">
+      {message}
+    </p>
+  );
+}
+
 // ── done panel ───────────────────────────────────────────────────────────────
 
 // Centered on BOTH breakpoints (the design's done step is a card, not a sheet).
@@ -295,6 +340,19 @@ export function ManualReservationModal({
   // exists to prevent: a recruiter reading the English cockpit would otherwise
   // silently mail every phone-in customer in English.
   const [customerLocale, setCustomerLocale] = React.useState<Locale>("pl");
+  // Which customer inputs have been blurred at least once. A field's message is
+  // withheld until then: an employee who has typed nothing yet is not making a
+  // mistake, and reding all three on open would be worse than the silence this
+  // phase removes. There is deliberately no "submit was attempted" arm — the
+  // gate below keeps the button `disabled` while the customer fields are
+  // invalid, so no submit can be attempted from that state. It does not need
+  // one either: clicking a disabled button moves focus to the body, so the
+  // gesture that produces the confusion IS a blur, and it reveals the message
+  // in the same tick (probed 2026-09-04).
+  const [touched, setTouched] = React.useState<Partial<Record<CustomerField, boolean>>>({});
+  const markTouched = (field: CustomerField) => {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+  };
   const [banner, setBanner] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -385,9 +443,16 @@ export function ManualReservationModal({
     locale: customerLocale,
   };
   // The same schema the endpoint validates with, so the button cannot enable on
-  // input the server would reject (D1: all three customer fields required).
-  const customerValid = manualReservationSchema(locale).safeParse(payload).success;
-  const canCreate = canCreateReservation(availability, customerValid);
+  // input the server would reject (D1: all three customer fields required) — and,
+  // since it is one parse, the message under a field is by construction the same
+  // one the 400 would carry, already in the employee's locale.
+  const parsed = manualReservationSchema(locale).safeParse(payload);
+  const canCreate = canCreateReservation(availability, parsed.success);
+  const issues = parsed.success ? {} : firstIssuePerField(parsed.error.issues);
+  // Live, so correcting a field clears its message in the same render.
+  const errors = Object.fromEntries(
+    CUSTOMER_FIELDS.map((field) => [field, touched[field] ? issues[field] : undefined]),
+  ) as Partial<Record<CustomerField, string>>;
 
   const days = pickup && returnDate ? Math.max(rentalDays(pickup, returnDate), 0) : 0;
   const total = estimatedTotal(vehicle.daily_rate, days);
@@ -634,39 +699,69 @@ export function ManualReservationModal({
                 {t("manualCustomer")}
               </div>
               <div className="flex flex-col gap-2">
-                <input
-                  aria-label={t("manualNamePlaceholder")}
-                  placeholder={t("manualNamePlaceholder")}
-                  value={name}
-                  disabled={busy}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                  }}
-                  className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
-                />
-                <div className="grid grid-cols-2 gap-2">
+                {/* Each input owns the row under it, so a message lands beside the
+                    field it is about — and, inside the 2-up, under that column
+                    only rather than pushing its neighbour down. */}
+                <div>
                   <input
-                    aria-label={t("manualPhonePlaceholder")}
-                    placeholder={t("manualPhonePlaceholder")}
-                    inputMode="tel"
-                    value={phone}
+                    id="mr-name"
+                    aria-label={t("manualNamePlaceholder")}
+                    placeholder={t("manualNamePlaceholder")}
+                    value={name}
                     disabled={busy}
-                    onChange={(e) => {
-                      setPhone(e.target.value);
+                    aria-invalid={Boolean(errors.customer_name)}
+                    aria-describedby={errors.customer_name ? "mr-name-error" : undefined}
+                    onBlur={() => {
+                      markTouched("customer_name");
                     }}
-                    className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
-                  />
-                  <input
-                    aria-label={t("manualEmailPlaceholder")}
-                    placeholder={t("manualEmailPlaceholder")}
-                    inputMode="email"
-                    value={email}
-                    disabled={busy}
                     onChange={(e) => {
-                      setEmail(e.target.value);
+                      setName(e.target.value);
                     }}
-                    className="text-foreground bg-card h-[42px] w-full rounded-[11px] border border-[var(--flota-hair)] px-[13px] text-[13.5px] outline-none"
+                    className={MR_INPUT}
                   />
+                  <FieldError id="mr-name-error" message={errors.customer_name} />
+                </div>
+                <div className="grid grid-cols-2 items-start gap-2">
+                  <div>
+                    <input
+                      id="mr-phone"
+                      aria-label={t("manualPhonePlaceholder")}
+                      placeholder={t("manualPhonePlaceholder")}
+                      inputMode="tel"
+                      value={phone}
+                      disabled={busy}
+                      aria-invalid={Boolean(errors.customer_phone)}
+                      aria-describedby={errors.customer_phone ? "mr-phone-error" : undefined}
+                      onBlur={() => {
+                        markTouched("customer_phone");
+                      }}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                      }}
+                      className={MR_INPUT}
+                    />
+                    <FieldError id="mr-phone-error" message={errors.customer_phone} />
+                  </div>
+                  <div>
+                    <input
+                      id="mr-email"
+                      aria-label={t("manualEmailPlaceholder")}
+                      placeholder={t("manualEmailPlaceholder")}
+                      inputMode="email"
+                      value={email}
+                      disabled={busy}
+                      aria-invalid={Boolean(errors.customer_email)}
+                      aria-describedby={errors.customer_email ? "mr-email-error" : undefined}
+                      onBlur={() => {
+                        markTouched("customer_email");
+                      }}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                      }}
+                      className={MR_INPUT}
+                    />
+                    <FieldError id="mr-email-error" message={errors.customer_email} />
+                  </div>
                 </div>
                 <CustomerLanguage locale={locale} value={customerLocale} onChange={setCustomerLocale} busy={busy} />
               </div>

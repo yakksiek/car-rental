@@ -1545,34 +1545,34 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 7.1 Migration state current: `npx supabase migration list --linked`
-- [x] 7.2 Type check passes: `npx astro check`
-- [x] 7.3 Lint passes: `npm run lint`
-- [x] 7.4 Unit tests pass including the parity test
-- [x] 7.5 Integration tests pass
-- [x] 7.6 Full E2E green in English and the PL smoke spec green
-- [x] 7.7 Build succeeds: `npm run build`
+- [x] 7.1 Migration state current: `npx supabase migration list --linked` — 264c8a3
+- [x] 7.2 Type check passes: `npx astro check` — 264c8a3
+- [x] 7.3 Lint passes: `npm run lint` — 264c8a3
+- [x] 7.4 Unit tests pass including the parity test — 264c8a3
+- [x] 7.5 Integration tests pass — 264c8a3
+- [x] 7.6 Full E2E green in English and the PL smoke spec green — 264c8a3
+- [x] 7.7 Build succeeds: `npm run build` — 264c8a3
 
 #### Manual
 
-- [x] 7.8 `/terms` renders in both locales, sample text clearly marked
-- [x] 7.9 Checkbox links to it; submission records version, terms locale and reservation locale
-- [x] 7.10 Full recruiter journey clean in English and in Polish
-- [x] 7.11 Header vision-diff empty minus recorded deviations
-- [x] 7.12 Deployed: migrations pushed **and** verified with `supabase migration list --linked`
+- [x] 7.8 `/terms` renders in both locales, sample text clearly marked — 264c8a3
+- [x] 7.9 Checkbox links to it; submission records version, terms locale and reservation locale — 264c8a3
+- [x] 7.10 Full recruiter journey clean in English and in Polish — 264c8a3
+- [x] 7.11 Header vision-diff empty minus recorded deviations — 264c8a3
+- [x] 7.12 Deployed: migrations pushed **and** verified with `supabase migration list --linked` — 264c8a3
 
 ### Phase 8: Manual-Booking Validation Feedback
 
 #### Automated
 
-- [ ] 8.1 Type check passes: `npx astro check`
-- [ ] 8.2 Lint passes: `npm run lint`
-- [ ] 8.3 Unit + integration tests pass
-- [ ] 8.4 The route's per-field 400 shape still matches what the modal renders
+- [x] 8.1 Type check passes: `npx astro check`
+- [x] 8.2 Lint passes: `npm run lint`
+- [x] 8.3 Unit + integration tests pass
+- [x] 8.4 The route's per-field 400 shape still matches what the modal renders
 
 #### Manual
 
-- [ ] 8.5 A too-short phone reports under the phone field; the button stays disabled
-- [ ] 8.6 Correcting it clears the message and enables the button
-- [ ] 8.7 Both locales
-- [ ] 8.8 No field reds before it has been touched
+- [x] 8.5 A too-short phone reports under the phone field; the button stays disabled
+- [x] 8.6 Correcting it clears the message and enables the button
+- [x] 8.7 Both locales
+- [x] 8.8 No field reds before it has been touched
