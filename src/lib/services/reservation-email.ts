@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // others
 import type { Database } from "../../db/database.types";
 import { reservationConfirmedEmail } from "../email/templates";
+import { asLocale } from "../i18n/types";
 import { sendTracked } from "./email-delivery";
 import type { DecisionEmailPayload } from "../../types";
 
@@ -52,6 +53,10 @@ export async function notifyReservationConfirmed(
     return: payload.return_date,
     dailyRate: payload.vehicle_daily_rate,
     deposit: payload.vehicle_deposit,
+    // `reservations.locale`, carried on the RPC payload — so this send reads the
+    // CUSTOMER's language whether it was triggered by an approval or by a manual
+    // booking, and regardless of what language the employee's cockpit is in.
+    locale: asLocale(payload.locale),
   });
 
   await sendTracked(client, payload.customer_email, content, {

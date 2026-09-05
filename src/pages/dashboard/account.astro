@@ -3,6 +3,7 @@
 import Layout from "../../layouts/Layout.astro";
 import StaffShell from "../../components/shell/StaffShell.astro";
 import NavIcon from "../../components/shell/NavIcon.astro";
+import LangRow from "../../components/shell/LangRow";
 
 // others
 import { staffIdentity } from "../../lib/staff-identity";
@@ -17,7 +18,7 @@ import { countOverdueReturns } from "../../lib/services/protocols";
 // Design contract: context/changes/staff-account/design-contract.md. The mockup's
 // Telefon (D1), Powiadomienia (D2) and Praca/Oddział (D3) rows are deliberate
 // trims — the data model carries no phone, notification or branch field.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 
 // The caller's own profiles row is self-SELECT-able under RLS. `maybeSingle` keeps
 // a missing row non-fatal: the name simply degrades to the humanised email.
@@ -29,7 +30,7 @@ const [profileResult, pending, overdueCount] = await Promise.all([
   countOverdueReturns(supabase),
 ]);
 
-const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+const { initials, displayName, roleLabel } = staffIdentity(user?.email, role, locale);
 const fullName = profileResult.data?.full_name ?? null;
 const name = fullName ?? displayName;
 
@@ -47,11 +48,11 @@ const initialsOf = (value: string) =>
 const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
 ---
 
-<Layout title="Profil — Flota">
+<Layout title={`${t("dashboard.accountTitle")} — Flota`}>
   <StaffShell
     active="me"
-    title="Profil"
-    subtitle="Twoje konto pracownika"
+    title={t("dashboard.accountTitle")}
+    subtitle={t("dashboard.accountSubtitle")}
     user={user}
     role={role}
     pendingCount={pending.length}
@@ -61,7 +62,7 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
     <main class="mx-auto w-full max-w-[980px] px-[18px] pt-[54px] md:px-8 md:pt-8 md:pb-8">
       {/* Mobile centered header (the desktop topbar carries this at md+) */}
       <header class="mb-3 text-center md:hidden">
-        <h1 class="text-foreground text-[17px] font-[650] tracking-[-0.2px]">Profil</h1>
+        <h1 class="text-foreground text-[17px] font-[650] tracking-[-0.2px]">{t("dashboard.accountTitle")}</h1>
       </header>
 
       <div class="flex flex-col gap-[18px] pt-1.5 md:gap-5 md:pt-0">
@@ -88,10 +89,10 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
         </section>
 
         <div class="grid gap-[18px] md:grid-cols-2 md:gap-5">
-          {/* ── Kontakt ───────────────────────────────────────────────── */}
+          {/* ── Contact ───────────────────────────────────────────────── */}
           <section>
             <div class="text-muted-foreground mx-1 mb-2 text-[11.5px] font-bold tracking-[0.4px] uppercase">
-              Kontakt
+              {t("info.contactEyebrow")}
             </div>
             <div class="bg-card shadow-card overflow-hidden rounded-lg">
               <div class="flex items-center gap-[13px] px-4 py-3.5">
@@ -110,7 +111,9 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
                   </svg>
                 </span>
                 <div class="min-w-0">
-                  <div class="text-foreground text-[13.5px] font-[650] tracking-[-0.15px]">E-mail służbowy</div>
+                  <div class="text-foreground text-[13.5px] font-[650] tracking-[-0.15px]">
+                    {t("dashboard.accountWorkEmail")}
+                  </div>
                   <div class="text-muted-foreground mt-0.5 truncate text-[12px]">{user?.email}</div>
                 </div>
               </div>
@@ -119,8 +122,21 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
 
           {/* ── Konto ─────────────────────────────────────────────────── */}
           <section>
-            <div class="text-muted-foreground mx-1 mb-2 text-[11.5px] font-bold tracking-[0.4px] uppercase">Konto</div>
+            <div class="text-muted-foreground mx-1 mb-2 text-[11.5px] font-bold tracking-[0.4px] uppercase">
+              {t("dashboard.accountSectionAccount")}
+            </div>
             <div class="bg-card shadow-card overflow-hidden rounded-lg">
+              {
+                /* Language is the one preference this screen can actually write —
+                 the sidebar row is desktop-only, and the mobile tab bar has no room
+                 for a chrome control, so /dashboard/account is where a
+                 `profiles.locale` setting belongs (design has no mockup for it:
+                 `deviation(no source)`). Both write through POST /api/locale. */
+              }
+              <div class="border-b border-[var(--flota-hair-2)]">
+                <LangRow client:idle variant="account" locale={locale} redirect="/dashboard/account" />
+              </div>
+
               <a
                 href="/dashboard/account/password"
                 class="hover:bg-background flex items-center gap-[13px] px-4 py-3.5 transition-colors"
@@ -128,7 +144,9 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
                 <span class="bg-background flex size-9 shrink-0 items-center justify-center rounded-[10px]">
                   <span class="text-[var(--flota-ink-2)]"><NavIcon glyph="key" size={16} /></span>
                 </span>
-                <div class="text-foreground min-w-0 text-[13.5px] font-[650] tracking-[-0.15px]">Zmień hasło</div>
+                <div class="text-foreground min-w-0 text-[13.5px] font-[650] tracking-[-0.15px]">
+                  {t("dashboard.accountChangePassword")}
+                </div>
                 <svg
                   class="text-muted-foreground ml-auto size-[15px] shrink-0"
                   viewBox="0 0 24 24"
@@ -172,7 +190,9 @@ const avatarInitials = (fullName ? initialsOf(fullName) : "") || initials;
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path>
                     </svg>
                   </span>
-                  <span class="text-destructive min-w-0 text-[13.5px] font-[650] tracking-[-0.15px]">Wyloguj się</span>
+                  <span class="text-destructive min-w-0 text-[13.5px] font-[650] tracking-[-0.15px]">
+                    {t("dashboard.accountSignOut")}
+                  </span>
                   <svg
                     class="text-muted-foreground ml-auto size-[15px] shrink-0"
                     viewBox="0 0 24 24"

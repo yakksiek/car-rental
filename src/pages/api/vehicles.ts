@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { requireRole } from "../../lib/access";
 import { createVehicle, listFleetForPicker } from "../../lib/services/vehicles";
 import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema";
@@ -24,25 +26,19 @@ import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema
 // `using (true)`, so this handler is the only barrier and must fail closed at
 // each step distinctly.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  duplicatePlate: "Pojazd o tym numerze rejestracyjnym już istnieje.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const GET: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) Auth, then (b) role — no CSRF step: reads carry no state change.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const vehicles = await listFleetForPicker(context.locals.supabase);
@@ -50,29 +46,31 @@ export const GET: APIRoute = async (context) => {
 };
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-staff role 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (c) Validate — the same schema the island runs client-side.
-  const parsed = vehicleInputSchema.safeParse(payload);
+  const parsed = vehicleInputSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: firstIssuePerField(parsed.error.issues) });
   }
@@ -82,10 +80,10 @@ export const POST: APIRoute = async (context) => {
   // same `{ errors }` shape the island already re-maps onto inputs.
   const result = await createVehicle(context.locals.supabase, parsed.data);
   if (result.status === "unauthorized") {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
   if (result.status === "duplicate_plate") {
-    return json(400, { errors: { plate: MSG.duplicatePlate } });
+    return json(400, { errors: { plate: t("duplicatePlate") } });
   }
   return json(201, { vehicle: result.vehicle });
 };

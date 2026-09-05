@@ -4,6 +4,9 @@ import type { LucideIcon } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
+import { protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 
 // The delivery badge for an *issued* protocol (S-05 Phase 6). Rendered on the
 // dispatch row and the protocol view, it turns the newest `email_deliveries` row
@@ -13,7 +16,7 @@ import { cn } from "../../lib/utils";
 // from the dashboard later.
 //
 // Only render this on a row that HAS a `protocol_id`. A reservation not yet
-// issued has no delivery to report and must show `Wydaj`, never a red badge.
+// issued has no delivery to report and must show the issue action, never a red badge.
 
 type Tone = "ok" | "warn" | "bad";
 
@@ -40,29 +43,33 @@ export interface BadgeState {
  * Derive the badge from an issued protocol's `pdf_path` and newest delivery
  * status, in this exact order (the plan's Phase 6 §2):
  *
- *   1. no `pdf_path`      → `Błąd PDF` (warn) — the PDF never generated, so no
+ *   1. no `pdf_path`      → PDF error (warn) — the PDF never generated, so no
  *                           send was even attempted; regenerate, don't resend.
- *   2. `failed` / no row  → `E-mail niewysłany` (bad) — a send failed or was
+ *   2. `failed` / no row  → email not sent (bad) — a send failed or was
  *                           never recorded; the resend action is the recovery.
- *   3. `sent`             → `Dostarczono` (ok).
+ *   3. `sent`             → delivered (ok).
  */
-export function deliveryBadge(pdfPath: string | null, deliveryStatus: string | null): BadgeState {
+export function deliveryBadge(pdfPath: string | null, deliveryStatus: string | null, locale: Locale): BadgeState {
+  const t = translator(locale, protocol);
   if (!pdfPath) {
-    return { tone: "warn", label: "Błąd PDF" };
+    return { tone: "warn", label: t("badgePdfError") };
   }
   if (deliveryStatus !== "sent") {
-    return { tone: "bad", label: "E-mail niewysłany" };
+    return { tone: "bad", label: t("badgeEmailNotSent") };
   }
-  return { tone: "ok", label: "Dostarczono" };
+  return { tone: "ok", label: t("badgeDelivered") };
 }
 
 export function DeliveryBadge({
   pdfPath,
   deliveryStatus,
+  locale,
   fullWidthOnMobile = false,
 }: {
   pdfPath: string | null;
   deliveryStatus: string | null;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
   /**
    * When set, the badge renders as a full-width tinted status *bar* on the mobile
    * card (design RtQueueCardM returned states) and collapses back to the compact
@@ -71,7 +78,7 @@ export function DeliveryBadge({
    */
   fullWidthOnMobile?: boolean;
 }) {
-  const { tone, label } = deliveryBadge(pdfPath, deliveryStatus);
+  const { tone, label } = deliveryBadge(pdfPath, deliveryStatus, locale);
   const Icon = TONE_ICON[tone];
   return (
     <span

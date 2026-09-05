@@ -8,9 +8,11 @@ import { cn } from "../../lib/utils";
 import { captionOf } from "../../lib/returns-filter";
 import { withFrom } from "../../lib/back-target";
 import type { ScheduleGroups } from "../../lib/dispatch-board";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import type { DispatchReturnRow, DispatchRow } from "../../types";
 
-// Today's Schedule — the grouped Wydania/Zwroty worklist of the dispatch cockpit
+// Today's Schedule — the grouped pickups/returns worklist of the dispatch cockpit
 // (design-contract §C). Desktop renders ONE unified card whose two groups are
 // opened by a tinted band and whose rows are hairline-divided; the row itself is
 // deliberately lighter than the full queue rows (no plates, delivery badges or
@@ -34,6 +36,9 @@ export interface ScheduleItem {
 
 /** Which group a row belongs to — drives the CTA copy and the band tone. */
 export type ScheduleKind = "pickups" | "returns";
+
+/** The `staff`-namespace translator these row components take instead of a locale. */
+type Translate = (key: keyof typeof staff.en) => string;
 
 // Rows carry `?from=<the cockpit's current URL>` so the screen they open sends the
 // user back HERE rather than to its own worklist — the cockpit is a second entry
@@ -129,28 +134,28 @@ function firstDoneIndex(items: ScheduleItem[]): number {
  * an `opacity` treatment reads as DISABLED, but these rows are live links to the
  * filed protocol. Position + this divider carry "done" without implying inert.
  */
-function DoneDivider({ tone = "card" }: { tone?: "card" | "panel" }) {
+function DoneDivider({ label, tone = "card" }: { label: string; tone?: "card" | "panel" }) {
   return (
     <div className={cn("flex items-center gap-2", tone === "card" ? "px-5 pt-3.5 pb-2" : "mt-3 mb-2 px-1.5")}>
-      <span className="text-muted-foreground text-[10.5px] font-bold tracking-[0.4px] uppercase">Zakończone</span>
+      <span className="text-muted-foreground text-[10.5px] font-bold tracking-[0.4px] uppercase">{label}</span>
       <span className={cn("flex-1 border-t", tone === "card" ? "border-border" : "border-black/10")} />
     </div>
   );
 }
 
 /**
- * Desktop right affordance: outline `Protokół ›`, the overdue chip, or — on a done
- * row — the quieter `Protokół ›` that opens the FILED protocol.
+ * Desktop right affordance: outline `Protocol ›`, the overdue chip, or — on a done
+ * row — the quieter `Protocol ›` that opens the FILED protocol.
  *
- * A done row used to show a `Zakończone` status label here. That wasted the slot:
+ * A done row used to show a "completed" status label here. That wasted the slot:
  * the row already links to the protocol, and the filled check circle plus the
- * `ZAKOŃCZONE` divider state the outcome. The affordance names the action instead.
+ * completed divider state the outcome. The affordance names the action instead.
  */
-function DesktopAction({ item }: { item: ScheduleItem }) {
+function DesktopAction({ item, t }: { item: ScheduleItem; t: Translate }) {
   if (item.done) {
     return (
       <span className="border-border bg-background text-foreground inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[9px] border px-3.5 text-[12.5px] font-[650]">
-        Protokół
+        {t("protocol")}
         <ChevronRight className="size-[13px] text-[var(--flota-ink-2)]" />
       </span>
     );
@@ -158,20 +163,20 @@ function DesktopAction({ item }: { item: ScheduleItem }) {
   if (item.overdue) {
     return (
       <span className="text-primary inline-flex h-8 shrink-0 items-center rounded-[10px] bg-[var(--flota-danger-soft)] px-3 text-[12px] font-[650]">
-        Po terminie
+        {t("overdue")}
       </span>
     );
   }
   return (
     <span className="border-border bg-card text-foreground inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[9px] border px-3.5 text-[12.5px] font-[650]">
-      Protokół
+      {t("protocol")}
       <ChevronRight className="size-[13px] text-[var(--flota-ink-2)]" />
     </span>
   );
 }
 
 /** One desktop row — the whole row is the link (deviation: JSX rows are static). */
-function DesktopRow({ item }: { item: ScheduleItem }) {
+function DesktopRow({ item, t }: { item: ScheduleItem; t: Translate }) {
   return (
     <li>
       <a
@@ -190,7 +195,7 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
             column, so a `lg:` breakpoint would measure the wrong box (see the
             embeddable-panels lesson). 500px ≈ a 1157px viewport at the desktop grid. */}
         <span className="flex w-full shrink-0 justify-end @min-[500px]:w-auto">
-          <DesktopAction item={item} />
+          <DesktopAction item={item} t={t} />
         </span>
       </a>
     </li>
@@ -198,7 +203,7 @@ function DesktopRow({ item }: { item: ScheduleItem }) {
 }
 
 /** A group's rows, with the finished block fenced off by its divider. */
-function DesktopRows({ items }: { items: ScheduleItem[] }) {
+function DesktopRows({ items, t }: { items: ScheduleItem[]; t: Translate }) {
   const doneAt = firstDoneIndex(items);
   return (
     <ul>
@@ -206,10 +211,10 @@ function DesktopRows({ items }: { items: ScheduleItem[] }) {
         <React.Fragment key={item.key}>
           {i === doneAt && (
             <li>
-              <DoneDivider />
+              <DoneDivider label={t("scheduleDone")} />
             </li>
           )}
-          <DesktopRow item={item} />
+          <DesktopRow item={item} t={t} />
         </React.Fragment>
       ))}
     </ul>
@@ -250,33 +255,33 @@ function GroupHeader({
 }
 
 /** Per-group quiet-day line, reusing the queue pages' copy (design-contract §G). */
-export const EMPTY_COPY: Record<ScheduleKind, string> = {
-  pickups: "Brak wydań na dziś",
-  returns: "Brak zwrotów na dziś",
+const EMPTY_KEY: Record<ScheduleKind, "emptyPickups" | "emptyReturns"> = {
+  pickups: "emptyPickups",
+  returns: "emptyReturns",
 };
 
 /**
- * Mobile CTA: filled `Protokół` / ghost `Zwrot` / danger `Po terminie`.
+ * Mobile CTA: filled protocol / ghost return / danger overdue.
  *
- * A done row keeps a real affordance — the ghost `Protokół`, opening the filed
- * protocol — rather than a `Zakończone` status label; the check circle and the
- * `ZAKOŃCZONE` divider already carry the outcome. Ghost, not filled, so finished
+ * A done row keeps a real affordance — the ghost protocol link, opening the filed
+ * protocol — rather than a "completed" status label; the check circle and the
+ * completed divider already carry the outcome. Ghost, not filled, so finished
  * work does not compete with open work now that the dim is gone.
  */
-function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
+function MobileAction({ item, kind, t }: { item: ScheduleItem; kind: ScheduleKind; t: Translate }) {
   if (item.done) {
     return (
       <span className="bg-background text-foreground border-border inline-flex h-8 shrink-0 items-center rounded-[10px] border px-3 text-[12px] font-[650]">
-        Protokół
+        {t("protocol")}
       </span>
     );
   }
   const cta =
     kind === "pickups"
-      ? { label: "Protokół", tone: "bg-foreground text-background" }
+      ? { label: t("protocol"), tone: "bg-foreground text-background" }
       : item.overdue
-        ? { label: "Po terminie", tone: "text-primary bg-[var(--flota-danger-soft)]" }
-        : { label: "Zwrot", tone: "bg-background text-foreground border border-border" };
+        ? { label: t("overdue"), tone: "text-primary bg-[var(--flota-danger-soft)]" }
+        : { label: t("returnAction"), tone: "bg-background text-foreground border border-border" };
 
   return (
     <span className={cn("inline-flex h-8 shrink-0 items-center rounded-[10px] px-3 text-[12px] font-[650]", cta.tone)}>
@@ -286,7 +291,7 @@ function MobileAction({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }
 }
 
 /** One mobile row — a standalone white card; the whole card is the link. */
-function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
+function MobileRow({ item, kind, t }: { item: ScheduleItem; kind: ScheduleKind; t: Translate }) {
   return (
     <a href={item.href} className="bg-card shadow-card mb-2 flex items-center gap-3 rounded-[16px] px-3.5 py-3">
       <StatusCircle done={item.done} size="md" />
@@ -300,7 +305,7 @@ function MobileRow({ item, kind }: { item: ScheduleItem; kind: ScheduleKind }) {
           <span className="font-mono">{item.reference}</span>
         </div>
       </div>
-      <MobileAction item={item} kind={kind} />
+      <MobileAction item={item} kind={kind} t={t} />
     </a>
   );
 }
@@ -350,12 +355,15 @@ export function MobileScheduleSection({
   label,
   total,
   items,
+  locale,
 }: {
   kind: ScheduleKind;
   label: string;
   total: number;
   items: ScheduleItem[];
+  locale: Locale;
 }) {
+  const t = translator(locale, staff);
   return (
     <MobileSection
       title={`${label} · ${total}`}
@@ -364,13 +372,13 @@ export function MobileScheduleSection({
     >
       {items.length === 0 ? (
         <p className="bg-card shadow-card text-muted-foreground mb-2 rounded-[16px] px-3.5 py-6 text-center text-[13px]">
-          {EMPTY_COPY[kind]}
+          {t(EMPTY_KEY[kind])}
         </p>
       ) : (
         items.map((item, i) => (
           <React.Fragment key={item.key}>
-            {i === firstDoneIndex(items) && <DoneDivider tone="panel" />}
-            <MobileRow item={item} kind={kind} />
+            {i === firstDoneIndex(items) && <DoneDivider label={t("scheduleDone")} tone="panel" />}
+            <MobileRow item={item} kind={kind} t={t} />
           </React.Fragment>
         ))
       )}
@@ -386,12 +394,15 @@ export default function DispatchSchedule({
   groups,
   today,
   origin,
+  locale,
 }: {
   groups: ScheduleGroups;
   today: string;
   /** The cockpit's current URL, threaded onto each row as `?from`. */
   origin: string;
+  locale: Locale;
 }) {
+  const t = translator(locale, staff);
   const pickupItems = groups.pickups.rows.map((row) => toPickupItem(row, origin));
   const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today, origin));
 
@@ -399,18 +410,19 @@ export default function DispatchSchedule({
     // `@container`: the rows' action-drop below keys off THIS card's width — it is
     // sized by the 1.5fr schedule column, never by the viewport.
     <div className="bg-card shadow-card @container overflow-hidden rounded-[18px]">
-      <GroupHeader kind="pickups" label="WYDANIA" progressLabel={groups.pickups.progressLabel} first />
+      {/* The band labels render uppercase in CSS, so the catalog holds sentence case. */}
+      <GroupHeader kind="pickups" label={t("navPickups")} progressLabel={groups.pickups.progressLabel} first />
       {pickupItems.length === 0 ? (
-        <p className="text-muted-foreground px-5 py-6 text-[13px]">{EMPTY_COPY.pickups}</p>
+        <p className="text-muted-foreground px-5 py-6 text-[13px]">{t("emptyPickups")}</p>
       ) : (
-        <DesktopRows items={pickupItems} />
+        <DesktopRows items={pickupItems} t={t} />
       )}
 
-      <GroupHeader kind="returns" label="ZWROTY" progressLabel={groups.returns.progressLabel} first={false} />
+      <GroupHeader kind="returns" label={t("navReturns")} progressLabel={groups.returns.progressLabel} first={false} />
       {returnItems.length === 0 ? (
-        <p className="text-muted-foreground px-5 py-6 text-[13px]">{EMPTY_COPY.returns}</p>
+        <p className="text-muted-foreground px-5 py-6 text-[13px]">{t("emptyReturns")}</p>
       ) : (
-        <DesktopRows items={returnItems} />
+        <DesktopRows items={returnItems} t={t} />
       )}
     </div>
   );

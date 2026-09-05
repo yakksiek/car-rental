@@ -3,6 +3,7 @@ import type { APIContext, AstroCookieSetOptions } from "astro";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 // others
+import { DEFAULT_LOCALE, type Locale } from "../../src/lib/i18n/types";
 import { anonClient, as, type SeededRole } from "./clients";
 
 // Constructed-APIContext factory for route-handler tests.
@@ -15,7 +16,7 @@ import { anonClient, as, type SeededRole } from "./clients";
 //
 // The handlers read ONLY `context.request` (Origin header + `.json()`),
 // `context.url` (`.origin`, `.searchParams`), `context.locals` (`.supabase`,
-// `.user`, `.role`, `.isDemo`), `context.params` (`.id`) and — since S-14's session-origin
+// `.user`, `.role`, `.isDemo`, `.locale`), `context.params` (`.id`) and — since S-14's session-origin
 // gate — `context.cookies`. A minimal object covers all of them; the single
 // `as unknown as APIContext` cast below is the one type escape (Astro's real
 // `APIContext` is far larger than any handler uses).
@@ -52,6 +53,13 @@ export interface BuildApiContextOptions {
    * profile-less or unconfigured request is never a demo request.
    */
   isDemo?: boolean;
+  /**
+   * `locals.locale` — middleware resolves it per request (cookie >
+   * profiles.locale > default) and it is NEVER null, so the default here is
+   * `DEFAULT_LOCALE`, exactly what a request with no signal at all resolves to.
+   * Set it to drive a handler's localized messages.
+   */
+  locale?: Locale;
   /** Route params for `[id]` routes, e.g. `{ id }`. */
   params?: Record<string, string | undefined>;
   /** Request body — JSON-serialized into the Request. Omit for GET. */
@@ -184,6 +192,7 @@ export function buildApiContext(opts: BuildApiContextOptions): APIContext {
       user: opts.user ?? null,
       role: opts.role ?? null,
       isDemo: opts.isDemo ?? false,
+      locale: opts.locale ?? DEFAULT_LOCALE,
     },
   } as unknown as APIContext;
 }

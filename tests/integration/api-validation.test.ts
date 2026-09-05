@@ -236,6 +236,7 @@ describe("API validation parity (#5)", () => {
           interior: `return/${RETURN_PROTOCOL_ID}/photo-interior.jpg`,
           dashboard: `return/${RETURN_PROTOCOL_ID}/photo-dashboard.jpg`,
         },
+        locale: "en",
         damages: [],
       };
     }

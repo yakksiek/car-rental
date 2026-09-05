@@ -5,7 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../db/database.types";
 import type { PickerVehicle, Vehicle, VehicleCategory, VehicleFilters } from "../../types";
 import type { VehicleInput } from "../vehicle-schema";
-import { categoryLabelPl } from "../format";
+import type { Locale } from "../i18n/types";
+import { categoryLabel } from "../i18n/vehicle";
 
 // The single home for public catalog queries. Two paths return the identical
 // `Vehicle[]` so the UI has one card and one mapper:
@@ -134,8 +135,9 @@ export interface CategoryPricing {
   count: number;
 }
 
-// Canonical category order for the Cennik table — matches CATEGORY_LABELS_PL and
-// getCategoryCounts.byCategory so every fleet read presents categories the same way.
+// Canonical category order for the Cennik table — matches `i18n/vehicle.ts`'s
+// CATEGORY_LABELS and getCategoryCounts.byCategory so every fleet read presents
+// categories the same way.
 const CATEGORY_PRICING_ORDER: VehicleCategory[] = [
   "cargo_van",
   "passenger_van",
@@ -154,6 +156,7 @@ const CATEGORY_PRICING_ORDER: VehicleCategory[] = [
  */
 export function reduceCategoryPricing(
   vehicles: { category: VehicleCategory; daily_rate: string | number; monthly_rate: string | number }[],
+  locale: Locale,
 ): CategoryPricing[] {
   const byCategory = new Map<VehicleCategory, { minDaily: number; minMonthly: number; count: number }>();
   for (const vehicle of vehicles) {
@@ -177,7 +180,7 @@ export function reduceCategoryPricing(
     }
     result.push({
       category,
-      label: categoryLabelPl(category),
+      label: categoryLabel(category, locale),
       minDaily: entry.minDaily,
       minMonthly: entry.minMonthly,
       count: entry.count,
@@ -191,7 +194,7 @@ export function reduceCategoryPricing(
  * the PII-safe `listVehicles` query, then folds with `reduceCategoryPricing`. A `null`
  * client (Supabase unconfigured) yields `[]` so the page shows its fallback row.
  */
-export async function getCategoryPricing(client: CatalogClient | null): Promise<CategoryPricing[]> {
+export async function getCategoryPricing(client: CatalogClient | null, locale: Locale): Promise<CategoryPricing[]> {
   if (!client) {
     return [];
   }
@@ -202,7 +205,7 @@ export async function getCategoryPricing(client: CatalogClient | null): Promise<
     minPayload: null,
     sort: null,
   });
-  return reduceCategoryPricing(vehicles);
+  return reduceCategoryPricing(vehicles, locale);
 }
 
 // A malformed id is just a vehicle that cannot exist. We reject it before the

@@ -9,6 +9,9 @@ import { DeliveryBadge, deliveryBadge } from "../protocol/DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { resendReturnEmail } from "../hooks/useReturnProtocolSubmit";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import { captionOf, overdueDaysLabel, sortReturnsByUrgency, toggleReturnsFilter } from "../../lib/returns-filter";
 import type { ReturnCaption } from "../../lib/returns-filter";
 import type { DispatchReturnRow } from "../../types";
@@ -71,18 +74,27 @@ const ALL_SELECTED_FILL = "bg-foreground text-background";
 // `Na dziś` neutral → navy, `Po terminie` danger → crimson, `Zwrócono` success → green
 // (design-contract §B; navy/success selected were `provisional`, resolved here to the
 // tone-solid fills the token map names).
-const SEGMENTS: { key: ReturnCaption; label: string; selectedFill: string }[] = [
-  { key: "due", label: "Na dziś", selectedFill: ALL_SELECTED_FILL },
-  { key: "overdue", label: "Po terminie", selectedFill: "bg-primary text-primary-foreground" },
-  { key: "returned", label: "Zwrócono", selectedFill: "bg-success text-white" },
-];
+const SEGMENT_KEYS = ["due", "overdue", "returned"] as const;
+const SEGMENT_LABEL_KEYS: Record<ReturnCaption, "filterDue" | "filterOverdue" | "filterReturned"> = {
+  due: "filterDue",
+  overdue: "filterOverdue",
+  returned: "filterReturned",
+};
+const SEGMENT_FILLS: Record<ReturnCaption, string> = {
+  due: ALL_SELECTED_FILL,
+  overdue: "bg-primary text-primary-foreground",
+  returned: "bg-success text-white",
+};
 
-/** Labels for the live list header, keyed by the active filter (`null` → `all`). */
-const HEADER_LABELS: Record<"all" | ReturnCaption, string> = {
-  all: "Wszystkie zwroty",
-  due: "Na dziś",
-  overdue: "Po terminie",
-  returned: "Zwrócono",
+/** Header-label KEYS for the live list, keyed by the active filter (`null` → `all`). */
+const HEADER_LABEL_KEYS: Record<
+  "all" | ReturnCaption,
+  "returnsAll" | "filterDue" | "filterOverdue" | "filterReturned"
+> = {
+  all: "returnsAll",
+  due: "filterDue",
+  overdue: "filterOverdue",
+  returned: "filterReturned",
 };
 
 /**
@@ -176,17 +188,20 @@ function FilterBar({
   counts,
   dateLabel,
   onSelect,
+  locale,
 }: {
   filter: FilterKey;
   counts: FilterCounts;
   dateLabel?: string;
   onSelect: (next: FilterKey) => void;
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   return (
     <>
       <div className="bg-card shadow-card mb-4 hidden items-center gap-1 rounded-[18px] p-2 sm:flex">
         <DesktopSegment
-          label="Wszystkie"
+          label={t("filterAll")}
           count={counts.all}
           selected={filter === null}
           selectedFill={ALL_SELECTED_FILL}
@@ -194,15 +209,15 @@ function FilterBar({
             onSelect(null);
           }}
         />
-        {SEGMENTS.map((seg) => (
+        {SEGMENT_KEYS.map((key) => (
           <DesktopSegment
-            key={seg.key}
-            label={seg.label}
-            count={counts[seg.key]}
-            selected={filter === seg.key}
-            selectedFill={seg.selectedFill}
+            key={key}
+            label={t(SEGMENT_LABEL_KEYS[key])}
+            count={counts[key]}
+            selected={filter === key}
+            selectedFill={SEGMENT_FILLS[key]}
             onClick={() => {
-              onSelect(toggleReturnsFilter(filter, seg.key));
+              onSelect(toggleReturnsFilter(filter, key));
             }}
           />
         ))}
@@ -218,7 +233,7 @@ function FilterBar({
       {/* Four pills that wrap to a second row on a narrow screen (design O5/O6). */}
       <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
         <MobilePill
-          label="Wszystkie"
+          label={t("filterAll")}
           count={counts.all}
           selected={filter === null}
           selectedFill={ALL_SELECTED_FILL}
@@ -226,15 +241,15 @@ function FilterBar({
             onSelect(null);
           }}
         />
-        {SEGMENTS.map((seg) => (
+        {SEGMENT_KEYS.map((key) => (
           <MobilePill
-            key={seg.key}
-            label={seg.label}
-            count={counts[seg.key]}
-            selected={filter === seg.key}
-            selectedFill={seg.selectedFill}
+            key={key}
+            label={t(SEGMENT_LABEL_KEYS[key])}
+            count={counts[key]}
+            selected={filter === key}
+            selectedFill={SEGMENT_FILLS[key]}
             onClick={() => {
-              onSelect(toggleReturnsFilter(filter, seg.key));
+              onSelect(toggleReturnsFilter(filter, key));
             }}
           />
         ))}
@@ -249,27 +264,30 @@ function ReturnRow({
   resending,
   error,
   onResend,
+  locale,
 }: {
   state: RowState;
   today: string;
   resending: boolean;
   error: string | null;
   onResend: () => void;
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const { row } = state;
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ");
   const caption = captionOf(row, today);
   const returned = caption === "returned";
   const overdue = caption === "overdue";
   // Plural-aware `N dni po terminie`; non-null exactly when `overdue` (design-contract §C).
-  const overdueLabel = overdueDaysLabel(row, today);
+  const overdueLabel = overdueDaysLabel(row, today, locale);
   // For returned rows, the effective delivery status is the resend override when one
   // landed this session, else the folded-in value from the RPC.
   const deliveryStatus = state.deliveryOverride ?? row.delivery_status;
   const pdfPath = row.pdf_path as string | null;
-  const badge = deliveryBadge(pdfPath, deliveryStatus);
+  const badge = deliveryBadge(pdfPath, deliveryStatus, locale);
   // Offer resend only when there is a stored PDF to attach *and* the last send did
-  // not land. A missing PDF (`Błąd PDF`, warn) is not resendable — regenerate.
+  // not land. A missing PDF (the warn badge) is not resendable — regenerate.
   const canResend = returned && Boolean(pdfPath) && badge.tone !== "ok";
 
   return (
@@ -324,7 +342,7 @@ function ReturnRow({
           // RtQueueRow). Resend is the crimson CTA (shown when the last send failed);
           // open protocol is outline. The stacked mobile layout is what un-crowds the row.
           <div className="flex shrink-0 flex-col items-start gap-2.5 sm:ml-auto sm:flex-row sm:items-center sm:gap-2">
-            <DeliveryBadge pdfPath={pdfPath} deliveryStatus={deliveryStatus} fullWidthOnMobile />
+            <DeliveryBadge pdfPath={pdfPath} deliveryStatus={deliveryStatus} locale={locale} fullWidthOnMobile />
             <div className="flex w-full gap-2 sm:w-auto">
               {canResend && (
                 <Button
@@ -338,7 +356,7 @@ function ReturnRow({
                   ) : (
                     <RefreshCw className="size-4" />
                   )}
-                  Wyślij ponownie
+                  {t("resend")}
                 </Button>
               )}
               <Button
@@ -347,23 +365,23 @@ function ReturnRow({
                 className="bg-card hover:bg-background h-10 flex-1 rounded-[10px] text-[13px] font-[650] sm:h-9 sm:flex-none sm:text-[12.5px]"
               >
                 <a href={`/dashboard/protocols/${row.return_protocol_id}`}>
-                  Otwórz protokół
+                  {t("openProtocol")}
                   <ChevronRight className="size-3.5" />
                 </a>
               </Button>
             </div>
           </div>
         ) : overdue ? (
-          // Overdue-open: a `PO TERMINIE` eyebrow over a `⚠ N dni po terminie` indicator
-          // (mobile red-soft pill / desktop plain crimson text), a `Zadzwoń` tel: link,
-          // and the `Przyjmij zwrot` CTA (design-contract §C). Mobile stacks the
+          // Overdue-open: an OVERDUE eyebrow over a `⚠ N days overdue` indicator
+          // (mobile red-soft pill / desktop plain crimson text), a call tel: link,
+          // and the accept-return CTA (design-contract §C). Mobile stacks the
           // eyebrow+indicator and the Call button on one justify-between row with Accept
           // return right-aligned below; desktop lays all three on one right-aligned line.
           <div className="flex shrink-0 flex-col items-stretch gap-2.5 sm:ml-auto sm:flex-row sm:items-center sm:gap-3">
             <div className="flex items-center justify-between gap-3 sm:justify-end">
               <div className="flex flex-col items-start gap-1 sm:items-end sm:gap-0.5">
                 <span className="text-muted-foreground text-[11px] font-bold tracking-[0.08em] uppercase">
-                  PO TERMINIE
+                  {t("overdueEyebrow")}
                 </span>
                 <span className="text-primary inline-flex items-center gap-1 rounded-[8px] bg-[var(--flota-danger-soft)] px-2.5 py-1 text-[13px] font-bold sm:rounded-none sm:bg-transparent sm:px-0 sm:py-0">
                   <TriangleAlert className="size-3.5" />
@@ -378,7 +396,7 @@ function ReturnRow({
                 >
                   <a href={`tel:${row.customer_phone}`}>
                     <Phone className="size-4" />
-                    Zadzwoń
+                    {t("callCustomer")}
                   </a>
                 </Button>
               )}
@@ -389,7 +407,7 @@ function ReturnRow({
               className="bg-primary text-primary-foreground hover:bg-primary/90 self-end rounded-[10px] sm:self-auto"
             >
               <a href={`/dashboard/returns/${row.reservation_id}`}>
-                Przyjmij zwrot
+                {t("acceptReturn")}
                 <ChevronRight className="size-3.5" />
               </a>
             </Button>
@@ -399,7 +417,7 @@ function ReturnRow({
           <div className="flex shrink-0 items-center justify-end sm:ml-auto">
             <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-[10px]">
               <a href={`/dashboard/returns/${row.reservation_id}`}>
-                Przyjmij zwrot
+                {t("acceptReturn")}
                 <ChevronRight className="size-3.5" />
               </a>
             </Button>
@@ -416,17 +434,22 @@ export default function ReturnQueue({
   today,
   initialFilter = null,
   dateLabel,
+  locale,
 }: {
   rows: DispatchReturnRow[];
   today: string;
   // Seeded server-side from `?filter` (parsed in returns.astro) so a deep-link renders
   // pre-filtered with no hydration flash — a client-only `window.location` read would
-  // differ from the SSR'd HTML and mismatch/flash. `null` = "Wszystkie" (all).
+  // differ from the SSR'd HTML and mismatch/flash. `null` = the "all" filter.
   initialFilter?: ReturnCaption | null;
-  // Today's date, pre-formatted server-side (workerd ICU can't do Polish) for the
-  // desktop filter bar's right edge.
+  // Today's date, pre-formatted server-side for the desktop filter bar's right edge.
   dateLabel?: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
+  // Memoized so `handleResend` below can list it in its dep array without losing
+  // its memo — `translator` is a pure two-property lookup.
+  const t = React.useMemo(() => translator(locale, dashboard), [locale]);
   // Group the worklist overdue → due → returned once at mount (design-contract §C); the
   // RPC returns `reference` order, preserved within each group by the stable sort. Same
   // deterministic input on server and client, so no hydration mismatch; counts and the
@@ -451,27 +474,28 @@ export default function ReturnQueue({
     window.history.replaceState(window.history.state, "", url);
   }, []);
 
-  const handleResend = React.useCallback(async (returnProtocolId: string) => {
-    setResendingId(returnProtocolId);
-    setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== returnProtocolId)));
-    const delivery = await resendReturnEmail(returnProtocolId);
-    setResendingId(null);
-    if (delivery === "sent") {
-      setStates((prev) =>
-        prev.map((s) => (s.row.return_protocol_id === returnProtocolId ? { ...s, deliveryOverride: "sent" } : s)),
-      );
-      return;
-    }
-    setErrors((prev) => ({ ...prev, [returnProtocolId]: "Nie udało się wysłać. Spróbuj ponownie." }));
-  }, []);
+  const handleResend = React.useCallback(
+    async (returnProtocolId: string) => {
+      setResendingId(returnProtocolId);
+      setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== returnProtocolId)));
+      const delivery = await resendReturnEmail(returnProtocolId);
+      setResendingId(null);
+      if (delivery === "sent") {
+        setStates((prev) =>
+          prev.map((s) => (s.row.return_protocol_id === returnProtocolId ? { ...s, deliveryOverride: "sent" } : s)),
+        );
+        return;
+      }
+      setErrors((prev) => ({ ...prev, [returnProtocolId]: t("resendFailed") }));
+    },
+    [t],
+  );
 
   if (states.length === 0) {
     return (
       <div className={cn("border-border bg-card shadow-card rounded-lg border p-10 text-center")}>
-        <h2 className="text-foreground text-[16px] font-[650] tracking-tight">Brak zwrotów na dziś</h2>
-        <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
-          Gdy wynajęty pojazd będzie do zwrotu, pojawi się tutaj.
-        </p>
+        <h2 className="text-foreground text-[16px] font-[650] tracking-tight">{t("returnsEmptyTitle")}</h2>
+        <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">{t("returnsEmptyBody")}</p>
       </div>
     );
   }
@@ -486,11 +510,11 @@ export default function ReturnQueue({
 
   return (
     <>
-      <FilterBar filter={filter} counts={counts} dateLabel={dateLabel} onSelect={applyFilter} />
+      <FilterBar filter={filter} counts={counts} dateLabel={dateLabel} onSelect={applyFilter} locale={locale} />
       {/* Live list header — desktop only; on mobile the per-filter counts live inside
           the pills, so the mockups drop this line there (deviation(screenshot)). */}
       <p className="text-foreground mb-3 hidden text-[14px] font-[650] tracking-tight sm:block">
-        {HEADER_LABELS[filter ?? "all"]} <span className="text-muted-foreground">· {visibleStates.length}</span>
+        {t(HEADER_LABEL_KEYS[filter ?? "all"])} <span className="text-muted-foreground">· {visibleStates.length}</span>
       </p>
       {visibleStates.length === 0 ? (
         filter === "overdue" ? (
@@ -501,14 +525,12 @@ export default function ReturnQueue({
             <span className="mx-auto flex size-16 items-center justify-center rounded-[18px] bg-[var(--flota-success-soft)]">
               <Check className="text-success size-7" />
             </span>
-            <h2 className="text-foreground mt-4 text-[16px] font-[650] tracking-tight">Brak zwrotów po terminie</h2>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
-              Wszystkie pojazdy wróciły na czas.
-            </p>
+            <h2 className="text-foreground mt-4 text-[16px] font-[650] tracking-tight">{t("overdueClearTitle")}</h2>
+            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">{t("overdueClearBody")}</p>
           </div>
         ) : (
-          // `Na dziś` / `Zwrócono` filter with no matches — a neutral line (design-contract §D).
-          <p className="text-muted-foreground py-10 text-center text-[13px]">Brak pozycji dla tego filtra.</p>
+          // A due / returned filter with no matches — a neutral line (design-contract §D).
+          <p className="text-muted-foreground py-10 text-center text-[13px]">{t("filterNoMatches")}</p>
         )
       ) : (
         // Mobile = separate cards with a gap. Desktop = one rounded card whose rows
@@ -520,6 +542,7 @@ export default function ReturnQueue({
             const returnProtocolId = state.row.return_protocol_id;
             return (
               <ReturnRow
+                locale={locale}
                 key={state.row.reservation_id}
                 state={state}
                 today={today}

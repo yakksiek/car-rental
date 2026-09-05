@@ -43,9 +43,9 @@ test("quick-action menu fetches the fleet on demand and opens the manual-reserva
   // silently swallowed.
   await waitForIslands(page);
 
-  await page.getByRole("button", { name: "Nowe" }).click();
+  await page.getByRole("button", { name: "New" }).click();
 
-  const reservationRow = page.getByRole("button", { name: /Nowa rezerwacja/ });
+  const reservationRow = page.getByRole("button", { name: /New reservation/ });
   await expect(reservationRow).toBeVisible();
 
   // Wait on the response, never a timeout. This is the request that only exists
@@ -59,7 +59,7 @@ test("quick-action menu fetches the fleet on demand and opens the manual-reserva
   // The business outcome: the modal is open AND its picker carries the fleet the
   // staffer can actually book. An empty picker would mean the fetch landed but
   // never reached the modal — exactly the failure this spec exists to catch.
-  const picker = page.getByRole("combobox", { name: "Pojazd" });
+  const picker = page.getByRole("combobox", { name: "Vehicle" });
   await expect(picker).toBeVisible();
   await expect.poll(async () => picker.locator("option").count()).toBeGreaterThan(0);
 });

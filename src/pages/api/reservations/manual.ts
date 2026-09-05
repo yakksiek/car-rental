@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../../lib/i18n/api";
+import { translator } from "../../../lib/i18n/types";
 import { isDemoAccount, isRoleSufficient } from "../../../lib/access";
 import { manualReservationSchema } from "../../../lib/reservation-schema";
 import { notifyReservationConfirmed } from "../../../lib/services/reservation-email";
@@ -22,20 +24,6 @@ import { createConfirmedReservation } from "../../../lib/services/reservations";
 //   (e) the atomic write; a lost race is a typed `conflict` 409, never a 500,
 //   (f) best-effort confirmation email — the booking is already committed.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  // Shared verbatim by the guarded routes (staff, deactivate, reset-password
-  // and this one). Duplicated rather than imported, following the strings
-  // above it that are already duplicated across those files.
-  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
-  conflict: "Ten pojazd ma już rezerwację w wybranych dniach.",
-  unavailable: "Ten pojazd nie jest już dostępny.",
-  serverError: "Nie udało się utworzyć rezerwacji.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
@@ -51,18 +39,20 @@ function fieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) + (c) Auth then role: a signed-out caller is 401, a non-staff role 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!isRoleSufficient(context.locals.role, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   // (c2) The demo gate, placed above the body parse so a refused request never
@@ -70,18 +60,18 @@ export const POST: APIRoute = async (context) => {
   // otherwise hand to a real provider send at (f). `code` matches the three
   // staff routes so a client can tell a demo refusal from a role refusal.
   if (isDemoAccount(context.locals)) {
-    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
+    return json(403, { error: t("demoBlocked"), code: "demo_blocked" });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (d) Validate — the same schema the modal island runs client-side.
-  const parsed = manualReservationSchema.safeParse(payload);
+  const parsed = manualReservationSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: fieldErrors(parsed.error.issues) });
   }
@@ -100,16 +90,16 @@ export const POST: APIRoute = async (context) => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("[api/reservations/manual] create failed:", error);
-    return json(500, { error: MSG.serverError });
+    return json(500, { error: t("createReservationFailed") });
   }
 
   switch (result.status) {
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
     case "unavailable":
-      return json(409, { error: MSG.unavailable, reason: "unavailable" });
+      return json(409, { error: t("vehicleUnavailable"), reason: "unavailable" });
     case "conflict":
-      return json(409, { error: MSG.conflict, reason: "conflict" });
+      return json(409, { error: t("manualConflict"), reason: "conflict" });
     case "created":
       // (f) Best-effort confirmation — shared with the decision endpoint's
       // confirmed branch, so both paths send the identical email.

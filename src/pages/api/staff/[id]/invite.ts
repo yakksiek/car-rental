@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { requireRole } from "../../../../lib/access";
 import { createAdminClient } from "../../../../lib/supabase";
 import { inviteEmployee } from "../../../../lib/services/staff";
@@ -20,39 +22,30 @@ import { inviteEmployee } from "../../../../lib/services/staff";
 // `password_set_at is null` gate, so a person who can already sign in is refused
 // here and not merely hidden in the island.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono pracownika.",
-  hasPassword: "Ta osoba ma już hasło — zaproszenie nie jest potrzebne.",
-  sendFailed: "Nie udało się wysłać zaproszenia.",
-  unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-admin 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "admin")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   // (c) Send. `invitedAt` rides back in the body so the island can move the row
@@ -63,15 +56,15 @@ export const POST: APIRoute = async (context) => {
     case "sent":
       return json(200, { status: "sent", invitedAt: result.invitedAt ?? null });
     case "has_password":
-      return json(409, { error: MSG.hasPassword });
+      return json(409, { error: t("hasPassword") });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("staffNotFound") });
     case "failed":
       // 502: our call to GoTrue failed, not the caller's request. The island
       // renders its network banner with a retry, which is the honest remedy.
-      return json(502, { error: MSG.sendFailed });
+      return json(502, { error: t("sendFailed") });
     case "unauthorized":
       // A null admin client here means the service-role key is unconfigured.
-      return json(403, { error: MSG.unconfigured });
+      return json(403, { error: t("unconfigured") });
   }
 };

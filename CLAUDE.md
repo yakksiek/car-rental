@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication style
+
+Write in plain language. Use short sentences. Say one thing per sentence.
+
+Do not compress several ideas into one dense clause. Do not stack qualifiers, em-dash asides, and parentheticals into a single line. If a sentence needs to be re-read to be understood, split it.
+
+This applies to everything written for a human to read: chat replies, review findings, plan text, commit messages, and code comments.
+
 ## Commands
 
 - `npm run dev` — start dev server (Cloudflare workerd runtime)

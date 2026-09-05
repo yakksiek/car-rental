@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 // others
 import { anonClient } from "../helpers/clients";
+import { queryDb } from "../helpers/db";
 
 // RPC EXECUTE-grant hardening regression guard (rpc-execute-grant-hardening).
 //
@@ -25,6 +26,16 @@ import { anonClient } from "../helpers/clients";
 // regression 20260731212650 had to fix forward on list_pending_reservations —
 // which was caught only because that RPC was in this suite and list_staff was not.
 //
+// english-localization added six more, and the story repeated exactly. Its two
+// migrations DROP and recreate eight functions between them to add a locale
+// column. Three of the eight arrived in this suite with the change
+// (`create_protocol`, `create_return_protocol`, `set_profile_locale`); the three
+// PII READS did not (`list_dispatch_today`, `get_return_baseline`,
+// `get_protocol`), and its impl-review (F4) put them here. The public
+// `get_reservation_status` gets the mirror-image treatment further down: its
+// failure mode is being silently CLOSED, plus a catalog assertion that PUBLIC was
+// revoked before the anon grant was re-stated — the half no client call can see.
+//
 // WHY THIS EXISTS: `grant execute ... to authenticated` alone is a no-op against
 // the default PUBLIC/anon grants (lessons.md -> "Revoke EXECUTE before granting
 // it"), and there is no reliable schema-level "start closed" default in Supabase
@@ -46,6 +57,17 @@ function isPermissionDenied(error: { code?: string; message?: string } | null): 
 // "not found" outcome (no row inserted), which proves EXECUTE without side effects.
 const MISSING_VEHICLE = "00000000-0000-0000-0000-000000000000";
 const SEEDED_VEHICLE = "11111111-1111-1111-1111-111111111111";
+// R-0003's `access_token` (supabase/seed.sql) — the tokenized status link's only
+// credential, and the canonical seeded PENDING status page. Needed rather than
+// MISSING_VEHICLE wherever the assertion is about the returned ROW, not just
+// about EXECUTE surviving. Its `locale` is `pl`, deliberately: the Polish
+// customer arriving from a Polish e-mail is the exact case Phase 10 §1 fixes.
+const SEEDED_RESERVATION_TOKEN = "cccccccc-0000-0000-0000-000000000003";
+
+/** The one column of `get_reservation_status` this file asserts on. */
+interface StatusLocaleRow {
+  locale?: string;
+}
 
 describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
   // -------------------------------------------------------------------------
@@ -111,6 +133,75 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
       expect(isPermissionDenied(res.error)).toBe(true);
     });
 
+    it("create_protocol -> permission denied", async () => {
+      // english-localization drops + recreates this to add `p_locale`, and a DROP
+      // resets the ACL to Supabase's default (EXECUTE to PUBLIC + anon). Same
+      // regression shape as list_pending_reservations in 20260731212650 — which
+      // was caught only because it was in this suite.
+      const res = await anonClient().rpc("create_protocol", {
+        p_id: MISSING_VEHICLE,
+        p_reservation_id: MISSING_VEHICLE,
+        p_odometer_km: 1,
+        p_fuel_eighths: 4,
+        p_signed_at: "2026-08-01T10:00:00Z",
+        p_customer_ack: true,
+        p_signature: "issue/none/sig.png",
+        p_photos: [],
+        p_damages: [],
+      });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("create_return_protocol -> permission denied", async () => {
+      // Dropped + recreated by the same migration, for the same reason.
+      const res = await anonClient().rpc("create_return_protocol", {
+        p_id: MISSING_VEHICLE,
+        p_reservation_id: MISSING_VEHICLE,
+        p_baseline_protocol_id: MISSING_VEHICLE,
+        p_odometer_km: 1,
+        p_fuel_eighths: 4,
+        p_signed_at: "2026-08-01T10:00:00Z",
+        p_customer_ack: true,
+        p_signature: "return/none/sig.png",
+        p_photos: [],
+        p_damages: [],
+      });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    // ---------------------------------------------------------------------
+    // The three PII READ paths 20260904120000_artifact_locale_reads.sql also
+    // drops and recreates (impl-review F4). The migration re-applies their
+    // permissions correctly at :376, :464 and :589, so nothing is open — the gap
+    // was that nothing would NOTICE if a future rewrite dropped one. All three
+    // return customer personal data: names, e-mail addresses, signature paths
+    // and damage notes.
+    // ---------------------------------------------------------------------
+
+    it("list_dispatch_today -> permission denied", async () => {
+      const res = await anonClient().rpc("list_dispatch_today");
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("get_return_baseline -> permission denied", async () => {
+      const res = await anonClient().rpc("get_return_baseline", { p_reservation_id: MISSING_VEHICLE });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("get_protocol -> permission denied", async () => {
+      const res = await anonClient().rpc("get_protocol", { p_id: MISSING_VEHICLE });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("set_profile_locale -> permission denied", async () => {
+      // english-localization: the definer seam that makes profiles.locale
+      // writable at all. It takes no target parameter and stamps auth.uid()'s own
+      // row, so an anon caller has nothing to stamp — but the grant layer must
+      // refuse it before that ever matters.
+      const res = await anonClient().rpc("set_profile_locale", { p_locale: "pl" });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
     it("current_is_demo -> permission denied", async () => {
       // Added by demo-account-gate. It is an RLS POLICY helper, so like
       // `current_app_role()` it must stay granted to `authenticated` or every
@@ -157,6 +248,54 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
       expect(res.error).toBeNull();
     });
 
+    it("get_reservation_status -> still anon-callable, and now returns the booking's language", async () => {
+      // english-localization Phase 10 DROPs and recreates this function to add the
+      // `locale` OUT column, so the customer's status page can render in the
+      // language they booked in rather than the visitor's session default. A drop
+      // resets the ACL, and — like create_reservation_request below — this one is
+      // intentionally PUBLIC (lessons.md carve-out (a)). The failure mode is
+      // "silently closed": an anon customer clicking the link in their own
+      // confirmation e-mail would get a permission error instead of their booking.
+      const res = await anonClient().rpc("get_reservation_status", { p_token: SEEDED_RESERVATION_TOKEN });
+      expect(isPermissionDenied(res.error)).toBe(false);
+      expect(res.error).toBeNull();
+
+      const rows = (res.data as StatusLocaleRow[] | null) ?? [];
+      expect(rows).toHaveLength(1);
+      // The added column must actually arrive — against a lagging migration it is
+      // absent, and every status page silently renders the session default.
+      expect(rows[0]).toHaveProperty("locale");
+      // R-0003 is seeded `pl`. Asserting the VALUE, not just the key, is what
+      // separates "the column arrived" from "the column arrived with the
+      // reservation's own language in it".
+      expect(rows[0].locale).toBe("pl");
+    });
+
+    it("get_reservation_status -> PUBLIC was revoked; only the named roles hold EXECUTE", async () => {
+      // The half `anonClient()` cannot see. `grant execute ... to anon` alone is a
+      // no-op against Postgres's default PUBLIC grant, so a recreate that forgot
+      // the `revoke execute ... from public, anon` FIRST leaves `=X/postgres` in
+      // the ACL — the function still works, and nothing is visibly wrong. On the
+      // three sibling functions in this file that state IS the leak; here it is
+      // "merely" a grant nobody wrote down. Either way the revoke is the control,
+      // so it needs an assertion that reads the catalog rather than the behaviour.
+      const rows = await queryDb<{ acl: string[] | null }>`
+        select p.proacl::text[] as acl
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.proname = 'get_reservation_status'
+      `;
+      // A rename or a dropped-and-never-recreated function would otherwise make
+      // the assertions below pass over an empty ACL.
+      expect(rows, "get_reservation_status is not in pg_proc").toHaveLength(1);
+      const acl: string[] = rows[0].acl ?? [];
+      // An entry with an EMPTY grantee ("=X/postgres") is the PUBLIC grant.
+      const publicGrants = acl.filter((entry) => entry.startsWith("="));
+      expect(publicGrants, `PUBLIC still holds EXECUTE: ${publicGrants.join(", ")}`).toEqual([]);
+      // ...and the intentional anon grant is present, re-stated after the revoke.
+      expect(acl.some((entry) => entry.startsWith("anon="))).toBe(true);
+    });
+
     it("create_reservation_request -> executes (business result, not permission denied)", async () => {
       // Missing vehicle -> a business "not found" outcome, no row inserted. The
       // point is only that EXECUTE is intact: the call must not be denied.
@@ -171,6 +310,30 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
         p_company: null,
         p_vat_id: null,
         p_notes: null,
+      });
+      expect(isPermissionDenied(res.error)).toBe(false);
+    });
+
+    it("create_reservation_request -> still anon-callable with the locale params", async () => {
+      // english-localization DROPs and recreates this function to add p_locale /
+      // p_terms_version / p_terms_locale. A drop resets the ACL, and this one is
+      // intentionally PUBLIC (lessons.md carve-out (a)) — so the failure mode is
+      // the mirror image of the staff RPCs above: not "silently re-opened" but
+      // "silently closed", which would take the entire booking funnel down.
+      const res = await anonClient().rpc("create_reservation_request", {
+        p_vehicle_id: MISSING_VEHICLE,
+        p_pickup: "2026-08-01",
+        p_return: "2026-08-05",
+        p_customer_name: "Grant Guard",
+        p_customer_email: "grant.guard@example.com",
+        p_customer_phone: "+48600000000",
+        p_terms_accepted: true,
+        p_company: null,
+        p_vat_id: null,
+        p_notes: null,
+        p_locale: "en",
+        p_terms_version: "v1",
+        p_terms_locale: "en",
       });
       expect(isPermissionDenied(res.error)).toBe(false);
     });

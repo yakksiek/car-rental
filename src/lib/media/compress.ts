@@ -26,6 +26,14 @@ const QUALITY = 0.8;
 const JPEG = "image/jpeg";
 
 /**
+ * A DIAGNOSTIC, not user copy, and deliberately not localized. Every caller
+ * catches this and paints its own localized state — the photo tile's `failed`
+ * treatment (`useProtocolMedia`) or the damage editor's own upload-failed message
+ * — so this string only ever reaches a developer's console.
+ */
+const PREPARE_FAILED = "Could not prepare the image";
+
+/**
  * Compress an image file to a JPEG blob, resized to `MAX_EDGE` on its long edge.
  *
  * HEIC input is converted first: Chrome, Firefox and Edge cannot draw a HEIC to
@@ -125,7 +133,7 @@ async function drawToJpeg(source: CanvasImageSource, width: number, height: numb
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      throw new Error("Nie udało się przygotować zdjęcia.");
+      throw new Error(PREPARE_FAILED);
     }
     ctx.drawImage(source, 0, 0, width, height);
     return asJpeg(await canvas.convertToBlob({ type: JPEG, quality: QUALITY }));
@@ -138,7 +146,7 @@ async function drawToJpeg(source: CanvasImageSource, width: number, height: numb
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    throw new Error("Nie udało się przygotować zdjęcia.");
+    throw new Error(PREPARE_FAILED);
   }
   ctx.drawImage(source, 0, 0, width, height);
 
@@ -148,7 +156,7 @@ async function drawToJpeg(source: CanvasImageSource, width: number, height: numb
         if (blob) {
           resolve(asJpeg(blob));
         } else {
-          reject(new Error("Nie udało się przygotować zdjęcia."));
+          reject(new Error(PREPARE_FAILED));
         }
       },
       JPEG,

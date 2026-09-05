@@ -18,14 +18,14 @@ import { listPendingReservations } from "../../../lib/services/reservations";
 // of it — the shell still MOUNTS <GlobalSearch> on this branch (mobile overlay),
 // it just does not claim ⌘K, which at desktop width would navigate away from a
 // part-filled form.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 const [pending, overdueCount] = await Promise.all([listPendingReservations(supabase), countOverdueReturns(supabase)]);
 ---
 
-<Layout title="Dodaj pojazd — Flota">
+<Layout title={`${t("dashboard.vehicleAddTitle")} — Flota`}>
   <StaffShell
     active="fleet"
-    title="Dodaj pojazd"
+    title={t("dashboard.vehicleAddTitle")}
     user={user}
     role={role}
     pendingCount={pending.length}
@@ -33,6 +33,6 @@ const [pending, overdueCount] = await Promise.all([listPendingReservations(supab
     showHeader={false}
     searchHotkey={false}
   >
-    <VehicleForm client:load mode="create" />
+    <VehicleForm client:load mode="create" locale={locale} />
   </StaffShell>
 </Layout>

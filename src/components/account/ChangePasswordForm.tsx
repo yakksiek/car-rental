@@ -8,6 +8,11 @@ import { PasswordToggle } from "../auth/PasswordToggle";
 import { SubmitButton } from "../auth/SubmitButton";
 import { ServerError } from "../auth/ServerError";
 
+// others
+import { auth } from "../../lib/i18n/auth";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
+
 interface Props {
   serverError?: string | null;
   // Server-rendered markup slotted into the <form> from password.astro — today
@@ -15,6 +20,8 @@ interface Props {
   // rather than inventing a second pattern; Astro renders it to static HTML
   // before hydration, so it is inert as far as this island is concerned.
   children?: ReactNode;
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
 }
 
 // In-session change-password form (S-11, design-contract D6 — no mockup; forks the
@@ -23,7 +30,8 @@ interface Props {
 // the current password is verified server-side — the checks here are only to spare
 // an obviously-doomed round-trip. Plain useState: three fields is a small form (RHF
 // is reserved for 8+ per lessons).
-export default function ChangePasswordForm({ serverError, children }: Props) {
+export default function ChangePasswordForm({ serverError, children, locale }: Props) {
+  const t = translator(locale, auth);
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -34,13 +42,13 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
   function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     const next: typeof errors = {};
     if (current.length === 0) {
-      next.current = "Podaj obecne hasło";
+      next.current = t("currentPasswordRequired");
     }
     if (password.length < 6) {
-      next.password = "Hasło musi mieć co najmniej 6 znaków";
+      next.password = t("passwordTooShort");
     }
     if (confirm !== password) {
-      next.confirm = "Hasła nie są takie same";
+      next.confirm = t("passwordMismatch");
     }
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -67,19 +75,20 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
       <div className="flex flex-col gap-3.5">
         <FormField
           id="current"
-          label="Obecne hasło"
+          label={t("currentPasswordLabel")}
           type={show.current ? "text" : "password"}
           value={current}
           onChange={(v) => {
             setCurrent(v);
             if (errors.current) setErrors((p) => ({ ...p, current: undefined }));
           }}
-          placeholder="Twoje obecne hasło"
+          placeholder={t("currentPasswordPlaceholder")}
           autoComplete="current-password"
           error={errors.current}
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.current}
               onToggle={() => {
                 setShow((p) => ({ ...p, current: !p.current }));
@@ -89,19 +98,20 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
         />
         <FormField
           id="password"
-          label="Nowe hasło"
+          label={t("newPasswordLabel")}
           type={show.password ? "text" : "password"}
           value={password}
           onChange={(v) => {
             setPassword(v);
             if (errors.password) setErrors((p) => ({ ...p, password: undefined }));
           }}
-          placeholder="Twoje nowe hasło"
+          placeholder={t("newPasswordPlaceholder")}
           autoComplete="new-password"
           error={errors.password}
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.password}
               onToggle={() => {
                 setShow((p) => ({ ...p, password: !p.password }));
@@ -111,19 +121,20 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
         />
         <FormField
           id="confirm"
-          label="Powtórz nowe hasło"
+          label={t("confirmNewPasswordLabel")}
           type={show.confirm ? "text" : "password"}
           value={confirm}
           onChange={(v) => {
             setConfirm(v);
             if (errors.confirm) setErrors((p) => ({ ...p, confirm: undefined }));
           }}
-          placeholder="Powtórz nowe hasło"
+          placeholder={t("confirmNewPasswordPlaceholder")}
           autoComplete="new-password"
           error={errors.confirm}
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={show.confirm}
               onToggle={() => {
                 setShow((p) => ({ ...p, confirm: !p.confirm }));
@@ -135,8 +146,8 @@ export default function ChangePasswordForm({ serverError, children }: Props) {
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText="Zapisywanie…" icon={<Check className="size-[17px]" />}>
-        Zmień hasło
+      <SubmitButton pending={submitting} pendingText={t("resetPending")} icon={<Check className="size-[17px]" />}>
+        {t("changePasswordSubmit")}
       </SubmitButton>
     </form>
   );

@@ -1,10 +1,46 @@
 // others
-import { estimatedTotal, formatDuration, formatPln, rejectionReasonLabelPl, rentalDays } from "../format";
+import { estimatedTotal, formatDuration, formatInteger, formatPln, plural, rentalDays } from "../format";
+import { email as emailCatalog } from "../i18n/email";
+import { rejectionReasonLabel } from "../i18n/reservation";
+import { translator } from "../i18n/types";
+import type { PluralForms } from "../format";
+import type { Locale } from "../i18n/types";
 import type { RejectionReason } from "../../types";
 import type { EmailContent } from "./index";
 
-// Polish transactional templates (S-02 + S-03). Each template is a pure function
-// returning EmailContent; the caller addresses and sends it via `sendEmail`.
+// The five transactional templates (S-02 + S-03 + S-05 + S-06). Each is a pure
+// function returning EmailContent; the caller addresses and sends it via
+// `sendEmail`. Copy lives in `../i18n/email.ts`.
+//
+// *** `locale` is a REQUIRED parameter on every one of them, and it is the
+// RESERVATION's, never the sender's session. *** This file carried an
+// `ARTIFACT_LOCALE = "pl"` constant through Phases 1-5 precisely so that the
+// day it became a parameter, no call site could quietly default it to whatever
+// language the employee happened to be reading. An employee working an English
+// cockpit accepting a Polish walk-in's request must still send Polish; the
+// resend path has no session at all. `reservations.locale` (Phase 1) is the
+// value, and the four RPCs that feed these callers return it (Phase 6).
+//
+// Free text is NEVER translated, only framed: `rejection_note` below renders
+// verbatim inside a localized `Details:` line, per the plan's frame decision 2.
+//
+// *** Every `{placeholder}` below is filled with a FUNCTION replacer, never a
+// string. *** `String.prototype.replace` reads `$&`, "$`", `$'` and `$1` as
+// substitution patterns inside a string replacement, so a value carrying one of
+// them gets re-interpreted instead of inserted. The customer types their own name
+// into the public booking form and nothing filters those characters: measured, a
+// customer called "Firma $` SA" received `Dzień dobry Firma Dzień dobry  SA,` —
+// the mail's own opening words spliced into their name. A function replacement
+// inserts the value literally, with no pattern syntax at all.
+//
+// Only `{name}` takes free text today; the reference numbers and counts are ours.
+// They are all converted anyway, so the next substitution added here inherits the
+// safe form rather than the trap.
+
+/** Bind the email copy to one artifact locale. */
+function copy(locale: Locale) {
+  return translator(locale, emailCatalog);
+}
 
 export interface ReservationReceivedParams {
   reference: string;
@@ -17,43 +53,47 @@ export interface ReservationReceivedParams {
   return: string;
   /** numeric-as-string quirk tolerated, like every money input. */
   dailyRate: string | number;
+  /** `reservations.locale` — the customer's language, captured at submission. */
+  locale: Locale;
 }
 
 /** Submit-confirmation email: reference, summary, and the status link. */
 export function reservationReceivedEmail(params: ReservationReceivedParams): EmailContent {
+  const { locale } = params;
+  const t = copy(locale);
   const days = rentalDays(params.pickup, params.return);
-  const total = formatPln(estimatedTotal(params.dailyRate, days));
-  const duration = formatDuration(days);
+  const total = formatPln(estimatedTotal(params.dailyRate, days), locale);
+  const duration = formatDuration(days, locale);
 
-  const subject = `FleetRent — zgłoszenie ${params.reference} przyjęte`;
+  const subject = t("receivedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    `Dziękujemy! Twoje zgłoszenie rezerwacji ${params.reference} zostało przyjęte.`,
+    t("receivedLead").replace("{ref}", () => params.reference),
     "",
-    `Pojazd: ${params.vehicle}`,
-    `Odbiór: ${params.pickup} od 14:00`,
-    `Zwrot: ${params.return} do 10:00`,
-    `Czas trwania: ${duration}`,
-    `Szacunkowa cena: ${total}`,
+    `${t("vehicle")}: ${params.vehicle}`,
+    `${t("pickup")}: ${params.pickup} ${t("pickupFrom")}`,
+    `${t("return")}: ${params.return} ${t("returnBy")}`,
+    `${t("duration")}: ${duration}`,
+    `${t("estimate")}: ${total}`,
     "",
-    "Status zgłoszenia sprawdzisz w każdej chwili pod adresem:",
+    t("receivedStatusLink"),
     params.statusUrl,
     "",
-    "Potwierdzimy dostępność e-mailem — zwykle w godzinę.",
-    "Bez płatności teraz.",
+    t("receivedConfirmSoon"),
+    t("receivedNoPayment"),
   ].join("\n");
 
   const html = [
-    `<p>Dziękujemy! Twoje zgłoszenie rezerwacji <strong>${params.reference}</strong> zostało przyjęte.</p>`,
+    `<p>${t("receivedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
-    `<li>Pojazd: ${params.vehicle}</li>`,
-    `<li>Odbiór: ${params.pickup} od 14:00</li>`,
-    `<li>Zwrot: ${params.return} do 10:00</li>`,
-    `<li>Czas trwania: ${duration}</li>`,
-    `<li>Szacunkowa cena: ${total}</li>`,
+    `<li>${t("vehicle")}: ${params.vehicle}</li>`,
+    `<li>${t("pickup")}: ${params.pickup} ${t("pickupFrom")}</li>`,
+    `<li>${t("return")}: ${params.return} ${t("returnBy")}</li>`,
+    `<li>${t("duration")}: ${duration}</li>`,
+    `<li>${t("estimate")}: ${total}</li>`,
     "</ul>",
-    `<p>Status zgłoszenia sprawdzisz w każdej chwili pod adresem:<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
-    "<p>Potwierdzimy dostępność e-mailem — zwykle w godzinę. Bez płatności teraz.</p>",
+    `<p>${t("receivedStatusLink")}<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
+    `<p>${t("receivedConfirmSoon")} ${t("receivedNoPayment")}</p>`,
   ].join("\n");
 
   return { subject, html, text };
@@ -75,45 +115,49 @@ export interface ReservationConfirmedParams {
   /** numeric-as-string quirk tolerated, like every money input. */
   dailyRate: string | number;
   deposit: string | number;
+  /** `reservations.locale`, off the deciding RPC's payload — not the employee's. */
+  locale: Locale;
 }
 
 /** Acceptance email: the booking is confirmed, with the pickup details + deposit. */
 export function reservationConfirmedEmail(params: ReservationConfirmedParams): EmailContent {
+  const { locale } = params;
+  const t = copy(locale);
   const days = rentalDays(params.pickup, params.return);
-  const total = formatPln(estimatedTotal(params.dailyRate, days));
-  const duration = formatDuration(days);
-  const deposit = formatPln(params.deposit);
+  const total = formatPln(estimatedTotal(params.dailyRate, days), locale);
+  const duration = formatDuration(days, locale);
+  const deposit = formatPln(params.deposit, locale);
 
-  const subject = `FleetRent — rezerwacja ${params.reference} potwierdzona`;
+  const subject = t("confirmedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    `Dobra wiadomość! Twoja rezerwacja ${params.reference} została potwierdzona.`,
+    t("confirmedLead").replace("{ref}", () => params.reference),
     "",
-    `Pojazd: ${params.vehicle}`,
-    `Odbiór: ${params.pickup} od 14:00`,
-    `Zwrot: ${params.return} do 10:00`,
-    `Czas trwania: ${duration}`,
-    `Szacunkowa cena: ${total}`,
-    `Kaucja: ${deposit}`,
+    `${t("vehicle")}: ${params.vehicle}`,
+    `${t("pickup")}: ${params.pickup} ${t("pickupFrom")}`,
+    `${t("return")}: ${params.return} ${t("returnBy")}`,
+    `${t("duration")}: ${duration}`,
+    `${t("estimate")}: ${total}`,
+    `${t("deposit")}: ${deposit}`,
     "",
-    "Szczegóły rezerwacji znajdziesz pod adresem:",
+    t("confirmedDetailsLink"),
     params.statusUrl,
     "",
-    "Do zobaczenia przy odbiorze!",
+    t("confirmedSeeYou"),
   ].join("\n");
 
   const html = [
-    `<p>Dobra wiadomość! Twoja rezerwacja <strong>${params.reference}</strong> została potwierdzona.</p>`,
+    `<p>${t("confirmedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
-    `<li>Pojazd: ${params.vehicle}</li>`,
-    `<li>Odbiór: ${params.pickup} od 14:00</li>`,
-    `<li>Zwrot: ${params.return} do 10:00</li>`,
-    `<li>Czas trwania: ${duration}</li>`,
-    `<li>Szacunkowa cena: ${total}</li>`,
-    `<li>Kaucja: ${deposit}</li>`,
+    `<li>${t("vehicle")}: ${params.vehicle}</li>`,
+    `<li>${t("pickup")}: ${params.pickup} ${t("pickupFrom")}</li>`,
+    `<li>${t("return")}: ${params.return} ${t("returnBy")}</li>`,
+    `<li>${t("duration")}: ${duration}</li>`,
+    `<li>${t("estimate")}: ${total}</li>`,
+    `<li>${t("deposit")}: ${deposit}</li>`,
     "</ul>",
-    `<p>Szczegóły rezerwacji znajdziesz pod adresem:<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
-    "<p>Do zobaczenia przy odbiorze!</p>",
+    `<p>${t("confirmedDetailsLink")}<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
+    `<p>${t("confirmedSeeYou")}</p>`,
   ].join("\n");
 
   return { subject, html, text };
@@ -125,41 +169,47 @@ export interface ReservationRejectedParams {
   statusUrl: string;
   /** Display name, e.g. `"Mercedes-Benz Sprinter (2022)"`. */
   vehicle: string;
-  /** The canned reason code; rendered as canonical Polish copy. */
+  /** The canned reason code; rendered as canonical copy in `locale`. */
   reason: RejectionReason;
   /** Optional free-text note (used when the reason is `other`). */
   note?: string | null;
+  /** `reservations.locale`, off the deciding RPC's payload — not the employee's. */
+  locale: Locale;
 }
 
 /** Rejection email: the request could not be confirmed, with the canned reason. */
 export function reservationRejectedEmail(params: ReservationRejectedParams): EmailContent {
-  const reasonLabel = rejectionReasonLabelPl(params.reason);
-  const noteLine = params.note ? `Szczegóły: ${params.note}` : null;
+  const { locale } = params;
+  const t = copy(locale);
+  const reasonLabel = rejectionReasonLabel(params.reason, locale);
+  // The employee's own words, rendered VERBATIM. Free text is never translated
+  // (frame decision 2) — only the `Details:` label around it localizes.
+  const noteLine = params.note ? `${t("details")}: ${params.note}` : null;
 
-  const subject = `FleetRent — wniosek ${params.reference} odrzucony`;
+  const subject = t("rejectedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    `Niestety nie mogliśmy potwierdzić Twojego wniosku ${params.reference}.`,
+    t("rejectedLead").replace("{ref}", () => params.reference),
     "",
-    `Pojazd: ${params.vehicle}`,
-    `Powód: ${reasonLabel}`,
+    `${t("vehicle")}: ${params.vehicle}`,
+    `${t("reason")}: ${reasonLabel}`,
     ...(noteLine ? [noteLine] : []),
     "",
-    "Zachęcamy do sprawdzenia innych pojazdów lub alternatywnych dat.",
+    t("rejectedSuggestion"),
     "",
-    "Status wniosku znajdziesz pod adresem:",
+    t("rejectedStatusLink"),
     params.statusUrl,
   ].join("\n");
 
   const html = [
-    `<p>Niestety nie mogliśmy potwierdzić Twojego wniosku <strong>${params.reference}</strong>.</p>`,
+    `<p>${t("rejectedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
-    `<li>Pojazd: ${params.vehicle}</li>`,
-    `<li>Powód: ${reasonLabel}</li>`,
+    `<li>${t("vehicle")}: ${params.vehicle}</li>`,
+    `<li>${t("reason")}: ${reasonLabel}</li>`,
     ...(noteLine ? [`<li>${noteLine}</li>`] : []),
     "</ul>",
-    "<p>Zachęcamy do sprawdzenia innych pojazdów lub alternatywnych dat.</p>",
-    `<p>Status wniosku znajdziesz pod adresem:<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
+    `<p>${t("rejectedSuggestion")}</p>`,
+    `<p>${t("rejectedStatusLink")}<br/><a href="${params.statusUrl}">${params.statusUrl}</a></p>`,
   ].join("\n");
 
   return { subject, html, text };
@@ -171,6 +221,11 @@ export function reservationRejectedEmail(params: ReservationRejectedParams): Ema
 // its PDF attachment are their ONLY copy of the evidence, possibly needed in a
 // dispute months later. So the mail carries no link into the app — the PDF is
 // the artifact, and the body is a human-readable summary of it.
+//
+// Its `locale` is the PROTOCOL's, not the reservation's: the mail describes an
+// already-rendered document and must be written in the language of the bytes it
+// attaches. The two agree at issue time and can only diverge if a reservation is
+// ever re-stamped, which nothing does today.
 // ---------------------------------------------------------------------------
 
 export interface ProtocolIssuedParams {
@@ -185,73 +240,89 @@ export interface ProtocolIssuedParams {
   fuelEighths: number;
   /** Number of damage items recorded at pickup (`0` reads as "no damage"). */
   damageCount: number;
+  /** `protocols.locale` — the language the attached PDF was rendered in. */
+  locale: Locale;
 }
 
 /** `3` → `"3/8"`, with the two ends named the way the form names them. */
-function fuelLabel(eighths: number): string {
+function fuelLabel(eighths: number, locale: Locale): string {
+  const t = copy(locale);
   if (eighths === 8) {
-    return "8/8 (pełny)";
+    return t("fuelFull");
   }
   if (eighths === 0) {
-    return "0/8 (pusty)";
+    return t("fuelEmpty");
   }
   return `${eighths}/8`;
 }
 
+// Plural noun forms live beside the selector that uses them, matching
+// `format.ts`'s DAY_FORMS and the PDF's PHOTO_FORMS: a four-armed CLDR set is
+// not a flat catalog string, and splitting it into one key per arm would hide
+// the shape `plural()` needs. The zero-case word IS a flat string, so it sits in
+// the catalog (`noDamage`) — it replaces the whole phrase rather than inflecting
+// it.
+const DAMAGE_ITEM_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "item", other: "items" },
+  pl: { one: "pozycja", few: "pozycje", many: "pozycji", other: "pozycji" },
+};
+
 /**
- * `0` → `"brak"`, otherwise the count with the Polish plural it takes:
- * 1 → `pozycja`, 2–4 → `pozycje`, everything else → `pozycji`, with the
- * 12–14 exception that makes the teens take the genitive plural.
+ * `0` → `none` / `brak`, otherwise the count with the plural form it takes —
+ * under `pl` 1 → `pozycja`, 2–4 → `pozycje`, the rest (teens included) →
+ * `pozycji`; under `en` simply `item` / `items`.
+ *
+ * The 12–14 exception used to be spelled out here in modular arithmetic, one of
+ * three copies in the repo. `Intl.PluralRules` supplies it now, via the shared
+ * `plural`; the words are the only thing this function still owns.
  */
-function damageLabel(count: number): string {
+function damageLabel(count: number, locale: Locale): string {
   if (count === 0) {
-    return "brak";
+    return copy(locale)("noDamage");
   }
-  if (count === 1) {
-    return "1 pozycja";
-  }
-  const lastTwo = count % 100;
-  const last = count % 10;
-  const few = last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14);
-  return `${count} ${few ? "pozycje" : "pozycji"}`;
+  return `${count} ${plural(count, locale, DAMAGE_ITEM_FORMS[locale])}`;
 }
 
 /** Handover email: the signed protocol, summarized, with the PDF attached. */
 export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent {
-  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
-  const fuel = fuelLabel(params.fuelEighths);
-  const damages = damageLabel(params.damageCount);
+  const { locale } = params;
+  const t = copy(locale);
+  const odometer = `${formatInteger(params.odometerKm, locale)} km`;
+  const fuel = fuelLabel(params.fuelEighths, locale);
+  const damages = damageLabel(params.damageCount, locale);
+  const greeting = t("greeting").replace("{name}", () => params.customerName);
+  const lead = t("issuedLead").replace("{ref}", () => params.reference);
 
-  const subject = `FleetRent — protokół wydania ${params.reference}`;
+  const subject = t("issuedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    `Dzień dobry, ${params.customerName}!`,
+    greeting,
     "",
-    `W załączniku przesyłamy podpisany protokół wydania pojazdu (${params.reference}).`,
+    lead,
     "",
-    `Pojazd: ${params.vehicle}`,
-    `Rejestracja: ${params.plate}`,
-    `Stan licznika: ${odometer}`,
-    `Poziom paliwa: ${fuel}`,
-    `Uszkodzenia zapisane przy wydaniu: ${damages}`,
+    `${t("vehicle")}: ${params.vehicle}`,
+    `${t("plate")}: ${params.plate}`,
+    `${t("odometer")}: ${odometer}`,
+    `${t("fuel")}: ${fuel}`,
+    `${t("issuedDamages")}: ${damages}`,
     "",
-    "Prosimy o zachowanie tego dokumentu — będzie podstawą porównania przy zwrocie pojazdu.",
+    t("issuedKeep"),
     "",
-    "Życzymy szerokiej drogi!",
+    t("issuedSafeTravels"),
   ].join("\n");
 
   const html = [
-    `<p>Dzień dobry, ${params.customerName}!</p>`,
-    `<p>W załączniku przesyłamy podpisany protokół wydania pojazdu (<strong>${params.reference}</strong>).</p>`,
+    `<p>${greeting}</p>`,
+    `<p>${t("issuedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
-    `<li>Pojazd: ${params.vehicle}</li>`,
-    `<li>Rejestracja: ${params.plate}</li>`,
-    `<li>Stan licznika: ${odometer}</li>`,
-    `<li>Poziom paliwa: ${fuel}</li>`,
-    `<li>Uszkodzenia zapisane przy wydaniu: ${damages}</li>`,
+    `<li>${t("vehicle")}: ${params.vehicle}</li>`,
+    `<li>${t("plate")}: ${params.plate}</li>`,
+    `<li>${t("odometer")}: ${odometer}</li>`,
+    `<li>${t("fuel")}: ${fuel}</li>`,
+    `<li>${t("issuedDamages")}: ${damages}</li>`,
     "</ul>",
-    "<p>Prosimy o zachowanie tego dokumentu — będzie podstawą porównania przy zwrocie pojazdu.</p>",
-    "<p>Życzymy szerokiej drogi!</p>",
+    `<p>${t("issuedKeep")}</p>`,
+    `<p>${t("issuedSafeTravels")}</p>`,
   ].join("\n");
 
   return { subject, html, text };
@@ -273,7 +344,7 @@ export interface ProtocolReturnedParams {
   vehicle: string;
   /** Registration plate, e.g. `"WX 5519M"`. */
   plate: string;
-  /** ISO `YYYY-MM-DD` rental window, for the body's "okres najmu" line. */
+  /** ISO `YYYY-MM-DD` rental window, for the body's "rental period" line. */
   pickup: string;
   return: string;
   /** Odometer at return, in km. */
@@ -286,71 +357,76 @@ export interface ProtocolReturnedParams {
   fuelDelta: number;
   /** Return damages with no baseline link — the "new damage" number. */
   newDamageCount: number;
+  /** `protocols.locale` — the language the attached PDF was rendered in. */
+  locale: Locale;
 }
 
-/** Signed km summary: `+1 228 km` / `−40 km` / `0 km` (pl-PL grouping). */
-function kmDrivenLabel(km: number): string {
+/** Signed km summary: `+1 228 km` / `−40 km` / `0 km`, grouped for the artifact locale. */
+function kmDrivenLabel(km: number, locale: Locale): string {
   const sign = km > 0 ? "+" : "";
-  return `${sign}${km.toLocaleString("pl-PL")} km`;
+  return `${sign}${formatInteger(km, locale)} km`;
 }
 
-/** Signed fuel-eighths change: `bez zmian` / `+2/8` / `−4/8` (a true minus, U+2212). */
-function fuelDeltaLabel(delta: number): string {
+/** Signed fuel-eighths change: `no change` / `+2/8` / `−4/8` (a true minus, U+2212). */
+function fuelDeltaLabel(delta: number, locale: Locale): string {
   if (delta === 0) {
-    return "bez zmian";
+    return copy(locale)("noChange");
   }
   return `${delta > 0 ? "+" : "−"}${Math.abs(delta)}/8`;
 }
 
 /** Return email: the signed return protocol, its comparison summarized, PDF attached. */
 export function protocolReturnedEmail(params: ProtocolReturnedParams): EmailContent {
-  const odometer = `${params.odometerKm.toLocaleString("pl-PL")} km`;
-  const fuel = fuelLabel(params.fuelEighths);
-  const kmDriven = kmDrivenLabel(params.kmDriven);
-  const fuelChange = fuelDeltaLabel(params.fuelDelta);
-  const newDamages = damageLabel(params.newDamageCount);
+  const { locale } = params;
+  const t = copy(locale);
+  const odometer = `${formatInteger(params.odometerKm, locale)} km`;
+  const fuel = fuelLabel(params.fuelEighths, locale);
+  const kmDriven = kmDrivenLabel(params.kmDriven, locale);
+  const fuelChange = fuelDeltaLabel(params.fuelDelta, locale);
+  const newDamages = damageLabel(params.newDamageCount, locale);
+  const greeting = t("greeting").replace("{name}", () => params.customerName);
 
-  const subject = `FleetRent — protokół zwrotu ${params.reference}`;
+  const subject = t("returnedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    `Dzień dobry, ${params.customerName}!`,
+    greeting,
     "",
-    `W załączniku przesyłamy podpisany protokół zwrotu pojazdu (${params.reference}).`,
+    t("returnedLead").replace("{ref}", () => params.reference),
     "",
-    `Pojazd: ${params.vehicle}`,
-    `Rejestracja: ${params.plate}`,
-    `Okres najmu: ${params.pickup} – ${params.return}`,
+    `${t("vehicle")}: ${params.vehicle}`,
+    `${t("plate")}: ${params.plate}`,
+    `${t("rentalPeriod")}: ${params.pickup} – ${params.return}`,
     "",
-    "Porównanie ze stanem wydania:",
-    `Przejechano: ${kmDriven}`,
-    `Zmiana paliwa: ${fuelChange}`,
-    `Nowe uszkodzenia: ${newDamages}`,
+    t("comparisonHeading"),
+    `${t("distanceDriven")}: ${kmDriven}`,
+    `${t("fuelChange")}: ${fuelChange}`,
+    `${t("newDamage")}: ${newDamages}`,
     "",
-    `Stan licznika przy zwrocie: ${odometer}`,
-    `Poziom paliwa przy zwrocie: ${fuel}`,
+    `${t("odometerAtReturn")}: ${odometer}`,
+    `${t("fuelAtReturn")}: ${fuel}`,
     "",
-    "Dziękujemy za skorzystanie z naszych usług!",
+    t("returnedThanks"),
   ].join("\n");
 
   const html = [
-    `<p>Dzień dobry, ${params.customerName}!</p>`,
-    `<p>W załączniku przesyłamy podpisany protokół zwrotu pojazdu (<strong>${params.reference}</strong>).</p>`,
+    `<p>${greeting}</p>`,
+    `<p>${t("returnedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
-    `<li>Pojazd: ${params.vehicle}</li>`,
-    `<li>Rejestracja: ${params.plate}</li>`,
-    `<li>Okres najmu: ${params.pickup} – ${params.return}</li>`,
+    `<li>${t("vehicle")}: ${params.vehicle}</li>`,
+    `<li>${t("plate")}: ${params.plate}</li>`,
+    `<li>${t("rentalPeriod")}: ${params.pickup} – ${params.return}</li>`,
     "</ul>",
-    "<p><strong>Porównanie ze stanem wydania:</strong></p>",
+    `<p><strong>${t("comparisonHeading")}</strong></p>`,
     "<ul>",
-    `<li>Przejechano: ${kmDriven}</li>`,
-    `<li>Zmiana paliwa: ${fuelChange}</li>`,
-    `<li>Nowe uszkodzenia: ${newDamages}</li>`,
+    `<li>${t("distanceDriven")}: ${kmDriven}</li>`,
+    `<li>${t("fuelChange")}: ${fuelChange}</li>`,
+    `<li>${t("newDamage")}: ${newDamages}</li>`,
     "</ul>",
     "<ul>",
-    `<li>Stan licznika przy zwrocie: ${odometer}</li>`,
-    `<li>Poziom paliwa przy zwrocie: ${fuel}</li>`,
+    `<li>${t("odometerAtReturn")}: ${odometer}</li>`,
+    `<li>${t("fuelAtReturn")}: ${fuel}</li>`,
     "</ul>",
-    "<p>Dziękujemy za skorzystanie z naszych usług!</p>",
+    `<p>${t("returnedThanks")}</p>`,
   ].join("\n");
 
   return { subject, html, text };

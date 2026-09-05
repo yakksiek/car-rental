@@ -4,6 +4,7 @@ import NavIcon from "./NavIcon.astro";
 import Brand from "../brand/Brand.astro";
 import GlobalSearch from "../search/GlobalSearch";
 import QuickAddButton from "../dashboard/QuickAddButton";
+import LangRow from "./LangRow";
 
 // others
 import type { AppRole } from "../../types";
@@ -14,8 +15,15 @@ import { countReturnsDueToday } from "../../lib/services/protocols";
 // a left sidebar with a user chip at md+, a floating dark tab bar below md —
 // wrapping every staff page so the queue and calendar are reachable without
 // bouncing through /dashboard. Source: design `staff-desktop.jsx` StaffShell +
-// `shared.jsx` TabBar. Profil (S-11) hangs off the account chip and a mobile
-// tab rather than the Operacje nav list — matching the design.
+// `shared.jsx` TabBar. Profile (S-11) hangs off the account chip and a mobile
+// tab rather than the Operations nav list — matching the design.
+//
+// *** The nav labels are the phase's least visible translation work. *** Of
+// `Pulpit` / `Wnioski` / `Wydania` / `Zwroty` / `Kalendarz` / `Flota` /
+// `Operacje` / `Profil` / `Wyloguj`, not one carries a diacritic (only `Zespół`
+// does), so a diacritic sweep finds almost none of them — they are enumerated in
+// `i18n/staff.ts` instead. `navFleet` becomes "Fleet" while the wordmark above
+// stays "Flota".
 
 interface Props {
   active: "dash" | "requests" | "pickups" | "returns" | "cal" | "fleet" | "staff" | "me";
@@ -70,7 +78,9 @@ const {
   autoOpen = false,
   searchHotkey = true,
 } = Astro.props;
-const { initials, displayName, roleLabel } = staffIdentity(user?.email, role);
+// Read before `staffIdentity`, which now needs the locale for its role label.
+const { isDemo, locale, t } = Astro.locals;
+const { initials, displayName, roleLabel } = staffIdentity(user?.email, role, locale);
 
 // The search dropdown's third quick-jump ("Dzisiejsze zwroty") needs a count no
 // page currently threads. It is read HERE rather than added to all 10 staff pages'
@@ -89,7 +99,10 @@ const dueTodayCount = await countReturnsDueToday(Astro.locals.supabase, today);
 //
 // `staff.astro` still passes `isDemo` explicitly to <StaffList>, because that is
 // a page-owned island the shell does not mount.
-const isDemo = Astro.locals.isDemo;
+
+// "Put me back where I was" after a locale switch; re-validated server-side by
+// `safeInternalPath`. The query string rides along so a filtered list survives.
+const localeRedirect = Astro.url.pathname + Astro.url.search;
 
 // Shared so the two <GlobalSearch> call sites below cannot drift. The island is mounted
 // on all 10 pages whether or not the band draws — it owns the ⌘K listener and the mobile
@@ -102,28 +115,29 @@ const searchProps = {
   field: search,
   autoOpen,
   hotkey: searchHotkey,
+  locale,
 };
 
 type IconName = "home" | "list" | "calendar" | "truck" | "key" | "return" | "users" | "user";
 // Deep-link "Zwroty" straight to the overdue filter when vehicles are overdue, so
 // the badge and the tap land on the same view (S-07 deviation(deep-link)).
 const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; badge?: number }[] = [
-  { id: "dash", href: "/dashboard", label: "Pulpit", icon: "home" },
-  { id: "requests", href: "/dashboard/reservations", label: "Wnioski", icon: "list", badge: pendingCount },
-  { id: "pickups", href: "/dashboard/pickups", label: "Wydania", icon: "key" },
+  { id: "dash", href: "/dashboard", label: t("staff.navDash"), icon: "home" },
+  { id: "requests", href: "/dashboard/reservations", label: t("staff.navRequests"), icon: "list", badge: pendingCount },
+  { id: "pickups", href: "/dashboard/pickups", label: t("staff.navPickups"), icon: "key" },
   {
     id: "returns",
     href: `/dashboard/returns${overdueCount > 0 ? "?filter=overdue" : ""}`,
-    label: "Zwroty",
+    label: t("staff.navReturns"),
     icon: "return",
     badge: overdueCount,
   },
-  { id: "cal", href: "/dashboard/calendar", label: "Kalendarz", icon: "calendar" },
-  { id: "fleet", href: "/dashboard/vehicles", label: "Flota", icon: "truck" },
-  // Admin-only "Zespół" tab (S-08) — the first role-gated nav entry. Rendered
+  { id: "cal", href: "/dashboard/calendar", label: t("staff.navCalendar"), icon: "calendar" },
+  { id: "fleet", href: "/dashboard/vehicles", label: t("staff.navFleet"), icon: "truck" },
+  // Admin-only team tab (S-08) — the first role-gated nav entry. Rendered
   // only for an admin; absent for a plain employee.
   ...(role === "admin"
-    ? [{ id: "staff" as const, href: "/dashboard/staff", label: "Zespół", icon: "users" as const }]
+    ? [{ id: "staff" as const, href: "/dashboard/staff", label: t("staff.navTeam"), icon: "users" as const }]
     : []),
 ];
 ---
@@ -150,7 +164,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     <div
       class="text-muted-foreground hidden px-2.5 pt-3 pb-1.5 text-[10px] font-bold tracking-wider uppercase lg:block"
     >
-      Operacje
+      {t("staff.sectionOperations")}
     </div>
     <nav class="flex w-full flex-col gap-0.5 md:items-center lg:items-stretch">
       {
@@ -192,16 +206,25 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
 
     <div class="mt-auto w-full">
       {
+        /* The locale row is the FIRST child of the mt-auto block, above the user
+        chip — the one part of the staff chrome with slack (design `SidebarLangRow`;
+        the top band cannot hold it, see the note on <LangRow>). Mobile gets no
+        chrome control: the tab bar below is already at 8 items = 360px on a 360px
+        viewport, so the preference lives on /dashboard/account instead. */
+      }
+      <LangRow client:idle variant="sidebar" locale={locale} redirect={localeRedirect} />
+
+      {
         /* The chip is the desktop entry point to Profil (S-11) — the design reaches
         the account screen from here rather than from an Operacje nav row. */
       }
       <a
         href="/dashboard/account"
         aria-current={active === "me" ? "page" : undefined}
-        aria-label={`Profil — ${displayName}`}
-        title="Profil"
+        aria-label={`${t("staff.profile")} — ${displayName}`}
+        title={t("staff.profile")}
         class:list={[
-          "flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
+          "mt-2 flex items-center rounded-lg transition-colors md:justify-center md:p-0 lg:justify-start lg:gap-2.5 lg:p-3",
           active === "me"
             ? "bg-background ring-foreground/15 ring-2"
             : "bg-background lg:bg-background md:hover:bg-background md:bg-transparent",
@@ -214,13 +237,24 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         </span>
         <span class="hidden min-w-0 flex-1 lg:block">
           <span class="text-foreground block truncate text-[12px] font-[650] tracking-tight">{displayName}</span>
-          <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · Warszawa</span>
+          <span class="text-muted-foreground block text-[10.5px]">{roleLabel} · {t("staff.depot")}</span>
         </span>
       </a>
-      <form method="POST" action="/api/auth/signout" class="mt-2 w-full" data-signout>
+      {
+        /* The pending label rides a `data-` attribute rather than `define:vars`:
+          that directive makes the script INLINE, which would ship the TypeScript
+          below to the browser unprocessed. */
+      }
+      <form
+        method="POST"
+        action="/api/auth/signout"
+        class="mt-2 w-full"
+        data-signout
+        data-signing-out={t("staff.signingOut")}
+      >
         <button
           type="submit"
-          aria-label="Wyloguj"
+          aria-label={t("staff.signOut")}
           class="text-muted-foreground hover:text-foreground hover:bg-background flex items-center justify-center rounded-[10px] text-xs font-medium transition-colors disabled:opacity-60 md:mx-auto md:size-11 lg:w-full lg:py-2"
         >
           <svg
@@ -235,7 +269,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           >
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path>
           </svg>
-          <span class="hidden lg:inline">Wyloguj</span>
+          <span class="hidden lg:inline">{t("staff.signOut")}</span>
         </button>
       </form>
     </div>
@@ -276,7 +310,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
           <div class="flex min-w-0 items-center justify-end gap-3">
             <GlobalSearch client:load {...searchProps} />
             <slot name="header-actions" />
-            <QuickAddButton client:load mode="desktop" promoted={promotedAction} isDemo={isDemo} />
+            <QuickAddButton client:load mode="desktop" promoted={promotedAction} isDemo={isDemo} locale={locale} />
           </div>
         </header>
       ) : (
@@ -338,7 +372,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
     <a
       href="/dashboard/account"
       aria-current={active === "me" ? "page" : undefined}
-      aria-label="Profil"
+      aria-label={t("staff.profile")}
       class:list={[
         // `shrink-0` for the same reason as the NAV items above — without it this
         // is the pill's ONLY shrinkable child, so at the 360px floor it absorbs
@@ -365,7 +399,7 @@ const NAV: { id: Props["active"]; href: string; label: string; icon: IconName; b
         const btn = form.querySelector<HTMLButtonElement>("button[type='submit']");
         if (!btn) return;
         btn.disabled = true;
-        btn.textContent = "Wylogowywanie…";
+        btn.textContent = form.dataset.signingOut ?? "";
       });
     });
   }

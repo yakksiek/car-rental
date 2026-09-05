@@ -4,16 +4,18 @@ import CategoryIcon from "../vehicle/CategoryIcon.astro";
 
 // others
 import type { VehicleCategory } from "../../types";
-import { categoryLabelPl } from "../../lib/format";
+import { categoryLabel } from "../../lib/i18n/vehicle";
 
 // Category selector (S7) — five click-to-route pills into `/fleet?category=<cat>`.
 // Stateless: no active/selected pill — every pill renders in the default state with a
 // hover treatment (the live design's DesktopTypeExplorer renders all pills active={false}).
-// Crimson belongs only to the "Cała flota" CTA, never to a pill.
-// The "see-all" CTA is a crimson `Cała flota` (dark inner arrow-disc), matching the
+// Crimson belongs only to the "all vehicles" CTA, never to a pill.
+// The "see-all" CTA is a crimson `landing.typesAllCta` (dark inner arrow-disc), matching the
 // live design: it is the LAST child of the pill row on every breakpoint — overhanging
 // into the bordered container's padding on desktop, after the wrapped pills on
 // tablet/mobile. Mobile pills WRAP (design `flexWrap:'wrap'`), not horizontal-scroll.
+
+const { locale, t } = Astro.locals;
 
 const CATEGORIES: VehicleCategory[] = [
   "cargo_van",
@@ -26,7 +28,7 @@ const CATEGORIES: VehicleCategory[] = [
 
 <section class="max-w-app mx-auto px-5 pt-16 pb-8 sm:px-8">
   <h2 class="text-foreground mb-6 font-serif text-[28px] leading-none md:text-[32px] xl:text-[44px]">
-    Wybierz typ pojazdu<span class="text-primary">.</span>
+    {t("landing.typesTitle")}<span class="text-primary">.</span>
   </h2>
 
   <div
@@ -42,7 +44,7 @@ const CATEGORIES: VehicleCategory[] = [
             category={category}
             class:list={[category === "car_transporter" && "md:size-[20px]", "text-[var(--flota-ink-2)]"]}
           />
-          {categoryLabelPl(category)}
+          {categoryLabel(category, locale)}
         </a>
       ))
     }
@@ -50,7 +52,9 @@ const CATEGORIES: VehicleCategory[] = [
       href="/fleet"
       class="bg-primary inline-flex shrink-0 items-center gap-2.5 rounded-full py-2 pr-2 pl-[18px] whitespace-nowrap [box-shadow:0_6px_18px_-4px_rgba(180,54,56,0.42)] transition hover:[box-shadow:0_10px_24px_-5px_rgba(180,54,56,0.52)] xl:-my-[11px] xl:-mr-1 xl:ml-1 xl:gap-[11px] xl:py-2.5 xl:pr-2 xl:pl-5"
     >
-      <span class="text-[14px] font-semibold tracking-[-0.1px] text-white xl:text-[14.5px]">Cała flota</span>
+      <span class="text-[14px] font-semibold tracking-[-0.1px] text-white xl:text-[14.5px]"
+        >{t("landing.typesAllCta")}</span
+      >
       <span
         class="inline-flex size-7 items-center justify-center rounded-full bg-[var(--flota-ink-deep)] xl:size-[30px]"
       >

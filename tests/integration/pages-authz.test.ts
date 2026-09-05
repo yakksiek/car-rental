@@ -26,12 +26,16 @@ const onRequest = rawOnRequest as unknown as PageMiddleware;
 // same `user = null`, so the redirect behaviour asserted here is identical.
 
 /** Minimal APIContext the middleware reads: url + request + cookies + locals + redirect. */
-function pageContext(pathname: string): APIContext {
+function pageContext(pathname: string, cookies: Record<string, string> = {}): APIContext {
   const url = new URL(pathname, "http://localhost:4321");
   return {
     request: new Request(url),
     url,
-    cookies: {},
+    // `get` returns Astro's `{ value }` shape, or undefined for an unset cookie.
+    // Middleware reads the `locale` cookie through it (english-localization).
+    cookies: {
+      get: (name: string) => (name in cookies ? { value: cookies[name] } : undefined),
+    },
     locals: {},
     redirect: (location: string) => new Response(null, { status: 302, headers: { location } }),
   } as unknown as APIContext;

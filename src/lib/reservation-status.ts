@@ -1,12 +1,15 @@
 // others
 import type { ReservationStatus } from "../types";
+import { booking } from "./i18n/booking";
+import { translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
 
-// Pure model for the status page's "CO DALEJ" stepper (S-02). One canonical
+// Pure model for the status page's "what happens next" stepper (S-02). One canonical
 // ordered step list; `stepperFor` marks each step done/current/upcoming for a
 // reservation status. No I/O — this is the model S-03 (confirm/reject) and the
-// later pickup/return slices extend. Polish labels + descriptions are canonical
-// (design screens 06 / mobile-4 / desktop-3 give each step a one-line muted
-// explanation under its bold title).
+// later pickup/return slices extend. Labels + descriptions come from the
+// `booking` namespace (design screens 06 / mobile-4 / desktop-3 give each step a
+// one-line muted explanation under its bold title).
 //
 // The happy path is linear: the request waits for acceptance, the decision
 // arrives by email, then the pickup (a later-slice placeholder, always greyed
@@ -27,36 +30,20 @@ export interface Step {
   state: StepState;
 }
 
-const COPY = {
-  pending: {
-    label: "Oczekuje na akceptację",
-    description: "Pracownik sprawdza Twoje zgłoszenie, zwykle w ciągu kilku godzin.",
-    icon: "clock",
-  },
-  decision: {
-    label: "Potwierdzenie e-mailem",
-    description: "Otrzymasz potwierdzenie (lub propozycję innych dat) e-mailem.",
-    icon: "chat",
-  },
-  pickup: {
-    label: "Odbiór",
-    description: "Zabierz dowód osobisty i prawo jazdy, aby odebrać pojazd.",
-    icon: "key",
-  },
-  rejected: {
-    label: "Odrzucone",
-    description: "Niestety nie możemy potwierdzić tego terminu. Wyślij zgłoszenie na inne daty.",
-    icon: "x",
-  },
-  cancelled: {
-    label: "Anulowane",
-    description: "Zgłoszenie zostało anulowane.",
-    icon: "x",
-  },
-} as const;
+function copyFor(locale: Locale) {
+  const t = translator(locale, booking);
+  return {
+    pending: { label: t("stepPendingLabel"), description: t("stepPendingDesc"), icon: "clock" },
+    decision: { label: t("stepDecisionLabel"), description: t("stepDecisionDesc"), icon: "chat" },
+    pickup: { label: t("stepPickupLabel"), description: t("stepPickupDesc"), icon: "key" },
+    rejected: { label: t("stepRejectedLabel"), description: t("stepRejectedDesc"), icon: "x" },
+    cancelled: { label: t("stepCancelledLabel"), description: t("stepCancelledDesc"), icon: "x" },
+  } as const;
+}
 
-/** Ordered stepper for a reservation status, Polish copy included. */
-export function stepperFor(status: ReservationStatus): Step[] {
+/** Ordered stepper for a reservation status, with its copy in `locale`. */
+export function stepperFor(status: ReservationStatus, locale: Locale): Step[] {
+  const COPY = copyFor(locale);
   switch (status) {
     case "pending":
       return [

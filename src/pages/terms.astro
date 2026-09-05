@@ -1,0 +1,133 @@
+---
+// components
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import InfoIcon from "../components/icons/InfoIcon.astro";
+
+// others
+import { TERMS_VERSION } from "../lib/reservation-schema";
+
+// Regulamin wynajmu — the document `ReservationForm`'s checkbox has always asked
+// customers to accept and which did not exist anywhere in the repo until now:
+// no route, no page, not even a link (frame decision 4). Under "literally
+// everything English" writing it was a prerequisite, not a translation task.
+//
+// *** The body is SAMPLE TEXT and the page says so in a banner. *** The decision
+// was to make the gap VISIBLE rather than hidden, so a plausible-looking terms
+// page with no warning would defeat the point — see `src/lib/i18n/terms.ts`.
+//
+// No design mockup exists for this route (it is a gap-filler, not a designed
+// surface), so it is built from the info-page shell the canonical `/faq` and
+// `/about` screens ship: the same hero band metrics, the same 1180px body, the
+// same dark CTA. That keeps it inside the design system without inventing one.
+//
+// Deliberately NOT in the header nav or the footer columns: both are
+// design-contract'd compositions, and this page's audience is the customer
+// standing at the checkbox, who arrives from there.
+//
+// `TERMS_VERSION` is rendered here AND stamped onto every reservation
+// (`src/pages/api/reservations.ts`). Bump it in `reservation-schema.ts` whenever
+// the copy in `i18n/terms.ts` changes, or a stored consent starts pointing at
+// text the customer never saw.
+const { t } = Astro.locals;
+
+// Section title/body pairs, in display order — the same positional-key idiom
+// `/faq` uses for its accordion. The ORDER is the contract: the numbering lives
+// in the copy itself, so re-ordering these means re-numbering the strings.
+const sections: [title: string, body: string][] = ([1, 2, 3, 4, 5, 6, 7] as const).map((n) => [
+  t(`terms.s${n}Title`),
+  t(`terms.s${n}Body`),
+]);
+---
+
+<Layout title={t("terms.title")}>
+  <SiteHeader />
+
+  <main>
+    <!-- Hero -->
+    <div
+      class="bg-card border-b border-[var(--flota-hair-2)] px-[22px] pt-[30px] pb-[34px] sm:px-[48px] sm:pt-[58px] sm:pb-[62px]"
+    >
+      <div class="mx-auto max-w-[1180px]">
+        <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
+          <span class="bg-primary size-1.5 rounded-full"></span>
+          {t("terms.eyebrow")}
+        </div>
+        <h1
+          class="text-foreground mt-4 text-[34px] leading-[1.02] font-bold tracking-[-1px] text-balance sm:text-[54px] sm:tracking-[-1.8px]"
+        >
+          {t("terms.heading")}
+        </h1>
+        <p class="mt-4 max-w-[680px] text-[15px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[18px]">
+          {t("terms.lead")}
+        </p>
+        <div class="text-muted-foreground mt-4 font-mono text-[12px] tracking-[0.5px]">
+          {t("terms.versionLabel")}
+          {TERMS_VERSION}
+        </div>
+      </div>
+    </div>
+
+    <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
+      <!-- Placeholder warning. Deliberately the first thing under the hero and
+           deliberately loud: the whole point of writing this page was to make the
+           missing document visible. -->
+      <div
+        class="flex flex-col gap-3 rounded-[16px] border border-[var(--flota-warning)] bg-[var(--flota-warning-soft)] p-[22px] sm:flex-row sm:gap-4 sm:p-7"
+      >
+        <div class="shrink-0">
+          <InfoIcon name="shield" size={22} color="var(--flota-warning)" />
+        </div>
+        <div class="max-w-[820px]">
+          <div class="text-foreground text-[17px] font-bold tracking-[-0.3px] sm:text-[19px]">
+            {t("terms.noticeTitle")}
+          </div>
+          <p class="mt-2 text-[14px] leading-[1.6] text-[var(--flota-ink-2)] sm:text-[15px]">
+            {t("terms.noticeBody")}
+          </p>
+        </div>
+      </div>
+
+      <!-- Sections. Each carries the sample tag so the warning above travels with
+           the reader instead of scrolling out of sight. -->
+      <div class="mt-[30px] flex flex-col gap-7 sm:mt-[46px] sm:gap-9">
+        {
+          sections.map(([title, body]) => (
+            <section class="max-w-[820px]">
+              <div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-foreground text-[19px] font-bold tracking-[-0.4px] sm:text-[22px]">{title}</h2>
+                <span class="rounded-[var(--flota-radius-pill)] bg-[var(--flota-warning-soft)] px-2.5 py-1 text-[10.5px] font-bold tracking-[0.6px] text-[var(--flota-warning)] uppercase">
+                  {t("terms.sampleTag")}
+                </span>
+              </div>
+              <p class="mt-2.5 text-[14.5px] leading-[1.65] text-[var(--flota-ink-2)] sm:text-[15.5px]">{body}</p>
+            </section>
+          ))
+        }
+      </div>
+
+      <!-- CTA banner (same treatment as /faq). -->
+      <div
+        class="bg-ink-deep mt-[30px] flex flex-col items-start justify-between gap-4 rounded-[20px] p-[22px] sm:mt-[46px] sm:flex-row sm:items-center sm:px-8 sm:py-7"
+      >
+        <div class="max-w-[680px] text-[14px] leading-[1.55] text-white/70 sm:text-[15px]">
+          {t("terms.footNote")}
+        </div>
+        <div class="flex shrink-0 gap-2.5">
+          <a
+            href="tel:+48221002030"
+            class="text-ink-deep inline-flex h-[46px] items-center gap-2 rounded-[12px] bg-white px-5 text-[14.5px] font-bold"
+          >
+            <InfoIcon name="phone" size={16} color="var(--flota-ink-deep)" />
+            {t("terms.contactCta")}
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-9 sm:h-[60px]"></div>
+  </main>
+
+  <SiteFooter />
+</Layout>

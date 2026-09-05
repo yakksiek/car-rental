@@ -85,6 +85,9 @@ function body(overrides: Record<string, unknown> = {}) {
     signedAt: new Date("2026-07-17T10:08:00Z").toISOString(),
     signaturePath: `return/${RETURN_PROTOCOL_ID}/signature.png`,
     photos: photos(RETURN_PROTOCOL_ID),
+    // The language the client rendered the PDF in. R-0002 is the seeded ENGLISH
+    // reservation, so its return document — and the mail carrying it — are English.
+    locale: "en",
     damages: [
       {
         id: DAMAGE_ID,
@@ -254,6 +257,7 @@ describe("return protocol API (S-06 Phase 4)", () => {
           protocolId: OTHER_RETURN_ID,
           signaturePath: `return/${OTHER_RETURN_ID}/signature.png`,
           photos: photos(OTHER_RETURN_ID),
+          locale: "en",
           damages: [],
         }),
       );
@@ -288,8 +292,9 @@ describe("return protocol API (S-06 Phase 4)", () => {
       expect(message.attachments?.[0].path).toContain(PDF_PATH);
       expect(message.attachments?.[0].filename).toMatch(/\.pdf$/);
       // The RETURN template was selected off the row's `type` — the whole point of
-      // the type-aware resend. Diacritics survive the send path.
-      expect(message.subject).toContain("protokół zwrotu");
+      // the type-aware resend — and rendered in the DOCUMENT's language. R-0002 is
+      // the seeded ENGLISH reservation, so the English subject IS the assertion.
+      expect(message.subject).toBe("Flota — return protocol R-0002");
 
       const rows = await deliveries();
       expect(rows).toHaveLength(1);

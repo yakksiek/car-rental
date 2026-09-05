@@ -1,4 +1,5 @@
 // others
+import type { Locale } from "../../lib/i18n/types";
 import type { ProtocolDamageType, ReturnBaselineDamage } from "../../types";
 
 // Shared props for the issue-protocol island (S-05 Phase 5).
@@ -20,6 +21,18 @@ export interface ProtocolContext {
   pickupTime: string;
   /** Newest odometer reading across any protocol for this vehicle — a soft-warning baseline, never a block. */
   lastOdometerKm: number | null;
+  /**
+   * The CUSTOMER's language (`reservations.locale`) — what the PDF is rendered
+   * in and what gets stamped onto `protocols.locale`.
+   *
+   * *** Named `documentLocale`, not `locale`, on purpose. *** The island already
+   * takes a `locale` prop, and that one is the EMPLOYEE's session: it decides
+   * what language the form's own chrome is in. The two are independent by
+   * design — an English cockpit issuing a Polish customer's protocol is the case
+   * this whole column exists for — so they must not be one word apart at the
+   * call site that feeds both.
+   */
+  documentLocale: Locale;
 }
 
 /** One photo tile's lifecycle. `failed` is retryable; the whole tile becomes the retry button. */
@@ -66,4 +79,6 @@ export interface ReturnProtocolContext {
   baselineFuelEighths: number;
   /** The issue-time damage list the return shows read-only and the auto-tagger diffs against. */
   baselineDamages: ReturnBaselineDamage[];
+  /** The customer's language — see `ProtocolContext.documentLocale` for why it is not called `locale`. */
+  documentLocale: Locale;
 }

@@ -98,7 +98,7 @@ export function useProtocolMedia({
   // Teardown mirror of `previews`: object URLs live until revoked or document
   // unload, so we revoke each on unmount (and when a recaptured slot replaces it).
   const previewUrls = React.useRef<Record<string, string>>({});
-  // The last file picked per slot, so `Ponów` replays it without a second picker.
+  // The last file picked per slot, so the retry tile replays it without a second picker.
   const retryFiles = React.useRef(new Map<ProtocolPhotoSlot, File>());
   const [tiles, setTiles] = React.useState<Record<string, TileState>>({});
 
@@ -144,7 +144,7 @@ export function useProtocolMedia({
         onPhotoUploaded(slot, path);
         setTiles((prev) => ({ ...prev, [slot]: { state: "done", pct: 100 } }));
       } catch (err) {
-        // The tile paints its `failed` / `Ponów` state; the employee retries.
+        // The tile paints its `failed` / retry state; the employee retries.
         // Surface the cause: a silent `catch {}` here is what made a broken photo
         // upload (e.g. a `createImageBitmap` allocation failure on a no-GPU Chrome)
         // impossible to diagnose from the tile alone.
@@ -194,7 +194,7 @@ export function useProtocolMedia({
   // ── Signature ───────────────────────────────────────────────────────────────
 
   // Bumped on clear/re-sign. The signature upload is async; if the customer taps
-  // `Wyczyść` while a sign is still uploading, its resolve must not re-stamp
+  // the clear action while a sign is still uploading, its resolve must not re-stamp
   // `signed_at` onto a now-empty pad. Each sign captures the current token and
   // drops itself if the token moved before it finished.
   const signSeq = React.useRef(0);
@@ -225,7 +225,10 @@ export function useProtocolMedia({
   const bytesOf = React.useCallback(async (path: string): Promise<Uint8Array> => {
     const blob = blobs.current.get(path);
     if (!blob) {
-      throw new Error(`Brak pliku w pamięci: ${path}`);
+      // A DIAGNOSTIC, not user copy, and deliberately not localized:
+      // `finalizeProtocol`'s bare `catch` swallows it and answers with the `pdf`
+      // overlay, so this string only ever reaches a developer's console.
+      throw new Error(`No cached blob for ${path}`);
     }
     return new Uint8Array(await blob.arrayBuffer());
   }, []);

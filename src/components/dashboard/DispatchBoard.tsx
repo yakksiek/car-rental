@@ -11,6 +11,8 @@ import DispatchSchedule, { MobileScheduleSection, MobileSection, toPickupItem, t
 import { cn } from "../../lib/utils";
 import { isSectionVisible } from "../../lib/dispatch-board";
 import type { DayCounts, ScheduleGroups, SectionKey } from "../../lib/dispatch-board";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 import type { PendingReservation } from "../../types";
 
 // The dispatch cockpit's single island. It owns both breakpoints so the compact
@@ -31,16 +33,23 @@ export interface DispatchBoardProps {
   today: string;
   // Seeded server-side from `?section` (parsed in dashboard.astro) so a deep-link
   // renders pre-filtered with no hydration flash — a client-only `window.location`
-  // read would differ from the SSR'd HTML. `wszystko` = all sections.
+  // read would differ from the SSR'd HTML. `all` = every section.
   initialSection?: SectionKey;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
-/** The four mobile chips, in order; the fill is per-chip tone (design-contract §F). */
-const CHIPS: { key: SectionKey; label: string; selectedFill: string }[] = [
-  { key: "wszystko", label: "Wszystko", selectedFill: "bg-foreground" },
-  { key: "wydania", label: "Wydania", selectedFill: "bg-primary" },
-  { key: "zwroty", label: "Zwroty", selectedFill: "bg-foreground" },
-  { key: "wnioski", label: "Wnioski", selectedFill: "bg-warning" },
+// The four mobile chips, in order; the fill is per-chip tone (design-contract §F).
+//
+// The `SectionKey`s are the `?section` URL parameter's values, not copy — the URL
+// must NOT vary by locale, so they stay fixed English tokens in both. (They were
+// Polish until Phase 5; the rename is a one-time correction, not a translation.)
+// Only `labelKey` is copy.
+const CHIPS: { key: SectionKey; labelKey: keyof typeof staff.en; selectedFill: string }[] = [
+  { key: "all", labelKey: "chipAll", selectedFill: "bg-foreground" },
+  { key: "pickups", labelKey: "navPickups", selectedFill: "bg-primary" },
+  { key: "returns", labelKey: "navReturns", selectedFill: "bg-foreground" },
+  { key: "requests", labelKey: "navRequests", selectedFill: "bg-warning" },
 ];
 
 /** One chip: a white card pill unselected, a tone fill with white text selected. */
@@ -85,8 +94,10 @@ export default function DispatchBoard({
   counts,
   groups,
   today,
-  initialSection = "wszystko",
+  initialSection = "all",
+  locale,
 }: DispatchBoardProps) {
+  const t = translator(locale, staff);
   const [section, setSection] = React.useState<SectionKey>(initialSection);
 
   // Mirror the active chip into `?section` — `history.replaceState`, not a
@@ -95,7 +106,7 @@ export default function DispatchBoard({
   const selectSection = React.useCallback((next: SectionKey) => {
     setSection(next);
     const url = new URL(window.location.href);
-    if (next === "wszystko") {
+    if (next === "all") {
       url.searchParams.delete("section");
     } else {
       url.searchParams.set("section", next);
@@ -104,17 +115,17 @@ export default function DispatchBoard({
   }, []);
 
   const chipCounts: Record<SectionKey, number> = {
-    wszystko: counts.all,
-    wydania: counts.pickups,
-    zwroty: counts.returns,
-    wnioski: counts.wnioski,
+    all: counts.all,
+    pickups: counts.pickups,
+    returns: counts.returns,
+    requests: counts.requests,
   };
 
   // What a row hands the destination as its `?from`. Derived from the section STATE,
   // not `window.location`, so the SSR'd href and the first client render agree (no
   // hydration mismatch) and the active chip survives the round trip: leave the
   // cockpit on "Zwroty", press back on the protocol screen, land back on "Zwroty".
-  const origin = section === "wszystko" ? "/dashboard" : `/dashboard?section=${section}`;
+  const origin = section === "all" ? "/dashboard" : `/dashboard?section=${section}`;
 
   const pickupItems = groups.pickups.rows.map((row) => toPickupItem(row, origin));
   const returnItems = groups.returns.rows.map((row) => toReturnItem(row, today, origin));
@@ -123,15 +134,15 @@ export default function DispatchBoard({
     <>
       {/* ── Desktop cockpit (lg+; the page owns the width, so `lg:` is safe) ── */}
       <div className="hidden lg:block">
-        <StatCards counts={counts} />
+        <StatCards counts={counts} locale={locale} />
         <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
           <div>
             <h2 className="text-muted-foreground mb-3 text-[13px] font-bold tracking-[0.4px] uppercase">
-              Harmonogram na dziś
+              {t("scheduleHeading")}
             </h2>
-            <DispatchSchedule groups={groups} today={today} origin={origin} />
+            <DispatchSchedule groups={groups} today={today} origin={origin} locale={locale} />
           </div>
-          <NeedDecisionPanel reservations={pending} />
+          <NeedDecisionPanel reservations={pending} locale={locale} />
         </div>
       </div>
 
@@ -141,7 +152,7 @@ export default function DispatchBoard({
           {CHIPS.map((chip) => (
             <Chip
               key={chip.key}
-              label={chip.label}
+              label={t(chip.labelKey)}
               count={chipCounts[chip.key]}
               selected={section === chip.key}
               selectedFill={chip.selectedFill}
@@ -153,34 +164,46 @@ export default function DispatchBoard({
         </div>
 
         <div className="mt-5">
-          {isSectionVisible(section, "wydania") && (
-            <MobileScheduleSection kind="pickups" label="Wydania" total={counts.pickups} items={pickupItems} />
+          {isSectionVisible(section, "pickups") && (
+            <MobileScheduleSection
+              kind="pickups"
+              label={t("navPickups")}
+              total={counts.pickups}
+              items={pickupItems}
+              locale={locale}
+            />
           )}
-          {isSectionVisible(section, "zwroty") && (
-            <MobileScheduleSection kind="returns" label="Zwroty" total={counts.returns} items={returnItems} />
+          {isSectionVisible(section, "returns") && (
+            <MobileScheduleSection
+              kind="returns"
+              label={t("navReturns")}
+              total={counts.returns}
+              items={returnItems}
+              locale={locale}
+            />
           )}
-          {/* Wnioski sits in the amber tinted panel like the other two sections; the
-              band carries the title and the "Otwórz" link, so `NeedDecisionPanel`
+          {/* Requests sits in the amber tinted panel like the other two sections; the
+              band carries the title and the "open" link, so `NeedDecisionPanel`
               renders its cards without its own header (its empty state is kept). */}
-          {isSectionVisible(section, "wnioski") && (
+          {isSectionVisible(section, "requests") && (
             <MobileSection
-              title={`Wnioski · ${counts.wnioski}`}
+              title={`${t("navRequests")} · ${counts.requests}`}
               icon={Bell}
               tint="amber"
               action={
-                counts.wnioski > 0 && (
+                counts.requests > 0 && (
                   <a
-                    href="/dashboard/reservations?from=pulpit"
+                    href="/dashboard/reservations?from=dashboard"
                     className="text-primary flex items-center gap-1 text-xs font-[650] hover:underline"
                   >
-                    Otwórz
+                    {t("open")}
                     <ArrowRight className="size-3.5" />
                   </a>
                 )
               }
             >
               <div className="mb-2">
-                <NeedDecisionPanel reservations={pending} showHeader={false} />
+                <NeedDecisionPanel reservations={pending} showHeader={false} locale={locale} />
               </div>
             </MobileSection>
           )}

@@ -5,6 +5,9 @@ import { z } from "zod";
 // others
 import type { Database } from "../../db/database.types";
 import type { AppRole } from "../../types";
+import { LOCALES, translator } from "../i18n/types";
+import type { Locale } from "../i18n/types";
+import { validation } from "../i18n/validation";
 import { deriveStaffStatus, type StaffStatus } from "../staff-status";
 
 // Staff service (S-08). Encapsulates the roster read + the three account
@@ -28,12 +31,30 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Shared validation contract (client island + API route reuse the same schema).
 // ---------------------------------------------------------------------------
 
-export const employeeInviteSchema = z.object({
-  email: z.email("Nieprawidłowy adres e-mail."),
-  full_name: z.string().trim().min(1, "Podaj imię i nazwisko."),
-});
+function buildInviteSchema(locale: Locale) {
+  const t = translator(locale, validation);
+  return z.object({
+    email: z.email(t("emailInvalid")),
+    full_name: z.string().trim().min(1, t("name")),
+  });
+}
 
-export type EmployeeInviteInput = z.infer<typeof employeeInviteSchema>;
+type InviteSchema = ReturnType<typeof buildInviteSchema>;
+
+// Built once per locale: zod bakes each message in at construction, so a
+// localized message cannot be a lookup at parse time. `StaffList` imports this
+// module, so the messages resolve through the ISLAND-SAFE `translator`.
+const INVITE_SCHEMAS = Object.fromEntries(LOCALES.map((locale) => [locale, buildInviteSchema(locale)])) as Record<
+  Locale,
+  InviteSchema
+>;
+
+/** The add-employee contract, with its messages in `locale`. */
+export function employeeInviteSchema(locale: Locale): InviteSchema {
+  return INVITE_SCHEMAS[locale];
+}
+
+export type EmployeeInviteInput = z.infer<InviteSchema>;
 
 // ---------------------------------------------------------------------------
 // Domain shapes

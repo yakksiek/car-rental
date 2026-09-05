@@ -11,15 +11,20 @@ import Brand from "../../components/brand/Brand.astro";
 import { safeRedirectPath } from "../../lib/safe-redirect";
 import { resolveAuthError } from "../../lib/auth-messages";
 
-// Staff sign-in ("Strefa pracownika"). Mobile: dark ink brand band over a white
+// Staff sign-in (the employee zone). Mobile: dark ink brand band over a white
 // form. Desktop: a centered 440px modal card over a blurred dispatch-workspace
 // backdrop + dark scrim. Source: design `staff-login.jsx` (Screen…Mobile /
-// Screen…Desktop + LoginForm), copy from `shared.jsx` STR.PL.login.
+// Screen…Desktop + LoginForm), copy from `shared.jsx` `STR.*.login` — both halves.
+//
+// *** This page is the recruiter's door. *** The footer's `footer.staffZone` link
+// is the only route here from the public site, and everything below it is the
+// only thing between an English reader and the cockpit.
 //
 // `?error=` carries a short code, never a sentence (S-14, F6). Anything we don't
 // recognise resolves to null and the alert is not rendered at all, so a crafted
 // link can no longer put words in the app's mouth on this URL.
-const error = resolveAuthError("signin", Astro.url.searchParams.get("error"));
+const { locale, t } = Astro.locals;
+const error = resolveAuthError("signin", Astro.url.searchParams.get("error"), locale);
 const redirectTo = safeRedirectPath(Astro.url.searchParams.get("redirect"));
 
 // Published demo credentials for the portfolio deployment (demo-account-gate).
@@ -54,7 +59,7 @@ if (DEMO_PASSWORD && Astro.locals.supabase) {
 const demo = demoEmail && DEMO_PASSWORD ? { email: demoEmail, password: DEMO_PASSWORD } : undefined;
 ---
 
-<Layout title="Strefa pracownika — logowanie">
+<Layout title={t("auth.titleSignIn")}>
   <div class="relative flex min-h-screen flex-col md:items-center md:justify-center md:p-10">
     {/* ── Desktop: blurred dispatch backdrop + scrim (decorative) ──────── */}
     <div aria-hidden="true" class="absolute inset-0 hidden overflow-hidden md:block">
@@ -123,14 +128,14 @@ const demo = demoEmail && DEMO_PASSWORD ? { email: demoEmail, password: DEMO_PAS
         >
           <path d="m15 6-6 6 6 6"></path>
         </svg>
-        Powrót do flota.pl
+        {t("auth.backToSite")}
       </a>
       <div class="relative flex items-center gap-3">
         <Brand variant="mark" label={false} tone="inverse" markClass="h-[42px]" class="shrink-0" />
         <div class="leading-none">
           <div class="text-[18px] font-bold tracking-[-0.3px]">Flota</div>
           <div class="mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] text-white/65 uppercase">
-            Strefa pracownika
+            {t("auth.zone")}
           </div>
         </div>
       </div>
@@ -145,18 +150,18 @@ const demo = demoEmail && DEMO_PASSWORD ? { email: demoEmail, password: DEMO_PAS
         <div class="leading-none">
           <div class="text-foreground text-[17px] font-bold tracking-[-0.3px]">Flota</div>
           <div class="text-muted-foreground mt-[3px] font-mono text-[10.5px] font-semibold tracking-[0.5px] uppercase">
-            Strefa pracownika
+            {t("auth.zone")}
           </div>
         </div>
       </div>
 
-      <SignInForm serverError={error} redirectTo={redirectTo} demo={demo} client:load />
+      <SignInForm serverError={error} redirectTo={redirectTo} demo={demo} locale={locale} client:load />
 
       <div
         class="text-muted-foreground border-border/60 mt-auto flex items-center justify-center gap-1.5 border-t pt-[18px] text-[12.5px] md:mt-6"
       >
-        <span>Problem z logowaniem?</span>
-        <span class="text-foreground font-[650]">Skontaktuj się z administratorem</span>
+        <span>{t("auth.helpQuestion")}</span>
+        <span class="text-foreground font-[650]">{t("auth.helpLink")}</span>
       </div>
     </div>
   </div>

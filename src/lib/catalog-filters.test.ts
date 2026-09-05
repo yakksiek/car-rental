@@ -88,39 +88,46 @@ describe("validateDateRange", () => {
   const TODAY = "2026-06-06";
 
   it("accepts an absent range (no date filter)", () => {
-    expect(validateDateRange(null, null, TODAY)).toEqual({ ok: true });
+    expect(validateDateRange(null, null, "en", TODAY)).toEqual({ ok: true });
   });
 
   it("accepts a valid future range", () => {
-    expect(validateDateRange("2026-07-01", "2026-07-05", TODAY)).toEqual({ ok: true });
+    expect(validateDateRange("2026-07-01", "2026-07-05", "en", TODAY)).toEqual({ ok: true });
   });
 
   it("allows a pickup of today (same-day start is not a past pickup)", () => {
-    expect(validateDateRange(TODAY, "2026-06-10", TODAY)).toEqual({ ok: true });
+    expect(validateDateRange(TODAY, "2026-06-10", "en", TODAY)).toEqual({ ok: true });
   });
 
   it("rejects a half-filled range as incomplete", () => {
-    expect(validateDateRange("2026-07-01", null, TODAY).ok).toBe(false);
-    expect(validateDateRange(null, "2026-07-05", TODAY).ok).toBe(false);
+    expect(validateDateRange("2026-07-01", null, "en", TODAY).ok).toBe(false);
+    expect(validateDateRange(null, "2026-07-05", "en", TODAY).ok).toBe(false);
   });
 
   it("rejects a past pickup", () => {
-    const result = validateDateRange("2026-06-01", "2026-06-10", TODAY);
+    const result = validateDateRange("2026-06-01", "2026-06-10", "en", TODAY);
     expect(result.ok).toBe(false);
   });
 
   it("rejects a return before the pickup", () => {
-    const result = validateDateRange("2026-07-10", "2026-07-05", TODAY);
+    const result = validateDateRange("2026-07-10", "2026-07-05", "en", TODAY);
     expect(result.ok).toBe(false);
   });
 
   it("rejects a same-day range (empty booking window under the fixed hours)", () => {
-    const result = validateDateRange("2026-07-01", "2026-07-01", TODAY);
+    const result = validateDateRange("2026-07-01", "2026-07-01", "en", TODAY);
     expect(result.ok).toBe(false);
   });
 
   it("rejects a malformed date", () => {
-    const result = validateDateRange("2026-7-1", "2026-07-05", TODAY);
+    const result = validateDateRange("2026-7-1", "2026-07-05", "en", TODAY);
     expect(result.ok).toBe(false);
+  });
+
+  it("reports the failure in the active locale", () => {
+    const en = validateDateRange("2026-07-01", "2026-07-01", "en", TODAY);
+    const pl = validateDateRange("2026-07-01", "2026-07-01", "pl", TODAY);
+    expect(en.ok || en.error).toBe("The return date must be later than the pickup date.");
+    expect(pl.ok || pl.error).toBe("Data zwrotu musi być późniejsza niż data odbioru.");
   });
 });

@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { isRoleSufficient } from "../../../../lib/access";
 import { getVehicleBusyRanges } from "../../../../lib/services/reservations";
 
@@ -25,13 +27,6 @@ import { getVehicleBusyRanges } from "../../../../lib/services/reservations";
 // RFC-4122 and would reject the fixed seed ids.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const MSG = {
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  badQuery: "Nieprawidłowe parametry zapytania.",
-  failed: "Nie udało się sprawdzić dostępności.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -48,16 +43,18 @@ function json(status: number, body: unknown): Response {
 }
 
 export const GET: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!isRoleSufficient(context.locals.role, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const id = context.params.id;
   if (!id || !UUID_RE.test(id)) {
-    return json(400, { error: MSG.badQuery });
+    return json(400, { error: t("badQuery") });
   }
 
   // Fail closed: the read reports its own failures (`ok: false`), and an empty
@@ -67,7 +64,7 @@ export const GET: APIRoute = async (context) => {
   // own 500, so the island's error state needs no new branch.
   const { ok, ranges } = await getVehicleBusyRanges(context.locals.supabase, id);
   if (!ok) {
-    return json(500, { error: MSG.failed });
+    return json(500, { error: t("availabilityFailed") });
   }
   return json(200, { ranges });
 };

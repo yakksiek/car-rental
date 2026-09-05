@@ -11,7 +11,7 @@ import { listPendingReservations } from "../../lib/services/reservations";
 // Employee pending-request queue (S-03). The /dashboard/reservations route is
 // gated to `employee` by the middleware (src/lib/access.ts); this page SSRs the
 // pending list through the role-gated definer RPC and mounts the decision island.
-const { user, role, supabase } = Astro.locals;
+const { user, role, supabase, locale, t } = Astro.locals;
 // No fleet fetch here any more (S-12b): the manual-reservation picker is loaded
 // on demand from `GET /api/vehicles` when a staffer actually picks that row, so
 // this page costs one SSR read fewer than it did under S-12.
@@ -20,19 +20,21 @@ const [reservations, overdueCount] = await Promise.all([
   countOverdueReturns(supabase),
 ]);
 const count = reservations.length;
-const countLabel = `${count} oczekuje na decyzję`;
+const countLabel = `${String(count)} ${t("dashboard.awaitingDecisionCount")}`;
 
 // The mobile back affordance (design 08) points at the dashboard, so it only
-// makes sense when the user arrived from there. The Pulpit cockpit links carry
-// `?from=pulpit`; the persistent nav tab does not — reaching this as a top-level
-// destination shows no back button.
-const fromDashboard = Astro.url.searchParams.get("from") === "pulpit";
+// makes sense when the user arrived from there. The cockpit's own links carry
+// `?from=dashboard`; the persistent nav tab does not — reaching this as a
+// top-level destination shows no back button. (The marker was `pulpit` until
+// english-localization Phase 5; it is an internal token, not copy, so renaming
+// it costs nothing and keeps the Polish sweep honest.)
+const fromDashboard = Astro.url.searchParams.get("from") === "dashboard";
 ---
 
-<Layout title="Oczekujące wnioski — Flota">
+<Layout title={`${t("dashboard.requestsTitle")} — Flota`}>
   <StaffShell
     active="requests"
-    title="Oczekujące wnioski"
+    title={t("dashboard.requestsTitle")}
     subtitle={countLabel}
     user={user}
     role={role}
@@ -45,7 +47,7 @@ const fromDashboard = Astro.url.searchParams.get("from") === "pulpit";
           only in the queue state and disappears on the request detail — passing
           `fromDashboard` so the island can render the back-to-pulpit affordance. */
       }
-      <PendingQueue client:load reservations={reservations} fromDashboard={fromDashboard} />
+      <PendingQueue client:load reservations={reservations} fromDashboard={fromDashboard} locale={locale} />
     </main>
   </StaffShell>
 </Layout>

@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { SubmitButton } from "./SubmitButton";
+import { auth } from "../../lib/i18n/auth";
+import { translator, type Locale } from "../../lib/i18n/types";
+
+interface Props {
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
+}
 
 // R11's only action (S-14): sign out so the link can be re-opened on a clean
 // browser. A native <form method="POST"> to the signout route rather than a
@@ -11,7 +18,8 @@ import { SubmitButton } from "./SubmitButton";
 // (the browser navigates; React never owns the submission), so the flag is
 // explicit. There is deliberately no reset: the only outcome of a native POST is
 // a navigation, so the spinner must survive until the new document paints.
-export default function SignOutButton() {
+export default function SignOutButton({ locale }: Props) {
+  const t = translator(locale, auth);
   const [submitting, setSubmitting] = useState(false);
 
   return (
@@ -22,8 +30,8 @@ export default function SignOutButton() {
         setSubmitting(true);
       }}
     >
-      <SubmitButton pending={submitting} pendingText="Wylogowywanie…" icon={<ArrowRight className="size-[17px]" />}>
-        Wyloguj się
+      <SubmitButton pending={submitting} pendingText={t("signingOut")} icon={<ArrowRight className="size-[17px]" />}>
+        {t("signOut")}
       </SubmitButton>
     </form>
   );

@@ -4,8 +4,11 @@ import { ChevronRight, Truck } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
-import { estimatedTotal, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
-import { highlightSegments, relativeDayPl, searchDateRange } from "../../lib/search-format";
+import { estimatedTotal, formatPln, rentalDays } from "../../lib/format";
+import { reservationStatusLabel } from "../../lib/i18n/reservation";
+import { search } from "../../lib/i18n/search";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { highlightSegments, relativeDay, searchDateRange } from "../../lib/search-format";
 import type { SearchResultReservation, SearchResultReturn, SearchResultVehicle } from "../../types";
 
 // The three result rows of the ⌘K dropdown and its mobile full-screen twin, built
@@ -159,8 +162,9 @@ type RowAnchorProps = Omit<React.ComponentPropsWithRef<"a">, "children" | "class
 export function ReservationRow({
   row,
   query,
+  locale,
   ...anchor
-}: { row: SearchResultReservation; query: string } & RowAnchorProps) {
+}: { row: SearchResultReservation; query: string; locale: Locale } & RowAnchorProps) {
   const days = rentalDays(row.pickup_date, row.return_date);
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
 
@@ -170,17 +174,17 @@ export function ReservationRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <MonoRef>{row.reference}</MonoRef>
-          <Pill label={reservationStatusLabelPl(row.status)} tone={RESERVATION_TONES[row.status]} />
+          <Pill label={reservationStatusLabel(row.status, locale)} tone={RESERVATION_TONES[row.status]} />
         </span>
         <span className="text-foreground mt-0.5 block truncate text-[13.5px] font-[600]">
           <Highlight text={row.customer_name} query={query} />
         </span>
         <span className="text-muted-foreground block truncate text-[12px]">
-          {vehicle} · {searchDateRange(row.pickup_date, row.return_date)}
+          {vehicle} · {searchDateRange(row.pickup_date, row.return_date, locale)}
         </span>
       </span>
       <span className="text-foreground shrink-0 text-[14px] font-bold">
-        {formatPln(estimatedTotal(row.daily_rate, days))}
+        {formatPln(estimatedTotal(row.daily_rate, days), locale)}
       </span>
       <EnterChip />
     </a>
@@ -191,8 +195,10 @@ export function ReturnRow({
   row,
   query,
   today,
+  locale,
   ...anchor
-}: { row: SearchResultReturn; query: string; today: string } & RowAnchorProps) {
+}: { row: SearchResultReturn; query: string; today: string; locale: Locale } & RowAnchorProps) {
+  const t = translator(locale, search);
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ") || row.vehicle_name;
   const returned = row.status === "returned";
 
@@ -202,13 +208,14 @@ export function ReturnRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <MonoRef>{row.reference}</MonoRef>
-          <Pill label={returned ? "Zwrócono" : "Na dziś"} tone={returned ? "success" : "warning"} />
+          <Pill label={returned ? t("returned") : t("dueTodayPill")} tone={returned ? "success" : "warning"} />
         </span>
         <span className="text-foreground mt-0.5 block truncate text-[13.5px] font-[600]">
           <Highlight text={row.customer_name} query={query} />
         </span>
         <span className="text-muted-foreground block truncate text-[12px]">
-          {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> · {relativeDayPl(row.return_date, today)}
+          {vehicle} · <span className="font-mono">{row.vehicle_plate}</span> ·{" "}
+          {relativeDay(row.return_date, today, locale)}
         </span>
       </span>
       <TrailingAffordance />
@@ -224,7 +231,13 @@ export function ReturnRow({
  * `Mercedes-Benz` / `Sprinter`). The `Wycofany` pill is the whole of D9: the design
  * has no retired state because its demo fleet has no retired vehicle.
  */
-export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle; query: string } & RowAnchorProps) {
+export function VehicleRow({
+  row,
+  query,
+  locale,
+  ...anchor
+}: { row: SearchResultVehicle; query: string; locale: Locale } & RowAnchorProps) {
+  const t = translator(locale, search);
   return (
     <a href={searchHref.vehicle(row)} {...anchor} className={ROW_SHELL}>
       <VThumb />
@@ -244,7 +257,7 @@ export function VehicleRow({ row, query, ...anchor }: { row: SearchResultVehicle
           </span>
         </span>
       </span>
-      {!row.is_active && <Pill label="Wycofany" tone="neutral" />}
+      {!row.is_active && <Pill label={t("retired")} tone="neutral" />}
       <TrailingAffordance />
     </a>
   );

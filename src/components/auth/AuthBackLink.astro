@@ -15,6 +15,7 @@ interface Props {
 }
 
 const { class: className } = Astro.props;
+const { t } = Astro.locals;
 ---
 
 <a
@@ -24,5 +25,6 @@ const { class: className } = Astro.props;
     className,
   )}
 >
-  <span aria-hidden="true">‹</span> Powrót do logowania
+  <span aria-hidden="true">‹</span>
+  {t("auth.backToLogin")}
 </a>

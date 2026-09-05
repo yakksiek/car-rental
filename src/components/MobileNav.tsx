@@ -6,51 +6,43 @@ import { HelpCircle, Home, Info, Menu, Receipt, Truck, X } from "lucide-react";
 import Brand from "./brand/Brand";
 
 // others
+import { translator, type Locale } from "../lib/i18n/types";
+import { nav as navCopy } from "../lib/i18n/nav";
 import { cn } from "../lib/utils";
 
-// Mobile chrome for the public header (design `InfoHeaderMobile`): a crimson
-// phone-reveal chip + a hamburger that opens a full-screen overlay listing all five
-// destinations (icon + label). Hydrated island so it can toggle the reveal, open/close
-// the overlay, lock body scroll while open, close on Escape, and reset after a
-// navigation (it remounts on each view-transition swap). Renders only below `sm`;
-// desktop uses the centered pill nav in <SiteHeader>.
+// Mobile nav overlay for the public header: a hamburger that opens a full-screen
+// overlay listing all five destinations (icon + label). Hydrated island so it can
+// open/close the overlay, lock body scroll while open, close on Escape, and reset
+// after a navigation (it remounts on each view-transition swap). Renders only below
+// `md`; from there up <SiteHeader> shows the centered pill nav.
+//
+// *** The crimson phone-reveal chip that used to sit beside the hamburger is GONE. ***
+// The design's `InfoHeaderMobile` right cluster is <LangToggle> + <ActionMenu>, and
+// <ActionMenu>'s first row IS the phone — keeping the chip would have shipped the
+// number twice in a 360px-wide bar. The hamburger stays because this app has no
+// `PublicDock`, so it is mobile's only route to the other four pages.
 
 type NavId = "home" | "fleet" | "pricing" | "faq" | "about";
 
 interface Props {
   active?: NavId;
+  /** Islands cannot read `Astro.locals`, so <SiteHeader> passes the request locale in. */
+  locale: Locale;
 }
 
-const NAV: { id: NavId; label: string; href: string; Icon: typeof Home }[] = [
-  { id: "home", label: "Start", href: "/", Icon: Home },
-  { id: "fleet", label: "Flota", href: "/fleet", Icon: Truck },
-  { id: "pricing", label: "Cennik", href: "/pricing", Icon: Receipt },
-  { id: "faq", label: "FAQ", href: "/faq", Icon: HelpCircle },
-  { id: "about", label: "O nas", href: "/about", Icon: Info },
+// Same nav model as <SiteHeader>, keyed rather than literal: the `fleet` NAV
+// ITEM translates to "Fleet" while <Brand> below keeps the untranslated brand.
+const NAV: { id: NavId; key: "home" | "fleet" | "pricing" | "faq" | "about"; href: string; Icon: typeof Home }[] = [
+  { id: "home", key: "home", href: "/", Icon: Home },
+  { id: "fleet", key: "fleet", href: "/fleet", Icon: Truck },
+  { id: "pricing", key: "pricing", href: "/pricing", Icon: Receipt },
+  { id: "faq", key: "faq", href: "/faq", Icon: HelpCircle },
+  { id: "about", key: "about", href: "/about", Icon: Info },
 ];
 
-// II.phone from the design source (exact path); crimson via currentColor.
-function PhoneGlyph() {
-  return (
-    <svg
-      width={17}
-      height={17}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z" />
-    </svg>
-  );
-}
-
-export default function MobileNav({ active }: Props) {
+export default function MobileNav({ active, locale }: Props) {
+  const t = translator(locale, navCopy);
   const [open, setOpen] = React.useState(false);
-  const [phoneOpen, setPhoneOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) {
@@ -71,50 +63,18 @@ export default function MobileNav({ active }: Props) {
 
   return (
     <>
-      <div className="flex items-center gap-[10px]">
-        {/* Phone-reveal chip: tap the crimson button to expand the number (a real tel link). */}
-        <div className="bg-accent flex h-10 items-center overflow-hidden rounded-[12px]">
-          <button
-            type="button"
-            aria-label={phoneOpen ? "Ukryj numer telefonu" : "Pokaż numer telefonu"}
-            aria-expanded={phoneOpen}
-            onClick={() => {
-              setPhoneOpen((value) => !value);
-            }}
-            className="text-primary flex size-10 shrink-0 items-center justify-center"
-          >
-            <PhoneGlyph />
-          </button>
-          <a
-            href="tel:+48221002030"
-            tabIndex={phoneOpen ? undefined : -1}
-            aria-hidden={phoneOpen ? undefined : "true"}
-            className="text-primary block overflow-hidden text-[14px] font-bold whitespace-nowrap"
-            style={{
-              maxWidth: phoneOpen ? 160 : 0,
-              opacity: phoneOpen ? 1 : 0,
-              paddingRight: phoneOpen ? 12 : 0,
-              transition:
-                "max-width .4s cubic-bezier(.4,0,.2,1), opacity .28s ease, padding-right .4s cubic-bezier(.4,0,.2,1)",
-            }}
-          >
-            +48 22 100 20 30
-          </a>
-        </div>
-
-        {/* Hamburger → full-screen overlay. */}
-        <button
-          type="button"
-          aria-label="Menu"
-          aria-expanded={open}
-          onClick={() => {
-            setOpen(true);
-          }}
-          className="text-foreground bg-background inline-flex size-10 items-center justify-center rounded-[12px]"
-        >
-          <Menu className="size-[18px]" strokeWidth={2} />
-        </button>
-      </div>
+      {/* Hamburger → full-screen overlay. */}
+      <button
+        type="button"
+        aria-label={t("menu")}
+        aria-expanded={open}
+        onClick={() => {
+          setOpen(true);
+        }}
+        className="text-foreground bg-background inline-flex size-10 shrink-0 items-center justify-center rounded-[12px]"
+      >
+        <Menu className="size-[18px]" strokeWidth={2} />
+      </button>
 
       {open && (
         <div className="bg-card fixed inset-0 z-[60] flex flex-col">
@@ -126,11 +86,15 @@ export default function MobileNav({ active }: Props) {
               }}
               className="flex items-center"
             >
-              <Brand className="gap-1.5" markClass="h-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+              {/* Same 34 as the mobile bar this drawer opens from, and on the same
+                  axis — see `SiteHeader.astro`. The design has no drawer (mobile nav
+                  is its `PublicDock`), so the lockup mirrors the header rather than a
+                  board of its own; a 2× mark here would jump the moment it opened. */}
+              <Brand className="gap-1.5" markClass="w-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
             </a>
             <button
               type="button"
-              aria-label="Zamknij menu"
+              aria-label={t("closeMenu")}
               onClick={() => {
                 setOpen(false);
               }}
@@ -154,7 +118,7 @@ export default function MobileNav({ active }: Props) {
                 )}
               >
                 <item.Icon className="size-7" />
-                {item.label}
+                {t(item.key)}
               </a>
             ))}
           </nav>

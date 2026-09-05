@@ -15,6 +15,17 @@ top_blocker: capacity
 > Edit-in-place; archive when superseded.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 
+> **Naming note (english-localization, 2026-09-04).** These documents call the project
+> **FleetRent**; the shipped product calls itself **Flota** everywhere a user can see it —
+> the page title, the header wordmark, the footer, all five email subjects and the protocol
+> PDF's footer. `Flota` was the brand from the first design board; `FleetRent` survived only
+> in the working name and in artifacts no customer reads. The `english-localization` change
+> reconciled the visible half and left this one alone deliberately, so the divergence is
+> recorded rather than papered over.
+>
+> The deployed hostname `fleetrent.marcin-kulbicki.workers.dev` also stays: it is
+> infrastructure, not brand, and renaming it would break every CV link already handed out.
+
 ## Vision recap
 
 Local commercial-vehicle rental operators run their fleet, reservations, and handover protocols on phone, email, and paper — which produces double bookings and traps mileage/fuel/damage data where it can't be searched or compared. FleetRent replaces that paper-and-phone coordination with a single system: a public reservation funnel that blocks conflicts at the source, and digital issue/return handover protocols (photos, signature, automatic comparison) for employees and admins. v1 is single-tenant, Polish-only, with no online payments and no customer accounts — customers interact through the public site and receive protocols by email.

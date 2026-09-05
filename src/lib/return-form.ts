@@ -1,4 +1,6 @@
 // others
+import { formatInteger } from "./format";
+import type { Locale } from "./i18n/types";
 import { autoTagDamages } from "./protocol-delta";
 import type { AutoTagBaselineDamage, AutoTagCurrentDamage } from "./protocol-delta";
 
@@ -14,24 +16,24 @@ import type { AutoTagBaselineDamage, AutoTagCurrentDamage } from "./protocol-del
 /** U+2212 MINUS SIGN — the design's chip glyph, distinct from a hyphen. */
 const MINUS = "−";
 
-/** Group a magnitude with the Polish thousands space: `1228` → `"1 228"`. */
-function groupThousands(magnitude: number): string {
-  return magnitude.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-}
-
 /**
  * `km driven` as a signed delta chip: `+1 228 km`, `${MINUS}120 km`, `0 km`. A
  * non-finite value (a half-typed live-form odometer) renders as `—` so the chip
  * never shows `NaN`. Always neutral in tone — a below-baseline reading shows the
  * negative number, but the km chip itself never flags (the odometer card carries
  * the amber soft-warning instead).
+ *
+ * The magnitude is grouped by the shared `formatInteger`. This file used to carry
+ * its own grouper spelling the separator U+0020, where `format.ts` used U+00A0 and
+ * `protocol-form.ts` U+202F — three separators for one convention. `Intl` settles
+ * it: U+00A0 under `pl`, a comma under `en`.
  */
-export function formatKmDriven(kmDriven: number): string {
+export function formatKmDriven(kmDriven: number, locale: Locale): string {
   if (!Number.isFinite(kmDriven)) {
     return "—";
   }
   const sign = kmDriven > 0 ? "+" : kmDriven < 0 ? MINUS : "";
-  return `${sign}${groupThousands(Math.abs(kmDriven))} km`;
+  return `${sign}${formatInteger(Math.abs(kmDriven), locale)} km`;
 }
 
 /**

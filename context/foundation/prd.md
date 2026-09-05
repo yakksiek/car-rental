@@ -15,6 +15,17 @@ timeline_budget:
   after_hours_only: false
 ---
 
+> **Naming note (english-localization, 2026-09-04).** These documents call the project
+> **FleetRent**; the shipped product calls itself **Flota** everywhere a user can see it —
+> the page title, the header wordmark, the footer, all five email subjects and the protocol
+> PDF's footer. `Flota` was the brand from the first design board; `FleetRent` survived only
+> in the working name and in artifacts no customer reads. The `english-localization` change
+> reconciled the visible half and left this one alone deliberately, so the divergence is
+> recorded rather than papered over.
+>
+> The deployed hostname `fleetrent.marcin-kulbicki.workers.dev` also stays: it is
+> infrastructure, not brand, and renaming it would break every CV link already handed out.
+
 ## Vision & Problem Statement
 
 Local commercial vehicle rental companies manage their fleet, reservations, and handover protocols manually — phone, email, paper. This coordination overhead across multiple employees leads to double bookings, while critical operational data (mileage, fuel level, damage condition) trapped in paper protocols cannot be searched, compared, or flagged automatically. Overdue returns go unnoticed until someone manually checks.
@@ -38,14 +49,17 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
 ## Success Criteria
 
 ### Primary
+
 - A customer can browse the fleet, pick a vehicle and dates, and submit a reservation request in under 3 minutes — without creating an account.
 - An employee can accept a reservation and complete an issue protocol (mileage, fuel, damage photos, digital signature) in under 5 minutes.
 - The return protocol displays the issue protocol baseline and highlights deltas (mileage difference, fuel level change, new damage) after the employee enters current values.
 
 ### Secondary
+
 - Customer sees real-time availability as they pick dates — conflicts shown during browsing, not just rejected after submission.
 
 ### Guardrails
+
 - No double bookings: the system must prevent two reservations for the same vehicle on overlapping dates. This is the core data integrity guarantee.
 - Customer personal data (names, emails, phone numbers, protocol photos) must not be accessible to unauthorized users.
 
@@ -58,6 +72,7 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
 - **Then** the system confirms receipt, prevents overlapping reservations on that vehicle, and the request appears on the employee dashboard for approval
 
 #### Acceptance Criteria
+
 - Reservation request can be completed without creating an account
 - Overlapping date selection for an already-booked vehicle is blocked before submission
 - Employee sees the new request within their pending reservations list
@@ -69,6 +84,7 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
 - **Then** the protocol is saved and auto-emailed to the customer; when the vehicle returns, the return protocol opens with the issue baseline as reference, the employee enters current values, and the system displays the comparison
 
 #### Acceptance Criteria
+
 - Issue protocol captures: mileage, fuel level, damage notes, photos, digital signature
 - Return protocol shows issue baseline as reference; employee must enter all current values fresh
 - System auto-compares and displays deltas (km driven, fuel difference, new damage)
@@ -78,6 +94,7 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
 ## Functional Requirements
 
 ### Fleet browsing (public)
+
 - FR-001: Visitor can browse vehicles by category (cargo van, passenger van, car transporter, refrigerated truck, flatbed truck). Priority: must-have
   > Socrates: Counter-argument considered: "too many categories fragments a small fleet — 5 types across 15 vehicles means 3 per page." Resolution: kept; UI should gracefully handle small category counts (show all vehicles with category filter rather than separate category pages).
 - FR-002: Visitor can filter vehicles by specs (type, payload capacity, available dates). Priority: must-have
@@ -86,12 +103,14 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
   > Socrates: No counter-argument; stands as written.
 
 ### Reservation (public)
+
 - FR-004: Visitor can submit a reservation request (name, email, phone, selected vehicle, dates) without creating an account. Priority: must-have
   > Socrates: No counter-argument; frictionless booking is the right trade for v1 targeting small operators.
 - FR-005: System prevents reservation requests for a vehicle on dates that overlap with an existing confirmed reservation. Hotel-style rule: return by 10:00 AM, pickup from 2:00 PM — same-day turnaround is allowed. Priority: must-have
   > Socrates: Counter-argument considered: "strict date-level blocking loses same-day turnaround revenue." Resolution: clarified — hotel-style time windows (return by 10am, pickup from 2pm) allow same-day turnover with a 4-hour buffer.
 
 ### Handover protocols (employee)
+
 - FR-006: Employee can fill out an issue protocol at vehicle pickup (mileage, fuel level, damage notes, photos, digital signature). Priority: must-have
   > Socrates: Counter-argument considered: "photo upload + signature capture adds significant technical complexity for v1." Resolution: kept; photos and signatures are the core value proposition — they replace paper protocols and provide dispute evidence. Complexity is accepted.
 - FR-007: Employee can fill out a return protocol at vehicle return — issue protocol baseline data is shown as reference; employee must enter all current values fresh (current mileage, current fuel, new damage, new photos, signature). System auto-compares current vs. issue values. Priority: must-have
@@ -100,23 +119,28 @@ Moment of pain: Discovers a double booking when a customer arrives and the vehic
   > Socrates: No counter-argument; auto-email is the simplest delivery mechanism without a customer portal.
 
 ### Reservation management (employee)
+
 - FR-009: Employee can view all pending reservation requests. Priority: must-have
 - FR-010: Employee can accept or reject a reservation request. Priority: must-have
   > Socrates (FR-009/010): Counter-argument considered: "manual accept/reject adds delay — customer waits with no confirmation." Resolution: kept; B2B commercial fleet requires human judgment on each booking (vehicle suitability, customer reliability). The delay is a deliberate trade for control.
 
 ### Fleet management (employee)
+
 - FR-011: Employee can add and edit vehicles in the fleet. Removal is blocked when active reservations exist — employee must cancel reservations first. Priority: must-have
   > Socrates: Counter-arguments considered: (1) "no audit trail — any employee can change pricing"; (2) "removing a vehicle with active reservations creates a data integrity problem." Resolution: (1) deferred to v2 — acceptable for small teams; (2) resolved — system blocks deletion when active reservations exist.
 
 ### Dashboard (employee)
+
 - FR-012: Employee can see overdue returns flagged automatically on their dashboard. Priority: must-have
   > Socrates: No counter-argument; visibility into overdue returns is the baseline.
 
 ### Employee management (admin)
+
 - FR-013: Admin can add and remove employee accounts. Employees can self-service reset their own password via email. Priority: must-have
   > Socrates: Counter-argument considered: "no password reset means admin becomes IT support." Resolution: resolved — employees can reset their own password via email; admin retains create/remove control.
 
 ### Availability (system)
+
 - FR-014: System shows real-time vehicle availability to visitors as they select dates. Priority: nice-to-have
 
 ## Non-Functional Requirements

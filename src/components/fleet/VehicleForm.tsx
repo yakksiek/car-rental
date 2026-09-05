@@ -11,8 +11,11 @@ import { Textarea } from "../ui/textarea";
 
 // others
 import { cn } from "../../lib/utils";
-import { categoryLabelPl } from "../../lib/format";
+import { categoryLabel, transmissionLabel } from "../../lib/i18n/vehicle";
+import type { Locale } from "../../lib/i18n/types";
 import { firstIssuePerField, vehicleInputSchema } from "../../lib/vehicle-schema";
+import { fleetAdmin } from "../../lib/i18n/fleet-admin";
+import { translator } from "../../lib/i18n/types";
 import type { Vehicle, VehicleCategory } from "../../types";
 
 // The shared add/edit form island (S-04 Phase 5). One surface for both create and
@@ -55,38 +58,13 @@ const TRANSMISSION_NONE = "__none__";
 const FIELD_CLASS = "bg-background h-11 rounded-[11px]";
 const LABEL_CLASS = "text-muted-foreground text-[11px] font-[650] tracking-[0.01em]";
 
-const COPY = {
-  eyebrow: "Zarządzanie flotą",
-  createTitle: "Dodaj pojazd",
-  editTitle: "Edytuj pojazd",
-  createSub: "Zarejestruj nowy pojazd w bazie floty.",
-  editSub: "Zaktualizuj dane pojazdu we flocie.",
-  createSubmit: "Dodaj do floty",
-  editSubmit: "Zapisz zmiany",
-  createPending: "Dodawanie…",
-  editPending: "Zapisywanie…",
-  cancel: "Anuluj",
-  back: "Wróć do floty",
-  secIdentity: "Dane pojazdu",
-  secSpec: "Specyfikacja",
-  secPricing: "Ceny i limity",
-  secPhotos: "Zdjęcia",
-  labelType: "Typ",
-  labelTransmission: "Skrzynia",
-  transmissionPlaceholder: "Wybierz skrzynię",
-  transmissionNone: "Nie określono",
-  photosLabel: "Adresy URL zdjęć",
-  photosHint: "Po jednym adresie URL w wierszu. Pierwsze zdjęcie jest miniaturą.",
-  fixFields: "Popraw zaznaczone pola.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-} as const;
-
 // Text/number fields rendered identically (label + Input). Category + transmission
 // (the two selects) and the photos textarea are handled out of band. `id` matches
 // a `vehicleInputSchema` key so the error map and scroll-to-error key on it.
 interface FieldDef {
   id: StringFieldKey;
-  label: string;
+  /** Catalog key rather than a literal, so the table can stay module-level. */
+  labelKey: keyof (typeof fleetAdmin)["en"];
   type?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   placeholder?: string;
@@ -115,39 +93,39 @@ type StringFieldKey =
 // ── Dane pojazdu (Identity) — name + category(chips) are special; these fill out the rest.
 const NAME_FIELD: FieldDef = {
   id: "name",
-  label: "Nazwa",
+  labelKey: "fieldName",
   required: true,
   full: true,
   placeholder: "np. Mercedes Sprinter 317 CDI",
 };
 const PLATE_FIELD: FieldDef = {
   id: "plate",
-  label: "Rejestracja",
+  labelKey: "fieldPlate",
   required: true,
   full: true,
   placeholder: "WX 0000A",
 };
 const IDENTITY: FieldDef[] = [
-  { id: "make", label: "Marka", placeholder: "Mercedes-Benz" },
-  { id: "model", label: "Model", placeholder: "Sprinter 317 CDI" },
-  { id: "production_year", label: "Rok", type: "number", inputMode: "numeric", placeholder: "2024" },
+  { id: "make", labelKey: "fieldMake", placeholder: "Mercedes-Benz" },
+  { id: "model", labelKey: "fieldModel", placeholder: "Sprinter 317 CDI" },
+  { id: "production_year", labelKey: "fieldYear", type: "number", inputMode: "numeric", placeholder: "2024" },
 ];
 
 // ── Specyfikacja (Specs) — fuel, then transmission(select), then seats + dims.
-const SPEC_FUEL: FieldDef = { id: "fuel_type", label: "Paliwo", placeholder: "Diesel" };
+const SPEC_FUEL: FieldDef = { id: "fuel_type", labelKey: "fieldFuel", placeholder: "Diesel" };
 const SPEC_REST: FieldDef[] = [
-  { id: "seats", label: "Miejsca", type: "number", inputMode: "numeric", placeholder: "3" },
-  { id: "payload_capacity_kg", label: "Ładowność (kg)", type: "number", inputMode: "decimal", placeholder: "1320" },
-  { id: "cargo_length_cm", label: "Długość (cm)", type: "number", inputMode: "decimal", placeholder: "430" },
-  { id: "cargo_width_cm", label: "Szerokość (cm)", type: "number", inputMode: "decimal", placeholder: "178" },
-  { id: "cargo_height_cm", label: "Wysokość (cm)", type: "number", inputMode: "decimal", placeholder: "194" },
+  { id: "seats", labelKey: "fieldSeats", type: "number", inputMode: "numeric", placeholder: "3" },
+  { id: "payload_capacity_kg", labelKey: "fieldPayload", type: "number", inputMode: "decimal", placeholder: "1320" },
+  { id: "cargo_length_cm", labelKey: "fieldLength", type: "number", inputMode: "decimal", placeholder: "430" },
+  { id: "cargo_width_cm", labelKey: "fieldWidth", type: "number", inputMode: "decimal", placeholder: "178" },
+  { id: "cargo_height_cm", labelKey: "fieldHeight", type: "number", inputMode: "decimal", placeholder: "194" },
 ];
 
 // ── Ceny i limity (Pricing & limits).
 const PRICING: FieldDef[] = [
   {
     id: "daily_rate",
-    label: "Stawka / doba (zł)",
+    labelKey: "fieldDailyRate",
     type: "number",
     inputMode: "decimal",
     required: true,
@@ -155,22 +133,29 @@ const PRICING: FieldDef[] = [
   },
   {
     id: "monthly_rate",
-    label: "Stawka / mies. (zł)",
+    labelKey: "fieldMonthlyRate",
     type: "number",
     inputMode: "decimal",
     required: true,
     placeholder: "6800",
   },
-  { id: "deposit", label: "Kaucja (zł)", type: "number", inputMode: "decimal", required: true, placeholder: "2500" },
+  {
+    id: "deposit",
+    labelKey: "fieldDeposit",
+    type: "number",
+    inputMode: "decimal",
+    required: true,
+    placeholder: "2500",
+  },
   {
     id: "per_extra_km_rate",
-    label: "Za dodatkowy km (zł)",
+    labelKey: "fieldExtraKm",
     type: "number",
     inputMode: "decimal",
     required: true,
     placeholder: "1.20",
   },
-  { id: "km_limit", label: "Limit km", type: "number", inputMode: "numeric", placeholder: "300" },
+  { id: "km_limit", labelKey: "fieldKmLimit", type: "number", inputMode: "numeric", placeholder: "300" },
 ];
 
 // Visual order — drives "scroll to the first error" on a failed submit.
@@ -253,17 +238,20 @@ function FormActions({
   pendingLabel,
   fullWidth,
   className,
+  locale,
 }: {
   submitting: boolean;
   submitLabel: string;
   pendingLabel: string;
   fullWidth?: boolean;
   className?: string;
+  locale: Locale;
 }) {
+  const t = translator(locale, fleetAdmin);
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
       <Button asChild variant="outline" className={cn("h-11", fullWidth && "flex-1")}>
-        <a href="/dashboard/vehicles">{COPY.cancel}</a>
+        <a href="/dashboard/vehicles">{t("cancel")}</a>
       </Button>
       <Button
         type="submit"
@@ -291,9 +279,12 @@ function FormActions({
 interface Props {
   mode: "create" | "edit";
   vehicle?: Vehicle;
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
 }
 
-export default function VehicleForm({ mode, vehicle }: Props) {
+export default function VehicleForm({ mode, vehicle, locale }: Props) {
+  const t = translator(locale, fleetAdmin);
   const [fields, setFields] = React.useState<StringFields>(() => initialStrings(vehicle));
   const [category, setCategory] = React.useState<string>(vehicle?.category ?? "");
   const [transmission, setTransmission] = React.useState<string>(vehicle?.transmission ?? "");
@@ -303,7 +294,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
   const [submitting, setSubmitting] = React.useState(false);
 
   const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
-  const formError = submitError ?? (hasFieldErrors ? COPY.fixFields : null);
+  const formError = submitError ?? (hasFieldErrors ? t("fixFields") : null);
 
   // The values the form opened with, mirroring the `useState` initialisers above.
   // Dirtiness is a comparison against this rather than a flag, so none of the ~18
@@ -380,7 +371,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
 
   /** Run the shared schema client-side. Returns the per-field map, or null when valid. */
   function validate(): Record<string, string> | null {
-    const parsed = vehicleInputSchema.safeParse(buildPayload());
+    const parsed = vehicleInputSchema(locale).safeParse(buildPayload());
     if (parsed.success) {
       setFieldErrors({});
       return null;
@@ -436,24 +427,24 @@ export default function VehicleForm({ mode, vehicle }: Props) {
         setSubmitting(false);
         return;
       }
-      setSubmitError(body.error ?? COPY.genericError);
+      setSubmitError(body.error ?? t("genericError"));
       setSubmitting(false);
     } catch {
-      setSubmitError(COPY.genericError);
+      setSubmitError(t("genericError"));
       setSubmitting(false);
     }
   }
 
-  const title = mode === "create" ? COPY.createTitle : COPY.editTitle;
-  const pendingLabel = mode === "create" ? COPY.createPending : COPY.editPending;
-  const submitLabel = mode === "create" ? COPY.createSubmit : COPY.editSubmit;
+  const title = mode === "create" ? t("createTitle") : t("editTitle");
+  const pendingLabel = mode === "create" ? t("createPending") : t("editPending");
+  const submitLabel = mode === "create" ? t("createSubmit") : t("editSubmit");
 
   function renderField(field: FieldDef) {
     const error = fieldErrors[field.id];
     return (
       <div key={field.id} className={cn("flex flex-col gap-1.5", field.full && "sm:col-span-2")}>
         <Label htmlFor={field.id} className={LABEL_CLASS}>
-          {field.label}
+          {t(field.labelKey)}
           {field.required && <Req />}
         </Label>
         <Input
@@ -494,14 +485,14 @@ export default function VehicleForm({ mode, vehicle }: Props) {
           <div className="flex min-w-0 items-center gap-3">
             <a
               href="/dashboard/vehicles"
-              aria-label={COPY.back}
+              aria-label={t("back")}
               className="border-border bg-card text-foreground hover:bg-background flex size-10 shrink-0 items-center justify-center rounded-[11px] border transition-colors"
             >
               <ArrowLeft className="size-[18px]" />
             </a>
             <div className="min-w-0">
               <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
-                {COPY.eyebrow}
+                {t("formEyebrow")}
               </p>
               <h1 className="text-foreground mt-0.5 text-[26px] leading-tight font-bold tracking-tight sm:text-[28px]">
                 {title}
@@ -509,6 +500,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
             </div>
           </div>
           <FormActions
+            locale={locale}
             submitting={submitting}
             submitLabel={submitLabel}
             pendingLabel={pendingLabel}
@@ -530,7 +522,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
         <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1.15fr_1fr] lg:items-start lg:gap-6">
           {/* Left: identity / specs / pricing. */}
           <div className="flex flex-col gap-5">
-            <Section n={1} title={COPY.secIdentity}>
+            <Section n={1} title={t("secIdentity")}>
               {renderField(NAME_FIELD)}
               {renderField(PLATE_FIELD)}
               {/* Type — required category chips (reuses the catalog/list Polish labels). */}
@@ -538,7 +530,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
                 {/* The chips are a button group, not a single labelable control, so
                     the label associates via aria-labelledby on a role="group". */}
                 <span id="category-label" className={cn(LABEL_CLASS, "flex items-center")}>
-                  {COPY.labelType}
+                  {t("labelType")}
                   <Req />
                 </span>
                 <div
@@ -568,7 +560,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
                           fieldErrors.category && !category && "border-destructive",
                         )}
                       >
-                        {categoryLabelPl(c)}
+                        {categoryLabel(c, locale)}
                       </button>
                     );
                   })}
@@ -578,12 +570,12 @@ export default function VehicleForm({ mode, vehicle }: Props) {
               {IDENTITY.map(renderField)}
             </Section>
 
-            <Section n={2} title={COPY.secSpec}>
+            <Section n={2} title={t("secSpec")}>
               {renderField(SPEC_FUEL)}
               {/* Transmission — optional select with an explicit "unset" option. */}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="transmission" className={LABEL_CLASS}>
-                  {COPY.labelTransmission}
+                  {t("labelTransmission")}
                 </Label>
                 <Select
                   value={transmission || undefined}
@@ -597,12 +589,12 @@ export default function VehicleForm({ mode, vehicle }: Props) {
                     className={cn(FIELD_CLASS, "w-full")}
                     aria-invalid={Boolean(fieldErrors.transmission)}
                   >
-                    <SelectValue placeholder={COPY.transmissionPlaceholder} />
+                    <SelectValue placeholder={t("transmissionPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={TRANSMISSION_NONE}>{COPY.transmissionNone}</SelectItem>
-                    <SelectItem value="manual">Manualna</SelectItem>
-                    <SelectItem value="automatic">Automatyczna</SelectItem>
+                    <SelectItem value={TRANSMISSION_NONE}>{t("transmissionNone")}</SelectItem>
+                    <SelectItem value="manual">{transmissionLabel("manual", locale)}</SelectItem>
+                    <SelectItem value="automatic">{transmissionLabel("automatic", locale)}</SelectItem>
                   </SelectContent>
                 </Select>
                 {fieldErrors.transmission && (
@@ -612,7 +604,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
               {SPEC_REST.map(renderField)}
             </Section>
 
-            <Section n={3} title={COPY.secPricing}>
+            <Section n={3} title={t("secPricing")}>
               {PRICING.map(renderField)}
             </Section>
           </div>
@@ -621,10 +613,10 @@ export default function VehicleForm({ mode, vehicle }: Props) {
             Real upload is deferred to S-05, so this is a URL textarea, not a gallery. */}
           <div className="lg:sticky lg:top-6">
             <section className="border-border bg-card shadow-card rounded-[18px] border p-5 sm:p-[22px]">
-              <SectionHead n={4} title={COPY.secPhotos} />
+              <SectionHead n={4} title={t("secPhotos")} />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="photos" className={LABEL_CLASS}>
-                  {COPY.photosLabel}
+                  {t("photosLabel")}
                 </Label>
                 <Textarea
                   id="photos"
@@ -638,7 +630,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
                     clearError("photos");
                   }}
                 />
-                <p className="text-muted-foreground text-xs">{COPY.photosHint}</p>
+                <p className="text-muted-foreground text-xs">{t("photosHint")}</p>
                 {fieldErrors.photos && <p className="text-destructive text-sm font-medium">{fieldErrors.photos}</p>}
               </div>
             </section>
@@ -647,6 +639,7 @@ export default function VehicleForm({ mode, vehicle }: Props) {
 
         {/* Mobile action bar — the header actions are desktop-only; full-width here. */}
         <FormActions
+          locale={locale}
           submitting={submitting}
           submitLabel={submitLabel}
           pendingLabel={pendingLabel}

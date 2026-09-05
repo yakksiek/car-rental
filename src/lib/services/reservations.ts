@@ -58,6 +58,14 @@ export async function createReservationRequest(
     p_company: input.company,
     p_vat_id: input.vat_id,
     p_notes: input.notes,
+    // The funnel's ONLY chance to record the customer's language: the
+    // confirmation mail is sent days later by staff who cannot know what
+    // language the customer read the site in.
+    p_locale: input.locale,
+    // Consent attribution: `terms_accepted_at` records only THAT someone agreed.
+    // These two record to what, and in which language they read it.
+    p_terms_version: input.terms_version,
+    p_terms_locale: input.terms_locale,
   });
   if (error) {
     throw error;
@@ -85,7 +93,7 @@ export async function createReservationRequest(
  * throw. The live availability GET the modal runs is advisory; this is the
  * TOCTOU-safe authority.
  *
- * On `created` the RPC's 11 email columns are split out as a `DecisionEmailPayload`
+ * On `created` the RPC's 12 email columns are split out as a `DecisionEmailPayload`
  * so the caller can hand them straight to the shared confirmed-email helper.
  *
  * A `null` client (or malformed vehicle id) degrades to `unauthorized` — the
@@ -106,6 +114,10 @@ export async function createConfirmedReservation(
     p_customer_name: input.customer_name,
     p_customer_email: input.customer_email,
     p_customer_phone: input.customer_phone,
+    // The customer's language as the employee entered it on the modal, not the
+    // employee's own — this RPC returns an email payload and the route mails it
+    // immediately.
+    p_locale: input.locale,
   });
   if (error) {
     throw error;

@@ -4,10 +4,12 @@ import { ArrowRight, Key, List, TriangleAlert } from "lucide-react";
 // others
 import { cn } from "../../lib/utils";
 import type { DayCounts } from "../../lib/dispatch-board";
+import { translator, type Locale } from "../../lib/i18n/types";
+import { staff } from "../../lib/i18n/staff";
 
 // The desktop KPI row of the dispatch cockpit (design `DashStat`, design-contract
 // §B). Four whole-card links onto the views they count: three white cards with a
-// tone accent bar and a watermark glyph, then the filled-crimson `Po terminie`
+// tone accent bar and a watermark glyph, then the filled-crimson overdue
 // urgency card. Numbers are DAY TOTALS — the row count of the view each card
 // opens — so a card's number always matches the list it lands on.
 
@@ -48,8 +50,8 @@ function StatCard({ card }: { card: ToneCard }) {
   );
 }
 
-/** The urgency card — filled crimson, no accent bar, `PILNE` pill beside the sub-label. */
-function OverdueCard({ value }: { value: number }) {
+/** The urgency card — filled crimson, no accent bar, an `urgent` pill beside the sub-label. */
+function OverdueCard({ value, t }: { value: number; t: (key: keyof typeof staff.en) => string }) {
   return (
     <a
       href="/dashboard/returns?filter=overdue"
@@ -61,12 +63,13 @@ function OverdueCard({ value }: { value: number }) {
       />
       <div className="text-[46px] leading-none font-[750] tracking-[-2px] text-white tabular-nums">{value}</div>
       <div>
-        <div className="mt-[7px] text-[14.5px] font-[650] tracking-[-0.2px] text-white">Po terminie</div>
+        <div className="mt-[7px] text-[14.5px] font-[650] tracking-[-0.2px] text-white">{t("overdue")}</div>
         <div className="mt-[3px] flex items-center gap-2">
-          <span className="text-[10.5px] font-bold tracking-[0.5px] text-white/70 uppercase">DZIŚ</span>
+          {/* `uppercase` is the CSS, so the catalog holds sentence case. */}
+          <span className="text-[10.5px] font-bold tracking-[0.5px] text-white/70 uppercase">{t("today")}</span>
           <span className="inline-flex h-5 items-center gap-[5px] rounded-full bg-white/15 px-[9px] text-[9.5px] font-bold tracking-[0.4px] text-white uppercase">
             <span className="size-[5px] rounded-full bg-white" aria-hidden="true" />
-            PILNE
+            {t("urgent")}
           </span>
         </div>
       </div>
@@ -74,12 +77,13 @@ function OverdueCard({ value }: { value: number }) {
   );
 }
 
-export default function StatCards({ counts }: { counts: DayCounts }) {
+export default function StatCards({ counts, locale }: { counts: DayCounts; locale: Locale }) {
+  const t = translator(locale, staff);
   const cards: ToneCard[] = [
     {
       href: "/dashboard/pickups",
-      label: "Wydania",
-      subLabel: "DZIŚ",
+      label: t("navPickups"),
+      subLabel: t("today"),
       value: counts.pickups,
       accent: "bg-foreground",
       numberTone: "text-foreground",
@@ -87,18 +91,18 @@ export default function StatCards({ counts }: { counts: DayCounts }) {
     },
     {
       href: "/dashboard/returns",
-      label: "Zwroty",
-      subLabel: "DZIŚ",
+      label: t("navReturns"),
+      subLabel: t("today"),
       value: counts.returns,
       accent: "bg-success",
       numberTone: "text-success",
       Icon: ArrowRight,
     },
     {
-      href: "/dashboard/reservations?from=pulpit",
-      label: "Wnioski",
-      subLabel: "OCZEKUJĄCE",
-      value: counts.wnioski,
+      href: "/dashboard/reservations?from=dashboard",
+      label: t("navRequests"),
+      subLabel: t("pendingSub"),
+      value: counts.requests,
       accent: "bg-warning",
       numberTone: "text-warning",
       Icon: List,
@@ -110,7 +114,7 @@ export default function StatCards({ counts }: { counts: DayCounts }) {
       {cards.map((card) => (
         <StatCard key={card.href} card={card} />
       ))}
-      <OverdueCard value={counts.overdue} />
+      <OverdueCard value={counts.overdue} t={t} />
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { vehicleSlug } from "../../../lib/slug";
 // VehicleDetail's Reserve CTA.
 
 const { id } = Astro.params;
-const supabase = Astro.locals.supabase;
+const { supabase, t } = Astro.locals;
 
 const vehicle = id ? await getVehicleById(supabase, id) : null;
 
@@ -47,7 +47,7 @@ const canonical = vehicle
 
 const title = vehicle
   ? [vehicle.make ?? vehicle.name, vehicle.model].filter(Boolean).join(" ")
-  : "Nie znaleziono pojazdu";
+  : t("fleet.notFoundTitle");
 ---
 
 <Layout title={`${title} — Flota`}>
@@ -58,16 +58,14 @@ const title = vehicle
       <VehicleDetail vehicle={vehicle} pickup={pickup} returnDate={returnDate} busyRanges={busyRanges} />
     ) : (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
-        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
-        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
-          Ten pojazd nie istnieje lub nie jest już dostępny w naszej flocie.
-        </p>
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("fleet.notFoundEyebrow")}</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">{t("fleet.notFoundTitle")}</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">{t("fleet.notFoundBody")}</p>
         <a
           href="/fleet"
           class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
         >
-          Wróć do floty
+          {t("fleet.backToFleet")}
         </a>
       </main>
     )

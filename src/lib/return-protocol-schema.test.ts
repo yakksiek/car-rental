@@ -2,12 +2,17 @@
 import { describe, expect, it } from "vitest";
 
 // others
+import type { Locale } from "./i18n/types";
 import { firstIssuePerField, returnProtocolSchema } from "./return-protocol-schema";
 import { PHOTO_SLOTS } from "./protocol-schema";
 
+// The schema's SHAPE cannot vary by locale, so the structural cases run against
+// the default; the message split gets its own both-locales case at the bottom.
+const schema = (locale: Locale = "en") => returnProtocolSchema(locale);
+
 /** Parse, assert it failed, and hand back the `{ field: message }` map the API returns. */
-function expectFieldErrors(input: unknown): Record<string, string> {
-  const result = returnProtocolSchema.safeParse(input);
+function expectFieldErrors(input: unknown, locale: Locale = "en"): Record<string, string> {
+  const result = schema(locale).safeParse(input);
   expect(result.success).toBe(false);
   if (result.success) {
     throw new Error("expected the schema to reject this input");
@@ -34,13 +39,16 @@ function validInput(overrides: Record<string, unknown> = {}) {
     signaturePath: `${PREFIX}/signature.png`,
     photos: Object.fromEntries(PHOTO_SLOTS.map((slot) => [slot, `${PREFIX}/photo-${slot}.jpg`])),
     damages: [],
+    // The language the client rendered the PDF in — a required field since
+    // english-localization Phase 6, seeded from the reservation, not the session.
+    locale: "pl",
     ...overrides,
   };
 }
 
 describe("returnProtocolSchema", () => {
   it("accepts a complete return protocol and coerces the odometer string to an int", () => {
-    const parsed = returnProtocolSchema.parse(validInput());
+    const parsed = schema().parse(validInput());
     expect(parsed.odometerKm).toBe(42850);
     expect(parsed.baselineProtocolId).toBe(BASELINE_ID);
     expect(parsed.photos.dashboard).toBe(`${PREFIX}/photo-dashboard.jpg`);
@@ -52,11 +60,11 @@ describe("returnProtocolSchema", () => {
   });
 
   it("rejects a non-uuid baselineProtocolId", () => {
-    expect(returnProtocolSchema.safeParse(validInput({ baselineProtocolId: "not-a-uuid" })).success).toBe(false);
+    expect(schema().safeParse(validInput({ baselineProtocolId: "not-a-uuid" })).success).toBe(false);
   });
 
   it("carries a per-damage baselineDamageId when the item is tagged existing", () => {
-    const parsed = returnProtocolSchema.parse(
+    const parsed = schema().parse(
       validInput({
         damages: [
           {
@@ -74,7 +82,7 @@ describe("returnProtocolSchema", () => {
   });
 
   it("defaults an absent baselineDamageId to null (a new damage)", () => {
-    const parsed = returnProtocolSchema.parse(
+    const parsed = schema().parse(
       validInput({
         damages: [{ id: DAMAGE_ID, type: "dent", location: "prawe drzwi ąćęłńóśźż", photos: [] }],
       }),
@@ -96,7 +104,7 @@ describe("returnProtocolSchema", () => {
   });
 
   it("rejects a damage photo path outside this protocol's return folder", () => {
-    const result = returnProtocolSchema.safeParse(
+    const result = schema().safeParse(
       validInput({
         damages: [
           {
@@ -112,11 +120,11 @@ describe("returnProtocolSchema", () => {
   });
 
   it("rejects customerAck when it is false", () => {
-    expect(returnProtocolSchema.safeParse(validInput({ customerAck: false })).success).toBe(false);
+    expect(schema().safeParse(validInput({ customerAck: false })).success).toBe(false);
   });
 
   it.each([-1, 9])("rejects fuelEighths outside 0–8 (%i)", (fuelEighths) => {
-    expect(returnProtocolSchema.safeParse(validInput({ fuelEighths })).success).toBe(false);
+    expect(schema().safeParse(validInput({ fuelEighths })).success).toBe(false);
   });
 
   // The return schema RE-DECLARES its own odometer/photos/damage validators (it
@@ -127,7 +135,7 @@ describe("returnProtocolSchema", () => {
     const photos = Object.fromEntries(
       PHOTO_SLOTS.filter((s) => s !== "rear").map((s) => [s, `${PREFIX}/photo-${s}.jpg`]),
     );
-    expect(returnProtocolSchema.safeParse(validInput({ photos })).success).toBe(false);
+    expect(schema().safeParse(validInput({ photos })).success).toBe(false);
   });
 
   it("rejects a blank odometer rather than coercing it to 0", () => {
@@ -135,22 +143,22 @@ describe("returnProtocolSchema", () => {
   });
 
   it("rejects a negative odometer", () => {
-    expect(returnProtocolSchema.safeParse(validInput({ odometerKm: "-1" })).success).toBe(false);
+    expect(schema().safeParse(validInput({ odometerKm: "-1" })).success).toBe(false);
   });
 
   it("rejects a non-uuid protocolId", () => {
-    expect(returnProtocolSchema.safeParse(validInput({ protocolId: "not-a-uuid" })).success).toBe(false);
+    expect(schema().safeParse(validInput({ protocolId: "not-a-uuid" })).success).toBe(false);
   });
 
   it("rejects a damage item with a blank location", () => {
-    const result = returnProtocolSchema.safeParse(
+    const result = schema().safeParse(
       validInput({ damages: [{ id: DAMAGE_ID, type: "crack", location: "   ", photos: [] }] }),
     );
     expect(result.success).toBe(false);
   });
 
   it("normalizes a blank damage size to null", () => {
-    const parsed = returnProtocolSchema.parse(
+    const parsed = schema().parse(
       validInput({
         damages: [
           {
@@ -164,5 +172,11 @@ describe("returnProtocolSchema", () => {
       }),
     );
     expect(parsed.damages[0].size).toBeNull();
+  });
+
+  it("renders its messages in the active locale", () => {
+    const blank = validInput({ odometerKm: "" });
+    expect(expectFieldErrors(blank, "en").odometerKm).toBe("Enter the odometer reading.");
+    expect(expectFieldErrors(blank, "pl").odometerKm).toBe("Podaj stan licznika.");
   });
 });

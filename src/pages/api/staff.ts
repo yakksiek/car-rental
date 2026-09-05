@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { isDemoAccount, requireRole } from "../../lib/access";
 import { createAdminClient } from "../../lib/supabase";
 import { createEmployee, employeeInviteSchema } from "../../lib/services/staff";
@@ -17,41 +19,25 @@ import { createEmployee, employeeInviteSchema } from "../../lib/services/staff";
 //   (c) zod body validation (shared employeeInviteSchema), 400 `{ errors }`,
 //   (d) the invite/reactivate, mapping the result tag to HTTP.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  duplicateEmail: "Pracownik z tym adresem e-mail już istnieje.",
-  unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
-  // Shared verbatim by the three guarded routes (deactivate, reset-password and
-  // this one). Duplicated rather than imported, following the four strings above
-  // it that are already duplicated across the same three files.
-  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
-  // The invite mail went out but the profiles row did not land. The roster island
-  // renders its own §9 copy off `code`, so this string is for non-browser callers
-  // and logs; the two outcomes share it because the remedy differs only in the
-  // island's wording.
-  provisionFailed: "Zaproszenie zostało wysłane, ale konta nie udało się dokończyć.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-admin 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "admin")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   // (b2) Demo gate. AFTER the admin check so a refusal is attributed to the demo
@@ -63,18 +49,18 @@ export const POST: APIRoute = async (context) => {
   // to the bad-origin/unconfigured sentence, so without it the roster would name
   // the wrong cause.
   if (isDemoAccount(context.locals)) {
-    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
+    return json(403, { error: t("demoBlocked"), code: "demo_blocked" });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (c) Validate — the same schema the island runs client-side.
-  const parsed = employeeInviteSchema.safeParse(payload);
+  const parsed = employeeInviteSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     const errors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
@@ -98,7 +84,7 @@ export const POST: APIRoute = async (context) => {
       // `api/return-protocols/[id]/pdf.ts:18-21`).
       return json(200, { member: result.member, activationMail: result.activationMail });
     case "duplicate_active":
-      return json(409, { errors: { email: MSG.duplicateEmail } });
+      return json(409, { errors: { email: t("duplicateEmail") } });
     // Provisioning half-succeeded: 500 is the honest class (our write failed),
     // and `code` is what makes it distinguishable from an unhandled 500 — those
     // carry Astro's HTML body with no `code`, so the island falls back to the
@@ -112,11 +98,11 @@ export const POST: APIRoute = async (context) => {
     // place it is emitted. The collapse is a UI decision about what helps an
     // admin act; the seam for it is the island, not this route or the service.
     case "provision_rolled_back":
-      return json(500, { error: MSG.provisionFailed, code: "provision_rolled_back" });
+      return json(500, { error: t("provisionFailed"), code: "provision_rolled_back" });
     case "provision_orphaned":
-      return json(500, { error: MSG.provisionFailed, code: "provision_orphaned" });
+      return json(500, { error: t("provisionFailed"), code: "provision_orphaned" });
     case "unauthorized":
       // A null admin client here means the service-role key is unconfigured.
-      return json(403, { error: MSG.unconfigured });
+      return json(403, { error: t("unconfigured") });
   }
 };

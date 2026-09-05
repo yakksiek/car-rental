@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { requireRole } from "../../../../lib/access";
 import { resendProtocolEmail } from "../../../../lib/services/protocols";
 
@@ -19,37 +21,30 @@ import { resendProtocolEmail } from "../../../../lib/services/protocols";
 // attach — that is a 409, and the employee must regenerate from the form, not
 // resend. Takes no body: the protocol id in the path is the whole request.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono protokołu.",
-  noPdf: "Protokół nie ma zapisanego pliku PDF — wygeneruj go ponownie.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-staff role 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   // (c) Re-sign and re-send, recording the outcome. Never throws; a provider
@@ -60,10 +55,10 @@ export const POST: APIRoute = async (context) => {
     case "failed":
       return json(200, { status: "ok", delivery: delivery.status });
     case "no_pdf":
-      return json(409, { error: MSG.noPdf, status: "no_pdf" });
+      return json(409, { error: t("noPdfRegenerate"), status: "no_pdf" });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("protocolNotFound") });
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
   }
 };

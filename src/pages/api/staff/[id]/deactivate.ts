@@ -3,6 +3,8 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { isDemoAccount, requireRole } from "../../../../lib/access";
 import { createAdminClient } from "../../../../lib/supabase";
 import { deactivateStaff, getStaffEmail } from "../../../../lib/services/staff";
@@ -21,21 +23,6 @@ import { deactivateStaff, getStaffEmail } from "../../../../lib/services/staff";
 // in production, that is a visitor locking the owner out, recoverable only by
 // direct SQL. The gate closes that; the RPC's guards are unchanged.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono pracownika.",
-  confirmMismatch: "Wpisany adres e-mail nie zgadza się.",
-  self: "Nie możesz usunąć własnego konta.",
-  lastAdmin: "To jedyny administrator — nie można go usunąć.",
-  unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
-  // Shared verbatim with `api/staff.ts` and `reset-password.ts` — see the note
-  // on that entry there.
-  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
-} as const;
-
 const bodySchema = z.object({ confirmEmail: z.string().trim().min(1) });
 
 function json(status: number, body: unknown): Response {
@@ -43,18 +30,20 @@ function json(status: number, body: unknown): Response {
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-admin 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "admin")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   // (b2) Demo gate — after the admin check, before any body parse or admin-client
@@ -62,39 +51,39 @@ export const POST: APIRoute = async (context) => {
   // (bad origin, forbidden, unconfigured, `self`), which the roster's remove
   // modal otherwise reports as a generic refusal.
   if (isDemoAccount(context.locals)) {
-    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
+    return json(403, { error: t("demoBlocked"), code: "demo_blocked" });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   const parsed = bodySchema.safeParse(payload);
   if (!parsed.success) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   const admin = createAdminClient();
   if (!admin) {
-    return json(403, { error: MSG.unconfigured });
+    return json(403, { error: t("unconfigured") });
   }
 
   // (c/d) Re-fetch the target's real email and enforce the typed confirmation
   // server-side. A missing target is a 404; a mismatch is a 400.
   const email = await getStaffEmail(admin, id);
   if (!email) {
-    return json(404, { error: MSG.notFound });
+    return json(404, { error: t("staffNotFound") });
   }
   if (email.trim().toLowerCase() !== parsed.data.confirmEmail.trim().toLowerCase()) {
-    return json(400, { error: MSG.confirmMismatch });
+    return json(400, { error: t("confirmMismatch") });
   }
 
   // (e) The guarded soft-remove. The RPC (run on the admin's cookie client) is
@@ -108,14 +97,14 @@ export const POST: APIRoute = async (context) => {
       // RPC's own demo arm is unreachable from here. Mapped to the identical
       // response anyway — an arm that answers "impossible" is how a guard rots
       // when a later edit moves the gate.
-      return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
+      return json(403, { error: t("demoBlocked"), code: "demo_blocked" });
     case "self":
-      return json(403, { error: MSG.self });
+      return json(403, { error: t("self") });
     case "last_admin":
-      return json(409, { error: MSG.lastAdmin });
+      return json(409, { error: t("lastAdmin") });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("staffNotFound") });
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
   }
 };

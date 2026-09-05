@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { createClient } from "./lib/supabase";
 import { isRoleSufficient, resolveRequiredRole } from "./lib/access";
+import { LOCALE_COOKIE, resolveLocale, useTranslations } from "./lib/i18n";
 import { shouldSecureCookies } from "./lib/secure-cookies";
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -16,6 +17,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // services (S-01) and the S-02 reservation funnel.
   context.locals.supabase = supabase;
 
+  // Filled from the profiles row below when there is one; stays null for an
+  // anonymous, profile-less or unconfigured request.
+  let profileLocale: string | null = null;
+
   if (supabase) {
     const {
       data: { user },
@@ -30,7 +35,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (user) {
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("role, deactivated_at, is_demo")
+        .select("role, deactivated_at, is_demo, locale")
         .eq("user_id", user.id)
         .maybeSingle();
       // A failed lookup is indistinguishable from a missing profile downstream —
@@ -52,6 +57,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
       // demo-ness are independent decisions, and collapsing them would make a
       // deactivated demo account read as a non-demo one. Missing profile → false.
       context.locals.isDemo = profile?.is_demo ?? false;
+      // Locale rides the SAME row, so it costs no extra round trip either
+      // (english-localization Phase 1). `is_demo` is read here rather than from
+      // `context.locals.isDemo` only to keep both signals sourced from one
+      // object; they are the same value.
+      profileLocale = profile?.locale ?? null;
     } else {
       context.locals.role = null;
       context.locals.isDemo = false;
@@ -62,6 +72,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.role = null;
     context.locals.isDemo = false;
   }
+
+  // Locale resolution: cookie > profiles.locale > default. Runs BEFORE the
+  // access gate below so a redirect it issues is still a redirect within the
+  // visitor's language, and it never throws — an unrecognised cookie value falls
+  // back rather than erroring every page (see `resolveLocale`).
+  //
+  // The `isDemo` argument is the demo carve-out: one shared profiles row means a
+  // stored preference would otherwise leak from one recruiter to the next. The
+  // WRITE side (`set_profile_locale`) is deliberately NOT gated — read
+  // `src/lib/i18n/resolve.ts` before touching either half.
+  context.locals.locale = resolveLocale({
+    cookie: context.cookies.get(LOCALE_COOKIE)?.value,
+    profileLocale,
+    isDemo: context.locals.isDemo,
+  });
+  context.locals.t = useTranslations(context.locals.locale);
 
   // Centralized, fail-closed gate. There is no path where an unresolved or
   // insufficient role falls through to access.

@@ -5,7 +5,27 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react
 import { DayPicker, getDefaultClassNames, type DayButton } from "react-day-picker";
 
 import { cn } from "../../lib/utils";
+import { dayFull, monthYearLong } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
 import { Button, buttonVariants } from "./button";
+
+/**
+ * Weekday header abbreviations, indexed by `getDay()`.
+ *
+ * A table rather than `Intl`, and the one place in this file that is copy. Every
+ * caller used to pass react-day-picker's `locale={pl}` — a `date-fns` Locale
+ * object, which pinned captions, weekday header and day aria-labels to Polish no
+ * matter which locale was active. Removing it is what makes this calendar
+ * bilingual, but the library's own `cccccc` shapes are what the design boards
+ * were drawn against, and no `Intl` width reproduces them: `short` gives
+ * `niedz. / wt. / czw. / pt.`, `narrow` gives single letters. So the Polish row is
+ * transcribed verbatim to keep the header identical, and English takes en-GB's
+ * short forms.
+ */
+const WEEKDAY_ABBR: Record<Locale, readonly string[]> = {
+  en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  pl: ["nie", "pon", "wto", "śro", "czw", "pią", "sob"],
+};
 
 function Calendar({
   className,
@@ -14,10 +34,17 @@ function Calendar({
   captionLayout = "label",
   buttonVariant = "ghost",
   formatters,
+  labels,
   components,
+  appLocale,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+  /**
+   * The APP locale. Named apart from react-day-picker's own `locale`, which takes
+   * a `date-fns` Locale object — a different thing, and the one this replaces.
+   */
+  appLocale: Locale;
 }) {
   const defaultClassNames = getDefaultClassNames();
 
@@ -31,9 +58,22 @@ function Calendar({
         className,
       )}
       captionLayout={captionLayout}
+      // Monday, in both locales: it is what `locale={pl}` used to imply, and the
+      // depot's week starts Monday regardless of the reader's language. Stated
+      // outright so dropping the date-fns Locale cannot silently reflow the grid
+      // to a Sunday start.
+      weekStartsOn={1}
       formatters={{
         formatMonthDropdown: (date) => date.toLocaleString("default", { month: "short" }),
+        formatCaption: (date) => monthYearLong(date, appLocale),
+        formatWeekdayName: (date) => WEEKDAY_ABBR[appLocale][date.getDay()],
         ...formatters,
+      }}
+      labels={{
+        // Authored rather than left to the library, whose default would fall back
+        // to its built-in en-US names for every day cell's accessible name.
+        labelDayButton: (date) => dayFull(date, appLocale),
+        ...labels,
       }}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),

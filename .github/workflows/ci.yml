@@ -30,6 +30,15 @@ jobs:
       - run: npm ci
       - run: npx astro sync
       - run: npm run lint
+      # The Polish-copy sweep (english-localization). It exits 1 on any hit and
+      # was written to gate CI, but shipped in neither the workflow nor the
+      # pre-commit hook — so plan criteria 5.6 and 6.15 were checks nobody had to
+      # run (impl-review F9). `--all` is the full-tree mode; the default mode
+      # covers only pages + components and is the weaker of the two.
+      #
+      # NOT pre-commit: that hook runs on staged files, and this sweep reads the
+      # whole tree.
+      - run: npm run sweep:i18n -- --all
       - run: npm run test
       - run: npm run build
         env:

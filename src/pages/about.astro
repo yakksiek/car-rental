@@ -19,6 +19,7 @@ import heroImg from "../assets/hero-airfield.jpg";
 // count (getCategoryCounts). Everything else is verbatim design copy. The hero photo
 // reuses src/assets/hero-airfield.jpg via astro:assets (mirrors index.astro).
 
+const { t } = Astro.locals;
 const counts = await getCategoryCounts(Astro.locals.supabase);
 // LIVE fleet count; "—" when Supabase is unset/empty (states-undesigned deviation).
 const fleetCount = counts.total > 0 ? String(counts.total) : "—";
@@ -27,44 +28,41 @@ const fleetCount = counts.total > 0 ? String(counts.total) : "—";
 // watermark + number + label — no small top icon. The "pojazdy we flocie" card uses the
 // canonical truck glyph (CategoryIcon, consistent with P9); the other three keep II.* icons.
 const stats: { icon: InfoIconName | "truck"; n: string; l: string }[] = [
-  { icon: "shield", n: "10+", l: "lat na rynku" },
-  { icon: "truck", n: fleetCount, l: "pojazdy we flocie" },
-  { icon: "headset", n: "24/7", l: "wsparcie i assistance" },
-  { icon: "spark", n: "do 2 lat", l: "maks. wiek auta" },
+  { icon: "shield", n: t("info.statYearsValue"), l: t("info.statYearsLabel") },
+  { icon: "truck", n: fleetCount, l: t("info.statFleetLabel") },
+  { icon: "headset", n: t("info.statSupportValue"), l: t("info.statSupportLabel") },
+  { icon: "spark", n: t("info.statAgeValue"), l: t("info.statAgeLabel") },
 ];
 
 // "Nasza flota" list (design FLEET_ITEMS, pulled 2026-08-02) — canonical Icon.* glyphs.
-const fleetItems: { icon: InfoIconName; t: string; d: string }[] = [
-  { icon: "truck", t: "Furgony L3 i L4H2", d: "Renault Master, Ford Transit, Mercedes Sprinter" },
-  { icon: "bus", t: "Busy 8–9 osobowe", d: "Idealne do przewozu większych grup" },
-  { icon: "box", t: "Kontenery 8–10 europalet", d: "Zabudowa kontenerowa i plandeka" },
-  { icon: "flatbed", t: "Winda załadowcza", d: "Łatwy za- i rozładunek ciężkich palet" },
-  { icon: "van", t: "Brygadówki 7-osobowe", d: "Załoga i ładunek w jednym aucie" },
-  { icon: "city", t: "Małe vany miejskie", d: "Zwrotne, do transportu w mieście" },
+// `title` / `desc` rather than the old `t` / `d`: `t` is now the translator.
+const fleetItems: { icon: InfoIconName; title: string; desc: string }[] = [
+  { icon: "truck", title: t("info.fleetVansT"), desc: t("info.fleetVansD") },
+  { icon: "bus", title: t("info.fleetBusesT"), desc: t("info.fleetBusesD") },
+  { icon: "box", title: t("info.fleetBoxT"), desc: t("info.fleetBoxD") },
+  { icon: "flatbed", title: t("info.fleetTailliftT"), desc: t("info.fleetTailliftD") },
+  { icon: "van", title: t("info.fleetCrewT"), desc: t("info.fleetCrewD") },
+  { icon: "city", title: t("info.fleetCityT"), desc: t("info.fleetCityD") },
 ];
 
-const values: { icon: InfoIconName; t: string; d: string }[] = [
-  { icon: "shield", t: "Pełne ubezpieczenie", d: "Każdy pojazd z AC, OC i NNW oraz assistance 24/7 w całej Polsce." },
-  { icon: "gauge", t: "Niski przebieg", d: "Auta z gwarancją producenta, serwisowane i utrzymane w idealnym stanie." },
-  { icon: "spark", t: "Nowoczesna flota", d: "Wymieniamy pojazdy maks. co 2 lata — jeździsz najnowszymi modelami." },
-  {
-    icon: "calendar",
-    t: "Elastyczne terminy",
-    d: "Wynajem na dobę, krótko-, średnio- i długoterminowy — jak potrzebujesz.",
-  },
-  { icon: "invoice", t: "Faktura VAT", d: "Pełna dokumentacja i faktura do każdego wynajmu, także dla firm." },
-  { icon: "headset", t: "Wsparcie 24/7", d: "Jesteśmy pod telefonem o każdej porze — także w weekendy i święta." },
+const values: { icon: InfoIconName; title: string; desc: string }[] = [
+  { icon: "shield", title: t("info.valueInsuranceT"), desc: t("info.valueInsuranceD") },
+  { icon: "gauge", title: t("info.valueMileageT"), desc: t("info.valueMileageD") },
+  { icon: "spark", title: t("info.valueModernT"), desc: t("info.valueModernD") },
+  { icon: "calendar", title: t("info.valueFlexibleT"), desc: t("info.valueFlexibleD") },
+  { icon: "invoice", title: t("info.valueInvoiceT"), desc: t("info.valueInvoiceD") },
+  { icon: "headset", title: t("info.valueSupportT"), desc: t("info.valueSupportD") },
 ];
 
 const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = [
-  { icon: "phone", k: "Telefon", v: "+48 22 100 20 30", href: "tel:+48221002030" },
-  { icon: "mail", k: "E-mail", v: "kontakt@flota.pl", href: "mailto:kontakt@flota.pl" },
-  { icon: "pin", k: "Adres", v: "Al. Jerozolimskie 200, Warszawa" },
-  { icon: "clock", k: "Godziny", v: "Czynne 24 / 7" },
+  { icon: "phone", k: t("info.contactPhoneKey"), v: "+48 22 100 20 30", href: "tel:+48221002030" },
+  { icon: "mail", k: t("info.contactEmailKey"), v: "kontakt@flota.pl", href: "mailto:kontakt@flota.pl" },
+  { icon: "pin", k: t("info.contactAddressKey"), v: t("info.contactAddressValue") },
+  { icon: "clock", k: t("info.contactHoursKey"), v: t("info.contactHoursValue") },
 ];
 ---
 
-<Layout title="O nas — Flota">
+<Layout title={t("info.aboutTitle")}>
   <SiteHeader active="about" />
 
   <main>
@@ -75,16 +73,15 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
       <div class="mx-auto max-w-[1180px]">
         <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
           <span class="bg-primary size-1.5 rounded-full"></span>
-          O nas
+          {t("info.aboutEyebrow")}
         </div>
         <h1
           class="text-foreground mt-4 text-[34px] leading-[1.02] font-bold tracking-[-1px] text-balance sm:text-[54px] sm:tracking-[-1.8px]"
         >
-          Flota, na której możesz polegać
+          {t("info.aboutHeading")}
         </h1>
         <p class="mt-4 max-w-[680px] text-[15px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[18px]">
-          Jesteśmy zespołem z ponad 10-letnim doświadczeniem w wynajmie samochodów dostawczych. Oferujemy elastyczne
-          rozwiązania dla firm i klientów indywidualnych — od jednej doby po wynajem długoterminowy.
+          {t("info.aboutLead")}
         </p>
       </div>
     </div>
@@ -123,19 +120,16 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
         <div>
           <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
             <span class="bg-primary size-1.5 rounded-full"></span>
-            Nasza historia
+            {t("info.storyEyebrow")}
           </div>
           <h2 class="text-foreground mt-3 text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
-            Rzetelność i elastyczność od pierwszego dnia
+            {t("info.storyHeading")}
           </h2>
           <p class="mt-3.5 text-[14.5px] leading-[1.65] text-[var(--flota-ink-2)] sm:text-[15.5px]">
-            Wszystkie nasze pojazdy są utrzymywane w doskonałym stanie technicznym, mają niski przebieg i bogate
-            wyposażenie. Niezależnie od tego, czy wynajmujesz auto na dobę, miesiąc czy dłużej, możesz liczyć na pełne
-            ubezpieczenie i wsparcie na każdym etapie.
+            {t("info.storyP1")}
           </p>
           <p class="mt-3 text-[14.5px] leading-[1.65] text-[var(--flota-ink-2)] sm:text-[15.5px]">
-            Specjalizujemy się w wynajmie krótko-, średnio- i długoterminowym, dzięki czemu dopasowujemy ofertę do
-            zmieniających się potrzeb Twojego biznesu.
+            {t("info.storyP2")}
           </p>
         </div>
         <div
@@ -157,10 +151,10 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
     <!-- Nasza flota -->
     <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
       <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
-        Nasza flota
+        {t("info.fleetHeading")}
       </h2>
       <div class="mt-1 mb-1.5 text-[14px] text-[var(--flota-ink-2)] sm:text-[15px]">
-        Szeroki wybór pojazdów do każdego zadania transportowego.
+        {t("info.fleetLead")}
       </div>
       <div class="mt-1 grid grid-cols-1 sm:mt-3 sm:grid-cols-2 sm:gap-x-14">
         {
@@ -170,8 +164,8 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
                 <InfoIcon name={item.icon} size={26} color="var(--flota-accent)" />
               </span>
               <div>
-                <div class="text-foreground text-[15px] font-bold tracking-[-0.3px] sm:text-[16px]">{item.t}</div>
-                <div class="text-muted-foreground mt-[3px] text-[13px] leading-[1.45]">{item.d}</div>
+                <div class="text-foreground text-[15px] font-bold tracking-[-0.3px] sm:text-[16px]">{item.title}</div>
+                <div class="text-muted-foreground mt-[3px] text-[13px] leading-[1.45]">{item.desc}</div>
               </div>
             </div>
           ))
@@ -182,7 +176,7 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
     <!-- Dlaczego Flota -->
     <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
       <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
-        Dlaczego Flota
+        {t("info.valuesHeading")}
       </h2>
       <div class="mt-2 grid grid-cols-1 sm:mt-[26px] sm:grid-cols-3 sm:gap-x-11 sm:gap-y-[34px]">
         {
@@ -190,10 +184,10 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
             <div class="border-t border-[var(--flota-hair-2)] py-[18px] sm:border-t-0 sm:py-[2px]">
               <InfoIcon name={v.icon} size={30} color="var(--flota-accent)" />
               <div class="text-foreground mt-3 text-[15.5px] font-bold tracking-[-0.3px] sm:mt-4 sm:text-[17px]">
-                {v.t}
+                {v.title}
               </div>
               <div class="mt-1.5 max-w-[300px] text-[13.5px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[14.5px]">
-                {v.d}
+                {v.desc}
               </div>
             </div>
           ))
@@ -210,19 +204,19 @@ const contacts: { icon: InfoIconName; k: string; v: string; href?: string }[] = 
         <div>
           <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
             <span class="bg-primary size-1.5 rounded-full"></span>
-            Kontakt
+            {t("info.contactEyebrow")}
           </div>
           <div class="mt-3 mb-2 text-[24px] leading-[1.05] font-bold tracking-[-0.8px] text-white sm:text-[32px]">
-            Porozmawiajmy o Twoim transporcie
+            {t("info.contactHeading")}
           </div>
           <div class="text-[14px] leading-[1.55] text-white/[0.72] sm:text-[15.5px]">
-            Zadzwoń lub napisz — dobierzemy pojazd i termin do Twoich potrzeb. Jesteśmy dostępni całą dobę.
+            {t("info.contactLead")}
           </div>
           <a
             href="/fleet"
             class="bg-primary mt-5 inline-flex h-12 items-center gap-2 rounded-[12px] px-6 text-[15px] font-[650] text-white"
           >
-            Zarezerwuj pojazd
+            {t("info.reserveVehicle")}
             <InfoIcon name="arrowRight" size={17} color="#fff" />
           </a>
         </div>

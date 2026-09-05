@@ -3,6 +3,8 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 // others
+import { api } from "../../../lib/i18n/api";
+import { translator } from "../../../lib/i18n/types";
 import { isRoleSufficient } from "../../../lib/access";
 import { listReservationsForCalendar } from "../../../lib/services/reservations";
 
@@ -23,8 +25,10 @@ function json(status: number, body: unknown): Response {
 }
 
 export const GET: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   if (!isRoleSufficient(context.locals.role, "employee")) {
-    return json(403, { error: "Brak uprawnień." });
+    return json(403, { error: t("forbidden") });
   }
 
   const parsed = querySchema.safeParse({
@@ -32,7 +36,7 @@ export const GET: APIRoute = async (context) => {
     end: context.url.searchParams.get("end"),
   });
   if (!parsed.success) {
-    return json(400, { error: "Nieprawidłowy zakres dat." });
+    return json(400, { error: t("badDateRange") });
   }
 
   const rows = await listReservationsForCalendar(context.locals.supabase, parsed.data.start, parsed.data.end);

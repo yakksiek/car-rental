@@ -30,10 +30,20 @@ import { fillHydrated, waitForIslands } from "./support/hydration";
 
 const AUTH_DIR = "playwright/.auth";
 
+// *** The suite runs in ENGLISH, pinned rather than inherited. ***
+// `en` is `DEFAULT_LOCALE`, so a cookie-less request already renders English and
+// this cookie changes nothing today. It is here because "nothing set it" and "it
+// is set to en" fail differently: the seeded staff rows carry `profiles.locale =
+// null` now, but any later seed or a stray `POST /api/locale` inside a spec would
+// silently re-language every literal-copy locator in the suite. Written onto the
+// context BEFORE sign-in so it rides into `storageState` with the session.
+const LOCALE_COOKIE = { name: "locale", value: "en", domain: "localhost", path: "/" };
+
 for (const role of ["employee", "admin", "demo"] as const) {
   setup(`authenticate as ${role}`, async ({ page }) => {
     const { email, password } = SEEDED_CREDENTIALS[role];
 
+    await page.context().addCookies([LOCALE_COOKIE]);
     await page.goto("/auth/signin");
 
     // SignInForm is a `client:load` island. Filling before it hydrates writes to
@@ -41,12 +51,13 @@ for (const role of ["employee", "admin", "demo"] as const) {
     // island to own its inputs before typing a character.
     await waitForIslands(page);
 
-    await fillHydrated(page.getByRole("textbox", { name: "E-mail służbowy" }), email);
-    // Scoped to the textbox role on purpose: `FormField` nests the "Pokaż hasło"
+    await fillHydrated(page.getByRole("textbox", { name: "Work email" }), email);
+    // Scoped to the textbox role on purpose: `FormField` nests the "Show password"
     // toggle inside the field's <label>, so the input's accessible name is
-    // "Hasło Pokaż hasło" and a bare getByLabel("Hasło") also matches the button.
-    await fillHydrated(page.getByRole("textbox", { name: "Hasło" }), password);
-    await page.getByRole("button", { name: "Zaloguj się" }).click();
+    // "Password Show password" and a bare getByLabel("Password") also matches the
+    // button.
+    await fillHydrated(page.getByRole("textbox", { name: "Password" }), password);
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     // The signin route redirects to DEFAULT_POST_LOGIN on success and back to
     // /auth/signin?error=… on failure. Waiting for the dashboard URL — not for
@@ -59,7 +70,7 @@ for (const role of ["employee", "admin", "demo"] as const) {
     // have been bounced back to sign-in. The sign-out control is the marker
     // because it renders at every breakpoint — the dashboard's <h1> is
     // `md:hidden`, so asserting on it would pass or fail by viewport.
-    await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 
     await page.context().storageState({ path: `${AUTH_DIR}/${role}.json` });
   });

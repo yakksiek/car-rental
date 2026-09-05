@@ -1,9 +1,7 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { AlertTriangle } from "lucide-react";
-import { labelDayButton, type DateRange, type DayButton, type Matcher } from "react-day-picker";
+import { type DateRange, type DayButton, type Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
@@ -12,7 +10,11 @@ import { Calendar } from "../ui/calendar";
 import { checkRangeBookable, dayAvailabilityMap, type RangeConflict } from "../../lib/availability";
 import { fromIsoDate, toIsoDate } from "../../lib/date-iso";
 import { formatDuration, rentalDays } from "../../lib/format";
-import { AVAILABILITY_COPY, type BusyRangesFetchState } from "../../lib/manual-availability";
+import { dayFull, dayMonthShort, monthYearLong } from "../../lib/format-date";
+import type { Locale } from "../../lib/i18n/types";
+import type { BusyRangesFetchState } from "../../lib/manual-availability";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
 import { cn } from "../../lib/utils";
 import type { VehicleBusyRange } from "../../types";
 
@@ -43,47 +45,28 @@ import type { VehicleBusyRange } from "../../types";
 // `modifiers.focused` effect over from `ui/calendar.tsx:134-141`, or arrow keys
 // repaint the highlight while DOM focus stays on the first cell.
 
-const COPY = {
-  // Verbatim from the source.
-  legendSelected: "Wybrane",
-  legendHalf: "Dzień odbioru / zwrotu — wciąż dostępny",
-  legendFull: "W pełni zajęte",
-  apply: "Zastosuj",
-  // deviation(reuse): the static source draws no veto state; these three are
-  // already shipped and translated on the public widget.
-  hintPickupTaken: "Wybrany dzień odbioru jest niedostępny. Wybierz inny termin.",
-  hintReturnTaken: "Wybrany dzień zwrotu jest niedostępny. Wybierz inny termin.",
-  hintSpansBooked: "Wybrany termin jest niedostępny. Wybierz inne daty.",
-  // deviation(a11y-added): the static source has no aria.
-  pickupOnlyLabel: "dostępny tylko jako dzień odbioru",
-  returnOnlyLabel: "dostępny tylko jako dzień zwrotu",
-  prevMonth: "Poprzedni miesiąc",
-  nextMonth: "Następny miesiąc",
-  // D19 — deliberately the availability panel's own strings, not a second
-  // wording for the same failure. Shared via `AVAILABILITY_COPY` so the two
-  // surfaces cannot drift apart.
-  readFailed: AVAILABILITY_COPY.readFailed,
-  retry: AVAILABILITY_COPY.retry,
-} as const;
-
-const HINT: Record<RangeConflict, string> = {
-  pickupTaken: COPY.hintPickupTaken,
-  returnTaken: COPY.hintReturnTaken,
-  spansBooked: COPY.hintSpansBooked,
-};
-
-// The source's own two-letter forms. The raw `pl` locale emits "pon.", "wt.", …,
-// so the headers are forced through `formatWeekdayName`. Indexed by `getDay()`.
-const WEEKDAYS = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"] as const;
+// The source's own two-letter forms — narrower than the shared calendar's default
+// header, which is why this grid overrides `formatWeekdayName`. Indexed by
+// `getDay()`, so the order is Sunday-first. These are design copy, not grammar
+// (`Intl` would give a different abbreviation), so they live in the catalog.
+const WEEKDAY_KEYS = [
+  "weekdaySun",
+  "weekdayMon",
+  "weekdayTue",
+  "weekdayWed",
+  "weekdayThu",
+  "weekdayFri",
+  "weekdaySat",
+] as const;
 
 /** `"1 kwi"` — the source's `mrFmt`, shared with the modal's day labels. */
-function formatDayShort(date: Date): string {
-  return format(date, "d MMM", { locale: pl });
+function formatDayShort(date: Date, locale: Locale): string {
+  return dayMonthShort(date, locale);
 }
 
 /** `"Kwiecień 2026"` — the source's `PL_MON_FULL` caption; sentence case, NOT uppercased. */
-function formatCaption(date: Date): string {
-  const month = format(date, "LLLL yyyy", { locale: pl });
+function formatCaption(date: Date, locale: Locale): string {
+  const month = monthYearLong(date, locale);
   return month.charAt(0).toUpperCase() + month.slice(1);
 }
 
@@ -166,6 +149,8 @@ interface Props {
    * can be picked. Without a retry inside the picker the surface is a dead end.
    */
   onRetry: () => void;
+  /** Islands cannot read `Astro.locals`; the mounting modal passes it down. */
+  locale: Locale;
 }
 
 export function ManualReservationCalendar({
@@ -177,7 +162,16 @@ export function ManualReservationCalendar({
   onChange,
   onApply,
   onRetry,
+  locale,
 }: Props) {
+  const t = translator(locale, dashboard);
+  // Maps each range-conflict reason to its inline hint.
+  const HINT: Record<RangeConflict, string> = {
+    pickupTaken: t("hintPickupTaken"),
+    returnTaken: t("hintReturnTaken"),
+    spansBooked: t("hintSpansBooked"),
+  };
+
   const [hint, setHint] = React.useState<string | null>(null);
 
   // The grid may only be operated when it is drawing a real answer. `inert`
@@ -258,13 +252,13 @@ export function ManualReservationCalendar({
         <div className="mb-3 flex items-start gap-[11px] rounded-[13px] bg-[var(--flota-warning-soft)] px-[13px] py-3">
           <AlertTriangle className="text-warning size-[18px] shrink-0" />
           <div className="pt-px">
-            <div className="text-warning text-[12.5px] font-semibold">{COPY.readFailed}</div>
+            <div className="text-warning text-[12.5px] font-semibold">{t("availabilityReadFailed")}</div>
             <button
               type="button"
               onClick={onRetry}
               className="text-warning mt-1 text-[12.5px] font-bold underline underline-offset-2"
             >
-              {COPY.retry}
+              {t("availabilityRetry")}
             </button>
           </div>
         </div>
@@ -314,23 +308,24 @@ export function ManualReservationCalendar({
           disabled={disabledDays}
           modifiers={dayModifiers}
           excludeDisabled
-          locale={pl}
+          appLocale={locale}
           formatters={{
-            formatCaption,
-            formatWeekdayName: (date) => WEEKDAYS[date.getDay()],
+            formatCaption: (date) => formatCaption(date, locale),
+            formatWeekdayName: (date) => t(WEEKDAY_KEYS[date.getDay()]),
           }}
           labels={{
-            labelPrevious: () => COPY.prevMonth,
-            labelNext: () => COPY.nextMonth,
+            labelPrevious: () => t("prevMonth"),
+            labelNext: () => t("nextMonth"),
             // Append the start-only/end-only rule to each changeover day's
-            // aria-label; wrap the library default so today/selected markers stay.
-            labelDayButton: (date, modifiers, options, dateLib) => {
-              const base = labelDayButton(date, modifiers, options, dateLib);
+            // aria-label. The base repeats the shared wrapper's `dayFull` because
+            // an override REPLACES the entry rather than wrapping it.
+            labelDayButton: (date, modifiers) => {
+              const base = dayFull(date, locale);
               if (modifiers.busyAm) {
-                return `${base}, ${COPY.pickupOnlyLabel}`;
+                return `${base}, ${t("pickupOnlyLabel")}`;
               }
               if (modifiers.busyPm) {
-                return `${base}, ${COPY.returnOnlyLabel}`;
+                return `${base}, ${t("returnOnlyLabel")}`;
               }
               return base;
             },
@@ -370,12 +365,12 @@ export function ManualReservationCalendar({
           stands for both the AM- and PM-busy treatments). */}
       <div className="mt-3.5 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--flota-hair-2)] pt-3">
         {[
-          { label: COPY.legendSelected, swatch: "bg-primary" },
+          { label: t("legendSelected"), swatch: "bg-primary" },
           // The source's swatch is a clean lower-right clip with NO divider —
           // unlike the day cells, which carry one. Reusing `cell-busy-pm` here
           // would draw a divider the mockup does not have.
-          { label: COPY.legendHalf, swatch: "bg-card legend-busy-half border border-[var(--flota-hair)]" },
-          { label: COPY.legendFull, swatch: "bg-[var(--flota-busy)]" },
+          { label: t("legendHalf"), swatch: "bg-card legend-busy-half border border-[var(--flota-hair)]" },
+          { label: t("legendFull"), swatch: "bg-[var(--flota-busy)]" },
         ].map((item) => (
           <span key={item.label} className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px]">
             <span aria-hidden="true" className={cn("size-3 shrink-0 rounded-[4px]", item.swatch)} />
@@ -393,7 +388,7 @@ export function ManualReservationCalendar({
         ) : (
           <span className="text-[12.5px] font-semibold text-[var(--flota-ink-2)] tabular-nums">
             {selected?.from && selected.to
-              ? `${formatDayShort(selected.from)} – ${formatDayShort(selected.to)} · ${formatDuration(days)}`
+              ? `${formatDayShort(selected.from, locale)} – ${formatDayShort(selected.to, locale)} · ${formatDuration(days, locale)}`
               : ""}
           </span>
         )}
@@ -402,7 +397,7 @@ export function ManualReservationCalendar({
           onClick={onApply}
           className="h-[38px] shrink-0 rounded-[11px] bg-[var(--foreground)] px-[18px] text-[13px] font-[650] text-white"
         >
-          {COPY.apply}
+          {t("apply")}
         </button>
       </div>
     </>

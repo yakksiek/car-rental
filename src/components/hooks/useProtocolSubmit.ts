@@ -48,7 +48,7 @@ interface Deps {
 
 const json = { "Content-Type": "application/json" };
 
-/** Steps 4–6, extracted so the `pdf` overlay's `Spróbuj ponownie` replays exactly them. */
+/** Steps 4–6, extracted so the `pdf` overlay's retry replays exactly them. */
 export async function finalizeProtocol(protocolId: string, deps: Deps): Promise<ProtocolSubmitOutcome> {
   try {
     const path = await deps.uploadPdf(protocolId);

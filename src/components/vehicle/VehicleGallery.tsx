@@ -3,6 +3,9 @@ import * as React from "react";
 
 // others
 import { cn } from "../../lib/utils";
+import { fleet } from "../../lib/i18n/fleet";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 
 // The vehicle detail image gallery (design screen 03's silhouette + dots, made
 // real once photos exist). A native scroll-snap track gives free, accessible
@@ -14,9 +17,12 @@ import { cn } from "../../lib/utils";
 interface Props {
   photos: string[];
   alt: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
-export default function VehicleGallery({ photos, alt }: Props) {
+export default function VehicleGallery({ photos, alt, locale }: Props) {
+  const t = translator(locale, fleet);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const [current, setCurrent] = React.useState(0);
 
@@ -61,7 +67,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
           onScroll={handleScroll}
           tabIndex={0}
           role="group"
-          aria-roledescription="karuzela"
+          aria-roledescription={t("galleryCarousel")}
           aria-label={alt}
           className="focus-visible:ring-foreground/25 flex snap-x snap-mandatory overflow-x-auto rounded-lg outline-none [scrollbar-width:none] focus-visible:ring-2 [&::-webkit-scrollbar]:hidden"
         >
@@ -69,7 +75,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
             <div key={src} className="flex w-full shrink-0 snap-center items-center justify-center">
               <img
                 src={src}
-                alt={`${alt} — zdjęcie ${String(i + 1)}`}
+                alt={`${alt} — ${t("galleryPhotoAlt")} ${String(i + 1)}`}
                 loading={i === 0 ? "eager" : "lazy"}
                 className="h-[240px] w-full rounded-lg object-cover lg:h-[340px]"
               />
@@ -85,7 +91,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
                 scrollToIndex(current - 1);
               }}
               disabled={current === 0}
-              aria-label="Poprzednie zdjęcie"
+              aria-label={t("galleryPrevious")}
               className="bg-card/90 text-foreground shadow-card absolute top-1/2 left-3 hidden size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full backdrop-blur transition disabled:pointer-events-none disabled:opacity-0 lg:flex"
             >
               <svg
@@ -107,7 +113,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
                 scrollToIndex(current + 1);
               }}
               disabled={current === photos.length - 1}
-              aria-label="Następne zdjęcie"
+              aria-label={t("galleryNext")}
               className="bg-card/90 text-foreground shadow-card absolute top-1/2 right-3 hidden size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full backdrop-blur transition disabled:pointer-events-none disabled:opacity-0 lg:flex"
             >
               <svg
@@ -137,7 +143,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
               onClick={() => {
                 scrollToIndex(i);
               }}
-              aria-label={`Przejdź do zdjęcia ${String(i + 1)}`}
+              aria-label={`${t("galleryGoTo")} ${String(i + 1)}`}
               aria-current={i === current}
               className={cn(
                 "h-1.5 cursor-pointer rounded-full transition-all",
@@ -158,7 +164,7 @@ export default function VehicleGallery({ photos, alt }: Props) {
               onClick={() => {
                 scrollToIndex(i);
               }}
-              aria-label={`Przejdź do zdjęcia ${String(i + 1)}`}
+              aria-label={`${t("galleryGoTo")} ${String(i + 1)}`}
               aria-current={i === current}
               className={cn(
                 "h-14 w-20 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition",

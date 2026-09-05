@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // others
 import type { AppRole } from "../types";
 import { isDemoAccount, isRoleSufficient, resolveRequiredRole } from "./access";
+import { DEFAULT_LOCALE } from "./i18n/types";
 
 // The access matrix is the most expensive thing in this slice to get wrong:
 // a too-loose gate leaks staff surfaces; a too-tight one locks out legitimate
@@ -66,13 +67,30 @@ describe("isRoleSufficient", () => {
 // un-annotated on purpose: `ExecutionContext` is an ambient Workers global with
 // no type available here, so naming it would push an error-typed value through
 // the helper.
+// `locale` and `t` are non-nullable on App.Locals (english-localization) because
+// middleware always resolves them, but they carry no access information — so
+// `locale` is the same default a signal-less request resolves to, and `t` is the
+// identity. Stubbed rather than built from `useTranslations`, whose Starlight
+// name reads as a React hook to `react-hooks/rules-of-hooks` when called from a
+// plain named function.
+const tStub: App.Locals["t"] = (key) => key;
+
 const cfContextStub = {
   waitUntil: () => undefined,
   passThroughOnException: () => undefined,
 };
 
 function localsWith(overrides: Partial<App.Locals>): App.Locals {
-  return { user: null, role: null, isDemo: false, supabase: null, cfContext: cfContextStub, ...overrides };
+  return {
+    user: null,
+    role: null,
+    isDemo: false,
+    supabase: null,
+    cfContext: cfContextStub,
+    locale: DEFAULT_LOCALE,
+    t: tStub,
+    ...overrides,
+  };
 }
 
 describe("isDemoAccount", () => {

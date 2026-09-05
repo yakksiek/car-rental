@@ -1,5 +1,8 @@
 // others
 import { formatDuration, rentalDays } from "./format";
+import { dashboard } from "./i18n/dashboard";
+import { translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
 import type { DispatchReturnRow } from "../types";
 
 // Pure, DOM-free helpers for the returns worklist (S-07 Phases 2–3). They live here
@@ -60,14 +63,14 @@ export function sortReturnsByUrgency(rows: DispatchReturnRow[], today: string): 
 }
 
 /**
- * The plural-aware days-overdue label for an overdue row — `1 dzień po terminie` /
- * `N dni po terminie`. `null` for due/returned rows (they carry no such label). The
+ * The plural-aware days-overdue label for an overdue row — `1 day overdue` /
+ * `N days overdue`. `null` for due/returned rows (they carry no such label). The
  * count is the calendar span `today − return_date` (`rentalDays`), ≥ 1 exactly when
  * the row classifies as `overdue`.
  */
-export function overdueDaysLabel(row: DispatchReturnRow, today: string): string | null {
+export function overdueDaysLabel(row: DispatchReturnRow, today: string, locale: Locale): string | null {
   if (captionOf(row, today) !== "overdue") {
     return null;
   }
-  return `${formatDuration(rentalDays(row.return_date, today))} po terminie`;
+  return `${formatDuration(rentalDays(row.return_date, today), locale)} ${translator(locale, dashboard)("overdueSuffix")}`;
 }
