@@ -7,6 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ProtocolForm from "../../../components/protocol/ProtocolForm";
 
 // others
+import { requireDocumentLocale } from "../../../lib/i18n/types";
 import { listDispatchToday } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -29,12 +30,12 @@ import { resolveBackTarget } from "../../../lib/back-target";
 // Note the frontmatter has no early `return`: a top-level return in an `.astro`
 // file crashes `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`.
 // The 404 follows the catalog detail page's `Astro.response.status` pattern instead.
-const { supabase } = Astro.locals;
+const { supabase, locale, t } = Astro.locals;
 const { reservationId } = Astro.params;
 
 // Reachable from the dispatch worklist AND from the cockpit, so "back" follows
 // `?from` when the caller supplied one; absent, it stays the worklist.
-const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/pickups");
+const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/pickups", locale);
 
 const row = (await listDispatchToday(supabase)).find((dispatch) => dispatch.reservation_id === reservationId);
 
@@ -64,18 +65,29 @@ const ctx = row
       // The booking's fixed hotel-style pickup hour, not `signed_at`.
       pickupTime: "14:00",
       lastOdometerKm: row.last_odometer_km,
+      // The CUSTOMER's language, off `reservations.locale` — deliberately NOT
+      // `locale` above, which is the employee's session and only decides what
+      // language the form's chrome is in.
+      //
+      // `requireDocumentLocale`, NOT `asLocale`: this value decides the permanent
+      // content of a PDF that is never regenerated, and the `protocols.locale`
+      // stamp that goes with it. A silent English default here is a wrong record,
+      // so a lagging migration must show up as a visible 500 instead.
+      documentLocale: requireDocumentLocale(row.locale, "pickups/[reservationId] documentLocale"),
     }
   : null;
 ---
 
-<Layout title={row ? `Protokół wydania ${row.reference} — Flota` : "Nie znaleziono — Flota"}>
+<Layout
+  title={row
+    ? `${t("dashboard.pickupProtocolTitle")} ${row.reference} — Flota`
+    : `${t("dashboard.notFoundTitle")} — Flota`}
+>
   {
     !ctx || !configured ? (
       <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
-        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono wydania</h1>
-        <p class="text-muted-foreground mt-1.5 text-[13px]">
-          Ta rezerwacja nie czeka dziś na wydanie albo nie masz do niej dostępu.
-        </p>
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">{t("dashboard.pickupNotFoundTitle")}</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">{t("dashboard.pickupNotFoundBody")}</p>
         <a
           href={back.href}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
@@ -85,10 +97,8 @@ const ctx = row
       </main>
     ) : issuedProtocolId ? (
       <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
-        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
-        <p class="text-muted-foreground mt-1.5 text-[13px]">
-          Dla tej rezerwacji wydano już protokół — każde wydanie może mieć tylko jeden.
-        </p>
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">{t("protocol.conflictTitle")}</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">{t("protocol.conflictIssueBody")}</p>
         <div class="border-border bg-card shadow-card mt-5 rounded-[14px] border p-4">
           <span class="text-foreground text-[14px] font-semibold tracking-tight">
             {ctx.reference} · <span class="font-mono">{ctx.plate}</span>
@@ -98,14 +108,21 @@ const ctx = row
           href={`/dashboard/protocols/${issuedProtocolId}`}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
         >
-          Otwórz protokół
+          {t("protocol.openProtocol")}
         </a>
         <a href={back.href} class="text-muted-foreground mt-3 text-[13px] font-semibold">
           {back.label}
         </a>
       </main>
     ) : (
-      <ProtocolForm client:only="react" ctx={ctx} supabaseUrl={supabaseUrl} supabaseKey={supabaseKey} back={back} />
+      <ProtocolForm
+        client:only="react"
+        ctx={ctx}
+        supabaseUrl={supabaseUrl}
+        supabaseKey={supabaseKey}
+        back={back}
+        locale={locale}
+      />
     )
   }
 </Layout>

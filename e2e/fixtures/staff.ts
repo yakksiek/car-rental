@@ -53,12 +53,12 @@ export async function createActiveEmployee(password: string): Promise<StaffFixtu
 }
 
 /**
- * A DODANY employee — created, never invited, no password (phase 8's first step).
+ * A ADDED employee — created, never invited, no password (phase 8's first step).
  *
  * Mirrors what `createEmployee` does on the net-new arm, and deliberately sends
  * NOTHING: no `inviteUserByEmail`, so it burns none of the two emails per hour
  * `config.toml` allows and cannot collide with the invite specs. The row it
- * produces is the one that offers `Wyślij zaproszenie`, which is what a spec
+ * produces is the one that offers `Send invite`, which is what a spec
  * about the row actions' feedback needs.
  */
 export async function createPendingEmployee(): Promise<StaffFixture> {
@@ -69,8 +69,8 @@ export async function createPendingEmployee(): Promise<StaffFixture> {
     throw new Error(`fixture: createUser failed — ${error.message}`);
   }
   // No `password_set_at`: that is what makes `deriveStaffStatus` read this row
-  // as password-less, and `invited_at` being null is what makes it DODANY rather
-  // than ZAPROSZONY.
+  // as password-less, and `invited_at` being null is what makes it ADDED rather
+  // than INVITED.
   const { error: pErr } = await db
     .from("profiles")
     .insert({ user_id: data.user.id, role: "employee", full_name: "E2E Dodany" });

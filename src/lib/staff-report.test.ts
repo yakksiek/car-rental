@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AddOutcome,
   DEMO_BLOCKED_CODE,
-  DEMO_BLOCKED_MESSAGE,
+  demoBlockedMessage,
   PROVISION_FAILURE_CODES,
   type RemoveOutcome,
   type Report,
@@ -19,6 +19,13 @@ import {
   resolveRemoveReport,
   resolveRowActionReport,
 } from "./staff-report";
+import type { Locale } from "./i18n/types";
+
+// The outcome→surface table is locale-agnostic — every assertion below is
+// about WHERE a report lands and whether the modal stays open. It runs under
+// `pl`, the locale whose exact sentences this suite already pins; a separate
+// case at the bottom proves the SENTENCES follow the locale.
+const LOCALE: Locale = "pl";
 
 // Every arm of every roster mutation, as the island sees it, tagged with the
 // mutation it belongs to. The sweeps below run the invariants across this one
@@ -44,7 +51,11 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
       { name: "400 bad body", outcome: { kind: "http", httpStatus: 400 } },
       { name: "fetch threw", outcome: { kind: "network" } },
     ] as { name: string; outcome: AddOutcome }[]
-  ).map(({ name, outcome }) => ({ mutation: "add" as const, name: `add: ${name}`, report: resolveAddReport(outcome) })),
+  ).map(({ name, outcome }) => ({
+    mutation: "add" as const,
+    name: `add: ${name}`,
+    report: resolveAddReport(outcome, LOCALE),
+  })),
 
   // ── remove (row-triggered) ────────────────────────────────────────────────
   ...(
@@ -61,7 +72,7 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
   ).map(({ name, outcome }) => ({
     mutation: "remove" as const,
     name: `remove: ${name}`,
-    report: resolveRemoveReport(outcome),
+    report: resolveRemoveReport(outcome, LOCALE),
   })),
 
   // ── invite / reset (row-triggered) ────────────────────────────────────────
@@ -79,7 +90,7 @@ const EVERY_ARM: { mutation: StaffMutation; name: string; report: Report }[] = [
     ).map(({ name, outcome }) => ({
       mutation: action,
       name: `${action}: ${name}`,
-      report: resolveRowActionReport(action, outcome),
+      report: resolveRowActionReport(action, outcome, LOCALE),
     })),
   ),
 ];
@@ -154,7 +165,7 @@ describe("the invariants, swept across every mutation", () => {
 
 describe("resolveAddReport — the table, arm by arm", () => {
   it("says nothing and closes on a clean create", () => {
-    expect(resolveAddReport({ kind: "ok", activationMail: null, status: "created" })).toMatchObject({
+    expect(resolveAddReport({ kind: "ok", activationMail: null, status: "created" }, LOCALE)).toMatchObject({
       target: "none",
       slot: null,
       keepsModalOpen: false,
@@ -167,16 +178,16 @@ describe("resolveAddReport — the table, arm by arm", () => {
   // behind an overlay — and after phase 10 it is pinned, so it is also not
   // off-screen if the admin scrolled behind the open dialog.
   it("keeps the repaired-but-unsent mail on the banner, with the modal closed", () => {
-    const report = resolveAddReport({ kind: "ok", activationMail: "failed", status: "invited" });
+    const report = resolveAddReport({ kind: "ok", activationMail: "failed", status: "invited" }, LOCALE);
     expect(report.target).toBe("banner");
     expect(report.keepsModalOpen).toBe(false);
     expect(report.tone).toBe("error");
     expect(report.offersRetry).toBe(false);
-    expect(report.message).toBe(repairedMailFailedMessage("invited"));
+    expect(report.message).toBe(repairedMailFailedMessage("invited", LOCALE));
   });
 
   it("attaches a duplicate to the e-mail field, modal open — the shipped idiom, unchanged", () => {
-    expect(resolveAddReport({ kind: "http", httpStatus: 409 })).toMatchObject({
+    expect(resolveAddReport({ kind: "http", httpStatus: 409 }, LOCALE)).toMatchObject({
       target: "modal",
       slot: "email",
       keepsModalOpen: true,
@@ -189,7 +200,7 @@ describe("resolveAddReport — the table, arm by arm", () => {
   // identical in both, so this pins them to one byte-identical sentence.
   it("renders one byte-identical form-level sentence for both provisioning codes", () => {
     const [rolledBack, orphaned] = PROVISION_FAILURE_CODES.map((code) =>
-      resolveAddReport({ kind: "http", httpStatus: 500, code }),
+      resolveAddReport({ kind: "http", httpStatus: 500, code }, LOCALE),
     );
     expect(rolledBack).toEqual(orphaned);
     expect(rolledBack).toMatchObject({
@@ -204,7 +215,7 @@ describe("resolveAddReport — the table, arm by arm", () => {
   // and the one case where the typed values are still perfectly good — it must
   // report where the admin is, in the form they would retry in.
   it("reports a thrown fetch in the modal's form slot, not the banner", () => {
-    expect(resolveAddReport({ kind: "network" })).toMatchObject({
+    expect(resolveAddReport({ kind: "network" }, LOCALE)).toMatchObject({
       target: "modal",
       slot: "form",
       keepsModalOpen: true,
@@ -213,10 +224,10 @@ describe("resolveAddReport — the table, arm by arm", () => {
   });
 
   it("matches design-contract §9.4 verbatim", () => {
-    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: "provision_rolled_back" }).message).toBe(
+    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: "provision_rolled_back" }, LOCALE).message).toBe(
       "Nie udało się utworzyć konta. Spróbuj ponownie.",
     );
-    expect(resolveAddReport({ kind: "network" }).message).toBe(
+    expect(resolveAddReport({ kind: "network" }, LOCALE).message).toBe(
       "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.",
     );
   });
@@ -228,7 +239,7 @@ describe("resolveAddReport — the table, arm by arm", () => {
       { kind: "network" } as const,
       ...PROVISION_FAILURE_CODES.map((code) => ({ kind: "http", httpStatus: 500, code }) as const),
     ]) {
-      expect(resolveAddReport(outcome).message).toMatch(/^Nie udało się utworzyć konta\./);
+      expect(resolveAddReport(outcome, LOCALE).message).toMatch(/^Nie udało się utworzyć konta\./);
     }
   });
 
@@ -236,10 +247,12 @@ describe("resolveAddReport — the table, arm by arm", () => {
   // must not borrow the provisioning sentence — nothing was provisioned.
   it("falls through to the connection wording for an unknown or missing code", () => {
     const connectionCopy = "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.";
-    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: null }).message).toBe(connectionCopy);
-    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: "something_else" }).message).toBe(connectionCopy);
-    expect(resolveAddReport({ kind: "http", httpStatus: 500 }).message).toBe(connectionCopy);
-    expect(resolveAddReport({ kind: "http", httpStatus: 502 }).message).toBe(connectionCopy);
+    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: null }, LOCALE).message).toBe(connectionCopy);
+    expect(resolveAddReport({ kind: "http", httpStatus: 500, code: "something_else" }, LOCALE).message).toBe(
+      connectionCopy,
+    );
+    expect(resolveAddReport({ kind: "http", httpStatus: 500 }, LOCALE).message).toBe(connectionCopy);
+    expect(resolveAddReport({ kind: "http", httpStatus: 502 }, LOCALE).message).toBe(connectionCopy);
   });
 
   // A `code` is attacker-influenced only via a compromised API, but the guard is
@@ -247,7 +260,7 @@ describe("resolveAddReport — the table, arm by arm", () => {
   // `__proto__` yields a truthy non-string that renders as "[object Object]".
   it("treats prototype keys as unknown codes rather than truthy non-strings", () => {
     for (const code of ["__proto__", "constructor", "toString"]) {
-      const report = resolveAddReport({ kind: "http", httpStatus: 500, code });
+      const report = resolveAddReport({ kind: "http", httpStatus: 500, code }, LOCALE);
       expect(report.slot).toBe("form");
       expect(report.message).toBe("Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.");
     }
@@ -256,7 +269,7 @@ describe("resolveAddReport — the table, arm by arm", () => {
 
 describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   it("says nothing and closes when the row really went", () => {
-    expect(resolveRemoveReport({ kind: "http", httpStatus: 200 })).toMatchObject({
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 200 }, LOCALE)).toMatchObject({
       target: "none",
       keepsModalOpen: false,
       message: null,
@@ -266,7 +279,7 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   // Unchanged by phase 10, and named here so the table is complete: the refusal
   // is a different screen with its own copy, not a message in this one.
   it("swaps to the last-admin refusal on a 409, carrying no message of its own", () => {
-    expect(resolveRemoveReport({ kind: "http", httpStatus: 409 })).toMatchObject({
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 409 }, LOCALE)).toMatchObject({
       target: "last-admin-modal",
       keepsModalOpen: false,
       message: null,
@@ -278,7 +291,7 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   // the `z-[60]` overlay once scrolled up to.
   it("reports a refused remove in the modal's form slot, not the banner", () => {
     for (const status of [400, 403, 404, 500, 502]) {
-      expect(resolveRemoveReport({ kind: "http", httpStatus: status })).toMatchObject({
+      expect(resolveRemoveReport({ kind: "http", httpStatus: status }, LOCALE)).toMatchObject({
         target: "modal",
         slot: "form",
         keepsModalOpen: true,
@@ -289,7 +302,7 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   });
 
   it("reports a thrown fetch in the modal's form slot too", () => {
-    expect(resolveRemoveReport({ kind: "network" })).toMatchObject({
+    expect(resolveRemoveReport({ kind: "network" }, LOCALE)).toMatchObject({
       target: "modal",
       slot: "form",
       keepsModalOpen: true,
@@ -300,7 +313,7 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   it("leads both remove strings with the same state-of-the-world clause", () => {
     // §9.5 mirrors §9.4's construction: identical lead, different remedy.
     for (const outcome of [{ kind: "network" } as const, { kind: "http", httpStatus: 500 } as const]) {
-      expect(resolveRemoveReport(outcome).message).toMatch(/^Nie udało się usunąć pracownika\./);
+      expect(resolveRemoveReport(outcome, LOCALE).message).toMatch(/^Nie udało się usunąć pracownika\./);
     }
   });
 
@@ -308,7 +321,7 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
   // it has to cover invite, reset AND remove from a banner; inside a modal
   // titled `Usunąć tego pracownika?` the specific verb is available and truer.
   it("does not borrow the row actions' generic wording", () => {
-    expect(resolveRemoveReport({ kind: "network" }).message).not.toBe(
+    expect(resolveRemoveReport({ kind: "network" }, LOCALE).message).not.toBe(
       "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
     );
   });
@@ -316,13 +329,13 @@ describe("resolveRemoveReport — the table, arm by arm (phase 10)", () => {
 
 describe("resolveRowActionReport — the table, arm by arm (phase 10)", () => {
   it("names the action that succeeded", () => {
-    expect(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 })).toMatchObject({
+    expect(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }, LOCALE)).toMatchObject({
       target: "banner",
       tone: "success",
       offersRetry: false,
       message: "Wysłano zaproszenie.",
     });
-    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 })).toMatchObject({
+    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }, LOCALE)).toMatchObject({
       target: "banner",
       tone: "success",
       offersRetry: false,
@@ -336,7 +349,7 @@ describe("resolveRowActionReport — the table, arm by arm (phase 10)", () => {
   // failure banner does. Pinned so it cannot quietly become `silent()`.
   it("never goes silent on success — a resend changes nothing else on screen", () => {
     for (const action of ["invite", "reset"] as const) {
-      const report = resolveRowActionReport(action, { kind: "http", httpStatus: 200 });
+      const report = resolveRowActionReport(action, { kind: "http", httpStatus: 200 }, LOCALE);
       expect(report.target).not.toBe("none");
       expect(report.message).toBeTruthy();
     }
@@ -351,7 +364,7 @@ describe("resolveRowActionReport — the table, arm by arm (phase 10)", () => {
         { kind: "http", httpStatus: 502 } as const,
         { kind: "network" } as const,
       ]) {
-        expect(resolveRowActionReport(action, outcome)).toMatchObject({
+        expect(resolveRowActionReport(action, outcome, LOCALE)).toMatchObject({
           target: "banner",
           tone: "error",
           offersRetry: true,
@@ -364,8 +377,8 @@ describe("resolveRowActionReport — the table, arm by arm (phase 10)", () => {
   // §9.4 recorded the decision not to split this string per action. Kept as an
   // assertion so a future "helpful" split is a deliberate contract edit.
   it("uses one failure string for both actions", () => {
-    expect(resolveRowActionReport("invite", { kind: "network" }).message).toBe(
-      resolveRowActionReport("reset", { kind: "network" }).message,
+    expect(resolveRowActionReport("invite", { kind: "network" }, LOCALE).message).toBe(
+      resolveRowActionReport("reset", { kind: "network" }, LOCALE).message,
     );
   });
 });
@@ -379,31 +392,31 @@ describe("the demo gate — one refusal, three resolvers (demo-account-gate)", (
   const demo403 = { kind: "http", httpStatus: 403, code: DEMO_BLOCKED_CODE } as const;
 
   it("names the demo account in the add modal's form slot", () => {
-    expect(resolveAddReport(demo403)).toMatchObject({
+    expect(resolveAddReport(demo403, LOCALE)).toMatchObject({
       target: "modal",
       slot: "form",
       keepsModalOpen: true,
       tone: "error",
-      message: DEMO_BLOCKED_MESSAGE,
+      message: demoBlockedMessage(LOCALE),
     });
   });
 
   it("names the demo account in the remove modal's form slot", () => {
-    expect(resolveRemoveReport(demo403)).toMatchObject({
+    expect(resolveRemoveReport(demo403, LOCALE)).toMatchObject({
       target: "modal",
       slot: "form",
       keepsModalOpen: true,
       tone: "error",
-      message: DEMO_BLOCKED_MESSAGE,
+      message: demoBlockedMessage(LOCALE),
     });
   });
 
   it("names the demo account on the row-action banner", () => {
     for (const action of ["invite", "reset"] as const) {
-      expect(resolveRowActionReport(action, demo403)).toMatchObject({
+      expect(resolveRowActionReport(action, demo403, LOCALE)).toMatchObject({
         target: "banner",
         tone: "error",
-        message: DEMO_BLOCKED_MESSAGE,
+        message: demoBlockedMessage(LOCALE),
       });
     }
   });
@@ -412,16 +425,16 @@ describe("the demo gate — one refusal, three resolvers (demo-account-gate)", (
   // "Spróbuj ponownie" or ships a `Ponów`; this one must do neither, because a
   // demo caller retrying gets the identical 403 forever.
   it("offers no retry control on any of the three — the refusal is permanent", () => {
-    expect(resolveAddReport(demo403).offersRetry).toBe(false);
-    expect(resolveRemoveReport(demo403).offersRetry).toBe(false);
-    expect(resolveRowActionReport("reset", demo403).offersRetry).toBe(false);
+    expect(resolveAddReport(demo403, LOCALE).offersRetry).toBe(false);
+    expect(resolveRemoveReport(demo403, LOCALE).offersRetry).toBe(false);
+    expect(resolveRowActionReport("reset", demo403, LOCALE).offersRetry).toBe(false);
   });
 
   it("says nothing about trying again", () => {
     for (const report of [
-      resolveAddReport(demo403),
-      resolveRemoveReport(demo403),
-      resolveRowActionReport("reset", demo403),
+      resolveAddReport(demo403, LOCALE),
+      resolveRemoveReport(demo403, LOCALE),
+      resolveRowActionReport("reset", demo403, LOCALE),
     ]) {
       expect(report.message).not.toMatch(/ponownie/i);
     }
@@ -433,13 +446,13 @@ describe("the demo gate — one refusal, three resolvers (demo-account-gate)", (
   // code check were dropped, these would silently adopt the demo sentence and
   // tell an admin with a real problem that they are on a demo account.
   it("leaves a 403 WITHOUT the code meaning exactly what it meant before", () => {
-    expect(resolveAddReport({ kind: "http", httpStatus: 403 }).message).toBe(
+    expect(resolveAddReport({ kind: "http", httpStatus: 403 }, LOCALE).message).toBe(
       "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.",
     );
-    expect(resolveRemoveReport({ kind: "http", httpStatus: 403 }).message).toBe(
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 403 }, LOCALE).message).toBe(
       "Nie udało się usunąć pracownika. Spróbuj ponownie.",
     );
-    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 403 })).toMatchObject({
+    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 403 }, LOCALE)).toMatchObject({
       offersRetry: true,
       message: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
     });
@@ -449,19 +462,21 @@ describe("the demo gate — one refusal, three resolvers (demo-account-gate)", (
   // merely resembles it — or a non-403 that carries it — must not qualify.
   it("matches the code exactly, and only on a 403", () => {
     for (const code of ["demo", "demo_blocked_", "DEMO_BLOCKED", "__proto__", null]) {
-      expect(resolveAddReport({ kind: "http", httpStatus: 403, code }).message).not.toBe(DEMO_BLOCKED_MESSAGE);
+      expect(resolveAddReport({ kind: "http", httpStatus: 403, code }, LOCALE).message).not.toBe(
+        demoBlockedMessage(LOCALE),
+      );
     }
-    expect(resolveRemoveReport({ kind: "http", httpStatus: 500, code: DEMO_BLOCKED_CODE }).message).toBe(
+    expect(resolveRemoveReport({ kind: "http", httpStatus: 500, code: DEMO_BLOCKED_CODE }, LOCALE).message).toBe(
       "Nie udało się usunąć pracownika. Spróbuj ponownie.",
     );
   });
 
   // One sentence, byte-identical everywhere it can surface — including the
-  // island's disabled controls, which import `DEMO_BLOCKED_MESSAGE` directly.
+  // island's disabled controls, which import `demoBlockedMessage(LOCALE)` directly.
   it("renders one byte-identical sentence across all three surfaces", () => {
-    expect(resolveAddReport(demo403).message).toBe(resolveRemoveReport(demo403).message);
-    expect(resolveRemoveReport(demo403).message).toBe(resolveRowActionReport("reset", demo403).message);
-    expect(DEMO_BLOCKED_MESSAGE).toBe("Ta akcja jest wyłączona na koncie demo.");
+    expect(resolveAddReport(demo403, LOCALE).message).toBe(resolveRemoveReport(demo403, LOCALE).message);
+    expect(resolveRemoveReport(demo403, LOCALE).message).toBe(resolveRowActionReport("reset", demo403, LOCALE).message);
+    expect(demoBlockedMessage(LOCALE)).toBe("Ta akcja jest wyłączona na koncie demo.");
   });
 
   it("keeps the wire code stable — the three routes hard-code this literal", () => {
@@ -471,14 +486,14 @@ describe("the demo gate — one refusal, three resolvers (demo-account-gate)", (
 
 describe("inviteActionLabel / repairedMailFailedMessage (phase 8)", () => {
   it("names a first send on a created row and a resend on an invited one", () => {
-    expect(inviteActionLabel("created")).toBe("Wyślij zaproszenie");
-    expect(inviteActionLabel("invited")).toBe("Wyślij ponownie zaproszenie");
+    expect(inviteActionLabel("created", LOCALE)).toBe("Wyślij zaproszenie");
+    expect(inviteActionLabel("invited", LOCALE)).toBe("Wyślij ponownie zaproszenie");
   });
 
   it("degrades an unreachable `active` to the first-send label rather than blank", () => {
     // An active row shows `Resetuj hasło`, so this never renders — but a wrong
     // yet real label beats a crash or an empty button if a future branch slips.
-    expect(inviteActionLabel("active")).toBe("Wyślij zaproszenie");
+    expect(inviteActionLabel("active", LOCALE)).toBe("Wyślij zaproszenie");
   });
 
   // THE COUPLING. `repairedMailFailedMessage` fires after a repair whose invite
@@ -488,16 +503,58 @@ describe("inviteActionLabel / repairedMailFailedMessage (phase 8)", () => {
   // the other go red instead of shipping copy that points at a missing control.
   it("always names the very button that row renders", () => {
     for (const status of ["created", "invited", "active"] as const) {
-      expect(repairedMailFailedMessage(status)).toContain(`„${inviteActionLabel(status)}”`);
+      expect(repairedMailFailedMessage(status, LOCALE)).toContain(`„${inviteActionLabel(status, LOCALE)}”`);
     }
   });
 
   it("keeps the approved sentence around the interpolated label", () => {
-    expect(repairedMailFailedMessage("created")).toBe(
+    expect(repairedMailFailedMessage("created", LOCALE)).toBe(
       "Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij zaproszenie” przy tej osobie.",
     );
-    expect(repairedMailFailedMessage("invited")).toBe(
+    expect(repairedMailFailedMessage("invited", LOCALE)).toBe(
       "Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „Wyślij ponownie zaproszenie” przy tej osobie.",
+    );
+  });
+});
+
+describe("the same tables, in English", () => {
+  // The outcome→surface decisions above are locale-agnostic, and this is what
+  // pins that: identical structure, different sentences. A resolver that fell
+  // back to the default locale for one arm would show up here as an English
+  // sentence in the Polish column, or vice versa.
+  //
+  // These are the SENTENCES this module composes. The TABLES behind them are
+  // gated separately: `STAFF_REPORT_DICTS` registers both of them with
+  // `src/lib/i18n/parity.test.ts`, which is what catches a key present in one
+  // locale and not the other, or an `en` value still holding the Polish it was
+  // pasted from — neither of which a hand-written case here would notice unless
+  // someone remembered to add one for that key (impl-review F7).
+  it("resolves every arm to the same surface, with English copy", () => {
+    const duplicate = { kind: "http", httpStatus: 409 } as const;
+
+    expect(resolveAddReport(duplicate, "en")).toMatchObject({
+      target: "modal",
+      slot: "email",
+      message: "This email is already on the team.",
+    });
+    expect(resolveAddReport(duplicate, "pl").target).toBe("modal");
+
+    expect(resolveRemoveReport({ kind: "network" }, "en").message).toBe(
+      "Could not remove the employee. Check your connection and try again.",
+    );
+    expect(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }, "en")).toMatchObject({
+      target: "banner",
+      tone: "success",
+      message: "Password-reset email sent.",
+    });
+  });
+
+  it("localizes the demo refusal and the invite labels the repair banner names", () => {
+    expect(demoBlockedMessage("en")).toBe("This action is disabled on the demo account.");
+    expect(inviteActionLabel("created", "en")).toBe("Send invite");
+    expect(inviteActionLabel("invited", "en")).toBe("Resend invite");
+    expect(repairedMailFailedMessage("invited", "en")).toBe(
+      "The account was restored, but the invitation was not sent. Use \u201cResend invite\u201d on that person.",
     );
   });
 });

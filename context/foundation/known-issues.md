@@ -300,3 +300,122 @@ authenticated;` so new functions start closed; (b) explicit `revoke execute … 
   which protects the public catalog without any scheduled job) — that is the narrow slice of
   impl-review F4 that matters most here. A manual `supabase db reset`-equivalent against prod is
   NOT an option: it would drop the demo account and the owner's admin account with it.
+
+## Queued: return-damage auto-tag matches on typed free text, not a stable id
+
+- **Symptom:** On the return protocol, the existing/new classification suggested for each damage row
+  silently stops suggesting anything when the wording of a damage's `location` / `size` changes
+  between pickup and return — every pre-existing scratch then defaults to **new**. Reproduces today
+  with nothing exotic: the employee types `lewy tylny zderzak` at pickup and `lewy tylny zderzak.`
+  (trailing full stop) at return, or rewords it to `tylny lewy zderzak`. Found 2026-09-01 while
+  framing `english-localization`.
+- **Cause:** `src/lib/protocol-delta.ts:128-133` — `autoTagDamages` finds a baseline row by exact
+  equality on `type` + `normalize(location)` + `normalize(size)`, and `normalize` (`:110`) only
+  lowercases, collapses internal whitespace and trims. It does **not** strip punctuation or tolerate
+  reordering. Both fields are free text an employee types at the counter (`DamageEditor.tsx:255`,
+  placeholder `np. lewy tylny zderzak`), so the join key is a human sentence, not an identity.
+- **Scope:** Suggestion quality only — **not** a billing or persistence error. The contract is stated
+  in both the matcher (`protocol-delta.ts:114-119`) and its wrapper (`return-form.ts:55-61`): _"A
+  **suggestion only**: the employee's override on the form is the persisted value."_
+  `ReturnProtocolForm.tsx:248,318,338` persists whatever `baselineDamageId` the employee confirms per
+  row, so a human sits between a bad suggestion and the customer. The consequence is that correctness
+  falls entirely on the employee re-tagging each row by hand — and prefilled defaults do get accepted.
+  Downstream of a wrong confirmation: `computeReturnDeltas` (`:80`) → `newDamageCount` /
+  `damageAdverse` → the return PDF comparison section (`protocol-pdf.ts:245-252`) and the customer's
+  email (`templates.ts:341`).
+- **Decision:** Open, queued. Deliberately **excluded from `english-localization`** — it is a
+  pre-existing weakness, worth fixing on its own schedule and not gated on a second language.
+- **The i18n interaction, for whoever picks this up:** a locale switch makes the failure total rather
+  than occasional. Pickup in Polish (`lewy tylny zderzak`) and return in English (`left rear bumper`)
+  match on nothing, so _every_ row defaults to `new`. Fixing the join key removes that hazard as a
+  side effect, which is why `english-localization` records it but does not own it. See
+  `context/changes/english-localization/frame.md` → Cross-System Convention.
+- **To action:** `/10x-new return-damage-stable-tagging`. Fix direction: carry the baseline damage's
+  `id` on the return draft row rather than re-deriving a match from strings — the baseline list
+  already exposes `id` (`AutoTagBaselineDamage`, `protocol-delta.ts:95-100`), so the identity exists
+  and is simply not used as the key. Keep the string match only as a fallback for rows with no
+  carried id. Add a unit case per failure mode (punctuation, reordering, cross-language) to
+  `src/lib/protocol-delta.test.ts`.
+
+## FIXED (english-localization Phase 3): header contact toggle wrapped the nav and grew the public header 22px (tablet)
+
+- **Symptom:** On every public page **except the landing page**, at tablet widths, tapping the phone
+  segment of the header's contact/booking toggle breaks the header: the active nav pill's label
+  **"O nas" wraps onto two lines**, deforming the pill into a lopsided circle, and the header bar
+  grows from **86px to 108px** (nav 50px → 72px). At the same time the `Zarezerwuj` CTA collapses to
+  a bare, unlabelled calendar icon — which is what reads as the action button "disappearing".
+- **Measured (2026-09-01, dev, Playwright sweep at 2px steps):** affected widths are **768–790 and
+  840**. In book mode the row has 19px slack at 768; switching to phone mode takes it to **−10px**.
+  The toggle itself grows **183px → 227px** (`HeaderContactToggle.tsx` `revealWidth` 112 → 150).
+  800–820 survives only because `SiteHeader.astro:57`'s `min-[840px]:px-[18px]` drops nav padding to
+  13px below 840 — which is also why exactly **840** fails while 860+ does not.
+- **Cause:** `SiteHeader.astro:41` is a `justify-between` flex row with **no `gap`, no `min-w-0`, no
+  `truncate`, no `flex-1`**, and the nav links carry **no `whitespace-nowrap`** (the design's
+  `info-nav-pill` does). So when the toggle expands, the only thing that can give is the nav text.
+- **Why the landing page is immune:** `LandingNav.astro:105-175` renders its own tablet band with a
+  **static** toggle — two direct links (`tel:` + `/fleet`), no mode switching, no reveal animation —
+  and a **4-item** nav (`:115`, `nav.slice(0, 4)` drops "O nas"). Measured stable at 182px wide and
+  49px tall across 768–1023. Confirms this is a `SiteHeader`-only defect.
+- **Scope:** Live on the deployed portfolio; reachable by any visitor on a tablet who taps the phone
+  icon on `/fleet`, `/pricing`, `/faq`, `/about`, `/reserve`, `/r/[token]`.
+- **Decision:** Do **not** patch in place. `english-localization` **Phase 3 deleted the toggle
+  component entirely** and replaced it with the design's `ActionMenu` — a fixed **40px** icon trigger
+  that opens a popover and never expands in-flow — so the failure mode is removed by construction
+  rather than papered over. Phase 3 also moved the header to container queries and added the
+  always-visible `LangToggle`, so the whole row was re-specified at once.
+- **Fixed and verified 2026-09-02.** Playwright regression sweep over `/fleet`, `/pricing`, `/faq`,
+  `/about` at 768 / 780 / 790 / 840px, **exercising the control** (the old failure needed an
+  interaction, not just a page load): the bar stays **87px before and after opening the menu**, the
+  nav pill stays on **one line**, and `scrollWidth` never exceeds the viewport. The nav links now
+  carry `whitespace-nowrap`, the flex children `shrink-0`, and the reflow is the design's own
+  container queries (`max-width` 1180 / 980 / 840), verified firing at exactly those thresholds.
+- **If it must be fixed sooner** (independently of i18n): add `whitespace-nowrap` to the nav links and
+  `min-w-0` to the flex children in `SiteHeader.astro`, and cap the phone `revealWidth`. That stops
+  the wrap but leaves the row over budget at 768 — the real fix is the design's collapse.
+- **Evidence:** `context/changes/english-localization/design-review/bug-siteheader-768-phonemode.png`
+  (wrapped) and `bug-siteheader-820-phonemode.png` (same state, width that survives).
+
+## FIXED (english-localization Phase 3): landing header hid the phone number across a 256px band (1024–1279)
+
+- **Symptom:** On the **landing page only**, the phone number is absent from the header at viewport
+  widths **1024–1279px**. There is no phone affordance of any kind in that band: `1264px` — a common
+  laptop content width — shows brand + 5-link nav + "Przeglądaj flotę" and nothing else, with a wide
+  empty gap where the number belongs. Below 1024 the tablet band carries a phone icon; below 768 the
+  mobile row carries it; at 1280+ the desktop pill shows the full number. Only lg–xl is dead.
+- **Inconsistent with the rest of the site:** at the _same_ 1264px, every `SiteHeader` page
+  (`/fleet`, `/pricing`, `/faq`, `/about`) shows the number — `SiteHeader` reveals it from `lg`
+  (1024), `LandingNav` defers it to `xl` (1280). Same viewport, same site, opposite answer, on the
+  one page a customer is most likely to be looking for a phone number.
+- **Cause:** `LandingNav.astro:74` marks the phone text-block `xl:flex`. The comment at `:18-21`
+  justifies this as _"the 5-link nav + logo + CTA fit, but nav + phone + CTA together do not"_ — true
+  below ~1136, **not** true up to 1280.
+- **Measured (2026-09-01, dev, Playwright, 8px steps):** the pill is `grid-cols-[1fr_auto_1fr]`; it
+  spans `left-8 right-8` with `pl-[14px] pr-[22px]`, so the side column is `(vw − 100 − navW) / 2`
+  with `navW = 393px` (5 links). The right cluster needs **322px** (CTA 154 + phone 148 + `gap-5`
+  20). The column reaches 322px at **vw ≥ 1136**. So the phone genuinely does not fit at 1024–1135,
+  but **144px of the suppression (1136–1279) is unnecessary** — the `xl` cutoff is a rounding to the
+  nearest Tailwind breakpoint, not the measured one.
+- **Do not "just lower it to `lg`".** That reintroduces a real overflow at 1024–1135. The measured
+  cutoff is ~1136, which has no Tailwind breakpoint — it needs an arbitrary `min-[1136px]:` or a
+  container query, which is what the design uses anyway.
+- **Phase 3 makes this worse before it makes it better — plan for it.** `english-localization`
+  Phase 3 adds an always-visible `LangToggle` (**75px**, measured) to this same right cluster. With
+  its `gap-5`, the cluster grows 322px → **417px**, which the side column only reaches at
+  **vw ≥ 1327**. Naively adding the toggle would therefore _widen_ the dead band from 1024–1279 to
+  **1024–1326**. `LandingNav`'s desktop pill has no collapse mechanism today; the design's answer for
+  `InfoHeader` (collapse phone + CTA into one `ActionMenu`, keep `LangToggle` visible at every width)
+  is what resolves it, and Phase 3 must port that collapse to the landing fork rather than only to
+  `SiteHeader`.
+- **Scope:** Live on the deployed portfolio. Landing page, 1024–1279px.
+- **Decision:** Owned by `english-localization` Phase 3, because the fix and the regression shared
+  the same line of code. Not worth a standalone patch first.
+- **Fixed and verified 2026-09-02.** The design's collapse is ported to the landing fork: below the
+  threshold the phone and the CTA fold into one `ActionMenu` whose first row is the `tel:` link, so
+  **there is no longer any width with no phone affordance at all**. Verified by Playwright at 1920 /
+  1440 / 1340 / 1280 / 1200 / 1136 / 1024 / 900 / 768 / 500 / 390 / 360 — the number is reachable at
+  every one, directly at ≥1340 and through the menu below it. The threshold is a container query on
+  the pill's own content box (`@min-[1208px]`), derived from measurement: 393px nav + 2 × 402px
+  cluster = 1197, since the `1fr` side columns are symmetric. The tablet band and the mobile row
+  collapse the same way, so all three landing presentations now behave like `SiteHeader`.
+- **Evidence:** `context/changes/english-localization/design-review/bug-landing-1264-no-phone.png`,
+  `bug-landing-1136-would-fit.png`, `bug-landing-1280-phone-returns.png`.

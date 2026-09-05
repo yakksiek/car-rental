@@ -1,6 +1,9 @@
 // others
 import { checkRangeBookable } from "./availability";
 import { validateDateRange } from "./catalog-filters";
+import { dashboard } from "./i18n/dashboard";
+import { translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
 import type { VehicleBusyRange } from "../types";
 
 // The manual-reservation availability panel's state, and the whole decision that
@@ -29,15 +32,14 @@ export type BusyRangesFetchState = "loading" | "ready" | "error";
  * The two strings the availability panel and the date picker must say
  * IDENTICALLY. D19 requires it — the picker repeats the failure because on
  * mobile it covers the panel outright, and two wordings for one failure would
- * read as two different problems. Shared from here rather than copied into each
- * component's local COPY map, because a copy is exactly what drifts. Polish
- * copy is canonical (see `design-system.md`); `src/lib` already carries some,
- * e.g. `formatDuration`.
+ * read as two different problems. Resolved from one pair of catalog keys rather
+ * than copied into each component's local COPY map, because a copy is exactly
+ * what drifts.
  */
-export const AVAILABILITY_COPY = {
-  readFailed: "Nie udało się sprawdzić dostępności.",
-  retry: "Spróbuj ponownie",
-} as const;
+export function availabilityCopy(locale: Locale) {
+  const t = translator(locale, dashboard);
+  return { readFailed: t("availabilityReadFailed"), retry: t("availabilityRetry") } as const;
+}
 
 /**
  * The panel's whole state, as a total function of the form plus the ranges
@@ -61,12 +63,13 @@ export function resolveAvailability(
   returnDate: string,
   ranges: VehicleBusyRange[],
   rangesState: BusyRangesFetchState,
+  locale: Locale,
 ): AvailabilityState {
   if (!vehicleId || !pickup || !returnDate) {
     return { state: "idle" };
   }
 
-  const range = validateDateRange(pickup, returnDate);
+  const range = validateDateRange(pickup, returnDate, locale);
   if (!range.ok) {
     return { state: "invalid", message: range.error };
   }

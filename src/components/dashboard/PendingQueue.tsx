@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format, formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
 import { ArrowRight, Calendar, Check, ChevronLeft, Mail, Phone, Truck, User } from "lucide-react";
 
 // components
@@ -14,6 +12,10 @@ import { ReasonSheet, ResultOverlay } from "./ReservationDecision";
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays, totalDueAtPickup } from "../../lib/format";
+import { dayMonthRange, dayMonthShortPadded, timeAgo } from "../../lib/format-date";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import { useReservationDecision } from "../hooks/useReservationDecision";
 import type { PendingReservation, RejectionReason } from "../../types";
 
@@ -23,78 +25,40 @@ import type { PendingReservation, RejectionReason } from "../../types";
 // reason sheet, and result overlay are extracted into shared components in Phase 7
 // so the calendar can reuse the same single decision mechanism.
 
-const COPY = {
-  pending: "Oczekujące",
-  queueTitle: "Oczekujące wnioski",
-  awaitingDecision: "oczekuje na decyzję",
-  empty: "Brak oczekujących wniosków",
-  emptyHint: "Nowe zgłoszenia pojawią się tutaj.",
-  sortLabel: "Sortuj:",
-  sortNewest: "Najnowsze zgłoszenia",
-  sortPickup: "Data odbioru",
-  approve: "Zatwierdź",
-  reject: "Odrzuć",
-  review: "Sprawdź",
-  reasonTitle: "Powód odrzucenia",
-  confirmReject: "Potwierdź odrzucenie",
-  noteLabel: "Dodaj szczegóły",
-  notePlaceholder: "Krótka informacja dla klienta…",
-  requestLabel: "Wniosek",
-  submitted: "Złożono",
-  pickup: "Odbiór",
-  return: "Zwrot",
-  datesHeld: "Daty zarezerwowane",
-  datesHeldNote: "Zablokowane dla innych klientów na czas oczekiwania — odrzucenie je zwalnia.",
-  openCalendar: "Zobacz w kalendarzu",
-  customer: "Klient",
-  name: "Imię i nazwisko",
-  email: "Email",
-  phone: "Telefon",
-  company: "Firma",
-  vatId: "NIP",
-  notes: "Uwagi klienta",
-  payment: "Płatność",
-  deposit: "Kaucja",
-  grandTotal: "Razem dziś",
-  grandTotalNote: "Najem + kaucja · płatne przy odbiorze",
-  confirmedTitle: "Rezerwacja potwierdzona",
-  rejectedTitle: "Wniosek odrzucony",
-  notifiedSub: "Klient powiadomiony e-mailem.",
-  done: "Gotowe",
-  alreadyHandled: "Ten wniosek został już rozpatrzony przez kogoś innego.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-} as const;
-
 // ── pure display helpers ────────────────────────────────────────────────────
 
-function formatDayShort(iso: string): string {
+function formatDayShort(iso: string, locale: Locale): string {
   const d = fromIsoDate(iso);
-  return d ? format(d, "dd MMM", { locale: pl }) : iso;
+  return d ? dayMonthShortPadded(d, locale) : iso;
 }
 
 /** `02 – 09 kwi` (same month) / `28 mar – 02 kwi`. */
-function formatRange(pickup: string, returnDate: string): string {
+function formatRange(pickup: string, returnDate: string, locale: Locale): string {
   const from = fromIsoDate(pickup);
   const to = fromIsoDate(returnDate);
   if (!from || !to) {
     return `${pickup} – ${returnDate}`;
   }
-  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
-  const fromLabel = sameMonth ? format(from, "dd", { locale: pl }) : format(from, "dd MMM", { locale: pl });
-  return `${fromLabel} – ${format(to, "dd MMM", { locale: pl })}`;
+  return dayMonthRange(from, to, locale, { pad: true });
 }
 
-function submittedAgo(createdAt: string): string {
+/**
+ * `5 minut temu` / `wczoraj` / `3 days ago`. Was `date-fns`' `formatDistanceToNow`
+ * with a static `pl` import — Polish sentences with no literal anywhere in the
+ * repo, and therefore invisible to every translation sweep. `Intl` reads the clock
+ * at the same moment the old call did, so the bucket a render lands in is unchanged.
+ */
+function submittedAgo(createdAt: string, locale: Locale): string {
   const d = new Date(createdAt);
   if (Number.isNaN(d.getTime())) {
     return "";
   }
-  return formatDistanceToNow(d, { locale: pl, addSuffix: true });
+  return timeAgo(d, Date.now(), locale);
 }
 
-function vehicleName(r: PendingReservation): string {
+function vehicleName(r: PendingReservation, locale: Locale): string {
   const label = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ");
-  return label === "" ? "Pojazd" : label;
+  return label === "" ? translator(locale, dashboard)("vehicleFallback") : label;
 }
 
 // ── subcomponents ────────────────────────────────────────────────────────────
@@ -107,15 +71,18 @@ function QueueCard({
   busy,
   onReview,
   onReject,
+  locale,
 }: {
   reservation: PendingReservation;
   selected?: boolean;
   busy: boolean;
   onReview: () => void;
   onReject: () => void;
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
-  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
+  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days), locale);
 
   return (
     <div className={cn(cardClass, "p-4", selected && "ring-foreground ring-2")}>
@@ -131,7 +98,7 @@ function QueueCard({
         </div>
         <div className="shrink-0 text-right">
           <div className="text-foreground text-base font-bold tracking-tight">{total}</div>
-          <div className="text-muted-foreground mt-0.5 text-[11px]">{formatDuration(days)}</div>
+          <div className="text-muted-foreground mt-0.5 text-[11px]">{formatDuration(days, locale)}</div>
         </div>
       </div>
 
@@ -141,11 +108,11 @@ function QueueCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-foreground truncate text-[13px] font-[650] tracking-tight">
-            {vehicleName(reservation)}
+            {vehicleName(reservation, locale)}
           </div>
           <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
             <Calendar className="size-3 shrink-0" />
-            {formatRange(reservation.pickup_date, reservation.return_date)}
+            {formatRange(reservation.pickup_date, reservation.return_date, locale)}
           </div>
         </div>
       </div>
@@ -157,14 +124,14 @@ function QueueCard({
           disabled={busy}
           onClick={onReject}
         >
-          {COPY.reject}
+          {t("reject")}
         </Button>
         <Button
           className="bg-foreground text-background hover:bg-foreground/90 h-10 flex-[2]"
           disabled={busy}
           onClick={onReview}
         >
-          {COPY.review}
+          {t("review")}
           <ArrowRight className="size-4" />
         </Button>
       </div>
@@ -178,13 +145,15 @@ function MasterCard({
   reservation,
   selected,
   onSelect,
+  locale,
 }: {
   reservation: PendingReservation;
   selected: boolean;
   onSelect: () => void;
+  locale: Locale;
 }) {
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
-  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
+  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days), locale);
 
   return (
     <button
@@ -198,7 +167,7 @@ function MasterCard({
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-muted-foreground font-mono text-[11px] font-semibold">{reservation.reference}</span>
-        <span className="text-muted-foreground text-[11px]">{submittedAgo(reservation.created_at)}</span>
+        <span className="text-muted-foreground text-[11px]">{submittedAgo(reservation.created_at, locale)}</span>
       </div>
       <div className="text-foreground mt-1 truncate text-[15px] font-[650] tracking-tight">
         {reservation.customer_name}
@@ -207,7 +176,7 @@ function MasterCard({
         <div className="flex min-w-0 items-center gap-2">
           <Truck className="text-foreground size-5 shrink-0" strokeWidth={1.5} />
           <span className="text-muted-foreground truncate text-xs">
-            {vehicleName(reservation)} · {formatRange(reservation.pickup_date, reservation.return_date)}
+            {vehicleName(reservation, locale)} · {formatRange(reservation.pickup_date, reservation.return_date, locale)}
           </span>
         </div>
         <span className="text-foreground shrink-0 text-sm font-bold tracking-tight">{total}</span>
@@ -251,6 +220,7 @@ export function RequestDetail({
   readOnly,
   className,
   withBackButton = true,
+  locale,
 }: {
   reservation: PendingReservation;
   busy: boolean;
@@ -260,9 +230,11 @@ export function RequestDetail({
   readOnly?: boolean;
   className?: string;
   withBackButton?: boolean;
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const days = rentalDays(reservation.pickup_date, reservation.return_date);
-  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days));
+  const total = formatPln(estimatedTotal(reservation.vehicle_daily_rate, days), locale);
 
   const pad = Math.max(1, Math.round(days * 0.4));
   const heldSidePct = (pad / (days + 2 * pad)) * 100;
@@ -287,7 +259,7 @@ export function RequestDetail({
             type="button"
             onClick={onBack}
             className="text-foreground border-border bg-card shadow-card hover:bg-background flex size-9 items-center justify-center rounded-full border"
-            aria-label="Wróć"
+            aria-label={t("back")}
           >
             <ChevronLeft className="size-[18px]" />
           </button>
@@ -296,10 +268,10 @@ export function RequestDetail({
         )}
         <div className="text-center">
           <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-            {COPY.requestLabel} {reservation.reference}
+            {t("requestLabel")} {reservation.reference}
           </div>
           <div className="text-foreground mt-0.5 text-[13px] font-[650] tracking-tight">
-            {COPY.submitted} · {submittedAgo(reservation.created_at)}
+            {t("submitted")} · {submittedAgo(reservation.created_at, locale)}
           </div>
         </div>
         {/* Call the customer — the detail header's right affordance (design 09).
@@ -308,7 +280,7 @@ export function RequestDetail({
           <a
             href={`tel:${reservation.customer_phone.replace(/\s+/g, "")}`}
             className="text-foreground border-border bg-card shadow-card hover:bg-background flex size-9 items-center justify-center rounded-full border"
-            aria-label={`Zadzwoń do: ${reservation.customer_name}`}
+            aria-label={`${t("callCustomer")}: ${reservation.customer_name}`}
           >
             <Phone className="size-[18px]" />
           </a>
@@ -330,7 +302,7 @@ export function RequestDetail({
             {reservation.customer_name}
           </h2>
           <div className="text-muted-foreground mt-1 text-[13px]">
-            {COPY.submitted} · {submittedAgo(reservation.created_at)}
+            {t("submitted")} · {submittedAgo(reservation.created_at, locale)}
           </div>
         </div>
       </div>
@@ -347,7 +319,9 @@ export function RequestDetail({
               <Truck className="size-10" strokeWidth={1.4} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-foreground text-[15px] font-[650] tracking-tight">{vehicleName(reservation)}</div>
+              <div className="text-foreground text-[15px] font-[650] tracking-tight">
+                {vehicleName(reservation, locale)}
+              </div>
               {/* First sub-line: registration plate — the fleet's practical
                   differentiator (falls back to nothing until the RPC returns it). */}
               {reservation.vehicle_plate ? (
@@ -358,7 +332,8 @@ export function RequestDetail({
               {/* Daily rate: always visible (product preference — the design only
                   showed it stacked; kept on the wide master-detail card too). */}
               <div className="mt-1 text-[12.5px] font-semibold text-[var(--flota-ink-2)]">
-                {formatPln(reservation.vehicle_daily_rate)}/doba
+                {formatPln(reservation.vehicle_daily_rate, locale)}
+                {t("perDay")}
               </div>
             </div>
           </div>
@@ -368,19 +343,19 @@ export function RequestDetail({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
-                  {COPY.pickup}
+                  {t("pickup")}
                 </div>
                 <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
-                  {formatDayShort(reservation.pickup_date)} · 14:00
+                  {formatDayShort(reservation.pickup_date, locale)} · 14:00
                 </div>
               </div>
               <ArrowRight className="text-muted-foreground size-[18px]" />
               <div className="text-right">
                 <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">
-                  {COPY.return}
+                  {t("return")}
                 </div>
                 <div className="text-foreground mt-0.5 text-lg font-bold tracking-tight">
-                  {formatDayShort(reservation.return_date)} · 10:00
+                  {formatDayShort(reservation.return_date, locale)} · 10:00
                 </div>
               </div>
             </div>
@@ -394,10 +369,10 @@ export function RequestDetail({
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="bg-warning size-2 rounded-[3px]" />
-              <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">{COPY.datesHeld}</span>
+              <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">{t("datesHeld")}</span>
             </div>
             <span className="text-muted-foreground flex items-center gap-1 text-[11px] font-medium">
-              {COPY.openCalendar}
+              {t("openCalendar")}
               <ArrowRight className="size-3" />
             </span>
           </div>
@@ -410,46 +385,46 @@ export function RequestDetail({
             </div>
           </div>
           <div className="text-muted-foreground mt-1.5 flex justify-between text-[10.5px]">
-            <span>{formatDayShort(reservation.pickup_date)}</span>
-            <span>{formatDayShort(reservation.return_date)}</span>
+            <span>{formatDayShort(reservation.pickup_date, locale)}</span>
+            <span>{formatDayShort(reservation.return_date, locale)}</span>
           </div>
-          <div className="mt-2.5 text-xs leading-relaxed text-[var(--flota-ink-2)]">{COPY.datesHeldNote}</div>
+          <div className="mt-2.5 text-xs leading-relaxed text-[var(--flota-ink-2)]">{t("datesHeldNote")}</div>
         </a>
 
         {/* Customer */}
         <div className="text-muted-foreground mx-1 mt-1 text-[13px] font-bold tracking-wide uppercase">
-          {COPY.customer}
+          {t("customer")}
         </div>
         <div className={cn(cardClass, "p-1.5")}>
           {/* Name repeats the lg+ master-detail heading, so drop it there (design
               14); mobile keeps it — the compact header shows only the reference. */}
           <InfoRow
             icon={<User className="size-4" />}
-            label={COPY.name}
+            label={t("name")}
             value={reservation.customer_name}
             className="lg:hidden"
           />
-          <InfoRow icon={<Mail className="size-4" />} label={COPY.email} value={reservation.customer_email} />
+          <InfoRow icon={<Mail className="size-4" />} label={t("email")} value={reservation.customer_email} />
           <InfoRow
             icon={<Phone className="size-4" />}
-            label={COPY.phone}
+            label={t("phone")}
             value={reservation.customer_phone}
             last={!reservation.company && !reservation.notes}
           />
           {reservation.company ? (
             <InfoRow
               icon={<User className="size-4" />}
-              label={COPY.company}
+              label={t("company")}
               value={
                 reservation.vat_id
-                  ? `${reservation.company} · ${COPY.vatId} ${reservation.vat_id}`
+                  ? `${reservation.company} · ${t("vatId")} ${reservation.vat_id}`
                   : reservation.company
               }
               last={!reservation.notes}
             />
           ) : null}
           {reservation.notes ? (
-            <InfoRow icon={<Mail className="size-4" />} label={COPY.notes} value={reservation.notes} last />
+            <InfoRow icon={<Mail className="size-4" />} label={t("notes")} value={reservation.notes} last />
           ) : null}
         </div>
 
@@ -457,7 +432,7 @@ export function RequestDetail({
             the one place rent + deposit are summed (totalDueAtPickup): the single
             amount taken on collection. 2-up on a wide panel, stacked on mobile. */}
         <div className="text-muted-foreground mx-1 mt-1 text-[13px] font-bold tracking-wide uppercase">
-          {COPY.payment}
+          {t("payment")}
         </div>
         <div className="bg-primary text-primary-foreground shadow-accent relative overflow-hidden rounded-lg bg-[linear-gradient(150deg,var(--flota-accent)_0%,var(--flota-accent-dark)_100%)]">
           {/* corner circle highlight — exact values from the design source
@@ -468,26 +443,31 @@ export function RequestDetail({
             <div className="@min-[520px]:border-r @min-[520px]:border-white/15 @min-[520px]:pr-6">
               <div className="flex items-center justify-between gap-4 border-b border-white/15 py-2">
                 <span className="text-primary-foreground/85 text-[13px] font-[540]">
-                  {formatDuration(days)} × {formatPln(reservation.vehicle_daily_rate)}
+                  {formatDuration(days, locale)} × {formatPln(reservation.vehicle_daily_rate, locale)}
                 </span>
                 <span className="text-sm font-[650] tracking-tight">{total}</span>
               </div>
               <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-primary-foreground/85 text-[13px] font-[540]">{COPY.deposit}</span>
-                <span className="text-sm font-[650] tracking-tight">{formatPln(reservation.vehicle_deposit)}</span>
+                <span className="text-primary-foreground/85 text-[13px] font-[540]">{t("deposit")}</span>
+                <span className="text-sm font-[650] tracking-tight">
+                  {formatPln(reservation.vehicle_deposit, locale)}
+                </span>
               </div>
             </div>
             <div className="border-t border-white/15 pt-3 @min-[520px]:border-t-0 @min-[520px]:pt-0">
               <div className="flex items-baseline justify-between gap-3 @min-[520px]:flex-col @min-[520px]:items-end @min-[520px]:gap-0">
                 <div className="text-primary-foreground/75 text-[10.5px] font-bold tracking-wide uppercase">
-                  {COPY.grandTotal}
+                  {t("grandTotal")}
                 </div>
                 <div className="text-[26px] leading-none font-bold tracking-tight @min-[520px]:mt-1">
-                  {formatPln(totalDueAtPickup(reservation.vehicle_daily_rate, days, reservation.vehicle_deposit))}
+                  {formatPln(
+                    totalDueAtPickup(reservation.vehicle_daily_rate, days, reservation.vehicle_deposit),
+                    locale,
+                  )}
                 </div>
               </div>
               <div className="text-primary-foreground/75 mt-2 hidden text-[11px] @min-[520px]:block @min-[520px]:text-right">
-                {COPY.grandTotalNote}
+                {t("grandTotalNote")}
               </div>
             </div>
           </div>
@@ -503,11 +483,11 @@ export function RequestDetail({
             disabled={busy}
             onClick={onReject}
           >
-            {COPY.reject}
+            {t("reject")}
           </Button>
           <Button className="h-12 flex-[2]" disabled={busy} onClick={onApprove}>
             <Check className="size-4" />
-            {COPY.approve}
+            {t("approve")}
           </Button>
         </div>
       )}
@@ -520,15 +500,19 @@ export function RequestDetail({
 export default function PendingQueue({
   reservations: initial,
   fromDashboard = false,
+  locale,
 }: {
   reservations: PendingReservation[];
   fromDashboard?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const [reservations, setReservations] = React.useState<PendingReservation[]>(initial);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [reasonForId, setReasonForId] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<"confirmed" | "rejected" | null>(null);
-  // The id whose decision produced the current result overlay — removed on "Gotowe".
+  // The id whose decision produced the current result overlay — removed on "done".
   // Tracked explicitly because on desktop the decided row may be the fallback
   // selection (selectedId still null).
   const [decidedId, setDecidedId] = React.useState<string | null>(null);
@@ -560,10 +544,10 @@ export default function PendingQueue({
       if (selectedId === id) {
         setSelectedId(null);
       }
-      setBanner(COPY.alreadyHandled);
+      setBanner(t("alreadyHandled"));
       return;
     }
-    setBanner(COPY.genericError);
+    setBanner(t("genericError"));
   }
 
   function onResultDone() {
@@ -594,11 +578,11 @@ export default function PendingQueue({
 
   const sortControl = (
     <div className="mb-3 flex items-center gap-2">
-      <span className="text-muted-foreground text-xs font-semibold">{COPY.sortLabel}</span>
+      <span className="text-muted-foreground text-xs font-semibold">{t("sortLabel")}</span>
       {(
         [
-          ["newest", COPY.sortNewest],
-          ["pickup", COPY.sortPickup],
+          ["newest", t("sortNewest")],
+          ["pickup", t("sortPickup")],
         ] as const
       ).map(([key, label]) => (
         <button
@@ -623,8 +607,8 @@ export default function PendingQueue({
 
   const emptyState = (
     <div className={cn(cardClass, "flex flex-col items-center justify-center px-6 py-16 text-center")}>
-      <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
-      <div className="text-muted-foreground mt-1 text-sm">{COPY.emptyHint}</div>
+      <div className="text-foreground text-base font-[650]">{t("empty")}</div>
+      <div className="text-muted-foreground mt-1 text-sm">{t("emptyHint")}</div>
     </div>
   );
 
@@ -638,23 +622,23 @@ export default function PendingQueue({
       {fromDashboard && (
         <a
           href="/dashboard"
-          aria-label="Wróć do pulpitu"
+          aria-label={t("backToDashboard")}
           className="text-foreground hover:bg-background absolute top-1/2 left-0 flex size-9 -translate-y-1/2 items-center justify-center rounded-full"
         >
           <ChevronLeft className="size-[18px]" />
         </a>
       )}
       <div className="text-center">
-        <h1 className="text-foreground text-xl font-bold tracking-tight">{COPY.queueTitle}</h1>
+        <h1 className="text-foreground text-xl font-bold tracking-tight">{t("queueTitle")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {count} {COPY.awaitingDecision}
+          {count} {t("awaitingDecision")}
         </p>
       </div>
       {/* Quick-add (S-12b), absolutely placed at the right edge for the same
           reason the back button is: a flex sibling would push the centred title
           off-centre. This board owns no create action, so no `promoted`. */}
       <div className="absolute top-1/2 right-0 -translate-y-1/2">
-        <QuickAddButton mode="mobile" />
+        <QuickAddButton mode="mobile" locale={locale} />
       </div>
     </header>
   );
@@ -676,6 +660,7 @@ export default function PendingQueue({
           <div className="mt-4">
             <RequestDetail
               reservation={selected}
+              locale={locale}
               busy={busy}
               onApprove={() => decide(selected.id, "confirm")}
               onReject={() => {
@@ -699,6 +684,7 @@ export default function PendingQueue({
                     <QueueCard
                       key={r.id}
                       reservation={r}
+                      locale={locale}
                       busy={busy}
                       onReview={() => {
                         setSelectedId(r.id);
@@ -728,6 +714,7 @@ export default function PendingQueue({
                 <MasterCard
                   key={r.id}
                   reservation={r}
+                  locale={locale}
                   selected={r.id === desktopSelected?.id}
                   onSelect={() => {
                     setSelectedId(r.id);
@@ -739,6 +726,7 @@ export default function PendingQueue({
               {desktopSelected && (
                 <RequestDetail
                   reservation={desktopSelected}
+                  locale={locale}
                   busy={busy}
                   withBackButton={false}
                   onApprove={() => decide(desktopSelected.id, "confirm")}
@@ -755,6 +743,7 @@ export default function PendingQueue({
       {/* Reason sheet */}
       {reasonForId && (
         <ReasonSheet
+          locale={locale}
           busy={busy}
           onClose={() => {
             setReasonForId(null);
@@ -764,7 +753,7 @@ export default function PendingQueue({
       )}
 
       {/* Result overlay */}
-      {result && <ResultOverlay status={result} onDone={onResultDone} />}
+      {result && <ResultOverlay status={result} onDone={onResultDone} locale={locale} />}
     </div>
   );
 }

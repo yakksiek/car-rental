@@ -10,7 +10,8 @@ import ReservationForm from "../components/reservation/ReservationForm.tsx";
 import { validateDateRange } from "../lib/catalog-filters";
 import { getVehicleById } from "../lib/services/vehicles";
 
-// Reservation flow step 2 — "Twoje dane" (design desktop-2 / mobile-3). The
+// Reservation flow step 2 — the customer's own details (design desktop-2 /
+// mobile-3). The
 // date range is chosen at step 1 on the vehicle detail page (the BookingWidget),
 // so this page REQUIRES a valid carried range: SSR resolves the vehicle
 // (missing/inactive/malformed id → styled 404) and, when the range is absent or
@@ -19,14 +20,14 @@ import { getVehicleById } from "../lib/services/vehicles";
 // submits to POST /api/reservations and redirects to /r/<token> (step 3). The
 // funnel is transactional and per-vehicle — noindex, like the status page.
 
-const supabase = Astro.locals.supabase;
+const { supabase, locale, t } = Astro.locals;
 const vehicleId = Astro.url.searchParams.get("vehicle_id");
 
 const vehicle = vehicleId ? await getVehicleById(supabase, vehicleId) : null;
 
 const rawPickup = Astro.url.searchParams.get("pickup");
 const rawReturn = Astro.url.searchParams.get("return");
-const datesOk = Boolean(rawPickup && rawReturn && validateDateRange(rawPickup, rawReturn).ok);
+const datesOk = Boolean(rawPickup && rawReturn && validateDateRange(rawPickup, rawReturn, locale).ok);
 
 // Dates live on step 1 now. A real vehicle reached without a valid range
 // (manual URL, stale link) gets a prompt back to step 1 rather than a broken
@@ -47,13 +48,14 @@ const backHref = vehicle
   : "/fleet";
 ---
 
-<Layout title="Twoje dane — Flota">
+<Layout title={t("booking.reserveTitle")}>
   <meta slot="head" name="robots" content="noindex" />
   <SiteHeader />
   {
     vehicle && datesOk ? (
       <main class="lg:max-w-app mx-auto max-w-2xl px-5 pb-40 sm:px-8 lg:pb-16">
         <ReservationForm
+          locale={locale}
           client:load
           vehicle={{
             id: vehicle.id,
@@ -72,30 +74,26 @@ const backHref = vehicle
       </main>
     ) : needsDates ? (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Krok 1 · Daty</p>
-        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Najpierw wybierz daty</h1>
-        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
-          Aby zarezerwować ten pojazd, wybierz termin odbioru i zwrotu na stronie pojazdu.
-        </p>
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("booking.noDatesStep")}</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">{t("booking.noDatesTitle")}</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">{t("booking.noDatesBody")}</p>
         <a
           href={backHref}
           class="bg-primary text-primary-foreground rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold transition-colors hover:bg-[var(--flota-accent-dark)]"
         >
-          Wybierz daty
+          {t("booking.noDatesCta")}
         </a>
       </main>
     ) : (
       <main class="mx-auto max-w-2xl px-5 py-24 text-center sm:px-8">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Błąd 404</p>
-        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">Nie znaleziono pojazdu</h1>
-        <p class="text-muted-foreground mx-auto mt-3 max-w-md">
-          Ten pojazd nie istnieje lub nie jest już dostępny w naszej flocie.
-        </p>
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("fleet.notFoundEyebrow")}</p>
+        <h1 class="text-foreground mt-3 text-3xl font-bold tracking-tight">{t("fleet.notFoundTitle")}</h1>
+        <p class="text-muted-foreground mx-auto mt-3 max-w-md">{t("fleet.notFoundBody")}</p>
         <a
           href="/fleet"
           class="bg-foreground text-background rounded-button mt-7 inline-flex h-11 items-center px-6 text-sm font-semibold"
         >
-          Wróć do floty
+          {t("fleet.backToFleet")}
         </a>
       </main>
     )

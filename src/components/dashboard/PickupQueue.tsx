@@ -9,12 +9,15 @@ import { DeliveryBadge, deliveryBadge } from "../protocol/DeliveryBadge";
 // others
 import { cn } from "../../lib/utils";
 import { postResend } from "../hooks/useResendEmail";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import type { DispatchRow } from "../../types";
 
 // The dispatch list (S-05 Phase 6) — the entry point that did not exist before
 // this slice. Today's confirmed reservations, each either awaiting handover
-// (`Wydaj`) or already issued (a delivery badge + `Otwórz protokół`, plus
-// `Wyślij ponownie` when the last send did not land).
+// (hand over) or already issued (a delivery badge + open-protocol, plus a resend
+// action when the last send did not land).
 //
 // Issued rows are the whole point of keeping `email_deliveries`: a dismissed
 // post-submit overlay is recoverable here, and this is the only discoverable
@@ -29,7 +32,7 @@ import type { DispatchRow } from "../../types";
 /** A row plus the client-side delivery-status override a successful resend applies. */
 interface RowState {
   row: DispatchRow;
-  /** Set once a resend succeeds this session, so the badge flips to `Dostarczono` without a reload. */
+  /** Set once a resend succeeds this session, so the badge flips to delivered without a reload. */
   deliveryOverride: string | null;
 }
 
@@ -46,12 +49,17 @@ function PickupRow({
   resending,
   error,
   onResend,
+  locale,
 }: {
   state: RowState;
   resending: boolean;
   error: string | null;
   onResend: () => void;
+  locale: Locale;
 }) {
+  // Memoized so the `useCallback`s below can list it honestly without losing
+  // their memo — `translator` is a pure two-property lookup.
+  const t = React.useMemo(() => translator(locale, dashboard), [locale]);
   const { row } = state;
   const vehicle = [row.vehicle_make, row.vehicle_model].filter(Boolean).join(" ");
   const issued = Boolean(row.protocol_id);
@@ -59,7 +67,7 @@ function PickupRow({
   // landed this session, else the folded-in value from the RPC.
   const deliveryStatus = state.deliveryOverride ?? row.delivery_status;
   const pdfPath = row.pdf_path as string | null;
-  const badge = deliveryBadge(pdfPath, deliveryStatus);
+  const badge = deliveryBadge(pdfPath, deliveryStatus, locale);
   // Offer resend only when there is a stored PDF to attach *and* the last send did
   // not land. A missing PDF (`Błąd PDF`, warn) is not resendable — regenerate.
   const canResend = issued && Boolean(pdfPath) && badge.tone !== "ok";
@@ -80,26 +88,26 @@ function PickupRow({
         <div className="flex shrink-0 flex-col items-end gap-2">
           {issued ? (
             <>
-              <DeliveryBadge pdfPath={pdfPath} deliveryStatus={deliveryStatus} />
+              <DeliveryBadge pdfPath={pdfPath} deliveryStatus={deliveryStatus} locale={locale} />
               <div className="flex items-center gap-2">
                 {canResend && (
                   <Button type="button" variant="outline" size="sm" disabled={resending} onClick={onResend}>
                     {resending ? (
                       <>
                         <span className="border-muted-foreground/30 border-t-foreground size-3.5 animate-spin rounded-full border-2" />
-                        Wysyłanie…
+                        {t("sending")}
                       </>
                     ) : (
                       <>
                         <RefreshCw className="size-3.5" />
-                        Wyślij ponownie
+                        {t("resend")}
                       </>
                     )}
                   </Button>
                 )}
                 <Button asChild variant="ghost" size="sm">
                   <a href={`/dashboard/protocols/${row.protocol_id}`}>
-                    Otwórz protokół
+                    {t("openProtocol")}
                     <ArrowRight className="size-3.5" />
                   </a>
                 </Button>
@@ -108,7 +116,7 @@ function PickupRow({
           ) : (
             <Button asChild size="sm" className="bg-foreground text-background hover:bg-foreground/90">
               <a href={`/dashboard/pickups/${row.reservation_id}`}>
-                Wydaj
+                {t("handOver")}
                 <ArrowRight className="size-3.5" />
               </a>
             </Button>
@@ -120,34 +128,35 @@ function PickupRow({
   );
 }
 
-export default function PickupQueue({ rows }: { rows: DispatchRow[] }) {
+export default function PickupQueue({ rows, locale }: { rows: DispatchRow[]; locale: Locale }) {
+  const t = translator(locale, dashboard);
   const [states, setStates] = React.useState<RowState[]>(() => rows.map((row) => ({ row, deliveryOverride: null })));
   const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
-  const handleResend = React.useCallback(async (protocolId: string) => {
-    setResendingId(protocolId);
-    setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== protocolId)));
-    const outcome = await postResend(protocolId);
-    setResendingId(null);
-    if (outcome.status === "sent") {
-      setStates((prev) => prev.map((s) => (s.row.protocol_id === protocolId ? { ...s, deliveryOverride: "sent" } : s)));
-      return;
-    }
-    const message =
-      outcome.status === "no_pdf"
-        ? "Brak zapisanego PDF — wygeneruj go ponownie."
-        : "Nie udało się wysłać. Spróbuj ponownie.";
-    setErrors((prev) => ({ ...prev, [protocolId]: message }));
-  }, []);
+  const handleResend = React.useCallback(
+    async (protocolId: string) => {
+      setResendingId(protocolId);
+      setErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== protocolId)));
+      const outcome = await postResend(protocolId);
+      setResendingId(null);
+      if (outcome.status === "sent") {
+        setStates((prev) =>
+          prev.map((s) => (s.row.protocol_id === protocolId ? { ...s, deliveryOverride: "sent" } : s)),
+        );
+        return;
+      }
+      const message = outcome.status === "no_pdf" ? t("resendNoPdf") : t("resendFailed");
+      setErrors((prev) => ({ ...prev, [protocolId]: message }));
+    },
+    [t],
+  );
 
   if (states.length === 0) {
     return (
       <div className={cn("border-border bg-card shadow-card rounded-lg border p-10 text-center")}>
-        <h2 className="text-foreground text-[16px] font-[650] tracking-tight">Brak wydań na dziś</h2>
-        <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">
-          Gdy rezerwacja będzie gotowa do wydania, pojawi się tutaj.
-        </p>
+        <h2 className="text-foreground text-[16px] font-[650] tracking-tight">{t("pickupsEmptyTitle")}</h2>
+        <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-[13px]">{t("pickupsEmptyBody")}</p>
       </div>
     );
   }
@@ -158,6 +167,7 @@ export default function PickupQueue({ rows }: { rows: DispatchRow[] }) {
         const protocolId = state.row.protocol_id;
         return (
           <PickupRow
+            locale={locale}
             key={state.row.reservation_id}
             state={state}
             resending={resendingId !== null && resendingId === protocolId}

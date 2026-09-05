@@ -7,6 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ReturnProtocolForm from "../../../components/protocol/ReturnProtocolForm";
 
 // others
+import { requireDocumentLocale } from "../../../lib/i18n/types";
 import { getReturnBaseline } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -26,12 +27,12 @@ import { resolveBackTarget } from "../../../lib/back-target";
 // frontmatter has no early `return` (a top-level return crashes
 // `@typescript-eslint/no-misused-promises` under `astro-eslint-parser`); the 404
 // follows the `Astro.response.status` pattern instead.
-const { supabase } = Astro.locals;
+const { supabase, locale, t } = Astro.locals;
 const { reservationId } = Astro.params;
 
 // Reachable from the returns worklist AND from the dispatch cockpit, so "back"
 // follows `?from` when the caller supplied one; absent, it stays the worklist.
-const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/returns");
+const back = resolveBackTarget(Astro.url.searchParams.get("from"), "/dashboard/returns", locale);
 
 const baseline = reservationId ? await getReturnBaseline(supabase, reservationId) : null;
 
@@ -64,18 +65,28 @@ const ctx = baseline
       baselineOdometerKm: baseline.baseline_odometer_km,
       baselineFuelEighths: baseline.baseline_fuel_eighths,
       baselineDamages: baseline.baseline_damages,
+      // The CUSTOMER's language — see the pickup page: independent of `locale`,
+      // which is the employee's session.
+      //
+      // `requireDocumentLocale`, NOT `asLocale`, for the same reason as there: the
+      // value decides the permanent content of a PDF that is never regenerated,
+      // plus its `protocols.locale` stamp. A default would hide a lagging
+      // migration behind permanently mis-stamped documents.
+      documentLocale: requireDocumentLocale(baseline.locale, "returns/[reservationId] documentLocale"),
     }
   : null;
 ---
 
-<Layout title={baseline ? `Protokół zwrotu ${baseline.reference} — Flota` : "Nie znaleziono — Flota"}>
+<Layout
+  title={baseline
+    ? `${t("dashboard.returnProtocolTitle")} ${baseline.reference} — Flota`
+    : `${t("dashboard.notFoundTitle")} — Flota`}
+>
   {
     !ctx || !configured ? (
       <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
-        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Nie znaleziono zwrotu</h1>
-        <p class="text-muted-foreground mt-1.5 text-[13px]">
-          Ta rezerwacja nie czeka dziś na zwrot, nie ma protokołu wydania albo nie masz do niej dostępu.
-        </p>
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">{t("dashboard.returnNotFoundTitle")}</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">{t("dashboard.returnNotFoundBody")}</p>
         <a
           href={back.href}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
@@ -85,10 +96,8 @@ const ctx = baseline
       </main>
     ) : returnedProtocolId ? (
       <main class="mx-auto flex min-h-screen max-w-[460px] flex-col justify-center px-5 text-center">
-        <h1 class="text-foreground text-[21px] font-bold tracking-tight">Protokół już istnieje</h1>
-        <p class="text-muted-foreground mt-1.5 text-[13px]">
-          Dla tej rezerwacji istnieje już protokół zwrotu — każdy zwrot może mieć tylko jeden.
-        </p>
+        <h1 class="text-foreground text-[21px] font-bold tracking-tight">{t("protocol.conflictTitle")}</h1>
+        <p class="text-muted-foreground mt-1.5 text-[13px]">{t("protocol.conflictReturnBody")}</p>
         <div class="border-border bg-card shadow-card mt-5 rounded-[14px] border p-4">
           <span class="text-foreground text-[14px] font-semibold tracking-tight">
             {ctx.reference} · <span class="font-mono">{ctx.plate}</span>
@@ -98,7 +107,7 @@ const ctx = baseline
           href={`/dashboard/protocols/${returnedProtocolId}`}
           class="bg-foreground text-background mt-6 flex h-12 items-center justify-center rounded-[13px] text-[15px] font-[650]"
         >
-          Otwórz protokół
+          {t("protocol.openProtocol")}
         </a>
         <a href={back.href} class="text-muted-foreground mt-3 text-[13px] font-semibold">
           {back.label}
@@ -106,6 +115,7 @@ const ctx = baseline
       </main>
     ) : (
       <ReturnProtocolForm
+        locale={locale}
         client:only="react"
         ctx={ctx}
         supabaseUrl={supabaseUrl}

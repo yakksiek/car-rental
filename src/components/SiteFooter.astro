@@ -3,37 +3,46 @@
 import Brand from "./brand/Brand.astro";
 
 // Public site footer (design `InfoFooter`): a 3-column contact footer shared across
-// the whole customer-facing site. Brand + tagline, then WYNAJEM / INFORMACJE /
-// KONTAKT columns and a bottom copyright bar. The rental-term links point at
-// /pricing (no per-term landing pages); "Kontakt" points at the About contact card
-// (/about#kontakt). Inner rows cap at 1800px (max-w-shell) to share the header's
-// content edge — wider than the 1180 info-page bodies on purpose (S-09 P8).
+// the whole customer-facing site. Brand + tagline, then RENTAL / INFORMATION /
+// CONTACT columns and a bottom copyright bar. The rental-term links point at
+// /pricing (no per-term landing pages); "Contact" points at the About contact card
+// (/about#kontakt — the ANCHOR stays Polish, it is a URL fragment, not copy).
+// Inner rows cap at 1800px (max-w-shell) to share the header's content edge —
+// wider than the 1180 info-page bodies on purpose (S-09 P8).
 //
-// "Strefa pracownika" → /auth/signin. S-09 P8 deliberately left it out ("staff reach
-// /auth/signin directly"), which is right for a real rental business but wrong here:
-// this deployment is a portfolio, and the staff cockpit is the half worth showing. It
-// sits last in INFORMACJE — discoverable, never competing with the customer funnel.
-// The route is public and self-gating (middleware bounces anyone without a profile),
-// so linking it exposes nothing a typed URL didn't already.
+// *** `footer.staffZone` → /auth/signin is the highest-leverage string in the repo. ***
+// S-09 P8 deliberately left the link out ("staff reach /auth/signin directly"), which
+// is right for a real rental business but wrong here: this deployment is a portfolio,
+// and the staff cockpit is the half worth showing. It is the ONLY route from the
+// public site into the demo, so an English reader who cannot parse "Strefa
+// pracownika" never reaches the cockpit at all. It sits last in INFORMATION —
+// discoverable, never competing with the customer funnel. The route is public and
+// self-gating (middleware bounces anyone without a profile), so linking it exposes
+// nothing a typed URL didn't already.
+//
+// The <Brand> wordmark and the `© 2026 Flota` prefix are the BRAND and stay
+// untranslated; the identically-spelled nav item does not live here (see `i18n/nav.ts`).
 
-const wynajem: { label: string; href: string }[] = [
-  { label: "Na dobę", href: "/pricing" },
-  { label: "Krótkoterminowy", href: "/pricing" },
-  { label: "Średnioterminowy", href: "/pricing" },
-  { label: "Długoterminowy", href: "/pricing" },
+const { t } = Astro.locals;
+
+const rental: { label: string; href: string }[] = [
+  { label: t("footer.daily"), href: "/pricing" },
+  { label: t("footer.shortTerm"), href: "/pricing" },
+  { label: t("footer.mediumTerm"), href: "/pricing" },
+  { label: t("footer.longTerm"), href: "/pricing" },
 ];
 
-const informacje: { label: string; href: string }[] = [
-  { label: "O nas", href: "/about" },
-  { label: "Cennik", href: "/pricing" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Kontakt", href: "/about#kontakt" },
-  { label: "Strefa pracownika", href: "/auth/signin" },
+const information: { label: string; href: string }[] = [
+  { label: t("footer.about"), href: "/about" },
+  { label: t("footer.pricing"), href: "/pricing" },
+  { label: t("footer.faq"), href: "/faq" },
+  { label: t("footer.contact"), href: "/about#kontakt" },
+  { label: t("footer.staffZone"), href: "/auth/signin" },
 ];
 
 const columns: { heading: string; items: { label: string; href: string }[] }[] = [
-  { heading: "Wynajem", items: wynajem },
-  { heading: "Informacje", items: informacje },
+  { heading: t("footer.headingRental"), items: rental },
+  { heading: t("footer.headingInfo"), items: information },
 ];
 
 const itemClass = "text-[13.5px] font-medium text-[#3B4453] transition-colors hover:text-foreground";
@@ -46,10 +55,16 @@ const headingClass = "mb-3 text-[11px] font-bold uppercase tracking-[0.5px] text
       <!-- Brand + tagline -->
       <div class="max-w-[300px]">
         <a href="/" class="mb-3 flex items-center">
-          <Brand class="gap-1.5" markClass="h-[38px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+          {
+            /* `w-`, not `h-`: the design's `InfoFooter` is `<FlotaMark size={38} />` and
+              that 38 is a WIDTH. The mark's viewBox is 124×60, so `h-[38px]` drew it
+              2.07× too big — the same axis slip the header carried until the phase-12
+              vision-diff caught it. Source pulled 2026-09-05 (`info-pages.jsx`). */
+          }
+          <Brand class="gap-1.5" markClass="w-[38px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
         </a>
         <p class="text-[13px] leading-[1.5] text-[#5B6474]">
-          Wynajem samochodów dostawczych w Warszawie — na dobę, krótko- i długoterminowo.
+          {t("footer.tagline")}
         </p>
       </div>
 
@@ -72,18 +87,18 @@ const headingClass = "mb-3 text-[11px] font-bold uppercase tracking-[0.5px] text
 
       <!-- Contact column -->
       <div>
-        <div class:list={headingClass}>Kontakt</div>
+        <div class:list={headingClass}>{t("footer.headingContact")}</div>
         <div class="flex flex-col gap-[9px]">
           <a href="tel:+48221002030" class:list={itemClass}>+48 22 100 20 30</a>
           <a href="mailto:kontakt@flota.pl" class:list={itemClass}>kontakt@flota.pl</a>
-          <div class="text-[13.5px] font-medium text-[#3B4453]">Al. Jerozolimskie 200, Warszawa</div>
-          <div class="text-primary text-[13.5px] font-bold">Czynne 24/7</div>
+          <div class="text-[13.5px] font-medium text-[#3B4453]">{t("footer.address")}</div>
+          <div class="text-primary text-[13.5px] font-bold">{t("footer.open247")}</div>
         </div>
       </div>
     </div>
 
     <div class="mt-[26px] border-t border-[#EEF1F5] pt-[18px] text-[12px] text-[#99A2B2]">
-      © 2026 Flota. Wszelkie prawa zastrzeżone.
+      © 2026 Flota. {t("footer.rights")}
     </div>
   </div>
 </footer>

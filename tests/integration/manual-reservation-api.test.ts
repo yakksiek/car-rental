@@ -34,8 +34,12 @@ const CUSTOMER = {
   customer_phone: "+48600000124",
 } as const;
 
+// `locale` is the CUSTOMER's language, answered by the employee on the modal —
+// the one field the public funnel has no equivalent of (the funnel takes it off
+// the session). `pl` here matches the modal's own default and the fixture's
+// Polish name.
 function body(pickup: string, returnDate: string) {
-  return { vehicle_id: VEHICLE_ID, pickup, return: returnDate, ...CUSTOMER };
+  return { vehicle_id: VEHICLE_ID, pickup, return: returnDate, locale: "pl", ...CUSTOMER };
 }
 
 async function clearReservations() {
@@ -202,6 +206,7 @@ describe("POST /api/reservations/manual (S-12)", () => {
           pickup: "2032-07-01",
           return: "2032-07-05",
           customer_name: "Tylko Nazwisko",
+          locale: "pl",
         },
       }),
     );
@@ -209,6 +214,24 @@ describe("POST /api/reservations/manual (S-12)", () => {
 
     const payload = (await res.json()) as { errors: Record<string, string> };
     expect(Object.keys(payload.errors).sort()).toEqual(["customer_email", "customer_phone"]);
+  });
+
+  it("rejects an unrecognised customer language rather than defaulting one", async () => {
+    // The modal's control can only emit `en`/`pl`, so this is the crafted-payload
+    // arm — and it must FAIL rather than fall back, because falling back would
+    // silently pick what language a stranger is written to. The route is the
+    // trust boundary; the RPC's own normalisation is the second line, not the first.
+    const res = await manualPOST(
+      await asContext("employee", {
+        method: "POST",
+        path: "/api/reservations/manual",
+        body: { ...body("2032-08-01", "2032-08-05"), locale: "de" },
+      }),
+    );
+    expect(res.status).toBe(400);
+
+    const payload = (await res.json()) as { errors: Record<string, string> };
+    expect(Object.keys(payload.errors)).toEqual(["locale"]);
   });
 });
 

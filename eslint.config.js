@@ -73,6 +73,23 @@ const reactConfig = tseslint.config({
   },
 });
 
+// `scripts/` holds repo tooling, not app source: plain Node ESM, run by hand or
+// from an npm script, outside the `tsconfig` project the type-checked rules need.
+// Linting it under the app's config produces only noise (`process` undefined, every
+// `readFileSync` result an `any`), so the type-aware layer is dropped and the two
+// rules that still say something useful are kept.
+const scriptsConfig = tseslint.config({
+  files: ["scripts/**/*.mjs"],
+  extends: [tseslint.configs.disableTypeChecked],
+  languageOptions: {
+    globals: { process: "readonly", console: "readonly" },
+  },
+  rules: {
+    "no-console": "off",
+    "no-undef": "off",
+  },
+});
+
 const astroConfig = tseslint.config({
   files: ["**/*.astro"],
   rules: {
@@ -112,6 +129,7 @@ export default tseslint.config(
   { ignores: ["context/foundation/design/**", "src/db/database.types.ts"] },
   baseConfig,
   reactConfig,
+  scriptsConfig,
   eslintPluginAstro.configs["flat/recommended"],
   ...eslintPluginAstro.configs["flat/jsx-a11y-recommended"],
   astroConfig,

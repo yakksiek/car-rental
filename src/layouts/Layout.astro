@@ -10,11 +10,16 @@ interface Props {
   title?: string;
 }
 
-const { title = "Flota — wynajem pojazdów użytkowych" } = Astro.props;
+const { locale, t } = Astro.locals;
+
+// `Flota` is the BRAND here and stays untranslated in both locales; only the
+// tagline beside it localizes (english-localization Phase 1 §4). The nav item
+// spelled identically DOES become "Fleet" — different namespace, opposite rule.
+const { title = `Flota — ${t("layout.tagline")}` } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="pl">
+<html lang={locale}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -42,14 +47,14 @@ const { title = "Flota — wynajem pojazdów użytkowych" } = Astro.props;
   </head>
   <body>
     {
-      missingConfigs.map((cfg) => (
+      missingConfigs(locale).map((cfg) => (
         <Banner variant="error">
-          <strong>Uwaga:</strong> {cfg.message}
+          <strong>{t("layout.noticePrefix")}</strong> {cfg.message}
           {cfg.docsUrl && (
             <>
               {" "}
               <a href={cfg.docsUrl} target="_blank" rel="noopener noreferrer">
-                {cfg.docsLabel ?? "Dokumentacja"}
+                {cfg.docsLabel ?? t("layout.docsLabel")}
               </a>
               .
             </>

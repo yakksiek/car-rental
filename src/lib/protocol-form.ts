@@ -1,4 +1,6 @@
 // others
+import { formatInteger } from "./format";
+import type { Locale } from "./i18n/types";
 import { PHOTO_SLOTS } from "./protocol-schema";
 import type { ProtocolPhotoSlot } from "../types";
 
@@ -6,7 +8,7 @@ import type { ProtocolPhotoSlot } from "../types";
 // rather than inside the island so they are unit-testable in the `unit` project,
 // which runs `src/**/*.test.ts` under node with no DOM.
 //
-// The Polish labels themselves live in `protocol-labels.ts` and are shared with
+// The labels themselves live in `i18n/protocol.ts` and are shared with
 // the PDF, so a slot can never be named one thing on screen and another in the
 // customer's only copy of the evidence.
 
@@ -24,13 +26,22 @@ export function allSlotsFilled(photos: PhotoPaths): boolean {
 }
 
 /**
- * `"128450"` → `"128 450"` — the Polish thousands separator is a space. Non-digits
- * are dropped: the field is `inputMode="numeric"`, but a paste can still carry
+ * `"128450"` → `"128 450"` under `pl`, `"128,450"` under `en`. Non-digits are
+ * dropped first: the field is `inputMode="numeric"`, but a paste can still carry
  * anything, and the schema coerces `Number(value)`.
+ *
+ * Grouping now comes from the shared `formatInteger` rather than a local regex
+ * that spelled the separator U+202F — a third spelling of one convention, and one
+ * no other module used.
+ *
+ * **`parseOdometer` is the exact inverse and the two must stay that way**: the
+ * field is controlled, so every keystroke round-trips display → digits → display.
+ * Stripping `\D` removes whatever separator `Intl` picked, which is what keeps
+ * that true across locales.
  */
-export function formatOdometer(value: string): string {
+export function formatOdometer(value: string, locale: Locale): string {
   const digits = value.replace(/\D/g, "");
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return digits === "" ? "" : formatInteger(digits, locale);
 }
 
 /** The inverse: strip grouping (and anything else) back to the digits the schema coerces. */

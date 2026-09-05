@@ -6,7 +6,7 @@ import { createResendAdapter } from "./resend";
 
 const message = {
   to: "anna@example.test",
-  subject: "FleetRent — protokół wydania R-2401",
+  subject: "Flota — protokół wydania R-2401",
   html: "<p>Wąsik</p>",
   text: "Wąsik",
 };
@@ -37,14 +37,14 @@ function fakeFetch(response: Response) {
 describe("createResendAdapter", () => {
   it("POSTs a Bearer-authenticated JSON message to the Resend API", async () => {
     const { calls, impl, body } = fakeFetch(new Response("{}", { status: 200 }));
-    await createResendAdapter({ apiKey: "re_test", from: "FleetRent <a@b.pl>", fetchImpl: impl })(message);
+    await createResendAdapter({ apiKey: "re_test", from: "Flota <a@b.pl>", fetchImpl: impl })(message);
 
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe("https://api.resend.com/emails");
     const headers = calls[0].init.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer re_test");
 
-    expect(body().from).toBe("FleetRent <a@b.pl>");
+    expect(body().from).toBe("Flota <a@b.pl>");
     expect(body().to).toEqual(["anna@example.test"]);
     expect(body().subject).toContain("protokół");
     // No attachment on this message — the key must be absent, not `undefined`.

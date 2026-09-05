@@ -52,6 +52,8 @@ function validInput(overrides: Partial<ReturnProtocolInput> = {}): ReturnProtoco
     photos: Object.fromEntries(
       PHOTO_SLOTS.map((slot) => [slot, `return/${PROTOCOL_ID}/photo-${slot}.jpg`]),
     ) as ReturnProtocolInput["photos"],
+    // The DOCUMENT's language, as the island sends it (`ctx.documentLocale`).
+    locale: "pl",
     damages: [
       {
         id: DAMAGE_ID,

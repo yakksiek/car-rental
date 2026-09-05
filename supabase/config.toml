@@ -254,12 +254,22 @@ otp_expiry = 3600
 # lacks on a cross-browser click. These templates instead link to our
 # /auth/callback with {{ .TokenHash }}, which verifyOtp() exchanges server-side
 # with no verifier — making invite-accept and admin-triggered reset both work.
+#
+# Both are BILINGUAL since english-localization Phase 6, subject included: GoTrue
+# renders one template per project per type, with no access to profiles.locale,
+# so the recipient's language cannot be resolved without an own-send architecture
+# the plan declines. English leads (it is the app default); Polish follows.
+#
+# *** This file loads only on `supabase stop && supabase start`. NEVER run
+# `supabase config push` *** — it would overwrite hosted settings that are managed
+# in the dashboard. On production these two subjects are set in the Supabase
+# dashboard, not from here.
 [auth.email.template.invite]
-subject = "Aktywuj konto w panelu Flota"
+subject = "Activate your Flota account · Aktywuj konto w panelu Flota"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.recovery]
-subject = "Reset hasła — Flota"
+subject = "Reset your password · Reset hasła — Flota"
 content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template

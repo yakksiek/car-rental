@@ -2,9 +2,11 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { sendEmail } from "../../lib/email";
 import { reservationReceivedEmail } from "../../lib/email/templates";
-import { reservationRequestSchema } from "../../lib/reservation-schema";
+import { reservationRequestSchema, TERMS_VERSION } from "../../lib/reservation-schema";
 import { createReservationRequest, isVehicleAvailable } from "../../lib/services/reservations";
 import { getVehicleById } from "../../lib/services/vehicles";
 
@@ -18,13 +20,6 @@ import { getVehicleById } from "../../lib/services/vehicles";
 //       mapping is the no-double-booking authority (the pre-check is UX sugar),
 //   (f) confirmation email through the dev/log seam — a send failure is logged
 //       and never fails the request.
-
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  conflict: "Pojazd właśnie został zarezerwowany w wybranym terminie. Zmień daty i spróbuj ponownie.",
-  unavailable: "Ten pojazd nie jest już dostępny.",
-} as const;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -41,18 +36,20 @@ function fieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: the browser sends Origin on every cross-site POST; reject anything
   // not same-origin before doing any work (dev origin is http://localhost:4321).
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (b) Honeypot: a non-empty `company_url` is a bot. Return a success-shaped
@@ -70,7 +67,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   // (c) Validate — the same schema the island runs client-side.
-  const parsed = reservationRequestSchema.safeParse(payload);
+  const parsed = reservationRequestSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: fieldErrors(parsed.error.issues) });
   }
@@ -82,23 +79,45 @@ export const POST: APIRoute = async (context) => {
   // here anyway because the confirmation email needs its display fields.
   const vehicle = await getVehicleById(supabase, input.vehicle_id);
   if (!vehicle) {
-    return json(409, { error: MSG.unavailable, reason: "unavailable" });
+    return json(409, { error: t("vehicleUnavailable"), reason: "unavailable" });
   }
 
   // (d) Pre-check: friendly early exit when the range was just taken.
   const available = await isVehicleAvailable(supabase, input.vehicle_id, input.pickup, input.return);
   if (!available) {
-    return json(409, { error: MSG.conflict, reason: "conflict" });
+    return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }
 
   // (e) The atomic write — a lost race still lands here as a typed `conflict`,
   // never a 500 (the EXCLUDE constraint is the truth; first insert wins).
-  const result = await createReservationRequest(supabase, input);
+  //
+  // The locale is stamped from the SESSION, not from the body: on this one path
+  // the sender IS the customer, so the language they read the funnel in is the
+  // language they want to be mailed in — and taking it server-side keeps a
+  // crafted payload from choosing what language we write to a stranger in.
+  // This is the funnel's only chance to record it; the confirmation is sent days
+  // later by staff who cannot know.
+  //
+  // The consent attribution rides the same rule and for the same reason. Both
+  // values describe what the SERVER rendered on `/terms` — the version constant
+  // it exports and the locale it rendered the funnel in — so neither is read off
+  // the body. A body field here would let a crafted payload record a consent to
+  // a document that was never shown, which is precisely the claim these columns
+  // exist to be able to make. (The window where a deploy bumps `TERMS_VERSION`
+  // between render and submit is real and knowingly accepted: this is an
+  // SSR'd page, so it is minutes wide, and a stamp one version ahead is a far
+  // smaller lie than an attacker-chosen one.)
+  const result = await createReservationRequest(supabase, {
+    ...input,
+    locale: context.locals.locale,
+    terms_version: TERMS_VERSION,
+    terms_locale: context.locals.locale,
+  });
   if (result.status === "conflict") {
-    return json(409, { error: MSG.conflict, reason: "conflict" });
+    return json(409, { error: t("bookingConflict"), reason: "conflict" });
   }
   if (result.status === "unavailable") {
-    return json(409, { error: MSG.unavailable, reason: "unavailable" });
+    return json(409, { error: t("vehicleUnavailable"), reason: "unavailable" });
   }
 
   // (f) Confirmation email with the durable status link. Best-effort: the
@@ -118,6 +137,7 @@ export const POST: APIRoute = async (context) => {
       pickup: input.pickup,
       return: input.return,
       dailyRate: vehicle.daily_rate,
+      locale: context.locals.locale,
     });
     await sendEmail({ to: input.customer_email, ...content });
   } catch (error) {

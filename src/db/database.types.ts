@@ -73,6 +73,7 @@ export type Database = {
           deactivated_at: string | null
           full_name: string | null
           is_demo: boolean
+          locale: string | null
           password_set_at: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -83,6 +84,7 @@ export type Database = {
           deactivated_at?: string | null
           full_name?: string | null
           is_demo?: boolean
+          locale?: string | null
           password_set_at?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -93,6 +95,7 @@ export type Database = {
           deactivated_at?: string | null
           full_name?: string | null
           is_demo?: boolean
+          locale?: string | null
           password_set_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -205,6 +208,7 @@ export type Database = {
           customer_ack: boolean
           fuel_eighths: number
           id: string
+          locale: string
           odometer_km: number
           pdf_path: string | null
           reservation_id: string
@@ -219,6 +223,7 @@ export type Database = {
           customer_ack: boolean
           fuel_eighths: number
           id: string
+          locale?: string
           odometer_km: number
           pdf_path?: string | null
           reservation_id: string
@@ -233,6 +238,7 @@ export type Database = {
           customer_ack?: boolean
           fuel_eighths?: number
           id?: string
+          locale?: string
           odometer_km?: number
           pdf_path?: string | null
           reservation_id?: string
@@ -266,6 +272,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           id: string
+          locale: string
           notes: string | null
           pickup_date: string
           reference: string | null
@@ -276,6 +283,8 @@ export type Database = {
           source: Database["public"]["Enums"]["reservation_source"]
           status: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at: string | null
+          terms_locale: string | null
+          terms_version: string | null
           updated_at: string
           vat_id: string | null
           vehicle_id: string
@@ -288,6 +297,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           id?: string
+          locale?: string
           notes?: string | null
           pickup_date: string
           reference?: string | null
@@ -298,6 +308,8 @@ export type Database = {
           source?: Database["public"]["Enums"]["reservation_source"]
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
+          terms_locale?: string | null
+          terms_version?: string | null
           updated_at?: string
           vat_id?: string | null
           vehicle_id: string
@@ -310,6 +322,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           id?: string
+          locale?: string
           notes?: string | null
           pickup_date?: string
           reference?: string | null
@@ -320,6 +333,8 @@ export type Database = {
           source?: Database["public"]["Enums"]["reservation_source"]
           status?: Database["public"]["Enums"]["reservation_status"]
           terms_accepted_at?: string | null
+          terms_locale?: string | null
+          terms_version?: string | null
           updated_at?: string
           vat_id?: string | null
           vehicle_id?: string
@@ -458,6 +473,7 @@ export type Database = {
           p_customer_email: string
           p_customer_name: string
           p_customer_phone: string
+          p_locale?: string
           p_pickup: string
           p_return: string
           p_vehicle_id: string
@@ -467,6 +483,7 @@ export type Database = {
           customer_email: string
           customer_name: string
           id: string
+          locale: string
           pickup_date: string
           reference: string
           result: string
@@ -484,6 +501,7 @@ export type Database = {
           p_damages: Json
           p_fuel_eighths: number
           p_id: string
+          p_locale?: string
           p_odometer_km: number
           p_photos: Json
           p_reservation_id: string
@@ -501,10 +519,13 @@ export type Database = {
           p_customer_email: string
           p_customer_name: string
           p_customer_phone: string
+          p_locale?: string
           p_notes?: string
           p_pickup: string
           p_return: string
           p_terms_accepted: boolean
+          p_terms_locale?: string
+          p_terms_version?: string
           p_vat_id?: string
           p_vehicle_id: string
         }
@@ -521,6 +542,7 @@ export type Database = {
           p_damages: Json
           p_fuel_eighths: number
           p_id: string
+          p_locale?: string
           p_odometer_km: number
           p_photos: Json
           p_reservation_id: string
@@ -549,6 +571,7 @@ export type Database = {
           access_token: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           result: string
@@ -574,6 +597,7 @@ export type Database = {
           delivery_status: string
           fuel_eighths: number
           id: string
+          locale: string
           odometer_km: number
           pdf_path: string
           photos: Json
@@ -595,6 +619,7 @@ export type Database = {
           created_at: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           return_date: string
@@ -616,6 +641,7 @@ export type Database = {
           baseline_protocol_id: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           reservation_id: string
@@ -641,6 +667,7 @@ export type Database = {
           delivery_created_at: string
           delivery_status: string
           last_odometer_km: number
+          locale: string
           pdf_path: string
           pickup_date: string
           protocol_id: string
@@ -768,6 +795,7 @@ export type Database = {
           vehicle_plate: string
         }[]
       }
+      set_profile_locale: { Args: { p_locale: string }; Returns: undefined }
       set_protocol_pdf: {
         Args: { p_id: string; p_path: string }
         Returns: {

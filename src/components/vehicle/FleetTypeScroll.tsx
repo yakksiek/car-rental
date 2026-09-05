@@ -31,7 +31,8 @@ interface Props {
 
 const keyOf = (category: VehicleCategory | null): string => category ?? "all";
 
-// Smooth expand/collapse (mirrors HeaderContactToggle): a fixed 40px icon holder that
+// Smooth expand/collapse (the idiom the public header's old contact toggle used before
+// english-localization replaced it with a popover): a fixed 40px icon holder that
 // never moves + a `min-w-0 overflow-hidden` label wrapper whose max-width animates.
 // Only flex / max-width / background / color transition — never `transition-all` with
 // animated padding/margin, which snapped.

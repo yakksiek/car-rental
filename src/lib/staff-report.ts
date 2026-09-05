@@ -1,4 +1,5 @@
 // others
+import type { Locale } from "./i18n/types";
 import type { StaffStatus } from "./staff-status";
 
 // ---------------------------------------------------------------------------
@@ -97,7 +98,19 @@ export const DEMO_BLOCKED_CODE = "demo_blocked";
  * (design-contract §2.9): that one is scoped to the sign-in context and warns
  * ahead of time; this one explains a control the visitor is looking at.
  */
-export const DEMO_BLOCKED_MESSAGE = "Ta akcja jest wyłączona na koncie demo.";
+const DEMO_BLOCKED = {
+  en: "This action is disabled on the demo account.",
+  pl: "Ta akcja jest wyłączona na koncie demo.",
+};
+
+/**
+ * The demo gate's refusal, in the active locale. A function rather than the
+ * constant it replaced so the island's disabled hints and the report table below
+ * cannot answer with different sentences.
+ */
+export function demoBlockedMessage(locale: Locale): string {
+  return DEMO_BLOCKED[locale];
+}
 
 // Membership via a Set, not by indexing an object literal: `codes["__proto__"]`
 // would answer with `Object.prototype` — truthy, non-null, and rendered as
@@ -113,23 +126,23 @@ const KNOWN_CODES: ReadonlySet<string> = new Set(PROVISION_FAILURE_CODES);
  * None names the address or the person: inside a modal both are already on
  * screen, which is exactly the argument the banner form could not make.
  */
-const COPY = {
+interface StaffCopy {
   /** §9.4 — a provisioning failure, reported in the add modal. */
-  provisionFailed: "Nie udało się utworzyć konta. Spróbuj ponownie.",
+  provisionFailed: string;
   /** §9.4 — a dropped connection or any other unhandled response on add. */
-  requestFailed: "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.",
+  requestFailed: string;
   /** Shipped S-08 string, moved here unchanged so the table owns every arm. */
-  duplicateEmail: "Ten adres e-mail jest już w zespole.",
+  duplicateEmail: string;
   /** §9.5 — the server refused a remove, reported in the remove modal. */
-  removeFailed: "Nie udało się usunąć pracownika. Spróbuj ponownie.",
+  removeFailed: string;
   /** §9.5 — a dropped connection on remove. */
-  removeRequestFailed: "Nie udało się usunąć pracownika. Sprawdź połączenie i spróbuj ponownie.",
+  removeRequestFailed: string;
   /**
-   * The ROW actions' failure banner. Unchanged from the day it shipped, and
-   * deliberately still generic: invite and reset have no form to report into, so
-   * one string covers both. §9.4 records the decision not to split it.
+   * The ROW actions' failure banner. Deliberately generic: invite and reset have
+   * no form to report into, so one string covers both. §9.4 records the decision
+   * not to split it.
    */
-  mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
+  mutationError: string;
   /**
    * §9.3 authored this one precisely because a RESEND changes nothing on screen
    * — the badge is already ZAPROSZONY — so without it the admin gets no feedback
@@ -137,15 +150,73 @@ const COPY = {
    * success banner the admin never sees fails that job as completely as a
    * failure banner does.
    */
-  inviteSent: "Wysłano zaproszenie.",
-  resetSent: "Wysłano e-mail do resetu hasła.",
-  /**
-   * The demo gate's refusal, on whichever surface the mutation owns. Not
-   * authored here — it is `DEMO_BLOCKED_MESSAGE` above, because the island's
-   * disabled controls carry the same sentence and the two must not drift.
-   */
-  demoBlocked: DEMO_BLOCKED_MESSAGE,
-} as const;
+  inviteSent: string;
+  resetSent: string;
+  /** The label on a password-less row's one action — first send vs resend. */
+  sendInvite: string;
+  resendInvite: string;
+  /** `{action}` is substituted with whichever of the two labels that row shows. */
+  repairedMailFailed: string;
+}
+
+const COPY: Record<Locale, StaffCopy> = {
+  en: {
+    provisionFailed: "Could not create the account. Try again.",
+    requestFailed: "Could not create the account. Check your connection and try again.",
+    duplicateEmail: "This email is already on the team.",
+    removeFailed: "Could not remove the employee. Try again.",
+    removeRequestFailed: "Could not remove the employee. Check your connection and try again.",
+    mutationError: "Could not save your change. Check your connection and try again.",
+    inviteSent: "Invitation sent.",
+    resetSent: "Password-reset email sent.",
+    sendInvite: "Send invite",
+    resendInvite: "Resend invite",
+    repairedMailFailed: "The account was restored, but the invitation was not sent. Use “{action}” on that person.",
+  },
+  pl: {
+    provisionFailed: "Nie udało się utworzyć konta. Spróbuj ponownie.",
+    requestFailed: "Nie udało się utworzyć konta. Sprawdź połączenie i spróbuj ponownie.",
+    duplicateEmail: "Ten adres e-mail jest już w zespole.",
+    removeFailed: "Nie udało się usunąć pracownika. Spróbuj ponownie.",
+    removeRequestFailed: "Nie udało się usunąć pracownika. Sprawdź połączenie i spróbuj ponownie.",
+    mutationError: "Nie udało się zapisać zmiany. Sprawdź połączenie i spróbuj ponownie.",
+    inviteSent: "Wysłano zaproszenie.",
+    resetSent: "Wysłano e-mail do resetu hasła.",
+    sendInvite: "Wyślij zaproszenie",
+    resendInvite: "Wyślij ponownie zaproszenie",
+    repairedMailFailed:
+      "Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „{action}” przy tej osobie.",
+  },
+};
+
+/**
+ * EXPORTED FOR `src/lib/i18n/parity.test.ts` ONLY. Nothing in the app should
+ * import it — the app reads these tables through the resolvers below.
+ *
+ * These two tables are the module's copy, and they live HERE rather than in
+ * `src/lib/i18n/staff-admin.ts` for a reason that survived a review of it
+ * (impl-review F7). Two islands import this module: `StaffList`, which does carry
+ * the `staffAdmin` namespace, and `QuickAddButton`, which does NOT — it carries
+ * only `staff` (the shell chrome) and reaches in here for `demoBlockedMessage`.
+ * Moving the words into the roster namespace would pull all ~170 of its keys,
+ * both locales, into `QuickAddButton`'s browser chunk, which is the exact cost
+ * the per-domain namespacing exists to avoid (`island-baseline.md`). The plan's
+ * own condition — "check whether an island imports this module before deciding" —
+ * resolves to keeping them.
+ *
+ * What was actually missing was the GATE, not the location. `parity.test.ts`
+ * walks `NAMESPACES`, so it could not see a missing key here, nor an `en` value
+ * still holding the Polish it was pasted from. Registering the tables closes that
+ * without moving a single string.
+ */
+export const STAFF_REPORT_DICTS: Record<string, { en: Record<string, string>; pl: Record<string, string> }> = {
+  // Widened to `Record<string, string>` deliberately: `StaffCopy` is an
+  // interface, so it carries no index signature and the gate cannot walk it as
+  // declared. The interface stays the authority for the CALL SITES; this is the
+  // shape the walk needs.
+  "staff-report/COPY": { en: { ...COPY.en }, pl: { ...COPY.pl } },
+  "staff-report/DEMO_BLOCKED": { en: { demoBlocked: DEMO_BLOCKED.en }, pl: { demoBlocked: DEMO_BLOCKED.pl } },
+};
 
 /**
  * Where a report is rendered.
@@ -300,7 +371,8 @@ const swapToLastAdmin = (): Report => ({
  * | 500 + a provisioning `code`          | modal, form-level          | stays   |
  * | anything else, incl. `fetch` threw   | modal, form-level          | stays   |
  */
-export function resolveAddReport(outcome: AddOutcome): Report {
+export function resolveAddReport(outcome: AddOutcome, locale: Locale): Report {
+  const copy = COPY[locale];
   switch (outcome.kind) {
     case "ok":
       // The repair succeeded — the row belongs on the roster and the modal
@@ -317,7 +389,7 @@ export function resolveAddReport(outcome: AddOutcome): Report {
       // (§3) closes that for free; it is why §5's scroll-lock question could be
       // deferred rather than answered here.
       return outcome.activationMail === "failed"
-        ? inBanner("error", repairedMailFailedMessage(outcome.status ?? "created"))
+        ? inBanner("error", repairedMailFailedMessage(outcome.status ?? "created", locale))
         : silent();
 
     case "http":
@@ -325,7 +397,7 @@ export function resolveAddReport(outcome: AddOutcome): Report {
       // that field — the shipped idiom, and the design's own answer to "the
       // server refused your add: say so in the form".
       if (outcome.httpStatus === 409) {
-        return inModal("email", COPY.duplicateEmail);
+        return inModal("email", copy.duplicateEmail);
       }
       // The demo gate refused it. Reported in the modal like every other add
       // failure (phase 9's rule), form-level rather than under the e-mail field:
@@ -337,21 +409,21 @@ export function resolveAddReport(outcome: AddOutcome): Report {
       // disabled for a demo caller. The server is the boundary; the disabled
       // control is the courtesy.
       if (outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
-        return inModal("form", COPY.demoBlocked);
+        return inModal("form", demoBlockedMessage(locale));
       }
       // A provisioning failure belongs to the submission, not to a field. The
       // route marks it with a machine-readable `code`; an unhandled 500 has
       // none (Astro's HTML body), so it falls through to the arm below.
       if (outcome.code && KNOWN_CODES.has(outcome.code)) {
-        return inModal("form", COPY.provisionFailed);
+        return inModal("form", copy.provisionFailed);
       }
-      return inModal("form", COPY.requestFailed);
+      return inModal("form", copy.requestFailed);
 
     case "network":
       // THE PHASE-9 DEFECT. `fetch` threw, the typed values are still perfectly
       // good, and this used to set a banner behind the overlay while leaving the
       // modal open — feedback the admin could not read at all.
-      return inModal("form", COPY.requestFailed);
+      return inModal("form", copy.requestFailed);
   }
 }
 
@@ -372,9 +444,10 @@ export function resolveAddReport(outcome: AddOutcome): Report {
  * `z-[60]` overlay once they scrolled up to it. Two failures compounding, and
  * `toBeVisible()` passed on both.
  */
-export function resolveRemoveReport(outcome: RemoveOutcome): Report {
+export function resolveRemoveReport(outcome: RemoveOutcome, locale: Locale): Report {
+  const copy = COPY[locale];
   if (outcome.kind === "network") {
-    return inModal("form", COPY.removeRequestFailed);
+    return inModal("form", copy.removeRequestFailed);
   }
   // Unchanged and deliberately so: the row really did go, and the modal that
   // asked for confirmation has nothing left to confirm.
@@ -391,9 +464,9 @@ export function resolveRemoveReport(outcome: RemoveOutcome): Report {
   // to retry something that can never succeed. Same surface as every other
   // refused remove (`remove` may not use the banner at all: its modal is open).
   if (outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
-    return inModal("form", COPY.demoBlocked);
+    return inModal("form", demoBlockedMessage(locale));
   }
-  return inModal("form", COPY.removeFailed);
+  return inModal("form", copy.removeFailed);
 }
 
 /**
@@ -413,21 +486,22 @@ export function resolveRemoveReport(outcome: RemoveOutcome): Report {
  * (`sticky top-4 z-20`) and dismissible, so it is on screen wherever the row
  * that triggered it was.
  */
-export function resolveRowActionReport(action: "invite" | "reset", outcome: RowActionOutcome): Report {
+export function resolveRowActionReport(action: "invite" | "reset", outcome: RowActionOutcome, locale: Locale): Report {
+  const copy = COPY[locale];
   if (outcome.kind === "http" && outcome.httpStatus === 200) {
-    return inBanner("success", action === "invite" ? COPY.inviteSent : COPY.resetSent);
+    return inBanner("success", action === "invite" ? copy.inviteSent : copy.resetSent);
   }
   // The demo gate, on the banner these two actions own — and WITHOUT the `Ponów`
   // the arm below carries, because a retry that is refused by construction is a
   // control that can only fail. Only `reset` can reach this: `[id]/invite.ts` is
   // outside the gate by design, and the integration suite pins that boundary.
   if (outcome.kind === "http" && outcome.httpStatus === 403 && outcome.code === DEMO_BLOCKED_CODE) {
-    return inBanner("error", COPY.demoBlocked);
+    return inBanner("error", demoBlockedMessage(locale));
   }
   // One generic failure string covers both actions and every failing status.
   // §9.4 records the decision not to split it: neither action has a form to
   // report into, so the specific verb buys nothing the banner can use.
-  return inBanner("error", COPY.mutationError, true);
+  return inBanner("error", copy.mutationError, true);
 }
 
 /**
@@ -438,8 +512,8 @@ export function resolveRowActionReport(action: "invite" | "reset", outcome: RowA
  * mapped to the first-send label rather than left to throw: a wrong-but-real
  * label degrades better than a crash or a blank button.
  */
-export function inviteActionLabel(status: StaffStatus): string {
-  return status === "invited" ? "Wyślij ponownie zaproszenie" : "Wyślij zaproszenie";
+export function inviteActionLabel(status: StaffStatus, locale: Locale): string {
+  return status === "invited" ? COPY[locale].resendInvite : COPY[locale].sendInvite;
 }
 
 /**
@@ -454,6 +528,6 @@ export function inviteActionLabel(status: StaffStatus): string {
  *
  * Copy is `design-contract.md` §9.2, verbatim. Do not reword here.
  */
-export function repairedMailFailedMessage(status: StaffStatus): string {
-  return `Konto zostało odnowione, ale zaproszenie nie zostało wysłane. Użyj „${inviteActionLabel(status)}” przy tej osobie.`;
+export function repairedMailFailedMessage(status: StaffStatus, locale: Locale): string {
+  return COPY[locale].repairedMailFailed.replace("{action}", () => inviteActionLabel(status, locale));
 }

@@ -51,35 +51,35 @@ test("self-service reset: forgot password → emailed link → new password → 
   // Request the reset from the forgot-password form.
   await page.goto("/auth/forgot-password");
   await waitForIslands(page);
-  await fillHydrated(page.getByRole("textbox", { name: "E-mail służbowy" }), email);
-  await page.getByRole("button", { name: "Wyślij link resetujący" }).click();
+  await fillHydrated(page.getByRole("textbox", { name: "Work email" }), email);
+  await page.getByRole("button", { name: "Send reset link" }).click();
 
   // Neutral confirmation (no account-existence leak).
   await page.waitForURL(/\/auth\/forgot-password\?sent=1/);
-  await expect(page.getByRole("heading", { name: "Sprawdź skrzynkę" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
 
   // Follow the emailed recovery link — establishes the recovery session.
   const link = await waitForCallbackLink(email);
   await page.goto(link);
   await page.waitForURL(/\/auth\/reset-password(?!\?done)/);
   await waitForIslands(page);
-  await expect(page.getByRole("heading", { name: "Ustaw nowe hasło" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
 
   // Set the new password.
-  await fillHydrated(page.getByRole("textbox", { name: "Nowe hasło" }), newPassword);
-  await fillHydrated(page.getByRole("textbox", { name: "Potwierdź hasło" }), newPassword);
-  await page.getByRole("button", { name: "Zapisz hasło" }).click();
+  await fillHydrated(page.getByRole("textbox", { name: "New password" }), newPassword);
+  await fillHydrated(page.getByRole("textbox", { name: "Confirm password" }), newPassword);
+  await page.getByRole("button", { name: "Save password" }).click();
   await page.waitForURL(/\/auth\/reset-password\?done=1/);
-  await expect(page.getByRole("heading", { name: "Hasło zaktualizowane" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Password updated" })).toBeVisible();
 
   // The assertion of record: the NEW password signs in and clears the gate.
   await page.goto("/auth/signin");
   await waitForIslands(page);
-  await fillHydrated(page.getByRole("textbox", { name: "E-mail służbowy" }), email);
-  await fillHydrated(page.getByRole("textbox", { name: "Hasło" }), newPassword);
-  await page.getByRole("button", { name: "Zaloguj się" }).click();
+  await fillHydrated(page.getByRole("textbox", { name: "Work email" }), email);
+  await fillHydrated(page.getByRole("textbox", { name: "Password" }), newPassword);
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/dashboard");
-  await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
 
 test("invite-accept: admin invite → emailed link → first password → sign in (INVITED→ACTIVE)", async ({ page }) => {
@@ -94,24 +94,24 @@ test("invite-accept: admin invite → emailed link → first password → sign i
   await page.goto(link);
   await page.waitForURL(/\/auth\/reset-password\?mode=invite/);
   await waitForIslands(page);
-  await expect(page.getByRole("heading", { name: "Ustaw hasło" })).toBeVisible();
-  await expect(page.getByText("Witaj we Flocie")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await expect(page.getByText("Welcome to Flota")).toBeVisible();
 
   // Set the first password.
-  await fillHydrated(page.getByRole("textbox", { name: "Nowe hasło" }), password);
-  await fillHydrated(page.getByRole("textbox", { name: "Potwierdź hasło" }), password);
-  await page.getByRole("button", { name: "Aktywuj konto" }).click();
+  await fillHydrated(page.getByRole("textbox", { name: "New password" }), password);
+  await fillHydrated(page.getByRole("textbox", { name: "Confirm password" }), password);
+  await page.getByRole("button", { name: "Activate account" }).click();
   await page.waitForURL(/\/auth\/reset-password\?done=1/);
-  await expect(page.getByRole("heading", { name: "Hasło zaktualizowane" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Password updated" })).toBeVisible();
 
   // The new hire signs in with the password they just set (INVITED → ACTIVE).
   await page.goto("/auth/signin");
   await waitForIslands(page);
-  await fillHydrated(page.getByRole("textbox", { name: "E-mail służbowy" }), email);
-  await fillHydrated(page.getByRole("textbox", { name: "Hasło" }), password);
-  await page.getByRole("button", { name: "Zaloguj się" }).click();
+  await fillHydrated(page.getByRole("textbox", { name: "Work email" }), email);
+  await fillHydrated(page.getByRole("textbox", { name: "Password" }), password);
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/dashboard");
-  await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
 
 // ---------------------------------------------------------------------------
@@ -156,16 +156,16 @@ test("demo prefill: published credentials fill both fields in one click and sign
   await page.goto("/auth/signin");
   await waitForIslands(page);
 
-  const email = page.getByRole("textbox", { name: "E-mail służbowy" });
-  const password = page.getByRole("textbox", { name: "Hasło" });
+  const email = page.getByRole("textbox", { name: "Work email" });
+  const password = page.getByRole("textbox", { name: "Password" });
 
   // The card is what publishes the credentials; without it there is nothing to
   // click and the prefill assertion below would pass vacuously on empty fields.
-  await expect(page.getByText("Konto demo")).toBeVisible();
+  await expect(page.getByText("Demo account")).toBeVisible();
   await expect(email).toHaveValue("");
   await expect(password).toHaveValue("");
 
-  await page.getByRole("button", { name: "Wypełnij dane demo" }).click();
+  await page.getByRole("button", { name: "Fill in demo credentials" }).click();
 
   await expect(email).toHaveValue(SEEDED_DEMO_EMAIL);
   await expect(password).toHaveValue(DEMO_PASSWORD);
@@ -173,7 +173,7 @@ test("demo prefill: published credentials fill both fields in one click and sign
   // The assertion of record: the prefilled pair really signs in and clears the
   // /dashboard gate. Fails if the card ever publishes credentials the app does
   // not accept — the one way this slice can be broken and still look right.
-  await page.getByRole("button", { name: "Zaloguj się" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/dashboard");
-  await expect(page.getByRole("button", { name: "Wyloguj" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });

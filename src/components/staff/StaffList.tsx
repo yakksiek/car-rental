@@ -10,10 +10,14 @@ import { ADD_EMPLOYEE_EVENT } from "../dashboard/quick-actions";
 
 // others
 import { cn } from "../../lib/utils";
-import { formatLastActive, plForm, staffInitials } from "../../lib/staff-format";
+import { formatLastActive, staffInitials } from "../../lib/staff-format";
+import { plural, type PluralForms } from "../../lib/format";
+import { staffAdmin } from "../../lib/i18n/staff-admin";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import {
   type AddOutcome,
-  DEMO_BLOCKED_MESSAGE,
+  demoBlockedMessage,
   type Report,
   type ReportTone,
   inviteActionLabel,
@@ -27,105 +31,85 @@ import { employeeInviteSchema, type StaffMember } from "../../lib/services/staff
 // SSR-loaded staff list: filter tabs (desktop) / chips (mobile) + name/email
 // search, a table at md+ and stacked cards below, plus add / remove(typed
 // confirm) / reset-password actions. Feedback is an inline banner + optimistic
-// list mutation (no toast). Built to design-contract.md §3.1–3.13. Polish copy
-// canonical.
+// list mutation (no toast). Built to design-contract.md §3.1–3.13.
 
-const COPY = {
-  title: "Pracownicy",
-  titleMobile: "Zespół",
-  searchPlaceholder: "Imię lub e-mail…",
-  add: "Dodaj pracownika",
-  tabAll: "Wszyscy",
-  tabActive: "Aktywny",
-  tabInvited: "Zaproszony",
-  tabCreated: "Dodany",
-  tabAdmin: "Administrator",
-  colName: "Imię i nazwisko",
-  colRole: "Rola",
-  colStatus: "Status",
-  colLastActive: "Ostatnia aktywność",
-  selfSuffix: "· Ty",
-  roleAdmin: "ADMINISTRATOR",
-  roleEmployee: "PRACOWNIK",
-  statusActive: "AKTYWNY",
-  statusInvited: "ZAPROSZONY",
-  statusCreated: "DODANY",
-  reset: "Resetuj hasło",
-  removeAria: "Usuń pracownika",
-  resetAria: "Resetuj hasło",
-  footerBold: "Nie możesz usunąć siebie.",
-  footerRest: " Poproś innego administratora o usunięcie Twojego konta.",
-  // add modal — step 1 of two. The subtitle and the CTA both stopped promising
-  // an email when the add stopped sending one (design-contract §9.2): the CTA
-  // now names what the button does (`Dodaj`, matching the modal's own title),
-  // and `Wyślij zaproszenie` moved to the row action that really sends.
-  addTitle: "Dodaj pracownika",
-  addSubtitle: "Konto powstanie od razu. Zaproszenie wyślesz w kolejnym kroku.",
-  labelName: "IMIĘ I NAZWISKO",
-  labelEmail: "ADRES E-MAIL",
-  cancel: "Anuluj",
-  addConfirm: "Dodaj",
-  adding: "Dodawanie…",
-  // Row action — TWO labels, one per password-less state (owner, 2026-08-21):
-  // a first send on a DODANY row, a resend on a ZAPROSZONY one, where reusing
-  // the first-send wording read as if nothing had been sent yet. Both are
-  // authored in `lib/staff-report.ts` rather than here, because
-  // `repairedMailFailed` has to NAME whichever button that row shows — the
-  // coupling that made a single shared label tempting in the first place.
-  sendInvite: inviteActionLabel,
-  sending: "Wysyłanie…",
-  close: "Zamknij",
-  // remove modal
-  removeTitle: "Usunąć tego pracownika?",
-  removeBodyTail: " — Utraci dostęp natychmiast. Zakończone protokoły pozostają w archiwum.",
-  confirmLabel: "WPISZ E-MAIL, ABY POTWIERDZIĆ",
-  remove: "Usuń",
-  // last-admin modal
-  lastAdminTitle: "Nie można usunąć ostatniego administratora",
-  lastAdminBody: "Musi pozostać co najmniej jeden administrator. Najpierw awansuj inną osobę.",
-  // states
-  emptyTitle: "Brak pracowników",
-  emptyHint: "Dodaj pierwszą osobę — zaproszenie wyślesz w kolejnym kroku.",
-  noResultsTitle: "Brak wyników",
-  noResultsHint: "Żaden pracownik nie pasuje do wyszukiwania. Spróbuj innego imienia lub e-maila.",
-  // banners
-  //
-  // No message string lives here any more. `mutationError`, `inviteSent`,
-  // `resetSent` and `repairedMailFailed` all moved into `lib/staff-report.ts`
-  // alongside the routing that places them, so the outcome→surface table owns
-  // every arm's words rather than owning some of them (phase 10 §1). What stays
-  // are the two CONTROL labels the banner renders, which belong to the island.
-  // The dismiss control phase 10 §3 owes the sticky banner reuses `close` above
-  // — the shipped `ModalShell` label — rather than authoring a second word for
-  // the same affordance. (`genericError` used to sit here and was dead: nothing
-  // referenced it. Removed with the strings that moved.)
-  retry: "Ponów",
-  // mobile
-  eyebrowMobileWord: (n: number) => `${n} ${plForm(n, "osoba", "osoby", "osób").toUpperCase()}`,
-  chipActive: "Aktywni",
-  chipInvited: "Zaproszeni",
-  chipCreated: "Dodani",
-  chipAdmin: "Administratorzy",
-  roleAdminMobile: "ADMIN",
-  statusActiveMobile: "Aktywny",
-  statusInvitedMobile: "Zaproszony",
-  statusCreatedMobile: "Dodany",
-  footerMobile: "Pracownicy mogą też zresetować swoje hasło z ekranu logowania.",
-  // The page-level demo note (design-contract.md §4.1). Scoped to THIS screen, so
-  // it names only what this screen fences. The sign-in card's §2.9 line makes the
-  // app-wide claim and therefore also names the reservation fence; the two differ
-  // on purpose and neither should be made to reuse the other.
-  //
-  // Narrowed 2026-09-01 (impl-review F7). It previously read "Akcje wysyłające
-  // e-maile i usuwanie kont…", which was false on its own screen: `Wyślij
-  // zaproszenie` is deliberately NOT gated and sends an e-mail, and it sits in
-  // this very table.
-  //
-  // NOT the same string as `DEMO_BLOCKED_MESSAGE`, and deliberately so: that one
-  // answers "why is THIS button dead" on a single control, this one answers
-  // "what is fenced" for the screen. The contract records the split.
-  demoNote: "Dodawanie i usuwanie kont oraz reset hasła są w trybie demo wyłączone.",
-} as const;
+// The counted noun for the mobile eyebrow. `staff-format.ts`'s own count-noun
+// selector — a second hand-rolled copy of Polish's 1 / 2–4 / rest split — is
+// deleted; the category now comes from `Intl.PluralRules` via the shared `plural`.
+const PEOPLE_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "person", other: "people" },
+  pl: { one: "osoba", few: "osoby", many: "osób", other: "osób" },
+};
+
+/**
+ * The roster's chrome, bound to one locale. A factory rather than a module
+ * constant because every string now depends on the request locale; `sendInvite`
+ * stays a FUNCTION of the row's status because the label differs per
+ * password-less state and is authored in `lib/staff-report.ts` beside the banner
+ * that has to name it.
+ */
+function copyFor(locale: Locale) {
+  const s = translator(locale, staffAdmin);
+  return {
+    title: s("title"),
+    titleMobile: s("titleMobile"),
+    searchPlaceholder: s("searchPlaceholder"),
+    add: s("add"),
+    tabAll: s("tabAll"),
+    tabActive: s("tabActive"),
+    tabInvited: s("tabInvited"),
+    tabCreated: s("tabCreated"),
+    tabAdmin: s("tabAdmin"),
+    colName: s("colName"),
+    colRole: s("colRole"),
+    colStatus: s("colStatus"),
+    colLastActive: s("colLastActive"),
+    colActions: s("colActions"),
+    selfSuffix: s("selfSuffix"),
+    roleAdmin: s("roleAdmin"),
+    roleEmployee: s("roleEmployee"),
+    statusActive: s("statusActive"),
+    statusInvited: s("statusInvited"),
+    statusCreated: s("statusCreated"),
+    reset: s("reset"),
+    removeAria: s("removeAria"),
+    resetAria: s("resetAria"),
+    footerBold: s("footerBold"),
+    footerRest: s("footerRest"),
+    addTitle: s("addTitle"),
+    addSubtitle: s("addSubtitle"),
+    labelName: s("labelName"),
+    labelEmail: s("labelEmail"),
+    cancel: s("cancel"),
+    addConfirm: s("addConfirm"),
+    adding: s("adding"),
+    sendInvite: inviteActionLabel,
+    sending: s("sending"),
+    close: s("close"),
+    removeTitle: s("removeTitle"),
+    removeBodyTail: s("removeBodyTail"),
+    confirmLabel: s("confirmLabel"),
+    remove: s("remove"),
+    lastAdminTitle: s("lastAdminTitle"),
+    lastAdminBody: s("lastAdminBody"),
+    emptyTitle: s("emptyTitle"),
+    emptyHint: s("emptyHint"),
+    noResultsTitle: s("noResultsTitle"),
+    noResultsHint: s("noResultsHint"),
+    retry: s("retry"),
+    eyebrowMobileWord: (n: number) => `${String(n)} ${plural(n, locale, PEOPLE_FORMS[locale]).toUpperCase()}`,
+    chipActive: s("chipActive"),
+    chipInvited: s("chipInvited"),
+    chipCreated: s("chipCreated"),
+    chipAdmin: s("chipAdmin"),
+    roleAdminMobile: s("roleAdminMobile"),
+    statusActiveMobile: s("statusActiveMobile"),
+    statusInvitedMobile: s("statusInvitedMobile"),
+    statusCreatedMobile: s("statusCreatedMobile"),
+    footerMobile: s("footerMobile"),
+    demoNote: s("demoNote"),
+  } as const;
+}
 
 // 16px content cards (design source = borderRadius:16 = rounded-lg). The project
 // remaps the Tailwind radius scale in global.css: rounded-lg=16px, rounded-xl=20px.
@@ -163,7 +147,8 @@ function Avatar({ member, className }: { member: StaffMember; className?: string
 
 // ── badges (§3.4) ─────────────────────────────────────────────────────────────
 
-function RoleBadge({ role, mobile = false }: { role: StaffMember["role"]; mobile?: boolean }) {
+function RoleBadge({ role, mobile = false, locale }: { role: StaffMember["role"]; mobile?: boolean; locale: Locale }) {
+  const COPY = copyFor(locale);
   if (role === "admin") {
     return (
       <Badge className="text-primary gap-1 bg-[var(--flota-danger-soft)]">
@@ -187,15 +172,19 @@ function RoleBadge({ role, mobile = false }: { role: StaffMember["role"]; mobile
 // and has no semantic Tailwind utility here, hence the explicit var(). Additive:
 // the two shipped arms render byte-identically to before.
 const STATUS_TONE = {
-  active: { label: COPY.statusActive, mobile: COPY.statusActiveMobile, text: "text-success", dot: "bg-success" },
-  invited: { label: COPY.statusInvited, mobile: COPY.statusInvitedMobile, text: "text-warning", dot: "bg-warning" },
-  created: {
-    label: COPY.statusCreated,
-    mobile: COPY.statusCreatedMobile,
-    text: "text-[var(--flota-neutral)]",
-    dot: "bg-[var(--flota-neutral)]",
-  },
+  active: { text: "text-success", dot: "bg-success" },
+  invited: { text: "text-warning", dot: "bg-warning" },
+  created: { text: "text-[var(--flota-neutral)]", dot: "bg-[var(--flota-neutral)]" },
 } as const;
+
+/** Desktop / mobile status labels, keyed by status. */
+function statusLabels(copy: ReturnType<typeof copyFor>) {
+  return {
+    active: { label: copy.statusActive, mobile: copy.statusActiveMobile },
+    invited: { label: copy.statusInvited, mobile: copy.statusInvitedMobile },
+    created: { label: copy.statusCreated, mobile: copy.statusCreatedMobile },
+  } as const;
+}
 
 const STATUS_SOFT: Record<StaffMember["status"], string> = {
   active: "bg-[var(--flota-success-soft)]",
@@ -203,12 +192,12 @@ const STATUS_SOFT: Record<StaffMember["status"], string> = {
   created: "bg-[var(--flota-neutral-soft)]",
 };
 
-function StatusBadge({ status }: { status: StaffMember["status"] }) {
+function StatusBadge({ status, locale }: { status: StaffMember["status"]; locale: Locale }) {
   const tone = STATUS_TONE[status];
   return (
     <Badge className={cn("gap-1.5", tone.text, STATUS_SOFT[status])}>
       <span className={cn("size-1.5 rounded-full", tone.dot)} />
-      {tone.label}
+      {statusLabels(copyFor(locale))[status].label}
     </Badge>
   );
 }
@@ -260,11 +249,14 @@ function ModalShell({
   onClose,
   children,
   showClose = false,
+  locale,
 }: {
   onClose: () => void;
   children: React.ReactNode;
   showClose?: boolean;
+  locale: Locale;
 }) {
+  const COPY = copyFor(locale);
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center"
@@ -299,11 +291,14 @@ function AddModal({
   busy,
   onClose,
   onSubmit,
+  locale,
 }: {
   busy: boolean;
   onClose: () => void;
   onSubmit: (values: { full_name: string; email: string }) => Promise<Report>;
+  locale: Locale;
 }) {
+  const COPY = copyFor(locale);
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [errors, setErrors] = React.useState<{ full_name?: string; email?: string }>({});
@@ -318,7 +313,7 @@ function AddModal({
 
   async function submit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    const parsed = employeeInviteSchema.safeParse({ full_name: fullName, email });
+    const parsed = employeeInviteSchema(locale).safeParse({ full_name: fullName, email });
     if (!parsed.success) {
       const next: typeof errors = {};
       for (const issue of parsed.error.issues) {
@@ -340,7 +335,7 @@ function AddModal({
   const labelBase = "text-muted-foreground mb-1.5 block text-[11px] font-bold tracking-wide uppercase";
 
   return (
-    <ModalShell onClose={onClose} showClose>
+    <ModalShell onClose={onClose} showClose locale={locale}>
       <form onSubmit={submit}>
         <div className="text-foreground text-xl font-bold tracking-tight">{COPY.addTitle}</div>
         <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{COPY.addSubtitle}</p>
@@ -450,12 +445,15 @@ function RemoveModal({
   busy,
   onClose,
   onConfirm,
+  locale,
 }: {
   member: StaffMember;
   busy: boolean;
   onClose: () => void;
   onConfirm: (confirmEmail: string) => Promise<Report>;
+  locale: Locale;
 }) {
+  const COPY = copyFor(locale);
   const [typed, setTyped] = React.useState("");
   // The form-level slot phase 10 §2 adds. `RemoveModal` had no error slot at
   // all — unlike `AddModal`, which had two field-level ones to generalise from
@@ -472,7 +470,7 @@ function RemoveModal({
   }
 
   return (
-    <ModalShell onClose={onClose}>
+    <ModalShell onClose={onClose} locale={locale}>
       <div className="text-destructive flex size-12 items-center justify-center rounded-lg bg-[var(--flota-danger-soft)]">
         <AlertTriangle className="size-6" />
       </div>
@@ -533,9 +531,10 @@ function RemoveModal({
 
 // ── last-admin refusal modal (§3.8) ───────────────────────────────────────────
 
-function LastAdminModal({ onClose }: { onClose: () => void }) {
+function LastAdminModal({ onClose, locale }: { onClose: () => void; locale: Locale }) {
+  const COPY = copyFor(locale);
   return (
-    <ModalShell onClose={onClose}>
+    <ModalShell onClose={onClose} locale={locale}>
       <div className="text-warning flex size-12 items-center justify-center rounded-lg bg-[var(--flota-warning-soft)]">
         <ShieldCheck className="size-6" />
       </div>
@@ -554,6 +553,7 @@ export default function StaffList({
   staff: initial,
   currentUserId,
   isDemo = false,
+  locale,
 }: {
   staff: StaffMember[];
   currentUserId: string;
@@ -569,7 +569,10 @@ export default function StaffList({
    * a courtesy either way — the server refuses these regardless of what renders.
    */
   isDemo?: boolean;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
+  const COPY = copyFor(locale);
   const [staff, setStaff] = React.useState<StaffMember[]>(initial);
   const [search, setSearch] = React.useState("");
   const [filter, setFilter] = React.useState<Filter>("all");
@@ -703,9 +706,9 @@ export default function StaffList({
         const failure = (await res.json().catch(() => null)) as { code?: string } | null;
         outcome = { kind: "http", httpStatus: res.status, code: failure?.code ?? null };
       }
-      return applyReport(resolveAddReport(outcome), closeAddModal);
+      return applyReport(resolveAddReport(outcome, locale), closeAddModal);
     } catch {
-      return applyReport(resolveAddReport({ kind: "network" }), closeAddModal);
+      return applyReport(resolveAddReport({ kind: "network" }, locale), closeAddModal);
     } finally {
       setAddBusy(false);
     }
@@ -737,18 +740,18 @@ export default function StaffList({
       });
       if (res.status === 200) {
         setStaff((rows) => rows.filter((r) => r.id !== member.id));
-        return applyReport(resolveRemoveReport({ kind: "http", httpStatus: 200 }), closeRemoveModal);
+        return applyReport(resolveRemoveReport({ kind: "http", httpStatus: 200 }, locale), closeRemoveModal);
       }
       // Only a FAILURE carries a `code`, and only the demo gate sets one today.
       // Read defensively: an unhandled 500 is Astro's HTML body, so `json()`
       // rejects and the outcome falls back to the status-only routing it had.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRemoveReport({ kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRemoveReport({ kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         closeRemoveModal,
       );
     } catch {
-      return applyReport(resolveRemoveReport({ kind: "network" }), closeRemoveModal);
+      return applyReport(resolveRemoveReport({ kind: "network" }, locale), closeRemoveModal);
     } finally {
       setBusyId(null);
     }
@@ -785,7 +788,7 @@ export default function StaffList({
         const body = (await res.json().catch(() => null)) as { invitedAt?: string | null } | null;
         const invitedAt = body?.invitedAt ?? new Date().toISOString();
         setStaff((rows) => rows.map((r) => (r.id === member.id ? { ...r, status: "invited", invitedAt } : r)));
-        return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }), noModal, retry);
+        return applyReport(resolveRowActionReport("invite", { kind: "http", httpStatus: 200 }, locale), noModal, retry);
       }
       // Symmetric with `resetPassword` below, though invite can never answer
       // `demo_blocked` — its route is outside the gate by design. The two row
@@ -793,12 +796,12 @@ export default function StaffList({
       // only one of them would buy an asymmetry rather than a guarantee.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRowActionReport("invite", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRowActionReport("invite", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         noModal,
         retry,
       );
     } catch {
-      return applyReport(resolveRowActionReport("invite", { kind: "network" }), noModal, retry);
+      return applyReport(resolveRowActionReport("invite", { kind: "network" }, locale), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -811,18 +814,18 @@ export default function StaffList({
     try {
       const res = await fetch(`/api/staff/${member.id}/reset-password`, { method: "POST" });
       if (res.status === 200) {
-        return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }), noModal, retry);
+        return applyReport(resolveRowActionReport("reset", { kind: "http", httpStatus: 200 }, locale), noModal, retry);
       }
       // The one row action the demo gate refuses. Without the `code` the banner
       // would call a permanent refusal a connection problem and offer `Ponów`.
       const failure = (await res.json().catch(() => null)) as { code?: string } | null;
       return applyReport(
-        resolveRowActionReport("reset", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }),
+        resolveRowActionReport("reset", { kind: "http", httpStatus: res.status, code: failure?.code ?? null }, locale),
         noModal,
         retry,
       );
     } catch {
-      return applyReport(resolveRowActionReport("reset", { kind: "network" }), noModal, retry);
+      return applyReport(resolveRowActionReport("reset", { kind: "network" }, locale), noModal, retry);
     } finally {
       setBusyId(null);
     }
@@ -855,7 +858,7 @@ export default function StaffList({
                 divider (after row 1 — the rule is positional, not structural).
                 The promoted action opens a dialog rather than navigating, so it
                 carries `onPick` instead of an `href`. */}
-            <QuickAddButton mode="mobile" promoted="employee" isDemo={isDemo} />
+            <QuickAddButton mode="mobile" promoted="employee" isDemo={isDemo} locale={locale} />
           </div>
         </div>
       </header>
@@ -1005,12 +1008,13 @@ export default function StaffList({
         {isEmpty ? (
           <EmptyState
             isDemo={isDemo}
+            locale={locale}
             onAdd={() => {
               setAddOpen(true);
             }}
           />
         ) : noResults ? (
-          <NoResults />
+          <NoResults locale={locale} />
         ) : (
           <>
             {/* Desktop table (§3.3) — lg+ only (tablet uses cards) */}
@@ -1021,7 +1025,7 @@ export default function StaffList({
                     <th className="px-4 py-3 font-bold">{COPY.colName}</th>
                     <th className="px-4 py-3 font-bold">{COPY.colRole}</th>
                     <th className="px-4 py-3 font-bold">{COPY.colStatus}</th>
-                    <th className="px-4 py-3" aria-label="Akcje" />
+                    <th className="px-4 py-3" aria-label={COPY.colActions} />
                   </tr>
                 </thead>
                 <tbody>
@@ -1046,13 +1050,13 @@ export default function StaffList({
                           </div>
                         </td>
                         <td className="px-4 py-3.5">
-                          <RoleBadge role={m.role} />
+                          <RoleBadge role={m.role} locale={locale} />
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex flex-col items-start gap-1">
-                            <StatusBadge status={m.status} />
+                            <StatusBadge status={m.status} locale={locale} />
                             <span className="text-muted-foreground text-xs" suppressHydrationWarning>
-                              {formatLastActive(m, nowMs, { invitePrefix: false })}
+                              {formatLastActive(m, nowMs, locale, { invitePrefix: false })}
                             </span>
                           </div>
                         </td>
@@ -1067,7 +1071,7 @@ export default function StaffList({
                                 variant="outline"
                                 className="h-9 gap-1.5 px-3 text-[13px] font-[650]"
                                 disabled={isDemo || busyId === m.id}
-                                title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                                title={isDemo ? demoBlockedMessage(locale) : undefined}
                                 onClick={() => resetPassword(m)}
                               >
                                 <KeyRound className="size-3.5" />
@@ -1088,7 +1092,7 @@ export default function StaffList({
                                 ) : (
                                   <>
                                     <Send className="size-3.5" />
-                                    {COPY.sendInvite(m.status)}
+                                    {COPY.sendInvite(m.status, locale)}
                                   </>
                                 )}
                               </Button>
@@ -1105,7 +1109,7 @@ export default function StaffList({
                                 isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                               )}
                               disabled={isSelf || isDemo || busyId === m.id}
-                              title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                              title={isDemo ? demoBlockedMessage(locale) : undefined}
                               aria-label={COPY.removeAria}
                               onClick={() => {
                                 setRemoveFor(m);
@@ -1134,16 +1138,16 @@ export default function StaffList({
                         <span className="text-foreground text-[17px] font-bold tracking-tight">
                           {m.fullName ?? m.email}
                         </span>
-                        <RoleBadge role={m.role} mobile />
+                        <RoleBadge role={m.role} mobile locale={locale} />
                       </div>
                       <div className="text-muted-foreground mt-0.5 truncate text-sm">{m.email}</div>
                       <div className="mt-1 flex items-center gap-1.5 text-[13px]">
                         <span className={cn("size-1.5 rounded-full", STATUS_TONE[m.status].dot)} />
                         <span className={cn("font-[540]", STATUS_TONE[m.status].text)}>
-                          {STATUS_TONE[m.status].mobile}
+                          {statusLabels(COPY)[m.status].mobile}
                         </span>
                         <span className="text-muted-foreground" suppressHydrationWarning>
-                          · {formatLastActive(m, nowMs, { invitePrefix: false })}
+                          · {formatLastActive(m, nowMs, locale, { invitePrefix: false })}
                         </span>
                       </div>
                     </div>
@@ -1155,7 +1159,7 @@ export default function StaffList({
                           size="icon"
                           className="text-foreground size-11 rounded-xl"
                           disabled={isDemo || busyId === m.id}
-                          title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                          title={isDemo ? demoBlockedMessage(locale) : undefined}
                           aria-label={COPY.resetAria}
                           onClick={() => resetPassword(m)}
                         >
@@ -1167,7 +1171,7 @@ export default function StaffList({
                           size="icon"
                           className="text-foreground size-11 rounded-xl"
                           disabled={busyId === m.id}
-                          aria-label={COPY.sendInvite(m.status)}
+                          aria-label={COPY.sendInvite(m.status, locale)}
                           onClick={() => sendInvite(m)}
                         >
                           {busyId === m.id ? (
@@ -1185,7 +1189,7 @@ export default function StaffList({
                           isSelf || isDemo ? "text-muted-foreground disabled:opacity-50" : "text-destructive",
                         )}
                         disabled={isSelf || isDemo || busyId === m.id}
-                        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+                        title={isDemo ? demoBlockedMessage(locale) : undefined}
                         aria-label={COPY.removeAria}
                         onClick={() => {
                           setRemoveFor(m);
@@ -1247,6 +1251,7 @@ export default function StaffList({
       {/* ── Modals ────────────────────────────────────────────────────── */}
       {addOpen && (
         <AddModal
+          locale={locale}
           busy={addBusy}
           onClose={() => {
             setAddOpen(false);
@@ -1256,6 +1261,7 @@ export default function StaffList({
       )}
       {removeFor && (
         <RemoveModal
+          locale={locale}
           member={removeFor}
           busy={busyId === removeFor.id}
           onClose={() => {
@@ -1266,6 +1272,7 @@ export default function StaffList({
       )}
       {lastAdminOpen && (
         <LastAdminModal
+          locale={locale}
           onClose={() => {
             setLastAdminOpen(false);
           }}
@@ -1280,7 +1287,8 @@ export default function StaffList({
 // Only reachable on a roster with zero rows, which the demo never has — the
 // seeded staff list is the thing a recruiter is here to look at. Fenced anyway:
 // leaving one live add trigger behind an unreachable branch is how a gate rots.
-function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boolean }) {
+function EmptyState({ onAdd, isDemo = false, locale }: { onAdd: () => void; isDemo?: boolean; locale: Locale }) {
+  const COPY = copyFor(locale);
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
       <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-lg">
@@ -1291,7 +1299,7 @@ function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boo
       <Button
         className="bg-foreground text-background hover:bg-foreground/90 mt-5 h-11 px-4"
         disabled={isDemo}
-        title={isDemo ? DEMO_BLOCKED_MESSAGE : undefined}
+        title={isDemo ? demoBlockedMessage(locale) : undefined}
         onClick={onAdd}
       >
         <Plus className="size-4" />
@@ -1301,7 +1309,8 @@ function EmptyState({ onAdd, isDemo = false }: { onAdd: () => void; isDemo?: boo
   );
 }
 
-function NoResults() {
+function NoResults({ locale }: { locale: Locale }) {
+  const COPY = copyFor(locale);
   return (
     <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
       <div className="bg-muted flex size-16 items-center justify-center rounded-lg">

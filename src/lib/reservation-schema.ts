@@ -3,27 +3,48 @@ import { z } from "zod";
 
 // others
 import { validateDateRange } from "./catalog-filters";
+import { LOCALES, translator } from "./i18n/types";
+import type { Locale } from "./i18n/types";
+import { validation } from "./i18n/validation";
 
 // The single server-side contract for the reservation POST body (S-02). The
 // ReservationForm island mirrors these rules client-side for inline errors,
 // but this schema (validated in POST /api/reservations) is the trust boundary.
 // Date semantics delegate to `validateDateRange`, the established third mirror
 // of the booking rule (SQL EXCLUDE ↔ availability.ts ↔ here) — past pickups,
-// same-day and inverted ranges are rejected with the same Polish messages the
-// catalog uses. Polish copy is canonical.
+// same-day and inverted ranges are rejected with the same messages the catalog
+// uses, in the same locale.
+//
+// **Both schemas are reached through a locale accessor** — `reservationRequestSchema(locale)`
+// / `manualReservationSchema(locale)` — because zod bakes messages in at
+// construction. Messages resolve through the ISLAND-SAFE `translator`:
+// `ReservationForm` and `ManualReservationModal` both import this module.
+//
+// The PL-specific VALIDATION stays PL-specific in both locales: the phone regex
+// and the NIP cap describe a Polish depot's customers, not the reader's language
+// (frame decision 3). Only the messages localize.
 
-const MSG = {
-  vehicleId: "Nieprawidłowy identyfikator pojazdu.",
-  date: "Nieprawidłowy format daty.",
-  name: "Podaj imię i nazwisko.",
-  email: "Podaj poprawny adres e-mail.",
-  phone: "Podaj poprawny numer telefonu.",
-  terms: "Zaakceptuj regulamin wynajmu.",
-  honeypot: "Nieprawidłowe zgłoszenie.",
-  company: "Nazwa firmy jest za długa.",
-  vatId: "NIP jest za długi.",
-  notes: "Uwagi są za długie.",
-} as const;
+/**
+ * Which rental terms a customer accepted, stamped onto `reservations.terms_version`
+ * beside the existing `terms_accepted_at` (frame decision 4). `terms_accepted_at`
+ * on its own records only THAT someone agreed, never to what — so a past consent
+ * stops being attributable the moment the text changes.
+ *
+ * *** Bump this whenever the copy in `src/lib/i18n/terms.ts` changes. *** The two
+ * files name each other for that reason: the version is meaningless if it can
+ * drift from the document it names.
+ *
+ * The `-sample` suffix is not decoration. `/terms` is placeholder text (frame
+ * decision 4 again: make the gap visible, do not paper over it), so every row
+ * written today records permanently that what was accepted was a sample — which
+ * is exactly what a real terms rollout would want to be able to tell apart.
+ *
+ * It lives HERE rather than beside the page because this module is the one
+ * contract that owns the reservation POST, `terms_accepted` included, and both
+ * the page and the route import it. It is a bare string constant, so the island
+ * that already imports this module pays nothing for it.
+ */
+export const TERMS_VERSION = "sample-1.0";
 
 // Optional B2B field caps (Phase 5). Generous — these only guard against abuse,
 // not format; a private customer leaves them empty.
@@ -45,50 +66,55 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // The vehicle + dates + customer fields both the public funnel and the staff
-// manual form share. Kept as one object so the two schemas below cannot drift
+// manual form share. Kept as one builder so the two schemas below cannot drift
 // on what a valid name/e-mail/phone is.
-const bookingFields = {
-  vehicle_id: z.string(MSG.vehicleId).regex(UUID_RE, MSG.vehicleId),
-  pickup: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
-  return: z.string(MSG.date).regex(ISO_DATE_RE, MSG.date),
-  customer_name: z.string(MSG.name).trim().min(1, MSG.name),
-  customer_email: z.email(MSG.email),
-  customer_phone: z
-    .string(MSG.phone)
-    .regex(PHONE_RE, MSG.phone)
-    .refine((value) => {
-      const digits = value.replace(/\D/g, "").length;
-      return digits >= PHONE_DIGITS_MIN && digits <= PHONE_DIGITS_MAX;
-    }, MSG.phone),
-} as const;
+function bookingFields(t: (key: "vehicleId" | "date" | "name" | "email" | "phone") => string) {
+  return {
+    vehicle_id: z.string(t("vehicleId")).regex(UUID_RE, t("vehicleId")),
+    pickup: z.string(t("date")).regex(ISO_DATE_RE, t("date")),
+    return: z.string(t("date")).regex(ISO_DATE_RE, t("date")),
+    customer_name: z.string(t("name")).trim().min(1, t("name")),
+    customer_email: z.email(t("email")),
+    customer_phone: z
+      .string(t("phone"))
+      .regex(PHONE_RE, t("phone"))
+      .refine((value) => {
+        const digits = value.replace(/\D/g, "").length;
+        return digits >= PHONE_DIGITS_MIN && digits <= PHONE_DIGITS_MAX;
+      }, t("phone")),
+  } as const;
+}
 
 // Reuse the catalog's date-range rule (past pickup / same-day / inverted) so no
 // booking path can disagree with the picker, the RPC, or the EXCLUDE constraint
 // about what a valid range is.
-function refineDateRange(value: { pickup: string; return: string }, ctx: z.RefinementCtx): void {
-  const result = validateDateRange(value.pickup, value.return);
-  if (!result.ok) {
-    ctx.addIssue({ code: "custom", message: result.error, path: ["return"] });
-  }
+function refineDateRange(locale: Locale) {
+  return (value: { pickup: string; return: string }, ctx: z.RefinementCtx): void => {
+    const result = validateDateRange(value.pickup, value.return, locale);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.error, path: ["return"] });
+    }
+  };
 }
 
-export const reservationRequestSchema = z
-  .object({
-    ...bookingFields,
-    terms_accepted: z.literal(true, MSG.terms),
-    // Optional B2B fields (Phase 5, desktop-2). Empty/omitted is valid; only an
-    // over-long value is rejected. The service normalizes blanks to null.
-    company: z.string().trim().max(COMPANY_MAX, MSG.company).optional(),
-    vat_id: z.string().trim().max(VAT_ID_MAX, MSG.vatId).optional(),
-    notes: z.string().trim().max(NOTES_MAX, MSG.notes).optional(),
-    // Honeypot: a visually-hidden field real users never fill. Non-empty means
-    // a bot; the API route short-circuits it to a benign success before this
-    // schema runs, so a rejection here is defense-in-depth only.
-    company_url: z.string().max(0, MSG.honeypot).optional().default(""),
-  })
-  .superRefine(refineDateRange);
-
-export type ReservationRequestInput = z.infer<typeof reservationRequestSchema>;
+function buildRequest(locale: Locale) {
+  const t = translator(locale, validation);
+  return z
+    .object({
+      ...bookingFields(t),
+      terms_accepted: z.literal(true, t("terms")),
+      // Optional B2B fields (Phase 5, desktop-2). Empty/omitted is valid; only an
+      // over-long value is rejected. The service normalizes blanks to null.
+      company: z.string().trim().max(COMPANY_MAX, t("company")).optional(),
+      vat_id: z.string().trim().max(VAT_ID_MAX, t("vatId")).optional(),
+      notes: z.string().trim().max(NOTES_MAX, t("notes")).optional(),
+      // Honeypot: a visually-hidden field real users never fill. Non-empty means
+      // a bot; the API route short-circuits it to a benign success before this
+      // schema runs, so a rejection here is defense-in-depth only.
+      company_url: z.string().max(0, t("honeypot")).optional().default(""),
+    })
+    .superRefine(refineDateRange(locale));
+}
 
 // The staff branch (S-12): the same booking fields WITHOUT `terms_accepted`,
 // the honeypot, or the B2B extras. An employee entering a phone-in booking is
@@ -97,6 +123,39 @@ export type ReservationRequestInput = z.infer<typeof reservationRequestSchema>;
 // is role-gated. Name + e-mail + phone are all required (design contract D1).
 // This schema is the trust boundary for POST /api/reservations/manual and the
 // modal island mirrors it client-side.
-export const manualReservationSchema = z.object(bookingFields).superRefine(refineDateRange);
+//
+// **Plus the one field the public funnel does NOT carry: `locale`.** On the
+// funnel the sender is the customer, so the route takes their language off the
+// session and never trusts the body. Here the sender is an employee and the
+// language belongs to someone on the other end of a phone call, which only that
+// employee knows — so it is an answered question, and it travels in the body.
+function buildManual(locale: Locale) {
+  const t = translator(locale, validation);
+  return z.object({ ...bookingFields(t), locale: z.enum(LOCALES, t("language")) }).superRefine(refineDateRange(locale));
+}
 
-export type ManualReservationSchemaInput = z.infer<typeof manualReservationSchema>;
+type RequestSchema = ReturnType<typeof buildRequest>;
+type ManualSchema = ReturnType<typeof buildManual>;
+
+const REQUEST_SCHEMAS = Object.fromEntries(LOCALES.map((locale) => [locale, buildRequest(locale)])) as Record<
+  Locale,
+  RequestSchema
+>;
+const MANUAL_SCHEMAS = Object.fromEntries(LOCALES.map((locale) => [locale, buildManual(locale)])) as Record<
+  Locale,
+  ManualSchema
+>;
+
+/** The public funnel's POST body contract, with its messages in `locale`. */
+export function reservationRequestSchema(locale: Locale): RequestSchema {
+  return REQUEST_SCHEMAS[locale];
+}
+
+export type ReservationRequestInput = z.infer<RequestSchema>;
+
+/** The staff manual-booking contract, with its messages in `locale`. */
+export function manualReservationSchema(locale: Locale): ManualSchema {
+  return MANUAL_SCHEMAS[locale];
+}
+
+export type ManualReservationSchemaInput = z.infer<ManualSchema>;

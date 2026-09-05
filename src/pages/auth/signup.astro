@@ -1,20 +1,21 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+
+const { t } = Astro.locals;
 ---
 
-<Layout title="Rejestracja">
+<Layout title={t("auth.titleSignUp")}>
   <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
     <div class="w-full max-w-sm rounded-xl border border-white/10 bg-white/10 p-8 text-white backdrop-blur-xl">
       <h1
         class="mb-6 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-center text-2xl font-bold text-transparent"
       >
-        Rejestracja niedostępna
+        {t("auth.signUpHeading")}
       </h1>
-      <p class="text-center text-sm text-blue-100/70">
-        Konta są zakładane przez administratora. Skontaktuj się z administratorem, aby uzyskać dostęp.
-      </p>
+      <p class="text-center text-sm text-blue-100/70">{t("auth.signUpBody")}</p>
       <p class="mt-6 text-center text-sm text-blue-100/60">
-        Masz już konto? <a href="/auth/signin" class="text-purple-300 hover:underline">Zaloguj się</a>
+        {t("auth.signUpHaveAccount")}
+        <a href="/auth/signin" class="text-purple-300 hover:underline">{t("auth.signInHeading")}</a>
       </p>
     </div>
   </div>

@@ -69,6 +69,9 @@ function body(overrides: Record<string, unknown> = {}) {
       interior: `issue/${PROTOCOL_ID}/photo-interior.jpg`,
       dashboard: `issue/${PROTOCOL_ID}/photo-dashboard.jpg`,
     },
+    // The language the client rendered the PDF in; the RPC stamps it onto
+    // `protocols.locale`. The seeded reservation this body targets is `pl`.
+    locale: "pl",
     damages: [
       {
         id: DAMAGE_ID,
@@ -232,6 +235,7 @@ describe("issue protocol API (S-05 Phase 3)", () => {
             interior: `issue/${OTHER_PROTOCOL_ID}/photo-interior.jpg`,
             dashboard: `issue/${OTHER_PROTOCOL_ID}/photo-dashboard.jpg`,
           },
+          locale: "pl",
           damages: [],
         }),
       );

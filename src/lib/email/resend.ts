@@ -23,7 +23,7 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 interface ResendOptions {
   apiKey: string;
-  /** Verified sender, e.g. `FleetRent <protokol@fleetrent.pl>`. */
+  /** Verified sender, e.g. `Flota <protokol@wujcar.com>`. */
   from: string;
   /** Injectable for tests; defaults to the platform `fetch`. */
   fetchImpl?: typeof fetch;

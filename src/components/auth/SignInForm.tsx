@@ -4,6 +4,8 @@ import { FormField } from "./FormField";
 import { PasswordToggle } from "./PasswordToggle";
 import { SubmitButton } from "./SubmitButton";
 import { ServerError } from "./ServerError";
+import { auth } from "../../lib/i18n/auth";
+import { translator, type Locale } from "../../lib/i18n/types";
 
 interface Props {
   serverError?: string | null;
@@ -15,9 +17,11 @@ interface Props {
   // DEMO_PASSWORD; absent everywhere else, and the card then emits no wrapper
   // at all so the form is unchanged.
   demo?: { email: string; password: string };
+  /** Islands cannot read `Astro.locals`, so the page passes the request locale in. */
+  locale: Locale;
 }
 
-// Staff sign-in form ("Strefa pracownika"). The "forgot password" link now
+// Staff sign-in form (the employee zone). The "forgot password" link now
 // routes to the S-08 self-service reset flow (/auth/forgot-password). The
 // designed "remember me" checkbox stays omitted — sessions persist via Supabase
 // cookies, so an inert control would read as broken.
@@ -29,7 +33,8 @@ interface Props {
 // `demo_account_email()`, so this card can never name an ungated account
 // (impl-review F3). Values transcribed from `design-contract.md` §2; the canonical
 // mockup is `staff-login.jsx` → `LoginDemoCard`.
-export default function SignInForm({ serverError, redirectTo, demo }: Props) {
+export default function SignInForm({ serverError, redirectTo, demo, locale }: Props) {
+  const t = translator(locale, auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -39,12 +44,12 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
   function validate() {
     const next: typeof errors = {};
     if (!email.trim()) {
-      next.email = "Podaj adres e-mail";
+      next.email = t("emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      next.email = "Podaj poprawny adres e-mail";
+      next.email = t("emailInvalid");
     }
     if (!password) {
-      next.password = "Podaj hasło";
+      next.password = t("passwordRequired");
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -77,16 +82,14 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
       {demo ? (
         <div className="bg-background border-border flex flex-col gap-2.5 rounded-md border p-3.5">
           <p className="text-muted-foreground font-mono text-[10.5px] leading-none font-semibold tracking-[0.5px] uppercase">
-            Konto demo
+            {t("demoEyebrow")}
           </p>
-          <p className="text-[13px] leading-[1.45] font-[540] text-[var(--flota-ink-2)]">
-            To wersja demonstracyjna portfolio. Zaloguj się poniższymi danymi, aby obejrzeć panel pracownika.
-          </p>
+          <p className="text-[13px] leading-[1.45] font-[540] text-[var(--flota-ink-2)]">{t("demoBody")}</p>
 
           <dl className="flex flex-col gap-1">
             {[
-              { label: "E-mail", value: demo.email },
-              { label: "Hasło", value: demo.password },
+              { label: t("demoEmailLabel"), value: demo.email },
+              { label: t("demoPasswordLabel"), value: demo.password },
             ].map((row) => (
               <div key={row.label} className="flex items-baseline justify-between gap-2.5">
                 <dt className="text-[11.5px] font-[650] tracking-[0.2px] text-[var(--flota-ink-2)]">{row.label}</dt>
@@ -108,33 +111,29 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
             }}
             className="border-border bg-card text-foreground hover:bg-background h-[38px] w-full rounded-[10px] border text-[13px] font-[650] transition-colors"
           >
-            Wypełnij dane demo
+            {t("demoFill")}
           </button>
 
-          <p className="text-muted-foreground text-xs leading-[1.45]">
-            Dodawanie i usuwanie kont, reset hasła oraz tworzenie rezerwacji są w trybie demo wyłączone.
-          </p>
+          <p className="text-muted-foreground text-xs leading-[1.45]">{t("demoNote")}</p>
         </div>
       ) : null}
 
       <div>
-        <h1 className="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">Zaloguj się</h1>
-        <p className="text-muted-foreground mt-2 text-sm leading-[1.45]">
-          Użyj konta służbowego Flota, aby wejść do panelu.
-        </p>
+        <h1 className="text-foreground text-[28px] leading-[1.05] font-bold tracking-[-0.8px]">{t("signInHeading")}</h1>
+        <p className="text-muted-foreground mt-2 text-sm leading-[1.45]">{t("signInSub")}</p>
       </div>
 
       <div className="flex flex-col gap-3.5">
         <FormField
           id="email"
           type="email"
-          label="E-mail służbowy"
+          label={t("emailLabel")}
           value={email}
           onChange={(v) => {
             setEmail(v);
             clearError("email");
           }}
-          placeholder="imie@flota.pl"
+          placeholder={t("emailPlaceholder")}
           autoComplete="username"
           error={errors.email}
           icon={<Mail className="size-[17px]" />}
@@ -142,19 +141,20 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
 
         <FormField
           id="password"
-          label="Hasło"
+          label={t("passwordLabel")}
           type={showPassword ? "text" : "password"}
           value={password}
           onChange={(v) => {
             setPassword(v);
             clearError("password");
           }}
-          placeholder="Twoje hasło"
+          placeholder={t("passwordPlaceholder")}
           autoComplete="current-password"
           error={errors.password}
           icon={<Lock className="size-[17px]" />}
           endContent={
             <PasswordToggle
+              locale={locale}
               visible={showPassword}
               onToggle={() => {
                 setShowPassword(!showPassword);
@@ -169,19 +169,19 @@ export default function SignInForm({ serverError, redirectTo, demo }: Props) {
           href="/auth/forgot-password"
           className="text-muted-foreground hover:text-foreground text-[13px] transition-colors"
         >
-          Nie pamiętasz hasła?
+          {t("forgot")}
         </a>
       </div>
 
       <ServerError message={serverError} />
 
-      <SubmitButton pending={submitting} pendingText="Logowanie..." icon={<ArrowRight className="size-[17px]" />}>
-        Zaloguj się
+      <SubmitButton pending={submitting} pendingText={t("signInPending")} icon={<ArrowRight className="size-[17px]" />}>
+        {t("signInHeading")}
       </SubmitButton>
 
       <div className="text-muted-foreground flex items-center justify-center gap-1.5 text-xs">
         <ShieldCheck className="text-success size-3.5" />
-        <span>Połączenie szyfrowane · tylko personel</span>
+        <span>{t("secure")}</span>
       </div>
     </form>
   );

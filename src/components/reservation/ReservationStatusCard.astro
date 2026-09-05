@@ -1,15 +1,15 @@
 ---
-// core
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
-
 // components
 import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
 
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays, reservationStatusLabelPl } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { useTranslations } from "../../lib/i18n";
+import { reservationStatusLabel } from "../../lib/i18n/reservation";
+import type { Locale } from "../../lib/i18n/types";
+import { dayMonthShort } from "../../lib/format-date";
 import type { ReservationStatus, ReservationStatusView } from "../../types";
 
 // The status screen's header + booking summary (design desktop-3 / mobile-4):
@@ -22,13 +22,23 @@ import type { ReservationStatus, ReservationStatusView } from "../../types";
 
 interface Props {
   view: ReservationStatusView;
+  /**
+   * The BOOKING's language (`reservations.locale`), not the session's. The
+   * customer who reads this card is the one who filled the form, and they
+   * arrive here from a link in an e-mail already written in that language —
+   * usually with no cookie at all. Passed in rather than read off
+   * `Astro.locals` so the page keeps the two apart: the chrome around this card
+   * stays on the session locale so the switcher still works.
+   */
+  locale: Locale;
 }
 
-const { view } = Astro.props;
+const { view, locale } = Astro.props;
+const t = useTranslations(locale);
 
 // Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
 // produces; confirmed/rejected/cancelled arrive with S-03. The WORDING now comes
-// from `reservationStatusLabelPl` so the S-13 search rows cannot drift from it;
+// from `reservationStatusLabel` so the S-13 search rows cannot drift from it;
 // the tint stays here because each surface's pill idiom differs.
 const PILL_CLASSES: Record<ReservationStatus, string> = {
   pending: "bg-warning/10 text-warning",
@@ -36,19 +46,19 @@ const PILL_CLASSES: Record<ReservationStatus, string> = {
   rejected: "bg-destructive/10 text-destructive",
   cancelled: "bg-destructive/10 text-destructive",
 };
-const pill = { label: reservationStatusLabelPl(view.status), classes: PILL_CLASSES[view.status] };
+const pill = { label: reservationStatusLabel(view.status, locale), classes: PILL_CLASSES[view.status] };
 
 const pickup = fromIsoDate(view.pickup_date);
 const returnDate = fromIsoDate(view.return_date);
 const days = rentalDays(view.pickup_date, view.return_date);
 const metaLine =
   pickup && returnDate
-    ? `${format(pickup, "d MMM", { locale: pl })} · 14:00 → ${format(returnDate, "d MMM", { locale: pl })} · 10:00 · ${formatDuration(days)}`
+    ? `${dayMonthShort(pickup, locale)} · 14:00 → ${dayMonthShort(returnDate, locale)} · 10:00 · ${formatDuration(days, locale)}`
     : "—";
 
 const title = [view.vehicle_make, view.vehicle_model].filter(Boolean).join(" ");
-const total = formatPln(estimatedTotal(view.vehicle_daily_rate, days));
-const deposit = formatPln(view.vehicle_deposit);
+const total = formatPln(estimatedTotal(view.vehicle_daily_rate, days), locale);
+const deposit = formatPln(view.vehicle_deposit, locale);
 ---
 
 <section class="flex flex-col items-center text-center">
@@ -67,8 +77,8 @@ const deposit = formatPln(view.vehicle_deposit);
     </svg>
   </span>
   <p class="text-primary mt-5 font-mono text-sm font-medium tracking-wide">{view.reference}</p>
-  <h1 class="text-foreground mt-1 font-serif text-4xl tracking-tight">Zgłoszenie przyjęte</h1>
-  <p class="text-muted-foreground mt-2 text-sm">Bez konta — wszystko potwierdzimy e-mailem.</p>
+  <h1 class="text-foreground mt-1 font-serif text-4xl tracking-tight">{t("booking.statusReceived")}</h1>
+  <p class="text-muted-foreground mt-2 text-sm">{t("booking.statusReceivedSub")}</p>
   <span
     class:list={cn(
       "mt-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide uppercase",
@@ -91,7 +101,7 @@ const deposit = formatPln(view.vehicle_deposit);
     </div>
     <div class="shrink-0 text-right">
       <p class="text-foreground text-lg font-bold tracking-tight">{total}</p>
-      <p class="text-muted-foreground text-xs">+ kaucja {deposit}</p>
+      <p class="text-muted-foreground text-xs">{t("booking.statusPlusDeposit")} {deposit}</p>
     </div>
   </div>
 
@@ -110,7 +120,8 @@ const deposit = formatPln(view.vehicle_deposit);
       <path d="M3 7l9 6 9-6"></path>
     </svg>
     <span class="truncate">
-      Potwierdzenie wysłaliśmy na <strong class="text-foreground font-semibold">{view.customer_email}</strong>
+      {t("booking.statusEmailedBefore")}
+      <strong class="text-foreground font-semibold">{view.customer_email}</strong>
     </span>
   </div>
 </div>

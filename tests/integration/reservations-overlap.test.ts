@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 // components
 
 // others
+import { TERMS_VERSION } from "../../src/lib/reservation-schema";
 import { createReservationRequest } from "../../src/lib/services/reservations";
 import type { CreateReservationInput } from "../../src/types";
 import { anonClient, serviceClient } from "../helpers/clients";
@@ -37,6 +38,12 @@ function booking(pickup: string, returnDate: string): CreateReservationInput {
     customer_email: "overlap.test@example.com",
     customer_phone: "+48600000000",
     terms_accepted: true,
+    // The route supplies these from the session and from `TERMS_VERSION`; the
+    // overlap rule is indifferent to all three, so the fixture pins the app
+    // defaults rather than leaving them implicit.
+    locale: "en",
+    terms_version: TERMS_VERSION,
+    terms_locale: "en",
   };
 }
 

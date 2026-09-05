@@ -1,33 +1,38 @@
 ---
-// "Proces wynajmu" stepper (S6). Desktop: two lane pills ("Online — bez telefonu" /
-// "Telefonicznie") converging into circle 1, then a horizontal 4-circle track. Mobile:
-// a vertical timeline with shorter step titles (the branch folds into step 1's copy).
-// Static content, verbatim Polish copy; heading in Instrument Serif (font-serif).
+// "How it works" stepper (S6). Desktop: two lane pills (online / by phone)
+// converging into circle 1, then a horizontal 4-circle track. Mobile: a vertical
+// timeline with shorter step titles (the branch folds into step 1's copy).
+// Static content; heading in Instrument Serif (font-serif).
+//
+// Copy lives in the `landing` catalog namespace. This is an `.astro` component,
+// so it reads the composed `Astro.locals.t` — no JavaScript ships either way.
+
+const { t } = Astro.locals;
 
 const STEPS = [
   {
     n: 1,
-    titleDesktop: "Rezerwacja",
-    titleMobile: "Rezerwacja",
-    desc: "Rezerwujesz online lub telefonicznie, a potwierdzenie terminu wysyłamy e-mailem.",
+    titleDesktop: t("landing.step1Title"),
+    titleMobile: t("landing.step1TitleShort"),
+    desc: t("landing.step1Desc"),
   },
   {
     n: 2,
-    titleDesktop: "Podpisanie dokumentów i płatność",
-    titleMobile: "Dokumenty i płatność",
-    desc: "Sprawdzamy dokumenty, pobieramy płatność z kaucją, a umowę podpisujesz na tablecie.",
+    titleDesktop: t("landing.step2Title"),
+    titleMobile: t("landing.step2TitleShort"),
+    desc: t("landing.step2Desc"),
   },
   {
     n: 3,
-    titleDesktop: "Oględziny i wydanie pojazdu",
-    titleMobile: "Oględziny i wydanie",
-    desc: "Wspólnie oglądamy pojazd i odbierasz auto z protokołem wydania na e-mailu.",
+    titleDesktop: t("landing.step3Title"),
+    titleMobile: t("landing.step3TitleShort"),
+    desc: t("landing.step3Desc"),
   },
   {
     n: 4,
-    titleDesktop: "Zwrot pojazdu i kaucja",
-    titleMobile: "Zwrot i kaucja",
-    desc: "Po oględzinach podpisujesz protokół zwrotu, a kaucja wraca do Ciebie.",
+    titleDesktop: t("landing.step4Title"),
+    titleMobile: t("landing.step4TitleShort"),
+    desc: t("landing.step4Desc"),
   },
 ];
 ---
@@ -36,16 +41,18 @@ const STEPS = [
   <div class="bg-card border-border rounded-[24px] border p-[26px] md:p-[30px] xl:rounded-[28px] xl:p-16">
     <!-- Section header (inside the card, top-left). -->
     <div class="mb-8 max-w-[560px]">
-      <p class="text-muted-foreground text-[11px] font-bold tracking-[1.2px] uppercase">Jak to działa</p>
+      <p class="text-muted-foreground text-[11px] font-bold tracking-[1.2px] uppercase">
+        {t("landing.processEyebrow")}
+      </p>
       <h2 class="text-foreground mt-2 font-serif text-[27px] leading-none md:text-[32px] xl:text-[38px]">
-        Proces wynajmu pojazdu<span class="text-primary">.</span>
+        {t("landing.processTitle")}<span class="text-primary">.</span>
       </h2>
-      <p class="mt-3 text-[15px] text-[var(--flota-ink-2)]">Online albo telefonicznie — wybór należy do Ciebie.</p>
+      <p class="mt-3 text-[15px] text-[var(--flota-ink-2)]">{t("landing.processSub")}</p>
     </div>
 
     <!-- Desktop: branching lanes → horizontal track. -->
     <div class="hidden xl:block">
-      <p class="text-muted-foreground mb-3 text-[12.5px]">Ty wybierasz, jak zaczynasz:</p>
+      <p class="text-muted-foreground mb-3 text-[12.5px]">{t("landing.processLanePrompt")}</p>
       <div class="mb-2 flex max-w-[520px] gap-3">
         <span
           class="border-border text-foreground inline-flex items-center gap-2 rounded-full border py-2.5 pr-4 pl-[14px] text-[12.5px] font-semibold shadow-[0_2px_6px_rgba(14,21,36,0.08)]"
@@ -63,7 +70,7 @@ const STEPS = [
             <rect x="4" y="5" width="16" height="11" rx="1.5"></rect>
             <path d="M2 20h20"></path>
           </svg>
-          Online — bez telefonu
+          {t("landing.processLaneOnline")}
         </span>
         <span
           class="border-border text-foreground inline-flex items-center gap-2 rounded-full border py-2.5 pr-4 pl-[14px] text-[12.5px] font-semibold shadow-[0_2px_6px_rgba(14,21,36,0.08)]"
@@ -82,7 +89,7 @@ const STEPS = [
               d="M15.5 13.5c-1 1-1 1-2 .5a11 11 0 0 1-4.5-4.5c-.5-1-.5-1 .5-2 .4-.4.4-.8.2-1.2L8.4 4.3A1 1 0 0 0 7.4 4H5.3A1.3 1.3 0 0 0 4 5.4 12 12 0 0 0 15.6 17a1.3 1.3 0 0 0 1.4-1.3v-2.1a1 1 0 0 0-.7-1l-1.8-.6c-.4-.1-.8 0-1 .3z"
             ></path>
           </svg>
-          Telefonicznie
+          {t("landing.processLanePhone")}
         </span>
       </div>
 

@@ -17,6 +17,18 @@
 
 -- ---------------------------------------------------------------------------
 -- vehicles — one+ per category, full pricing, one retired (is_active = false)
+--
+-- *** `name` reads ENGLISH, with TWO rows deliberately left in Polish. ***
+-- Seeded vehicle names are fixture data we control, not text a user typed, so
+-- they follow the chrome (english-localization Phase 4 §5). The two exceptions —
+-- `MAN TGL Chłodnia` and `Scania P280 Skrzyniowy` — are the change's standing
+-- proof of frame decision 2: real user-entered text is NEVER machine-translated,
+-- so English chrome around a Polish value is the CORRECT outcome, and one of the
+-- two carries a diacritic so the encoding path is exercised with it. Do not
+-- "finish the job" by translating them.
+--
+-- `protocol_damages.location` further down stays Polish for the same reason, and
+-- because it is the diacritic fixture the PDF path is proved against.
 -- ---------------------------------------------------------------------------
 
 insert into vehicles (
@@ -45,7 +57,7 @@ insert into vehicles (
   -- passenger_van
   (
     '33333333-3333-3333-3333-333333333333',
-    'Volkswagen Crafter 9-osobowy', 'WX 3102P', 'passenger_van', 'Volkswagen', 'Crafter', 2023, 'diesel',
+    'Volkswagen Crafter 9-seater', 'WX 3102P', 'passenger_van', 'Volkswagen', 'Crafter', 2023, 'diesel',
     900.00, null, null, null,
     '{"https://picsum.photos/seed/crafter-1/960/600","https://picsum.photos/seed/crafter-2/960/600","https://picsum.photos/seed/crafter-3/960/600","https://picsum.photos/seed/crafter-4/960/600"}',
     279.00, 6500.00, 2200.00, 1.30, 350,
@@ -54,7 +66,7 @@ insert into vehicles (
   -- car_transporter
   (
     '44444444-4444-4444-4444-444444444444',
-    'Iveco Daily Autolaweta', 'WX 8867L', 'car_transporter', 'Iveco', 'Daily', 2020, 'diesel',
+    'Iveco Daily Car Transporter', 'WX 8867L', 'car_transporter', 'Iveco', 'Daily', 2020, 'diesel',
     2800.00, 600.00, 210.00, null,
     '{"https://picsum.photos/seed/daily-1/960/600","https://picsum.photos/seed/daily-2/960/600","https://picsum.photos/seed/daily-3/960/600"}',
     349.00, 8200.00, 3000.00, 1.80, 250,
@@ -63,6 +75,7 @@ insert into vehicles (
   -- refrigerated_truck
   (
     '55555555-5555-5555-5555-555555555555',
+    -- RETAINED IN POLISH on purpose (see the block comment above).
     'MAN TGL Chłodnia', 'WX 4415R', 'refrigerated_truck', 'MAN', 'TGL', 2021, 'diesel',
     3500.00, 720.00, 245.00, 260.00,
     '{"https://picsum.photos/seed/tgl-1/960/600","https://picsum.photos/seed/tgl-2/960/600","https://picsum.photos/seed/tgl-3/960/600"}',
@@ -72,6 +85,7 @@ insert into vehicles (
   -- flatbed_truck
   (
     '66666666-6666-6666-6666-666666666666',
+    -- RETAINED IN POLISH on purpose (see the block comment above).
     'Scania P280 Skrzyniowy', 'WX 9038S', 'flatbed_truck', 'Scania', 'P280', 2019, 'diesel',
     8000.00, 760.00, 248.00, null,
     '{"https://picsum.photos/seed/scania-1/960/600","https://picsum.photos/seed/scania-2/960/600","https://picsum.photos/seed/scania-3/960/600"}',
@@ -82,7 +96,7 @@ insert into vehicles (
   -- filtering later: it must NOT appear in `where is_active = true` queries.
   (
     '77777777-7777-7777-7777-777777777777',
-    'Fiat Ducato (wycofany)', 'WX 2276D', 'cargo_van', 'Fiat', 'Ducato', 2016, 'diesel',
+    'Fiat Ducato (retired)', 'WX 2276D', 'cargo_van', 'Fiat', 'Ducato', 2016, 'diesel',
     1200.00, 320.00, 170.00, 185.00,
     '{}', 179.00, 4200.00, 1500.00, 1.00, 300,
     3, 'manual', false
@@ -97,9 +111,18 @@ insert into vehicles (
 -- access_token: fixed (not defaulted) so /r/<token> manual checks survive
 -- `supabase db reset` — e.g. /r/cccccccc-0000-0000-0000-000000000003 is the
 -- canonical seeded PENDING status page (S-02).
+-- locale: the CUSTOMER's language, stamped at submission (english-localization
+-- Phase 1). Written EXPLICITLY on every seeded row rather than left to the
+-- column default, because the demo data is what the two cross-locale cases are
+-- walked against: an employee reading an English cockpit accepting R-0003 must
+-- see a POLISH mail leave, and R-0004 an English one. Each of the four is
+-- deliberately half of a pair with its sibling, and the two confirmed rows carry
+-- the languages the protocol suites assert on (R-0001 -> `pl`,
+-- tests/integration/protocol-email.test.ts; R-0002 -> `en`,
+-- tests/integration/return-protocol-email.test.ts).
 insert into reservations (
   id, vehicle_id, customer_name, customer_email, customer_phone,
-  pickup_date, return_date, status, reference, access_token
+  pickup_date, return_date, status, reference, access_token, locale
 ) values
   -- Same-day-turnover pair on the Sprinter (vehicle 1111...). The first
   -- reservation returns 2026-07-10 (window ends 07-10 10:00); the second picks
@@ -110,14 +133,14 @@ insert into reservations (
     '11111111-1111-1111-1111-111111111111',
     'Jan Kowalski', 'jan.kowalski@example.com', '+48600100200',
     '2026-07-01', '2026-07-10', 'confirmed',
-    'R-0001', 'cccccccc-0000-0000-0000-000000000001'
+    'R-0001', 'cccccccc-0000-0000-0000-000000000001', 'pl'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000002',
     '11111111-1111-1111-1111-111111111111',
     'Anna Nowak', 'anna.nowak@example.com', '+48600300400',
     '2026-07-10', '2026-07-15', 'confirmed',
-    'R-0002', 'cccccccc-0000-0000-0000-000000000002'
+    'R-0002', 'cccccccc-0000-0000-0000-000000000002', 'en'
   ),
   -- Pending requests on other vehicles (pending is a blocking status too).
   (
@@ -125,14 +148,14 @@ insert into reservations (
     '33333333-3333-3333-3333-333333333333',
     'Piotr Wiśniewski', 'piotr.wisniewski@example.com', '+48600500600',
     '2026-07-05', '2026-07-08', 'pending',
-    'R-0003', 'cccccccc-0000-0000-0000-000000000003'
+    'R-0003', 'cccccccc-0000-0000-0000-000000000003', 'pl'
   ),
   (
     'aaaaaaaa-0000-0000-0000-000000000004',
     '55555555-5555-5555-5555-555555555555',
     'Katarzyna Wójcik', 'katarzyna.wojcik@example.com', '+48600700800',
     '2026-07-12', '2026-07-20', 'pending',
-    'R-0004', 'cccccccc-0000-0000-0000-000000000004'
+    'R-0004', 'cccccccc-0000-0000-0000-000000000004', 'en'
   );
 
 -- ---------------------------------------------------------------------------
@@ -359,9 +382,13 @@ insert into profiles (user_id, role, full_name, password_set_at) values
 -- Every seeded damage note carries the full Polish diacritic set
 -- `ą ć ę ł ń ó ś ź ż` / `Ą Ć Ę Ł Ń Ó Ś Ź Ż` (lessons.md) so the pdf-lib encoding
 -- boundary is exercised the moment a return PDF is built against this baseline.
+--
+-- locale: what language this protocol's PDF bytes were rendered in. Written
+-- explicitly (the column defaults 'pl') and always MATCHING its reservation —
+-- R-0002 is the `en` half of the seeded pair, so its baseline is `en` too.
 insert into protocols (
   id, reservation_id, type, odometer_km, fuel_eighths,
-  signed_at, signature, customer_ack, pdf_path, created_by
+  signed_at, signature, customer_ack, pdf_path, created_by, locale
 ) values (
   'd6000000-0000-0000-0000-000000000001',
   'aaaaaaaa-0000-0000-0000-000000000002',
@@ -369,7 +396,7 @@ insert into protocols (
   '2026-07-10 14:20:00+02',
   'issue/d6000000-0000-0000-0000-000000000001/signature.png',
   true, null,
-  'e0000000-0000-0000-0000-0000000000e0'
+  'e0000000-0000-0000-0000-0000000000e0', 'en'
 );
 
 insert into protocol_damages (id, protocol_id, type, location, size) values
@@ -397,9 +424,13 @@ insert into protocol_damages (id, protocol_id, type, location, size) values
 -- ids live in the a6… / d7… namespaces, disjoint from every test fixture and
 -- the R-0001…4 / d6… demo rows above.
 -- ---------------------------------------------------------------------------
+--
+-- locale, again explicit: R-0010 is the row a recruiter walks the return flow on,
+-- so it is `en` and its PDF renders English end to end; R-0011 is `pl`, the
+-- walk-in-at-a-Polish-depot case the whole reservations.locale design exists for.
 insert into reservations (
   id, vehicle_id, customer_name, customer_email, customer_phone,
-  pickup_date, return_date, status, reference, access_token
+  pickup_date, return_date, status, reference, access_token, locale
 ) values
   -- DUE today (no return protocol yet) -> primary "Przyjmij zwrot".
   (
@@ -407,7 +438,7 @@ insert into reservations (
     '22222222-2222-2222-2222-222222222222',
     'Maria Zielińska', 'maria.zielinska@example.com', '+48600910110',
     current_date - 4, current_date, 'confirmed',
-    'R-0010', 'cccccccc-0000-0000-0000-000000000010'
+    'R-0010', 'cccccccc-0000-0000-0000-000000000010', 'en'
   ),
   -- OVERDUE (return_date in the past, no return protocol) -> red bar + "Po terminie".
   (
@@ -415,7 +446,7 @@ insert into reservations (
     '44444444-4444-4444-4444-444444444444',
     'Firma Trans-Bud', 'kontakt@trans-bud.example.com', '+48600920120',
     current_date - 9, current_date - 3, 'confirmed',
-    'R-0011', 'cccccccc-0000-0000-0000-000000000011'
+    'R-0011', 'cccccccc-0000-0000-0000-000000000011', 'pl'
   ),
   -- RETURNED today, email SENT -> "Dostarczono" + "Otwórz protokół" (no resend).
   (
@@ -423,13 +454,13 @@ insert into reservations (
     '66666666-6666-6666-6666-666666666666',
     'Tomasz Wójcik', 'tomasz.wojcik@example.com', '+48600930130',
     current_date - 5, current_date - 1, 'confirmed',
-    'R-0012', 'cccccccc-0000-0000-0000-000000000012'
+    'R-0012', 'cccccccc-0000-0000-0000-000000000012', 'pl'
   );
 
 -- Issue baselines (required: list_returns_today INNER-joins the issue protocol).
 insert into protocols (
   id, reservation_id, type, odometer_km, fuel_eighths,
-  signed_at, signature, customer_ack, pdf_path, created_by
+  signed_at, signature, customer_ack, pdf_path, created_by, locale
 ) values
   (
     'd7000000-0000-0000-0000-000000000010',
@@ -437,7 +468,7 @@ insert into protocols (
     'issue', 51000, 8,
     now() - interval '4 days',
     'issue/d7000000-0000-0000-0000-000000000010/signature.png',
-    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+    true, null, 'e0000000-0000-0000-0000-0000000000e0', 'en'
   ),
   (
     'd7000000-0000-0000-0000-000000000011',
@@ -445,7 +476,7 @@ insert into protocols (
     'issue', 128400, 6,
     now() - interval '9 days',
     'issue/d7000000-0000-0000-0000-000000000011/signature.png',
-    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+    true, null, 'e0000000-0000-0000-0000-0000000000e0', 'pl'
   ),
   (
     'd7000000-0000-0000-0000-000000000012',
@@ -453,7 +484,7 @@ insert into protocols (
     'issue', 87200, 4,
     now() - interval '5 days',
     'issue/d7000000-0000-0000-0000-000000000012/signature.png',
-    true, null, 'e0000000-0000-0000-0000-0000000000e0'
+    true, null, 'e0000000-0000-0000-0000-0000000000e0', 'pl'
   );
 
 -- The SENT row's return protocol, created TODAY (so it stays on the list), linked
@@ -461,7 +492,7 @@ insert into protocols (
 -- object bytes are never seeded, so the view's PDF link 404s while the deltas render.
 insert into protocols (
   id, reservation_id, type, odometer_km, fuel_eighths,
-  signed_at, signature, customer_ack, pdf_path, baseline_protocol_id, created_by, created_at
+  signed_at, signature, customer_ack, pdf_path, baseline_protocol_id, created_by, created_at, locale
 ) values (
   'd7000000-0000-0000-0000-0000000000f2',
   'a6000000-0000-0000-0000-000000000012',
@@ -472,7 +503,7 @@ insert into protocols (
   'return/d7000000-0000-0000-0000-0000000000f2/protocol.pdf',
   'd7000000-0000-0000-0000-000000000012',
   'e0000000-0000-0000-0000-0000000000e0',
-  now()
+  now(), 'pl'
 );
 
 -- Delivery row status 'sent' -> the queue shows "Dostarczono", no resend button.

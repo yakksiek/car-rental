@@ -11,7 +11,7 @@ import { createRetiredVehicle, deleteVehicle } from "./fixtures/booking";
 // (invite-journey-fixes, phase 11).
 //
 // `/dashboard/vehicles` carried phase 10's defect in its row-action half.
-// `Przywróć` is per-row and reachable at any scroll depth; `restore`'s banner is
+// `Restore` is per-row and reachable at any scroll depth; `restore`'s banner is
 // anchored above the list. So the message landed outside the viewport — measured
 // against the running app, 2026-08-24, with a retired row at the bottom:
 //
@@ -40,7 +40,7 @@ test.use({ storageState: "playwright/.auth/admin.json" });
 // Pinned at 390×844 for the same reason phase 10's reachability specs are.
 //
 // This defect only exists on a page tall enough to scroll. Measured 2026-08-24
-// with the seeded fleet plus one fixture row and "Pokaż wycofane" checked: the
+// with the seeded fleet plus one fixture row and "Show retired" checked: the
 // page scrolls 213px at Playwright's default `devices["Desktop Chrome"]`
 // viewport and 1186px at 390×844. At the desktop default the banner never leaves
 // the viewport — measured top 113 at maximum scroll — so both the assertion AND
@@ -53,10 +53,10 @@ test.use({ storageState: "playwright/.auth/admin.json" });
 test.describe("the fleet banner is reachable from the row that set it", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("a failed Przywróć from a row below the fold is readable without scrolling", async ({ page }) => {
+  test("a failed Restore from a row below the fold is readable without scrolling", async ({ page }) => {
     // The fixture is the whole reason this spec can fail. The seed's single
-    // retired vehicle (`Fiat Ducato (wycofany)`) sorts FIRST by name, so its
-    // `Przywróć` sits near the top and its banner happens to be in view — a
+    // retired vehicle (`Fiat Ducato (retired)`) sorts FIRST by name, so its
+    // `Restore` sits near the top and its banner happens to be in view — a
     // property of the fixture, not of the design. This row sorts last.
     const { vehicleId, name } = await createRetiredVehicle();
     // Stubbed, not really failed: the 409/500 mapping inside `postActive` is not
@@ -68,21 +68,21 @@ test.describe("the fleet banner is reachable from the row that set it", () => {
       await waitForIslands(page);
 
       // Retired rows are hidden until the toggle is on — this is the only way to
-      // get a `Przywróć` control on screen at all.
+      // get a `Restore` control on screen at all.
       //
       // `.first()` because the fleet renders BOTH surfaces into the DOM and hides
       // one per breakpoint (`hidden md:block` table, `md:hidden` cards), so every
       // vehicle name is present twice at any width.
-      await page.getByRole("checkbox", { name: "Pokaż wycofane" }).check();
+      await page.getByRole("checkbox", { name: "Show retired" }).check();
       await expect(page.getByText(name).first()).toBeAttached();
 
       const scrollY = await scrollToBottom(page);
       expect(scrollY, "the fleet must actually scroll or this proves nothing").toBeGreaterThan(200);
 
       // `.last()` is the fixture row — it sorts after every seeded vehicle.
-      await page.getByRole("button", { name: "Przywróć" }).last().click();
+      await page.getByRole("button", { name: "Restore" }).last().click();
 
-      const banner = page.getByText("Coś poszło nie tak. Spróbuj ponownie.");
+      const banner = page.getByText("Something went wrong. Try again.");
       await expect(banner).toBeVisible();
       // THE PHASE-11 ASSERTIONS. Before the fix this banner sat at top -804 with
       // `elementFromPoint` answering `null`, and `toBeVisible()` passed anyway.
@@ -96,10 +96,10 @@ test.describe("the fleet banner is reachable from the row that set it", () => {
       expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThanOrEqual(scrollY);
 
       // Pinning removed the only exit the design had (scrolling past it), so the
-      // ✕ is what replaces it. The fleet banner carries no `Ponów` — the row's
-      // own `Przywróć` is the retry, so exactly one retry control is on screen.
-      await expect(page.getByRole("button", { name: "Ponów" })).toHaveCount(0);
-      await page.getByRole("button", { name: "Zamknij" }).click();
+      // ✕ is what replaces it. The fleet banner carries no `Retry` — the row's
+      // own `Restore` is the retry, so exactly one retry control is on screen.
+      await expect(page.getByRole("button", { name: "Retry" })).toHaveCount(0);
+      await page.getByRole("button", { name: "Close" }).click();
       await expect(banner).toHaveCount(0);
       // Dismissing the message must not remove the row it was about — the
       // vehicle is still retired, because the abort changed nothing server-side.
@@ -133,19 +133,19 @@ test.describe("the fleet banner is reachable from the row that set it", () => {
       // `.last()` here is the deepest retire control, and Playwright's auto-scroll
       // to it leaves the page scrolled when the dialog opens. A dialog error read
       // at scrollY 0 would prove nothing.
-      await page.getByRole("checkbox", { name: "Pokaż wycofane" }).check();
+      await page.getByRole("checkbox", { name: "Show retired" }).check();
       await expect(page.getByText(name).first()).toBeAttached();
-      await page.getByRole("button", { name: "Wycofaj", exact: true }).last().click();
+      await page.getByRole("button", { name: "Retire", exact: true }).last().click();
 
-      await expect(page.getByText("Wycofać pojazd z floty?")).toBeVisible();
+      await expect(page.getByText("Retire this vehicle from the fleet?")).toBeVisible();
       expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(200);
 
       // `.last()` again, and now it resolves to a different control: `RetireDialog`
       // renders after the list, so its confirm is DOM-last. The row controls and
-      // the dialog's confirm share one accessible name — `Wycofaj` is the verb in
+      // the dialog's confirm share one accessible name — `Retire` is the verb in
       // both places — which is a copy decision, not something to work around with
       // a test id.
-      await page.getByRole("button", { name: "Wycofaj", exact: true }).last().click();
+      await page.getByRole("button", { name: "Retire", exact: true }).last().click();
 
       const error = page.getByText("Pojazd ma aktywne rezerwacje — najpierw je anuluj.");
       await expect(error).toBeVisible();
@@ -155,7 +155,7 @@ test.describe("the fleet banner is reachable from the row that set it", () => {
       expect(await isInViewport(error), "dialog error is outside the viewport").toBe(true);
       expect(await isTopmostAtItsOwnCentre(error), "dialog error is covered").toBe(true);
       // And it did not leak onto the banner, whose ✕ would be on screen if it had.
-      await expect(page.getByRole("button", { name: "Zamknij" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Close" })).toHaveCount(0);
     } finally {
       await page.unroute("**/api/vehicles/*/active");
       await deleteVehicle(vehicleId);

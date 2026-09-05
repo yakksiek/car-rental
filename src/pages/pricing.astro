@@ -10,6 +10,8 @@ import CategoryIcon from "../components/vehicle/CategoryIcon.astro";
 import type { InfoIconName } from "../components/icons/info-icons";
 import { getCategoryPricing } from "../lib/services/vehicles";
 import { formatPln } from "../lib/format";
+
+const { locale, t } = Astro.locals;
 import { cn } from "../lib/utils";
 
 // Cennik — hybrid page (design ScreenPricingDesktop/Mobile, PricingBody). Only the
@@ -19,7 +21,7 @@ import { cn } from "../lib/utils";
 // (verbatim) — they encode a length-discount ladder and single global values we do
 // not store. Money always routes through formatPln (never .toFixed()).
 
-const pricing = await getCategoryPricing(Astro.locals.supabase);
+const pricing = await getCategoryPricing(Astro.locals.supabase, locale);
 
 interface Tier {
   icon: InfoIconName;
@@ -32,45 +34,57 @@ interface Tier {
 }
 
 const tiers: Tier[] = [
-  { icon: "calendar", name: "Na dobę", when: "1–3 dni", from: "219", note: "Elastycznie, bez zobowiązań" },
+  {
+    icon: "calendar",
+    name: t("info.tierDailyName"),
+    when: t("info.tierDailyWhen"),
+    from: "219",
+    note: t("info.tierDailyNote"),
+  },
   {
     icon: "van",
-    name: "Krótkoterminowy",
-    when: "1–30 dni",
+    name: t("info.tierShortName"),
+    when: t("info.tierShortWhen"),
     from: "199",
-    note: "Niższa stawka dobowa",
-    tag: "Popularny",
+    note: t("info.tierShortNote"),
+    tag: t("info.tierShortTag"),
   },
-  { icon: "gauge", name: "Średnioterminowy", when: "1–24 mies.", from: "169", note: "Stała rata miesięczna" },
+  {
+    icon: "gauge",
+    name: t("info.tierMediumName"),
+    when: t("info.tierMediumWhen"),
+    from: "169",
+    note: t("info.tierMediumNote"),
+  },
   {
     icon: "spark",
-    name: "Długoterminowy",
-    when: "24+ mies.",
+    name: t("info.tierLongName"),
+    when: t("info.tierLongWhen"),
     from: "149",
-    note: "Najniższy koszt, pełny serwis",
-    tag: "Najlepsza cena",
+    note: t("info.tierLongNote"),
+    tag: t("info.tierLongTag"),
     feat: true,
   },
 ];
 
 const included: string[] = [
-  "Pełne ubezpieczenie AC / OC / NNW",
-  "Assistance 24/7 w całej Polsce",
-  "Bezpłatne podstawienie w mieście",
-  "Limit 300 km / dobę (potem 0,50 zł/km)",
-  "Serwis, przeglądy i wymiana opon",
-  "Auto zastępcze przy awarii",
+  t("info.included1"),
+  t("info.included2"),
+  t("info.included3"),
+  t("info.included4"),
+  t("info.included5"),
+  t("info.included6"),
 ];
 
 const goodToKnow: [k: string, v: string][] = [
-  ["Kaucja", "od 1 500 zł, zwracana po zwrocie auta"],
-  ["VAT", "Wszystkie ceny netto (+23% VAT)"],
-  ["Faktura", "Faktura VAT do każdego wynajmu"],
-  ["Płatność", "Karta, przelew lub gotówka przy odbiorze"],
+  [t("info.goodToKnowDepositKey"), t("info.goodToKnowDepositValue")],
+  [t("info.goodToKnowVatKey"), t("info.goodToKnowVatValue")],
+  [t("info.goodToKnowInvoiceKey"), t("info.goodToKnowInvoiceValue")],
+  [t("info.goodToKnowPaymentKey"), t("info.goodToKnowPaymentValue")],
 ];
 ---
 
-<Layout title="Cennik — Flota">
+<Layout title={t("info.pricingTitle")}>
   <SiteHeader active="pricing" />
 
   <main>
@@ -81,16 +95,15 @@ const goodToKnow: [k: string, v: string][] = [
       <div class="mx-auto max-w-[1180px]">
         <div class="text-primary inline-flex items-center gap-2 text-[12px] font-bold tracking-[1px] uppercase">
           <span class="bg-primary size-1.5 rounded-full"></span>
-          Cennik
+          {t("info.pricingEyebrow")}
         </div>
         <h1
           class="text-foreground mt-4 text-[34px] leading-[1.02] font-bold tracking-[-1px] text-balance sm:text-[54px] sm:tracking-[-1.8px]"
         >
-          Przejrzyste stawki, bez ukrytych kosztów
+          {t("info.pricingHeading")}
         </h1>
         <p class="mt-4 max-w-[680px] text-[15px] leading-[1.55] text-[var(--flota-ink-2)] sm:text-[18px]">
-          Płacisz za dobę lub za miesiąc — im dłuższy wynajem, tym niższa stawka. Ubezpieczenie i assistance zawsze w
-          cenie.
+          {t("info.pricingLead")}
         </p>
       </div>
     </div>
@@ -155,7 +168,7 @@ const goodToKnow: [k: string, v: string][] = [
                 <div class:list={cn("my-4 h-px", feat ? "bg-white/12" : "bg-[var(--flota-hair-2)]")} />
                 <div class="flex items-baseline gap-1">
                   <span class:list={cn("text-[12px] font-semibold", feat ? "text-white/60" : "text-muted-foreground")}>
-                    od
+                    {t("info.tierFrom")}
                   </span>
                   <span
                     class:list={cn(
@@ -166,7 +179,7 @@ const goodToKnow: [k: string, v: string][] = [
                     {tier.from}
                   </span>
                   <span class:list={cn("text-[13px] font-semibold", feat ? "text-white/60" : "text-muted-foreground")}>
-                    zł/doba
+                    {t("info.tierPerDay")}
                   </span>
                 </div>
                 <div
@@ -187,25 +200,29 @@ const goodToKnow: [k: string, v: string][] = [
     <!-- Live per-category rate table -->
     <div class="mx-auto max-w-[1180px] px-[22px] pt-[32px] sm:px-[48px] sm:pt-[54px]">
       <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
-        Stawki wg typu pojazdu
+        {t("info.ratesHeading")}
       </h2>
       <div class="mt-1 mb-5 text-[14px] text-[var(--flota-ink-2)] sm:text-[15px]">
-        Ceny netto, od. Ostateczna wycena zależy od terminu i długości najmu.
+        {t("info.ratesLead")}
       </div>
       <div class="bg-card shadow-card overflow-hidden rounded-[20px] border border-[var(--flota-hair)]">
         <!-- Header band (desktop only) -->
         <div
           class="hidden grid-cols-[2.4fr_1fr_1fr] border-b border-[var(--flota-hair)] bg-[#E7EAF1] px-[22px] py-[14px] sm:grid"
         >
-          <div class="text-muted-foreground text-[11px] font-bold tracking-[0.4px] uppercase">Pojazd</div>
-          <div class="text-muted-foreground text-right text-[11px] font-bold tracking-[0.4px] uppercase">Doba</div>
-          <div class="text-muted-foreground text-right text-[11px] font-bold tracking-[0.4px] uppercase">Miesiąc</div>
+          <div class="text-muted-foreground text-[11px] font-bold tracking-[0.4px] uppercase">
+            {t("info.ratesColVehicle")}
+          </div>
+          <div class="text-muted-foreground text-right text-[11px] font-bold tracking-[0.4px] uppercase">
+            {t("info.ratesColDay")}
+          </div>
+          <div class="text-muted-foreground text-right text-[11px] font-bold tracking-[0.4px] uppercase">
+            {t("info.ratesColMonth")}
+          </div>
         </div>
         {
           pricing.length === 0 ? (
-            <div class="text-muted-foreground px-[16px] py-[18px] text-[14px] sm:px-[22px]">
-              Cennik chwilowo niedostępny — zadzwoń: +48 22 100 20 30
-            </div>
+            <div class="text-muted-foreground px-[16px] py-[18px] text-[14px] sm:px-[22px]">{t("info.ratesEmpty")}</div>
           ) : (
             pricing.map((row, i) => (
               <div
@@ -227,16 +244,19 @@ const goodToKnow: [k: string, v: string][] = [
                 {/* Mobile: stacked rates; desktop: two right-aligned cells. */}
                 <div class="shrink-0 text-right sm:hidden">
                   <div class="text-foreground text-[15px] font-[750] tracking-[-0.4px]">
-                    od {formatPln(row.minDaily)}
-                    <span class="text-muted-foreground text-[11px] font-semibold">/doba</span>
+                    {t("info.ratesFrom")} {formatPln(row.minDaily, locale)}
+                    <span class="text-muted-foreground text-[11px] font-semibold">{t("info.ratesPerDayShort")}</span>
                   </div>
-                  <div class="text-muted-foreground mt-px text-[12px]">od {formatPln(row.minMonthly)}/mies</div>
+                  <div class="text-muted-foreground mt-px text-[12px]">
+                    {t("info.ratesFrom")} {formatPln(row.minMonthly, locale)}
+                    {t("info.ratesPerMonthShort")}
+                  </div>
                 </div>
                 <div class="text-foreground hidden text-right text-[16px] font-[750] tracking-[-0.4px] sm:block">
-                  od {formatPln(row.minDaily)}
+                  {t("info.ratesFrom")} {formatPln(row.minDaily, locale)}
                 </div>
                 <div class="hidden text-right text-[16px] font-bold tracking-[-0.4px] text-[var(--flota-ink-2)] sm:block">
-                  od {formatPln(row.minMonthly)}
+                  {t("info.ratesFrom")} {formatPln(row.minMonthly, locale)}
                 </div>
               </div>
             ))
@@ -250,7 +270,7 @@ const goodToKnow: [k: string, v: string][] = [
       <div class="grid grid-cols-1 items-start gap-5 sm:grid-cols-[1.3fr_1fr] sm:gap-7">
         <div>
           <h2 class="text-foreground text-[23px] font-bold tracking-[-0.6px] sm:text-[32px] sm:tracking-[-1px]">
-            W każdej cenie
+            {t("info.includedHeading")}
           </h2>
           <div class="mt-[18px] grid grid-cols-1 gap-[10px] sm:grid-cols-2 sm:gap-3">
             {
@@ -269,7 +289,7 @@ const goodToKnow: [k: string, v: string][] = [
         </div>
 
         <div class="bg-ink-deep rounded-[20px] p-[22px] text-white sm:p-[26px]">
-          <div class="text-[15.5px] font-bold tracking-[-0.2px]">Dobrze wiedzieć</div>
+          <div class="text-[15.5px] font-bold tracking-[-0.2px]">{t("info.goodToKnowHeading")}</div>
           <div class="mt-4 flex flex-col gap-3">
             {
               goodToKnow.map(([k, v]) => (
@@ -286,7 +306,7 @@ const goodToKnow: [k: string, v: string][] = [
             href="/fleet"
             class="bg-primary mt-[18px] flex h-[46px] items-center justify-center gap-2 rounded-[12px] text-[14.5px] font-[650] text-white"
           >
-            Zarezerwuj pojazd
+            {t("info.reserveVehicle")}
             <InfoIcon name="arrowRight" size={16} color="#fff" />
           </a>
         </div>

@@ -7,6 +7,9 @@ import { protocolIssuedEmail, protocolReturnedEmail } from "../email/templates";
 import { computeReturnDeltas } from "../protocol-delta";
 import { PHOTO_SLOTS } from "../protocol-schema";
 import type { ProtocolInput } from "../protocol-schema";
+import { protocol as protocolCatalog } from "../i18n/protocol";
+import { asLocale, translator } from "../i18n/types";
+import type { Locale } from "../i18n/types";
 import { captionOf } from "../returns-filter";
 import type { ReturnProtocolInput } from "../return-protocol-schema";
 import { sendTracked } from "./email-delivery";
@@ -49,6 +52,22 @@ const SIGNED_URL_TTL_SECONDS = 300;
 
 const TEMPLATE = "protocol_issued";
 const TEMPLATE_RETURN = "protocol_returned";
+
+/**
+ * The PDF's attachment filename stem, in the DOCUMENT's language — read from
+ * `protocols.locale`, never from the sender's session, exactly as
+ * `media/protocol-pdf.ts` reads it for the bytes inside. A resend months later
+ * has no session at all, and the file the customer saves should be named the way
+ * the document they open is written.
+ *
+ * The stems are ASCII in both halves (`protocol-pickup` / `protokol-wydania`):
+ * this becomes a filename on someone else's device.
+ */
+function artifactFilename(type: "issue" | "return", locale: Locale): string {
+  const t = translator(locale, protocolCatalog);
+  return t(type === "return" ? "filenameReturn" : "filenameIssue");
+}
+
 const ENTITY_TYPE = "protocol";
 
 /**
@@ -90,6 +109,10 @@ export async function createProtocol(
       size: damage.size,
       photos: damage.photos,
     })),
+    // What language the client just rendered the PDF in. Stamped on the row so
+    // the resend path can write its covering mail in the language of the bytes
+    // it attaches, months after the session that produced them is gone.
+    p_locale: input.locale,
   });
   if (error) {
     throw error;
@@ -255,6 +278,12 @@ export async function resendProtocolEmail(
   }
 
   const vehicle = [protocol.vehicle_make, protocol.vehicle_model].filter(Boolean).join(" ");
+  // `protocols.locale` — what the stored PDF was rendered in. NOT the
+  // reservation's current value and emphatically not the resending employee's
+  // session: this mail describes bytes that already exist and are never
+  // regenerated, so it has to be written in their language or it arrives
+  // describing the attachment in a language the attachment is not in.
+  const documentLocale = asLocale(protocol.locale);
 
   if (protocol.type === "return") {
     // Load the issue baseline the deltas are measured against, then compute them
@@ -286,13 +315,19 @@ export async function resendProtocolEmail(
       kmDriven: deltas.kmDriven,
       fuelDelta: deltas.fuelDelta,
       newDamageCount: deltas.newDamageCount,
+      locale: documentLocale,
     });
 
     return sendTracked(client, protocol.customer_email, content, {
       entityType: ENTITY_TYPE,
       entityId: protocolId,
       template: TEMPLATE_RETURN,
-      attachments: [{ path: signed.signedUrl, filename: `protokol-zwrotu-${protocol.reference}.pdf` }],
+      attachments: [
+        {
+          path: signed.signedUrl,
+          filename: `${artifactFilename("return", documentLocale)}-${protocol.reference}.pdf`,
+        },
+      ],
     });
   }
 
@@ -304,13 +339,16 @@ export async function resendProtocolEmail(
     odometerKm: protocol.odometer_km,
     fuelEighths: protocol.fuel_eighths,
     damageCount: protocol.damages.length,
+    locale: documentLocale,
   });
 
   return sendTracked(client, protocol.customer_email, content, {
     entityType: ENTITY_TYPE,
     entityId: protocolId,
     template: TEMPLATE,
-    attachments: [{ path: signed.signedUrl, filename: `protokol-wydania-${protocol.reference}.pdf` }],
+    attachments: [
+      { path: signed.signedUrl, filename: `${artifactFilename("issue", documentLocale)}-${protocol.reference}.pdf` },
+    ],
   });
 }
 
@@ -467,6 +505,8 @@ export async function createReturnProtocol(
       baseline_damage_id: damage.baselineDamageId,
       photos: damage.photos,
     })),
+    // As on the issue path: the language of the bytes, not of the session.
+    p_locale: input.locale,
   });
   if (error) {
     throw error;

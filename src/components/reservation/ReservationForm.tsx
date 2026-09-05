@@ -1,7 +1,5 @@
 // core
 import * as React from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import { CheckIcon } from "lucide-react";
 
 // components
@@ -12,7 +10,11 @@ import { Label } from "../ui/label";
 // others
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
-import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { estimatedTotal, formatDuration, formatPln, formatPlnAmount, rentalDays } from "../../lib/format";
+import { dayMonthRange, dayMonthShort } from "../../lib/format-date";
+import { booking } from "../../lib/i18n/booking";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import { reservationRequestSchema } from "../../lib/reservation-schema";
 
 // Reservation flow steps 2–3 — "Twoje dane" then "Podsumowanie" (design
@@ -44,36 +46,9 @@ interface Props {
   backHref: string;
   /** Server-rendered silhouette for the order-summary thumbnail. */
   children?: React.ReactNode;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
-
-const BRANCH = "Warszawa · Mokotów";
-
-const COPY = {
-  eyebrow: "Zarezerwuj pojazd",
-  headingDetails: "Twoje dane",
-  headingReview: "Podsumowanie",
-  backToVehicle: "Wróć do pojazdu",
-  backToDetails: "Wróć do danych",
-  next: "Dalej",
-  submit: "Wyślij zgłoszenie",
-  change: "Zmień",
-  summary: "Twoja rezerwacja",
-  bookingDetails: "Dane rezerwacji",
-  customerDetails: "Dane klienta",
-  pickup: "Odbiór",
-  return: "Zwrot",
-  duration: "Czas trwania",
-  rate: "Stawka",
-  branch: "Oddział",
-  estimate: "Szacunkowa cena",
-  deposit: "Kaucja",
-  terms: "Akceptuję regulamin wynajmu.",
-  reassurance: "Bez płatności teraz — potwierdzimy dostępność e-mailem, zwykle w godzinę.",
-  fixFields: "Popraw zaznaczone pola.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-} as const;
-
-const STEPS = ["Daty", "Twoje dane", "Podsumowanie"] as const;
 
 // Field ids in visual order — drives "scroll to the first error" on a failed
 // submit (the element id matches each field's `id`/`htmlFor`).
@@ -132,13 +107,6 @@ const chevronIcon = (
   </svg>
 );
 
-/** `24 – 27 marca` (same month shows the pickup day only) / `28 marca – 2 kwietnia`. */
-function rangeHeadline(from: Date, to: Date): string {
-  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
-  const fromLabel = sameMonth ? format(from, "d", { locale: pl }) : format(from, "d MMMM", { locale: pl });
-  return `${fromLabel} – ${format(to, "d MMMM", { locale: pl })}`;
-}
-
 /** First zod message per top-level field, e.g. `{ customer_email: "Podaj…" }`. */
 function firstIssuePerField(issues: { path: PropertyKey[]; message: string }[]): Record<string, string> {
   const errors: Record<string, string> = {};
@@ -150,7 +118,9 @@ function firstIssuePerField(issues: { path: PropertyKey[]; message: string }[]):
 }
 
 export default function ReservationForm(props: Props) {
-  const { vehicle, pickup, return: returnIso, backHref, children } = props;
+  const { vehicle, pickup, return: returnIso, backHref, children, locale } = props;
+  const t = translator(locale, booking);
+  const STEPS = [t("stepDates"), t("stepDetails"), t("stepReview")] as const;
 
   const [step, setStep] = React.useState<Step>("details");
   const [name, setName] = React.useState("");
@@ -167,18 +137,20 @@ export default function ReservationForm(props: Props) {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  // The "Popraw zaznaczone pola." banner is DERIVED from the live field errors,
+  // The "correct the highlighted fields" banner is DERIVED from the live field errors,
   // so it disappears on its own once the last field is fixed (no stale state).
   // `submitError` holds only the persistent server errors (conflict / generic).
   const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
-  const formError = submitError ?? (hasFieldErrors ? COPY.fixFields : null);
+  const formError = submitError ?? (hasFieldErrors ? t("fixFields") : null);
 
   const days = rentalDays(pickup, returnIso);
   const total = estimatedTotal(vehicle.dailyRate, days);
   const pickupDate = fromIsoDate(pickup);
   const returnDate = fromIsoDate(returnIso);
   const datesHeadline =
-    pickupDate && returnDate ? `${rangeHeadline(pickupDate, returnDate)} · ${formatDuration(days)}` : "";
+    pickupDate && returnDate
+      ? `${dayMonthRange(pickupDate, returnDate, locale, { month: "long" })} · ${formatDuration(days, locale)}`
+      : "";
 
   function buildPayload() {
     return {
@@ -201,7 +173,7 @@ export default function ReservationForm(props: Props) {
    * Returns the per-field error map on failure, or `null` when valid.
    */
   function validate(): Record<string, string> | null {
-    const parsed = reservationRequestSchema.safeParse(buildPayload());
+    const parsed = reservationRequestSchema(locale).safeParse(buildPayload());
     if (parsed.success) {
       setFieldErrors({});
       return null;
@@ -277,7 +249,7 @@ export default function ReservationForm(props: Props) {
       const body = (await res.json().catch(() => ({}))) as SubmitFailure;
       if (res.status === 409) {
         // Conflict ("pojazd właśnie został zarezerwowany") or vehicle gone.
-        setSubmitError(body.error ?? COPY.genericError);
+        setSubmitError(body.error ?? t("genericError"));
         return;
       }
       if (res.status === 400) {
@@ -287,9 +259,9 @@ export default function ReservationForm(props: Props) {
         scrollToFirstError(serverErrors);
         return;
       }
-      setSubmitError(COPY.genericError);
+      setSubmitError(t("genericError"));
     } catch {
-      setSubmitError(COPY.genericError);
+      setSubmitError(t("genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -308,11 +280,11 @@ export default function ReservationForm(props: Props) {
     full?: boolean;
   }
   const textFields: FieldDef[] = [
-    { id: "customer_name", label: "Imię i nazwisko", type: "text", autoComplete: "name", value: name, set: setName },
-    { id: "customer_phone", label: "Telefon", type: "tel", autoComplete: "tel", value: phone, set: setPhone },
+    { id: "customer_name", label: t("fieldName"), type: "text", autoComplete: "name", value: name, set: setName },
+    { id: "customer_phone", label: t("fieldPhone"), type: "tel", autoComplete: "tel", value: phone, set: setPhone },
     {
       id: "customer_email",
-      label: "Email",
+      label: t("fieldEmail"),
       type: "email",
       autoComplete: "email",
       value: email,
@@ -321,45 +293,48 @@ export default function ReservationForm(props: Props) {
     },
     {
       id: "company",
-      label: "Firma (opcj.)",
+      label: t("fieldCompany"),
       type: "text",
       autoComplete: "organization",
       value: company,
       set: setCompany,
     },
-    { id: "vat_id", label: "NIP (opcj.)", type: "text", autoComplete: "off", value: vatId, set: setVatId },
+    { id: "vat_id", label: t("fieldVatId"), type: "text", autoComplete: "off", value: vatId, set: setVatId },
   ];
 
   const summaryRows = [
-    { label: COPY.pickup, value: pickupDate ? `${format(pickupDate, "d MMM", { locale: pl })} · 14:00` : "—" },
-    { label: COPY.return, value: returnDate ? `${format(returnDate, "d MMM", { locale: pl })} · 10:00` : "—" },
-    { label: COPY.branch, value: BRANCH },
+    { label: t("pickup"), value: pickupDate ? `${dayMonthShort(pickupDate, locale)} · 14:00` : "—" },
+    { label: t("return"), value: returnDate ? `${dayMonthShort(returnDate, locale)} · 10:00` : "—" },
+    { label: t("branch"), value: t("branchValue") },
   ];
 
   const priceRows = [
-    { label: `${formatPln(vehicle.dailyRate)} × ${formatDuration(days)}`, value: formatPln(total) },
-    { label: COPY.deposit, value: formatPln(vehicle.deposit) },
+    {
+      label: `${formatPln(vehicle.dailyRate, locale)} × ${formatDuration(days, locale)}`,
+      value: formatPln(total, locale),
+    },
+    { label: t("deposit"), value: formatPln(vehicle.deposit, locale) },
   ];
 
   // Read-only review rows (step 3). Optional B2B fields only appear when filled.
   const reviewBookingRows = [
-    { label: COPY.pickup, value: pickupDate ? `${format(pickupDate, "d MMM", { locale: pl })} · 14:00` : "—" },
-    { label: COPY.return, value: returnDate ? `${format(returnDate, "d MMM", { locale: pl })} · 10:00` : "—" },
-    { label: COPY.duration, value: formatDuration(days) },
-    { label: COPY.rate, value: `${formatPln(vehicle.dailyRate)}/doba` },
+    { label: t("pickup"), value: pickupDate ? `${dayMonthShort(pickupDate, locale)} · 14:00` : "—" },
+    { label: t("return"), value: returnDate ? `${dayMonthShort(returnDate, locale)} · 10:00` : "—" },
+    { label: t("duration"), value: formatDuration(days, locale) },
+    { label: t("rate"), value: `${formatPln(vehicle.dailyRate, locale)}${t("perDay")}` },
   ];
   const reviewCustomerRows = [
-    { label: "Imię i nazwisko", value: name },
-    { label: "Email", value: email },
-    { label: "Telefon", value: phone },
-    ...(company.trim() ? [{ label: "Firma", value: company }] : []),
-    ...(vatId.trim() ? [{ label: "NIP", value: vatId }] : []),
-    ...(notes.trim() ? [{ label: "Uwagi", value: notes }] : []),
+    { label: t("fieldName"), value: name },
+    { label: t("fieldEmail"), value: email },
+    { label: t("fieldPhone"), value: phone },
+    ...(company.trim() ? [{ label: t("fieldCompanyShort"), value: company }] : []),
+    ...(vatId.trim() ? [{ label: t("fieldVatIdShort"), value: vatId }] : []),
+    ...(notes.trim() ? [{ label: t("fieldNotesShort"), value: notes }] : []),
   ];
 
   // Step-aware bits.
-  const heading = step === "details" ? COPY.headingDetails : COPY.headingReview;
-  const primaryLabel = step === "details" ? COPY.next : COPY.submit;
+  const heading = step === "details" ? t("headingDetails") : t("headingReview");
+  const primaryLabel = step === "details" ? t("next") : t("submit");
   const onPrimary = step === "details" ? handleNext : () => void handleSubmit();
 
   function stepState(i: number): "done" | "current" | "upcoming" {
@@ -376,11 +351,11 @@ export default function ReservationForm(props: Props) {
           "review" sub-step. */}
       <div className="flex items-center gap-3 py-4 lg:hidden">
         {step === "details" ? (
-          <a href={backHref} aria-label={COPY.backToVehicle} className={CHEVRON_CLASSES}>
+          <a href={backHref} aria-label={t("backToVehicle")} className={CHEVRON_CLASSES}>
             {chevronIcon}
           </a>
         ) : (
-          <button type="button" onClick={backToDetails} aria-label={COPY.backToDetails} className={CHEVRON_CLASSES}>
+          <button type="button" onClick={backToDetails} aria-label={t("backToDetails")} className={CHEVRON_CLASSES}>
             {chevronIcon}
           </button>
         )}
@@ -392,7 +367,7 @@ export default function ReservationForm(props: Props) {
           right. Indicator is desktop-only — mobile navigates via the chevron. */}
       <div className="hidden py-6 lg:flex lg:items-center lg:justify-between lg:gap-8">
         <div>
-          <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">{COPY.eyebrow}</p>
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">{t("eyebrow")}</p>
           <h1 className="text-foreground mt-1 font-serif text-4xl tracking-tight">{heading}</h1>
           {datesHeadline && <p className="text-muted-foreground mt-2 text-sm">{datesHeadline}</p>}
         </div>
@@ -433,7 +408,7 @@ export default function ReservationForm(props: Props) {
       <div className="lg:grid lg:grid-cols-[7fr_3fr] lg:items-start lg:gap-10">
         {/* Order summary — sticky right on desktop, on top on mobile (D9, D23). */}
         <aside className="bg-card shadow-card mb-6 rounded-lg p-6 lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1 lg:mb-0">
-          <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{COPY.summary}</h2>
+          <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{t("summary")}</h2>
 
           <div className="mt-3 flex items-center gap-3">
             <div className="text-foreground w-14 shrink-0">{children}</div>
@@ -460,11 +435,11 @@ export default function ReservationForm(props: Props) {
 
           {/* Navy estimated-total band (design desktop-2). */}
           <div className="bg-foreground text-background mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3">
-            <span className="text-sm font-semibold">{COPY.estimate}</span>
-            <span className="text-lg font-bold tracking-tight">{formatPln(total)}</span>
+            <span className="text-sm font-semibold">{t("estimate")}</span>
+            <span className="text-lg font-bold tracking-tight">{formatPln(total, locale)}</span>
           </div>
 
-          <p className="text-muted-foreground mt-4 text-sm leading-snug">{COPY.reassurance}</p>
+          <p className="text-muted-foreground mt-4 text-sm leading-snug">{t("reserveReassurance")}</p>
         </aside>
 
         {/* Main: step 2 fields OR step 3 review. */}
@@ -494,7 +469,7 @@ export default function ReservationForm(props: Props) {
 
                 {/* Notes — full-width textarea (optional). */}
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <Label htmlFor="notes">Uwagi dla zespołu (opcj.)</Label>
+                  <Label htmlFor="notes">{t("fieldNotes")}</Label>
                   <textarea
                     id="notes"
                     rows={3}
@@ -505,7 +480,7 @@ export default function ReservationForm(props: Props) {
                       setFieldErrors(({ notes: _gone, ...rest }) => rest);
                     }}
                     className="border-input bg-background placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full resize-y rounded-md border px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
-                    placeholder="Coś, o czym powinniśmy wiedzieć — ładunek, dodatkowy kierowca, preferowana godzina odbioru…"
+                    placeholder={t("notesPlaceholder")}
                   />
                   {fieldErrors.notes && <p className="text-destructive text-sm font-medium">{fieldErrors.notes}</p>}
                 </div>
@@ -513,7 +488,7 @@ export default function ReservationForm(props: Props) {
 
               {/* Honeypot — visually hidden; bots fill it, people never see it. */}
               <div className="sr-only" aria-hidden="true">
-                <label htmlFor="company_url">Firmowa strona WWW</label>
+                <label htmlFor="company_url">{t("fieldHoneypot")}</label>
                 <input
                   id="company_url"
                   name="company_url"
@@ -540,7 +515,26 @@ export default function ReservationForm(props: Props) {
                     className="mt-0.5"
                   />
                   <Label htmlFor="terms_accepted" className="text-foreground text-sm leading-snug font-medium">
-                    {COPY.terms}
+                    {t("termsPrefix")}{" "}
+                    {/* The document itself is the link, so the checkbox stops
+                        asking for consent to something with no address. It opens
+                        in a NEW TAB: `/reserve` holds every typed field in island
+                        state, so navigating away in this tab would discard the
+                        whole form. `stopPropagation` keeps the click from also
+                        toggling the checkbox through the enclosing <Label>. */}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-2"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                    >
+                      {t("termsLink")}
+                      <span className="sr-only"> {t("termsNewTab")}</span>
+                    </a>
+                    {t("termsSuffix")}
                   </Label>
                 </div>
                 {fieldErrors.terms_accepted && (
@@ -560,14 +554,14 @@ export default function ReservationForm(props: Props) {
                   href={backHref}
                   className="border-input text-foreground hover:bg-accent rounded-button inline-flex h-12 shrink-0 items-center gap-1.5 border bg-transparent px-5 text-sm font-semibold transition-colors"
                 >
-                  <span aria-hidden="true">‹</span> {COPY.backToVehicle}
+                  <span aria-hidden="true">‹</span> {t("backToVehicle")}
                 </a>
                 <button
                   type="button"
                   onClick={handleNext}
                   className="bg-primary text-primary-foreground rounded-button inline-flex h-12 flex-1 items-center justify-center gap-2 px-7 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)]"
                 >
-                  {COPY.next}
+                  {t("next")}
                   {arrow}
                 </button>
               </div>
@@ -577,10 +571,10 @@ export default function ReservationForm(props: Props) {
               {/* Booking details — dates change on step 1 (the detail page). */}
               <div className="flex items-center justify-between">
                 <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                  {COPY.bookingDetails}
+                  {t("bookingDetails")}
                 </h2>
                 <a href={backHref} className="text-primary text-sm font-semibold hover:underline">
-                  {COPY.change}
+                  {t("change")}
                 </a>
               </div>
               <dl className="mt-2 divide-y divide-[var(--flota-hair-2)]">
@@ -595,14 +589,14 @@ export default function ReservationForm(props: Props) {
               {/* Customer details — edit returns to the fields sub-step. */}
               <div className="mt-6 flex items-center justify-between border-t border-[var(--flota-hair-2)] pt-5">
                 <h2 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                  {COPY.customerDetails}
+                  {t("customerDetails")}
                 </h2>
                 <button
                   type="button"
                   onClick={backToDetails}
                   className="text-primary text-sm font-semibold hover:underline"
                 >
-                  {COPY.change}
+                  {t("change")}
                 </button>
               </div>
               <dl className="mt-2 divide-y divide-[var(--flota-hair-2)]">
@@ -629,7 +623,7 @@ export default function ReservationForm(props: Props) {
                   onClick={backToDetails}
                   className="border-input text-foreground hover:bg-accent rounded-button inline-flex h-12 shrink-0 items-center gap-1.5 border bg-transparent px-5 text-sm font-semibold transition-colors"
                 >
-                  <span aria-hidden="true">‹</span> {COPY.backToDetails}
+                  <span aria-hidden="true">‹</span> {t("backToDetails")}
                 </button>
                 <button
                   type="button"
@@ -637,7 +631,7 @@ export default function ReservationForm(props: Props) {
                   disabled={submitting}
                   className="bg-primary text-primary-foreground rounded-button inline-flex h-12 flex-1 items-center justify-center gap-2 px-7 text-[15px] font-semibold transition-colors hover:bg-[var(--flota-accent-dark)] disabled:opacity-60"
                 >
-                  {COPY.submit}
+                  {t("submit")}
                   {arrow}
                 </button>
               </div>
@@ -648,22 +642,28 @@ export default function ReservationForm(props: Props) {
 
       {/* Mobile/tablet sticky CTA (design mobile-2/3): a crimson estimate band
           stacked above a full-width crimson CTA — not a band with a side button.
-          Advances (Dalej) on step 2, submits (Wyślij zgłoszenie) on step 3. */}
+          Advances on step 2, submits on step 3. */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--flota-hair-2)] bg-[var(--flota-bg)]/92 backdrop-blur lg:hidden">
         <div className="mx-auto max-w-2xl px-5 pt-4 pb-4 sm:px-8">
           <div className="bg-primary text-primary-foreground rounded-button flex items-center justify-between gap-4 px-5 py-4">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{COPY.estimate}</div>
+              <div className="text-[11px] font-semibold tracking-[0.18em] uppercase opacity-80">{t("estimate")}</div>
               <div className="mt-0.5 font-bold tracking-tight">
-                <span className="text-[2.5rem] leading-none">{formatPln(total).replace(/\s*zł$/, "")}</span>
+                {/* Two type sizes, so the bare number comes from `formatPlnAmount`
+                    rather than from stripping `zł` off `formatPln` with a regex —
+                    that strip silently stopped matching once the currency became
+                    locale-aware, and the `zł` span beside it stayed regardless. */}
+                <span className="text-[2.5rem] leading-none">{formatPlnAmount(total, locale)}</span>
                 <span className="ml-1 text-lg">zł</span>
               </div>
             </div>
             <div className="shrink-0 text-right text-xs leading-snug opacity-80">
               <div>
-                {formatDuration(days)} × {formatPln(vehicle.dailyRate)}
+                {formatDuration(days, locale)} × {formatPln(vehicle.dailyRate, locale)}
               </div>
-              <div>+ kaucja {formatPln(vehicle.deposit)}</div>
+              <div>
+                {t("statusPlusDeposit")} {formatPln(vehicle.deposit, locale)}
+              </div>
             </div>
           </div>
           <button

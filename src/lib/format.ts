@@ -1,5 +1,5 @@
 // others
-import type { RejectionReason, ReservationStatus, Transmission, VehicleCategory } from "../types";
+import type { Locale } from "./i18n/types";
 
 // Pure, I/O-free presentation helpers for the public catalog. Two quirks they
 // own so call sites don't have to:
@@ -8,10 +8,23 @@ import type { RejectionReason, ReservationStatus, Transmission, VehicleCategory 
 //      helper parses `string | number` defensively; never `toFixed` a raw value.
 //   2. Cargo dims — stored in cm (also string-at-runtime); the detail/card UI
 //      wants metres.
-// Polish copy is canonical (PRD §Non-Goals); these labels are the single source.
+//
+// **This module never reaches the catalog.** Eleven React islands import it, and
+// a bundler tree-shakes on exports rather than on object keys — so a single
+// import of the composed `useTranslations` here would pull both locales' entire
+// dictionary into every one of those chunks. It stays a pure numeric module: the
+// unit words it owns (`zł`, `kg`, `m`, and the day noun `formatDuration` counts)
+// are units, identical or near-identical across locales. Anything a caller could
+// phrase differently belongs in a catalog namespace, reached by the caller. See
+// the accessor-boundary note in `src/lib/i18n/types.ts`.
+//
+// The Polish enum labels this module used to carry at the bottom are GONE — they
+// live in `src/lib/i18n/{vehicle,reservation}.ts` now, reached by the caller.
 
-const PLN_GROUP_SEPARATOR = " "; // non-breaking space, Polish thousands grouping
 const DASH = "—"; // shown for absent values
+
+/** BCP-47 tag per app locale — see `format-date.ts` for why `en` formats as en-GB. */
+const TAGS: Record<Locale, string> = { en: "en-GB", pl: "pl-PL" };
 
 /** Coerce a `string | number` (the numeric-as-string quirk) to a finite number. */
 function toNumber(value: string | number): number {
@@ -19,37 +32,101 @@ function toNumber(value: string | number): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Group an integer-part string with non-breaking spaces every three digits. */
-function groupThousands(intPart: string): string {
-  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, PLN_GROUP_SEPARATOR);
+// `Intl.NumberFormat` construction dominates the cost; the same few
+// (locale, fraction-digits) pairs are re-requested once per row of every list.
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
+/**
+ * `useGrouping: "always"` is NOT optional. CLDR `pl` sets
+ * `minimumGroupingDigits = 2`, so the default groups only from five integer
+ * digits — `5900` would render `5900`, regressing the app's most common amount
+ * shape (and `format.test.ts`'s `formatPln("5900.00", "pl") === "5 900 zł"`).
+ * Probed 2026-09-02. The separator `Intl` then uses for `pl` is U+00A0, which is
+ * byte-identical to the hand-rolled grouper this replaced.
+ */
+function numberFormat(locale: Locale, fractionDigits: number): Intl.NumberFormat {
+  const key = `${locale}|${fractionDigits}`;
+  let found = numberFormats.get(key);
+  if (!found) {
+    found = new Intl.NumberFormat(TAGS[locale], {
+      useGrouping: "always",
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    });
+    numberFormats.set(key, found);
+  }
+  return found;
+}
+
+/**
+ * A thousands-grouped whole number — `128 450` under `pl`, `128,450` under `en`.
+ *
+ * The ONE grouper. It replaced four hand-rolled ones that disagreed on the
+ * separator (`format.ts` U+00A0, `return-form.ts` U+0020, `protocol-form.ts`
+ * U+202F, `protocol-pdf.ts` U+00A0) plus a scatter of bare
+ * `toLocaleString("pl-PL")` calls that silently dropped grouping below five
+ * digits. Anything counting km, kg or an odometer reading routes through here.
+ *
+ * The PDF is the one caller that must NOT: its embedded font subset carries no
+ * U+202F, and a runtime whose CLDR chose that separator would draw a tofu box
+ * mid-number, so it keeps its own U+00A0-pinned copy — see `media/protocol-pdf.ts`.
+ */
+export function formatInteger(value: string | number, locale: Locale): string {
+  return numberFormat(locale, 0).format(Math.trunc(toNumber(value)));
+}
+
+/** The CLDR plural categories a locale can select. Polish uses three, English two. */
+export type PluralForms = { other: string } & Partial<Record<Intl.LDMLPluralRule, string>>;
+
+const pluralRules = new Map<Locale, Intl.PluralRules>();
+
+/**
+ * Select a counted noun's form for `n` in `locale`. Replaces the two hand-rolled
+ * selectors this repo carried — one here, one in `staff-format.ts` — which each
+ * open-coded Polish's 1 / 2–4 / rest split and its 12–14 exception.
+ * `Intl.PluralRules("pl-PL")` reproduces both exactly
+ * (probed 2026-09-01: 1→one, 2→few, 5→many, 12→many, 22→few).
+ *
+ * The caller supplies whichever forms its locale has and the helper falls back to
+ * `other`, so **arity stops being per-language**: English passes `{one, other}`,
+ * Polish `{one, few, many, other}`, and a third locale costs no code here. The
+ * number is rendered by the caller — this returns the noun alone, e.g.
+ * `${n} ${plural(n, locale, VEHICLE_FORMS[locale])}`.
+ */
+export function plural(n: number, locale: Locale, forms: PluralForms): string {
+  let rules = pluralRules.get(locale);
+  if (!rules) {
+    rules = new Intl.PluralRules(TAGS[locale]);
+    pluralRules.set(locale, rules);
+  }
+  return forms[rules.select(n)] ?? forms.other;
 }
 
 /**
  * The number half of a PLN amount, without the currency — `320`, `1,20`,
- * `5 900`. For the second amount in a pair that already carries the unit
- * (e.g. "1 745 zł + 3 000 kaucji"), where repeating "zł" is noise.
+ * `5 900` under `pl`; `320`, `1.20`, `5,900` under `en`. For the second amount in
+ * a pair that already carries the unit (e.g. "1 745 zł + 3 000 kaucji"), where
+ * repeating "zł" is noise.
  */
-export function formatPlnAmount(value: string | number): string {
+export function formatPlnAmount(value: string | number, locale: Locale): string {
   const n = toNumber(value);
-  const fixed = Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2);
-  const [intPart, decPart] = fixed.split(".");
-  const grouped = groupThousands(intPart);
-  return decPart ? `${grouped},${decPart}` : grouped;
+  return numberFormat(locale, Number.isInteger(n) ? 0 : 2).format(n);
 }
 
 /**
- * Format a PLN amount, e.g. `formatPln("320.00") -> "320 zł"`,
- * `formatPln(1.2) -> "1,20 zł"`, `formatPln(5900) -> "5 900 zł"`.
- * Whole amounts drop the decimal part; fractional amounts show two digits
- * with a comma separator (Polish convention).
+ * Format a PLN amount, e.g. `formatPln("320.00", "pl") -> "320 zł"`,
+ * `formatPln(1.2, "pl") -> "1,20 zł"`, `formatPln(5900, "pl") -> "5 900 zł"`.
+ * Whole amounts drop the decimal part; fractional amounts show two digits.
+ *
+ * **Composed by hand, never `style: "currency"`** (probed 2026-09-02). Under `pl`
+ * the currency style forces two decimals (`5900 → "5900,00 zł"`), contradicting
+ * the whole-amount rule above; under `en` it emits the ISO prefix
+ * (`"PLN 1,234.50"`), and even `currencyDisplay: "narrowSymbol"` puts the symbol
+ * BEFORE the number. `zł` stays in both locales — the business bills in PLN, and
+ * a currency symbol is not a translatable word.
  */
-export function formatPln(value: string | number): string {
-  return `${formatPlnAmount(value)} zł`;
-}
-
-/** Daily-rate display, e.g. `"320 zł/doba"`. */
-export function formatDailyRate(value: string | number): string {
-  return `${formatPln(value)}/doba`;
+export function formatPln(value: string | number, locale: Locale): string {
+  return `${formatPlnAmount(value, locale)} zł`;
 }
 
 /** Epoch ms of an ISO `YYYY-MM-DD` date at UTC midnight (calendar math only). */
@@ -89,33 +166,20 @@ export function totalDueAtPickup(dailyRate: string | number, days: number, depos
   return Math.round((estimatedTotal(dailyRate, days) + toNumber(deposit)) * 100) / 100;
 }
 
-/**
- * Polish duration label, plural-aware: `1 -> "1 dzień"`, otherwise `"N dni"`.
- */
-export function formatDuration(days: number): string {
-  return days === 1 ? "1 dzień" : `${days} dni`;
-}
+// The rental-day noun, per locale. A DURATION UNIT rather than vocabulary — it is
+// what `days` counts, so it belongs beside the number that arranges it, the same
+// way `zł` and `kg` do. It is also the only string in this module `plural` needs,
+// which is what keeps `formatDuration`'s twelve call sites from each hauling a
+// forms object around (Phase 1 §1's injected-forms sketch); nothing here reaches
+// the catalog either way.
+const DAY_FORMS: Record<Locale, PluralForms> = {
+  en: { one: "day", other: "days" },
+  pl: { one: "dzień", few: "dni", many: "dni", other: "dni" },
+};
 
-/**
- * Select the correct Polish plural form of a noun for a count. Polish inflects a
- * counted noun into three forms: singular (n = 1), "few" (n = 2–4, but NOT the
- * teens 12–14), and "many"/genitive (0, 5+, and the teens). Returns only the noun
- * form — the caller renders the number separately, e.g.
- * `${n} ${pluralPl(n, ["pojazd", "pojazdy", "pojazdów"])}`.
- *
- * `pluralPl(1, …) -> "pojazd"`, `pluralPl(2, …) -> "pojazdy"`, `pluralPl(5, …) -> "pojazdów"`.
- */
-export function pluralPl(n: number, forms: [one: string, few: string, many: string]): string {
-  const abs = Math.abs(Math.trunc(n));
-  const mod10 = abs % 10;
-  const mod100 = abs % 100;
-  if (abs === 1) {
-    return forms[0];
-  }
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return forms[1];
-  }
-  return forms[2];
+/** Duration label, plural-aware: `1 dzień` / `3 dni` / `1 day` / `3 days`. */
+export function formatDuration(days: number, locale: Locale): string {
+  return `${days} ${plural(days, locale, DAY_FORMS[locale])}`;
 }
 
 /** Format one cm dimension as metres (`440 -> "4.40"`), or the dash when absent. */
@@ -142,88 +206,10 @@ export function formatCargoDims(
   return `${formatDimM(length)} × ${formatDimM(width)} × ${formatDimM(height)} m`;
 }
 
-/** Payload capacity in kg, e.g. `"1 350 kg"`, or the dash when absent. */
-export function formatPayloadKg(value: string | number | null | undefined): string {
+/** Payload capacity in kg, e.g. `"1 350 kg"` / `"1,350 kg"`, or the dash when absent. */
+export function formatPayloadKg(value: string | number | null | undefined, locale: Locale): string {
   if (value === null || value === undefined || value === "") {
     return DASH;
   }
-  return `${groupThousands(toNumber(value).toFixed(0))} kg`;
-}
-
-const CATEGORY_LABELS_PL: Record<VehicleCategory, string> = {
-  cargo_van: "Furgon",
-  passenger_van: "Bus osobowy",
-  car_transporter: "Autolaweta",
-  refrigerated_truck: "Chłodnia",
-  flatbed_truck: "Skrzyniowy",
-};
-
-/** Polish label for a vehicle category enum value. */
-export function categoryLabelPl(category: VehicleCategory): string {
-  return CATEGORY_LABELS_PL[category];
-}
-
-const TRANSMISSION_LABELS_PL: Record<Transmission, string> = {
-  manual: "Manualna",
-  automatic: "Automatyczna",
-};
-
-/** Polish label for a transmission enum value; dash when absent. */
-export function transmissionLabelPl(transmission: Transmission | null | undefined): string {
-  if (!transmission) {
-    return DASH;
-  }
-  return TRANSMISSION_LABELS_PL[transmission];
-}
-
-// `fuel_type` is a free-text column (not an enum); map the known values and fall
-// back to the raw string (capitalized) for anything unseeded.
-const FUEL_LABELS_PL: Record<string, string> = {
-  diesel: "Diesel",
-  petrol: "Benzyna",
-  benzyna: "Benzyna",
-  gasoline: "Benzyna",
-  electric: "Elektryczny",
-  hybrid: "Hybryda",
-  lpg: "LPG",
-};
-
-/** Polish label for a free-text fuel type; dash when absent. */
-export function fuelLabelPl(fuel: string | null | undefined): string {
-  if (!fuel) {
-    return DASH;
-  }
-  const key = fuel.trim().toLowerCase();
-  return FUEL_LABELS_PL[key] ?? fuel.charAt(0).toUpperCase() + fuel.slice(1);
-}
-
-// Canonical Polish labels for the four canned rejection reasons (S-03). Single
-// source for the reject-reason sheet (Phase 4) and the rejection email (Phase 3).
-const REJECTION_REASON_LABELS_PL: Record<RejectionReason, string> = {
-  dates_unavailable: "Daty już niedostępne",
-  no_category: "Brak wymaganej kategorii",
-  vehicle_withdrawn: "Pojazd wycofany",
-  other: "Inny",
-};
-
-/** Polish label for a rejection-reason enum value. */
-export function rejectionReasonLabelPl(reason: RejectionReason): string {
-  return REJECTION_REASON_LABELS_PL[reason];
-}
-
-// Canonical Polish labels for the reservation status pill. Extracted from
-// `ReservationStatusCard.astro`, which owned the only copy, so the S-13 search
-// result rows show the SAME words as the status card rather than a second map
-// that can drift. Tints stay per-surface (each pill idiom differs); only the
-// wording is shared.
-const RESERVATION_STATUS_LABELS_PL: Record<ReservationStatus, string> = {
-  pending: "Oczekuje",
-  confirmed: "Potwierdzone",
-  rejected: "Odrzucone",
-  cancelled: "Anulowane",
-};
-
-/** Polish label for a reservation status enum value. */
-export function reservationStatusLabelPl(status: ReservationStatus): string {
-  return RESERVATION_STATUS_LABELS_PL[status];
+  return `${formatInteger(value, locale)} kg`;
 }

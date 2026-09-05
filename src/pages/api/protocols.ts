@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../lib/i18n/api";
+import { translator } from "../../lib/i18n/types";
 import { requireRole } from "../../lib/access";
 import { firstIssuePerField, protocolInputSchema } from "../../lib/protocol-schema";
 import { createProtocol } from "../../lib/services/protocols";
@@ -23,44 +25,36 @@ import { createProtocol } from "../../lib/services/protocols";
 //   (c) zod body validation, 400 `{ errors }`,
 //   (d) the definer RPC via the service, whose result tags map to HTTP.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono rezerwacji.",
-  notConfirmed: "Rezerwacja nie jest potwierdzona.",
-  conflict: "Dla tej rezerwacji wydano już protokół.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-staff role 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "employee")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   let payload: unknown;
   try {
     payload = await context.request.json();
   } catch {
-    return json(400, { error: MSG.badBody, errors: {} });
+    return json(400, { error: t("badBody"), errors: {} });
   }
 
   // (c) Validate — the same schema the island runs client-side.
-  const parsed = protocolInputSchema.safeParse(payload);
+  const parsed = protocolInputSchema(context.locals.locale).safeParse(payload);
   if (!parsed.success) {
     return json(400, { errors: firstIssuePerField(parsed.error.issues) });
   }
@@ -74,12 +68,12 @@ export const POST: APIRoute = async (context) => {
     case "ok":
       return json(201, { protocol_id: result.protocolId });
     case "conflict":
-      return json(409, { error: MSG.conflict, status: "conflict", protocol_id: result.protocolId });
+      return json(409, { error: t("protocolConflict"), status: "conflict", protocol_id: result.protocolId });
     case "not_confirmed":
-      return json(409, { error: MSG.notConfirmed, status: "not_confirmed" });
+      return json(409, { error: t("reservationNotConfirmed"), status: "not_confirmed" });
     case "not_found":
-      return json(404, { error: MSG.notFound });
+      return json(404, { error: t("reservationNotFound") });
     case "unauthorized":
-      return json(403, { error: MSG.forbidden });
+      return json(403, { error: t("forbidden") });
   }
 };

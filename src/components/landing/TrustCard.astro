@@ -1,6 +1,7 @@
 ---
 // others
-import { pluralPl } from "../../lib/format";
+import { formatInteger, plural } from "../../lib/format";
+import { VEHICLE_NOUN_FORMS } from "../../lib/i18n/vehicle";
 
 // Landing trust card (S4) — three rows: a hardcoded ratings PLACEHOLDER, the live
 // fleet count, and the reservation channels. Rendered twice (desktop floats in the
@@ -17,9 +18,17 @@ interface Props {
 }
 
 const { count, class: className } = Astro.props;
+const { locale, t } = Astro.locals;
 
-// Live fleet count with correct Polish plural (1 pojazd / 2–4 pojazdy / 5+ pojazdów).
-const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
+// Live fleet count with the noun form the count takes — 1 pojazd / 2–4 pojazdy /
+// 5+ pojazdów, and the 12–14 exception, all from `Intl.PluralRules`. The forms
+// live in the vehicle namespace so the hero eyebrow counts the same noun.
+const countNoun = plural(count, locale, VEHICLE_NOUN_FORMS[locale]);
+
+// Placeholder review count. Grouped through the app's ONE grouper so the
+// separator follows the locale (`1 280` under pl, `1,280` under en) instead of
+// being frozen into the markup as a literal U+00A0.
+const REVIEW_COUNT = 1280;
 ---
 
 <div
@@ -43,7 +52,10 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
     </svg>
     <div class="relative min-w-0">
       <div class="text-foreground text-[17px] leading-tight font-bold">4.9 / 5</div>
-      <div class="text-[12.5px] text-[var(--flota-ink-2)]">1 280 opinii klientów</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">
+        {formatInteger(REVIEW_COUNT, locale)}
+        {t("landing.reviews")}
+      </div>
     </div>
   </div>
 
@@ -67,7 +79,7 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
     </svg>
     <div class="relative min-w-0">
       <div class="text-foreground text-[17px] leading-tight font-bold">{count} {countNoun}</div>
-      <div class="text-[12.5px] text-[var(--flota-ink-2)]">we flocie, gotowe od ręki</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">{t("landing.fleetCountSub")}</div>
     </div>
   </div>
 
@@ -87,8 +99,8 @@ const countNoun = pluralPl(count, ["pojazd", "pojazdy", "pojazdów"]);
       <path d="M11 18.5h2"></path>
     </svg>
     <div class="relative min-w-0">
-      <div class="text-foreground text-[17px] leading-tight font-bold">Rezerwacja</div>
-      <div class="text-[12.5px] text-[var(--flota-ink-2)]">online lub telefonicznie</div>
+      <div class="text-foreground text-[17px] leading-tight font-bold">{t("landing.channelsTitle")}</div>
+      <div class="text-[12.5px] text-[var(--flota-ink-2)]">{t("landing.channelsSub")}</div>
     </div>
   </div>
 </div>

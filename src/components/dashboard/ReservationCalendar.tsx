@@ -10,6 +10,10 @@ import { CalendarDecision } from "./ReservationDecision";
 // others
 import dayjs from "../../lib/calendar/dayjs";
 import { reservationsToEvents } from "../../lib/calendar/map";
+import { dayMonthYearRange, monthYearLong } from "../../lib/format-date";
+import { dashboard } from "../../lib/i18n/dashboard";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import { cn } from "../../lib/utils";
 import type { CalendarReservation } from "../../types";
 
@@ -24,25 +28,28 @@ import type { CalendarReservation } from "../../types";
 // the week view runs at `weekViewGranularity="daily"` (7 day columns, no hour grid)
 // and month is the default. A custom `headerComponent` replaces the library
 // toolbar to (a) omit the `+ New` create button (L9) and (b) restrict the view
-// switcher to Miesiąc / Tydzień (no hour-grid Dzień, no Rok). The precise
+// switcher to month / week (no hour-grid day view, no year). The precise
 // 14:00→10:00 times live in the request detail, not the calendar bar.
 
-const TRANSLATIONS: Translations = {
-  ...defaultTranslations,
-  today: "Dziś",
-  month: "Miesiąc",
-  week: "Tydzień",
-  day: "Dzień",
-  year: "Rok",
-  event: "rezerwacja",
-  events: "rezerwacje",
-  more: "więcej",
-  resources: "Pojazdy",
-  resource: "Pojazd",
-  time: "Godzina",
-  date: "Data",
-  noResourcesVisible: "Brak pojazdów",
-};
+function translationsFor(locale: Locale): Translations {
+  const t = translator(locale, dashboard);
+  return {
+    ...defaultTranslations,
+    today: t("calToday"),
+    month: t("calMonth"),
+    week: t("calWeek"),
+    day: t("calDay"),
+    year: t("calYear"),
+    event: t("calEvent"),
+    events: t("calEvents"),
+    more: t("calMore"),
+    resources: t("calResources"),
+    resource: t("calResource"),
+    time: t("calTime"),
+    date: t("calDate"),
+    noResourcesVisible: t("calNoResources"),
+  };
+}
 
 function isoDate(value: unknown): string {
   if (typeof value === "string") {
@@ -62,60 +69,34 @@ function isoDate(value: unknown): string {
   return "";
 }
 
-// Polish month names — nominative for the month-view title, genitive for the
-// week-view range. Self-contained so the label never depends on the dayjs locale
-// bundle being loaded in workerd.
-const PL_MONTHS_NOM = [
-  "styczeń",
-  "luty",
-  "marzec",
-  "kwiecień",
-  "maj",
-  "czerwiec",
-  "lipiec",
-  "sierpień",
-  "wrzesień",
-  "październik",
-  "listopad",
-  "grudzień",
-];
-const PL_MONTHS_GEN = [
-  "stycznia",
-  "lutego",
-  "marca",
-  "kwietnia",
-  "maja",
-  "czerwca",
-  "lipca",
-  "sierpnia",
-  "września",
-  "października",
-  "listopada",
-  "grudnia",
+// The two views the switcher offers; the labels come from the catalog.
+const VIEW_OPTIONS: { id: CalendarView; labelKey: "calMonth" | "calWeek" }[] = [
+  { id: "month", labelKey: "calMonth" },
+  { id: "week", labelKey: "calWeek" },
 ];
 
-const VIEW_OPTIONS: { id: CalendarView; label: string }[] = [
-  { id: "month", label: "Miesiąc" },
-  { id: "week", label: "Tydzień" },
-];
-
-// Replaces the library toolbar: prev / Dziś / next + period label on the left, a
-// Miesiąc/Tydzień segmented switch on the right. No `+ New`, no export, no
-// hour-grid Dzień / Rok. Rendered inside the calendar provider, so it can drive
+// Replaces the library toolbar: prev / today / next + period label on the left, a
+// month/week segmented switch on the right. No `+ New`, no export, no
+// hour-grid day / year view. Rendered inside the calendar provider, so it can drive
 // navigation through the public context hook.
-function CalendarHeader() {
+function CalendarHeader({ locale }: { locale: Locale }) {
+  const t = translator(locale, dashboard);
   const { currentDate, view, setView, nextPeriod, prevPeriod, today } = useIlamyCalendarContext();
 
+  // The two period labels used to need two hand-rolled Polish month tables — a
+  // NOMINATIVE one for the standalone month title (`lipiec 2026`) and a GENITIVE
+  // one for the week range (`25–31 lipca 2026`) — on the belief that workerd's ICU
+  // could not be trusted. It can (probed 2026-09-01), and `Intl` makes the same
+  // split for free: a month asked for on its own comes back nominative, a month
+  // asked for beside a day comes back genitive. `formatRange` even reproduces the
+  // range's elision byte for byte, including which end keeps the month.
   let label: string;
   if (view === "week") {
     const start = currentDate.subtract((currentDate.day() + 6) % 7, "day"); // Monday
     const end = start.add(6, "day");
-    label =
-      start.month() === end.month()
-        ? `${start.date()}–${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`
-        : `${start.date()} ${PL_MONTHS_GEN[start.month()]} – ${end.date()} ${PL_MONTHS_GEN[end.month()]} ${end.year()}`;
+    label = dayMonthYearRange(start.toDate(), end.toDate(), locale);
   } else {
-    label = `${PL_MONTHS_NOM[currentDate.month()]} ${currentDate.year()}`;
+    label = monthYearLong(currentDate.toDate(), locale);
   }
 
   const navButton = "text-foreground hover:bg-background flex size-9 items-center justify-center rounded-full";
@@ -123,7 +104,7 @@ function CalendarHeader() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
       <div className="flex items-center gap-1">
-        <button type="button" onClick={prevPeriod} aria-label="Poprzedni okres" className={navButton}>
+        <button type="button" onClick={prevPeriod} aria-label={t("calPrevPeriod")} className={navButton}>
           <ChevronLeft className="size-[18px]" />
         </button>
         <button
@@ -131,9 +112,9 @@ function CalendarHeader() {
           onClick={today}
           className="border-border text-foreground hover:bg-background rounded-full border px-3.5 py-1.5 text-sm font-medium"
         >
-          Dziś
+          {t("calToday")}
         </button>
-        <button type="button" onClick={nextPeriod} aria-label="Następny okres" className={navButton}>
+        <button type="button" onClick={nextPeriod} aria-label={t("calNextPeriod")} className={navButton}>
           <ChevronRight className="size-[18px]" />
         </button>
         <span className="text-foreground ml-1.5 text-base font-bold tracking-tight capitalize">{label}</span>
@@ -153,7 +134,7 @@ function CalendarHeader() {
               view === v.id ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {v.label}
+            {t(v.labelKey)}
           </button>
         ))}
       </div>
@@ -254,13 +235,17 @@ export default function ReservationCalendar({
   initialDate,
   initialView = "month",
   focusVehicleId,
+  locale,
 }: {
   resources: Resource[];
   reservations: CalendarReservation[];
   initialDate?: string;
   initialView?: CalendarView;
   focusVehicleId?: string;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }) {
+  const t = translator(locale, dashboard);
   const [reservations, setReservations] = React.useState<CalendarReservation[]>(initial);
   const [active, setActive] = React.useState<CalendarReservation | null>(null);
 
@@ -320,18 +305,18 @@ export default function ReservationCalendar({
           initialDate={initialDate}
           weekViewGranularity="daily"
           firstDayOfWeek="monday"
-          locale="pl"
+          locale={locale}
           timezone="Europe/Warsaw"
           disableDragAndDrop
           disableCellClick
           hideExportButton
           headerComponent={
             <>
-              <CalendarHeader />
+              <CalendarHeader locale={locale} />
               <CalendarAutoFocus focusDate={initialDate} />
             </>
           }
-          translations={TRANSLATIONS}
+          translations={translationsFor(locale)}
           onEventClick={onEventClick}
           onDateChange={(_date: unknown, range: { start: unknown; end: unknown }) => refetch(range)}
         />
@@ -344,19 +329,20 @@ export default function ReservationCalendar({
             className={cn("size-3 rounded-[4px]")}
             style={{ backgroundColor: "#FBF1DA", borderLeft: "2px solid #B6790E" }}
           />
-          Oczekujące
+          {t("calLegendPending")}
         </span>
         <span className="flex items-center gap-2">
           <span
             className={cn("size-3 rounded-[4px]")}
             style={{ backgroundColor: "#E3F5EC", borderLeft: "2px solid #1B9E5A" }}
           />
-          Potwierdzone
+          {t("calLegendConfirmed")}
         </span>
       </div>
 
       {active && (
         <CalendarDecision
+          locale={locale}
           reservation={active}
           onClose={() => {
             setActive(null);

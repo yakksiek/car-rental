@@ -14,6 +14,8 @@ import LandingVehicleCard from "../components/vehicle/LandingVehicleCard.astro";
 
 // others
 import type { VehicleFilters } from "../types";
+import { plural } from "../lib/format";
+import { AVAILABLE_TODAY_FORMS } from "../lib/i18n/landing";
 import { listVehicles } from "../lib/services/vehicles";
 import heroImg from "../assets/hero-airfield.jpg";
 import vanImg from "../assets/van-cutout.png";
@@ -21,7 +23,7 @@ import vanImg from "../assets/van-cutout.png";
 // Public landing (restyled — `customer-desktop.jsx` → ScreenDesktopHome / ScreenMobileHome).
 // A dark immersive hero (full-bleed photo → translucent FLOTA wordmark → van-cutout
 // z-order → glass search pill + trust card) rising into a light sheet that carries the
-// "Proces wynajmu" stepper, a click-to-route category selector, and a "Popularne" strip.
+// rental-process stepper, a click-to-route category selector, and a "popular" strip.
 // Built over existing data + tokens (no global.css edit) and existing fonts. NO account
 // chrome (logged-in surfaces are deferred to v2).
 //
@@ -36,11 +38,20 @@ const NO_FILTERS: VehicleFilters = {
   sort: null,
 };
 
+const { locale, t } = Astro.locals;
 const vehicles = await listVehicles(Astro.locals.supabase, NO_FILTERS);
 const featured = vehicles.slice(0, 3);
+
+// The hero eyebrow, rendered uppercase by CSS. The WHOLE phrase is plural-selected
+// because Polish agrees the adjective with the count too ("1 pojazd dostępny" /
+// "2 pojazdy dostępne" / "5 pojazdów dostępnych"), which a frozen genitive got
+// right only from 5 up.
+const availableToday = `${vehicles.length} ${plural(vehicles.length, locale, AVAILABLE_TODAY_FORMS[locale])}`;
+
+// The default <Layout> title is already `Flota — <tagline>`, brand untranslated.
 ---
 
-<Layout title="Flota — wynajem pojazdów użytkowych">
+<Layout>
   <!-- Dark hero (S2) — full-bleed. Positioning context for the floating <LandingNav>
        and (on desktop) the absolutely-composed content column + trust card. -->
   <section class="relative w-full overflow-hidden bg-[#0A0D14] xl:h-[880px] xl:bg-[#080B12]">
@@ -96,25 +107,21 @@ const featured = vehicles.slice(0, 3);
     </div>
 
     <!-- Mobile hero content (below the photo stage, on solid dark). Copy is intentionally
-         different from desktop; the eyebrow is mobile-only (fixed genitive, deviation). -->
+         different from desktop; the eyebrow is mobile + tablet only. -->
     <div class="relative z-[5] flex flex-col gap-[18px] px-[22px] pt-0.5 pb-[34px] md:hidden">
       <p class="text-[11px] font-bold tracking-[1.4px] text-white/60 uppercase">
-        {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
+        {availableToday}
       </p>
       <h1 class="font-serif text-[46px] leading-[1.02] tracking-[-1.8px] text-white">
-        Pojazdy<br />użytkowe<span class="bg-primary ml-[3px] inline-block size-[9px] rounded-full align-baseline"
-        ></span>
+        {t("landing.heroTitleLine1")}<br />{t("landing.heroTitleLine2")}<span
+          class="bg-primary ml-[3px] inline-block size-[9px] rounded-full align-baseline"></span>
       </h1>
       <p class="text-[15px] leading-[23px] text-white/72">
-        Wynajem długoterminowy i na dobę, w pełni online, z fakturą VAT.
+        {t("landing.heroLede")}
       </p>
       <ul class="flex flex-col gap-2.5">
         {
-          [
-            "Darmowe podstawienie i odbiór w mieście",
-            "Bezpłatne odwołanie rezerwacji",
-            "Wynajem średnioterminowy już od 1 miesiąca",
-          ].map((text) => (
+          [t("landing.heroBullet1"), t("landing.heroBullet2"), t("landing.heroBullet3")].map((text) => (
             <li class="flex items-center gap-2.5 text-[14px] font-medium text-white/[0.92]">
               <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/10">
                 <svg
@@ -139,7 +146,7 @@ const featured = vehicles.slice(0, 3);
         href="/fleet"
         class="bg-primary text-primary-foreground mt-1.5 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[16px] text-[16px] font-bold [box-shadow:0_14px_30px_-10px_rgba(180,54,56,0.55)]"
       >
-        Zarezerwuj online
+        {t("landing.heroCta")}
         <svg
           class="size-4"
           viewBox="0 0 24 24"
@@ -162,22 +169,18 @@ const featured = vehicles.slice(0, 3);
          bottom-right, bottom-aligned with the copy (see the search wrapper below). -->
     <div class="relative z-[5] ml-10 hidden w-[408px] flex-col gap-5 pt-1.5 pb-[46px] md:flex xl:hidden">
       <p class="text-[12px] font-bold tracking-[1.4px] text-white/60 uppercase">
-        {vehicles.length} POJAZDÓW DOSTĘPNYCH DZIŚ
+        {availableToday}
       </p>
       <h1 class="font-serif text-[62px] leading-[62px] tracking-[-2.4px] text-white">
-        Pojazdy<br />użytkowe<span class="bg-primary mb-3 ml-[7px] inline-block size-[11px] rounded-full align-baseline"
-        ></span>
+        {t("landing.heroTitleLine1")}<br />{t("landing.heroTitleLine2")}<span
+          class="bg-primary mb-3 ml-[7px] inline-block size-[11px] rounded-full align-baseline"></span>
       </h1>
       <p class="max-w-[420px] text-[16.5px] leading-[26px] text-white/72">
-        Wynajem długoterminowy i na dobę, w pełni online, z fakturą VAT.
+        {t("landing.heroLede")}
       </p>
       <ul class="flex flex-col gap-3">
         {
-          [
-            "Darmowe podstawienie i odbiór w mieście",
-            "Bezpłatne odwołanie rezerwacji",
-            "Wynajem średnioterminowy już od 1 miesiąca",
-          ].map((text) => (
+          [t("landing.heroBullet1"), t("landing.heroBullet2"), t("landing.heroBullet3")].map((text) => (
             <li class="flex items-center gap-3 text-[14.5px] font-medium text-white/[0.92]">
               <span class="flex size-6 shrink-0 items-center justify-center rounded-full border border-white/[0.14] bg-white/10">
                 <svg
@@ -204,18 +207,14 @@ const featured = vehicles.slice(0, 3);
     <div class="hidden xl:block">
       <div class="absolute top-[414px] left-16 z-[5] w-[560px]">
         <h1 class="font-serif text-[56px] leading-[56px] tracking-[-2px] text-white">
-          Pojazdy<br />użytkowe<span class="text-primary">.</span>
+          {t("landing.heroTitleLine1")}<br />{t("landing.heroTitleLine2")}<span class="text-primary">.</span>
         </h1>
         <p class="mt-5 max-w-[440px] text-[15.5px] leading-[24px] text-white/80">
-          Nowe samochody dla Twojej firmy. Dostępne od ręki!
+          {t("landing.heroLedeDesktop")}
         </p>
         <ul class="mt-6 flex flex-col gap-3">
           {
-            [
-              "Darmowe podstawienie i odbiór na terenie miasta",
-              "Bezpłatne odwołanie rezerwacji",
-              "Wynajem średnioterminowy już od 1 miesiąca",
-            ].map((text) => (
+            [t("landing.heroBullet1Desktop"), t("landing.heroBullet2"), t("landing.heroBullet3")].map((text) => (
               <li class="flex items-center gap-3 text-[15.5px] font-medium text-white/95">
                 <span class="bg-primary size-[7px] shrink-0 rounded-full" />
                 {text}
@@ -243,7 +242,7 @@ const featured = vehicles.slice(0, 3);
     <div
       class="mx-auto w-full max-w-[560px] px-4 sm:px-6 md:absolute md:top-[-315px] md:right-10 md:z-20 md:mx-0 md:w-[320px] md:max-w-none md:px-0 xl:top-[-145px] xl:right-auto xl:left-16 xl:w-[740px]"
     >
-      <HeroSearch client:load />
+      <HeroSearch client:load locale={locale} />
     </div>
 
     <!-- Trust card — stacked on mobile, a 3-across white bar at the tablet tier
@@ -252,18 +251,18 @@ const featured = vehicles.slice(0, 3);
       <TrustCard count={vehicles.length} />
     </div>
 
-    <!-- Proces wynajmu (S6) -->
+    <!-- Rental process (S6) -->
     <ProcessSteps />
 
-    <!-- Wybierz typ pojazdu (S7) — click-to-route category selector -->
+    <!-- Vehicle type selector (S7) — click-to-route category selector -->
     <TypeSelector />
 
-    <!-- Popularne (S8) — forked LandingVehicleCard over live top-3 -->
+    <!-- Popular (S8) — forked LandingVehicleCard over live top-3 -->
     {
       featured.length > 0 && (
         <section class="max-w-app mx-auto px-5 pt-8 pb-16 sm:px-8">
           <h2 class="text-foreground mb-6 font-serif text-[26px] leading-none md:text-[30px] xl:text-[38px]">
-            Popularne
+            {t("landing.popular")}
           </h2>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {featured.map((vehicle) => (

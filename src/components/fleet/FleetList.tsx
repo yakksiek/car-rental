@@ -9,7 +9,11 @@ import QuickAddButton from "../dashboard/QuickAddButton";
 
 // others
 import { cn } from "../../lib/utils";
-import { categoryLabelPl, formatPln, fuelLabelPl, transmissionLabelPl } from "../../lib/format";
+import { formatPln } from "../../lib/format";
+import { categoryLabel, fuelLabel, transmissionLabel } from "../../lib/i18n/vehicle";
+import { fleetAdmin } from "../../lib/i18n/fleet-admin";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import type { CategoryCounts } from "../../lib/services/vehicles";
 import type { Vehicle, VehicleCategory } from "../../types";
 
@@ -50,41 +54,12 @@ import type { Vehicle, VehicleCategory } from "../../types";
 //      same omission phase 10 closed with `inviteSent`. There, a resend changes
 //      NOTHING on screen (the badge is already ZAPROSZONY), so the banner was the
 //      only signal. Here the row itself answers: `is_active` flips, so the badge
-//      goes `Wycofany` → `Aktywny` and the action goes `Przywróć` → `Wycofaj`, on
+//      goes retired → active and the action goes restore → retire, on
 //      the row the admin just clicked — verified against the running app at
 //      390×844, 2026-08-24, reading the card before and after. A restored row
 //      also cannot vanish either; it passes `filtered` at any toggle state. Out
 //      of scope, and not carried as a follow-up; adding a banner would be a
 //      second signal for a change already visible at the point of the click.
-
-const COPY = {
-  eyebrow: "pojazdów",
-  title: "Zarządzanie flotą",
-  add: "Dodaj pojazd",
-  searchPlaceholder: "Marka, model…",
-  all: "Wszystkie",
-  showRetired: "Pokaż wycofane",
-  active: "Aktywny",
-  retired: "Wycofany",
-  edit: "Edytuj",
-  restore: "Przywróć",
-  colVehicle: "Pojazd",
-  colStatus: "Status",
-  colRate: "Stawka",
-  perDay: "/doba",
-  perMonth: "/mies",
-  retireTitle: "Wycofać pojazd z floty?",
-  cancel: "Anuluj",
-  retireConfirm: "Wycofaj",
-  hasReservations: "Pojazd ma aktywne rezerwacje — najpierw je anuluj.",
-  genericError: "Coś poszło nie tak. Spróbuj ponownie.",
-  // The dismiss control phase 11 owes the pinned banner. Same shipped Polish as
-  // `StaffList.tsx`'s `close` and as `ModalShell`'s ✕ — one word, reused, not a
-  // new string to approve.
-  close: "Zamknij",
-  empty: "Brak pojazdów",
-  emptyHint: "Zmień filtry lub dodaj nowy pojazd do floty.",
-} as const;
 
 // Stable display order for the category pills (matches the catalog).
 const CATEGORY_ORDER: VehicleCategory[] = [
@@ -98,11 +73,11 @@ const CATEGORY_ORDER: VehicleCategory[] = [
 const cardClass = "rounded-lg border border-border bg-card shadow-card";
 
 /** `2021 · Diesel · Manualna` — only the present fields, dot-separated. */
-function specLine(vehicle: Vehicle): string {
+function specLine(vehicle: Vehicle, locale: Locale): string {
   return [
     vehicle.production_year ? String(vehicle.production_year) : null,
-    vehicle.fuel_type ? fuelLabelPl(vehicle.fuel_type) : null,
-    vehicle.transmission ? transmissionLabelPl(vehicle.transmission) : null,
+    vehicle.fuel_type ? fuelLabel(vehicle.fuel_type, locale) : null,
+    vehicle.transmission ? transmissionLabel(vehicle.transmission, locale) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -139,24 +114,26 @@ function Thumbnail({ vehicle, className }: { vehicle: Vehicle; className?: strin
   );
 }
 
-function StatusBadge({ active }: { active: boolean }) {
+function StatusBadge({ active, locale }: { active: boolean; locale: Locale }) {
+  const t = translator(locale, fleetAdmin);
   return active ? (
-    <Badge className="text-success bg-[var(--flota-success-soft)]">{COPY.active}</Badge>
+    <Badge className="text-success bg-[var(--flota-success-soft)]">{t("active")}</Badge>
   ) : (
-    <Badge className="text-muted-foreground bg-muted">{COPY.retired}</Badge>
+    <Badge className="text-muted-foreground bg-muted">{t("retired")}</Badge>
   );
 }
 
-function Rate({ vehicle, className }: { vehicle: Vehicle; className?: string }) {
+function Rate({ vehicle, className, locale }: { vehicle: Vehicle; className?: string; locale: Locale }) {
+  const t = translator(locale, fleetAdmin);
   return (
     <div className={className}>
       <span className="text-foreground text-sm font-[650] tracking-tight">
-        {formatPln(vehicle.daily_rate)}
-        {COPY.perDay}
+        {formatPln(vehicle.daily_rate, locale)}
+        {t("perDay")}
       </span>
       <span className="text-muted-foreground ml-2 text-xs">
-        {formatPln(vehicle.monthly_rate)}
-        {COPY.perMonth}
+        {formatPln(vehicle.monthly_rate, locale)}
+        {t("perMonth")}
       </span>
     </div>
   );
@@ -170,13 +147,16 @@ function RetireDialog({
   error,
   onConfirm,
   onClose,
+  locale,
 }: {
   vehicle: Vehicle;
   busy: boolean;
   error: string | null;
   onConfirm: () => void;
   onClose: () => void;
+  locale: Locale;
 }) {
+  const t = translator(locale, fleetAdmin);
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(20,18,22,0.55)] backdrop-blur-sm md:items-center"
@@ -189,9 +169,11 @@ function RetireDialog({
         className="bg-card shadow-overlay w-full rounded-t-[28px] p-6 pb-8 md:max-w-md md:rounded-xl"
       >
         <div className="bg-border mx-auto mb-4 h-1 w-10 rounded-full md:hidden" />
-        <div className="text-foreground text-xl font-bold tracking-tight">{COPY.retireTitle}</div>
+        <div className="text-foreground text-xl font-bold tracking-tight">{t("retireTitle")}</div>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          „{vehicle.name}” zniknie z publicznego katalogu. Możesz przywrócić pojazd w każdej chwili.
+          {t("retireBodyHead")}
+          {vehicle.name}
+          {t("retireBodyTail")}
         </p>
 
         {error && (
@@ -202,10 +184,10 @@ function RetireDialog({
 
         <div className="mt-5 flex gap-2.5">
           <Button variant="outline" className="h-12 flex-1" disabled={busy} onClick={onClose}>
-            {COPY.cancel}
+            {t("cancel")}
           </Button>
           <Button variant="destructive" className="h-12 flex-1" disabled={busy} onClick={onConfirm}>
-            {COPY.retireConfirm}
+            {t("retireConfirm")}
           </Button>
         </div>
       </div>
@@ -215,7 +197,17 @@ function RetireDialog({
 
 // ── main island ──────────────────────────────────────────────────────────────
 
-export default function FleetList({ vehicles: initial, counts }: { vehicles: Vehicle[]; counts: CategoryCounts }) {
+export default function FleetList({
+  vehicles: initial,
+  counts,
+  locale,
+}: {
+  vehicles: Vehicle[];
+  counts: CategoryCounts;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
+}) {
+  const t = translator(locale, fleetAdmin);
   const [vehicles, setVehicles] = React.useState<Vehicle[]>(initial);
   const [category, setCategory] = React.useState<VehicleCategory | null>(null);
   const [search, setSearch] = React.useState("");
@@ -261,11 +253,11 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
       }
       if (res.status === 409) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        return { ok: false, error: body?.error ?? COPY.hasReservations };
+        return { ok: false, error: body?.error ?? t("hasReservations") };
       }
-      return { ok: false, error: COPY.genericError };
+      return { ok: false, error: t("genericError") };
     } catch {
-      return { ok: false, error: COPY.genericError };
+      return { ok: false, error: t("genericError") };
     }
   }
 
@@ -301,10 +293,10 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
   }
 
   const pills: { key: string; label: string; count: number; value: VehicleCategory | null }[] = [
-    { key: "all", label: COPY.all, count: counts.total, value: null },
+    { key: "all", label: t("all"), count: counts.total, value: null },
     ...CATEGORY_ORDER.map((c) => ({
       key: c,
-      label: categoryLabelPl(c),
+      label: categoryLabel(c, locale),
       count: counts.byCategory[c],
       value: c,
     })),
@@ -320,9 +312,9 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 md:hidden">
           <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            {filtered.length} {COPY.eyebrow}
+            {filtered.length} {t("eyebrow")}
           </div>
-          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">{COPY.title}</h1>
+          <h1 className="text-foreground mt-1 text-[28px] leading-none font-bold tracking-tight">{t("title")}</h1>
         </div>
         {/* No md+ button since Phase 6: `Dodaj pojazd` is reached through the
             shell's `＋ Nowe` menu at every breakpoint, where this page's action is
@@ -335,7 +327,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
             duplicate. Size 48 → 40 per the settled reconciliation, with the
             design's own shadow (replacing `shadow-accent`). */}
         <div className="md:hidden">
-          <QuickAddButton mode="mobile" promoted="vehicle" />
+          <QuickAddButton mode="mobile" promoted="vehicle" locale={locale} />
         </div>
       </div>
 
@@ -348,7 +340,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
           onChange={(e) => {
             setSearch(e.target.value);
           }}
-          placeholder={COPY.searchPlaceholder}
+          placeholder={t("searchPlaceholder")}
           className="border-border bg-card text-foreground placeholder:text-muted-foreground focus-visible:ring-ring h-11 w-full rounded-xl border pr-4 pl-10 text-sm outline-none focus-visible:ring-2"
         />
       </div>
@@ -388,7 +380,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
           }}
           className="accent-foreground size-4 rounded"
         />
-        <span className="text-foreground font-[540]">{COPY.showRetired}</span>
+        <span className="text-foreground font-[540]">{t("showRetired")}</span>
       </label>
 
       {/* Restore-failure banner — PINNED, phase 11 of invite-journey-fixes.
@@ -421,7 +413,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
               shipped control minus its absolute positioning. */}
           <button
             type="button"
-            aria-label={COPY.close}
+            aria-label={t("close")}
             onClick={() => {
               setBanner(null);
             }}
@@ -434,8 +426,8 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
 
       {filtered.length === 0 ? (
         <div className={cn(cardClass, "mt-5 flex flex-col items-center justify-center px-6 py-16 text-center")}>
-          <div className="text-foreground text-base font-[650]">{COPY.empty}</div>
-          <div className="text-muted-foreground mt-1 text-sm">{COPY.emptyHint}</div>
+          <div className="text-foreground text-base font-[650]">{t("empty")}</div>
+          <div className="text-muted-foreground mt-1 text-sm">{t("emptyHint")}</div>
         </div>
       ) : (
         <>
@@ -444,10 +436,10 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="text-muted-foreground border-border border-b text-[11px] font-bold tracking-wide uppercase">
-                  <th className="px-5 py-3 font-bold">{COPY.colVehicle}</th>
-                  <th className="px-5 py-3 font-bold">{COPY.colStatus}</th>
-                  <th className="px-5 py-3 font-bold">{COPY.colRate}</th>
-                  <th className="px-5 py-3" aria-label="Akcje" />
+                  <th className="px-5 py-3 font-bold">{t("colVehicle")}</th>
+                  <th className="px-5 py-3 font-bold">{t("colStatus")}</th>
+                  <th className="px-5 py-3 font-bold">{t("colRate")}</th>
+                  <th className="px-5 py-3" aria-label={t("colActions")} />
                 </tr>
               </thead>
               <tbody>
@@ -458,15 +450,15 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                         <Thumbnail vehicle={v} className="h-11 w-16" />
                         <div className="min-w-0">
                           <div className="text-foreground truncate text-sm font-[650] tracking-tight">{v.name}</div>
-                          <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v)}</div>
+                          <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v, locale)}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <StatusBadge active={v.is_active} />
+                      <StatusBadge locale={locale} active={v.is_active} />
                     </td>
                     <td className="px-5 py-3.5">
-                      <Rate vehicle={v} />
+                      <Rate vehicle={v} locale={locale} />
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
@@ -476,7 +468,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                           size="icon"
                           className="text-muted-foreground hover:text-foreground"
                         >
-                          <a href={editHref(v)} aria-label={COPY.edit}>
+                          <a href={editHref(v)} aria-label={t("edit")}>
                             <Pencil className="size-4" />
                           </a>
                         </Button>
@@ -492,7 +484,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                             }}
                           >
                             <X className="size-3.5" />
-                            {COPY.retireConfirm}
+                            {t("retireConfirm")}
                           </Button>
                         ) : (
                           <Button
@@ -503,7 +495,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                             onClick={() => restore(v)}
                           >
                             <RotateCcw className="size-3.5" />
-                            {COPY.restore}
+                            {t("restore")}
                           </Button>
                         )}
                       </div>
@@ -523,10 +515,10 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="text-foreground truncate text-[15px] font-[650] tracking-tight">{v.name}</div>
-                      <StatusBadge active={v.is_active} />
+                      <StatusBadge locale={locale} active={v.is_active} />
                     </div>
-                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v)}</div>
-                    <Rate vehicle={v} className="mt-1.5" />
+                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{specLine(v, locale)}</div>
+                    <Rate vehicle={v} locale={locale} className="mt-1.5" />
                   </div>
                 </div>
                 <div className="mt-3.5 flex gap-2">
@@ -537,7 +529,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                   >
                     <a href={editHref(v)}>
                       <Pencil className="size-4" />
-                      {COPY.edit}
+                      {t("edit")}
                     </a>
                   </Button>
                   {v.is_active ? (
@@ -551,7 +543,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                       }}
                     >
                       <X className="size-4" />
-                      {COPY.retireConfirm}
+                      {t("retireConfirm")}
                     </Button>
                   ) : (
                     <Button
@@ -561,7 +553,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
                       onClick={() => restore(v)}
                     >
                       <RotateCcw className="size-3.5" />
-                      {COPY.restore}
+                      {t("restore")}
                     </Button>
                   )}
                 </div>
@@ -573,6 +565,7 @@ export default function FleetList({ vehicles: initial, counts }: { vehicles: Veh
 
       {confirmFor && (
         <RetireDialog
+          locale={locale}
           vehicle={confirmFor}
           busy={busyId === confirmFor.id}
           error={dialogError}

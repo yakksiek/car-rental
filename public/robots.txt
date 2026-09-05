@@ -1,4 +1,4 @@
-# FleetRent is a PORTFOLIO deployment, not a real rental company. Nothing here
+# Flota is a PORTFOLIO deployment, not a real rental company. Nothing here
 # should turn up in search results:
 #
 #   * the fleet, prices and reservations are fictional seed data, and an indexed

@@ -9,8 +9,19 @@ import { POST as staffResetPasswordPOST } from "../../src/pages/api/staff/[id]/r
 import { anonClient, as, serviceClient } from "../helpers/clients";
 import { asContext } from "../helpers/context";
 import { settledMailCount, waitForMailCount } from "../helpers/mailpit";
-import { DEMO_BLOCKED_CODE, DEMO_BLOCKED_MESSAGE } from "../../src/lib/staff-report";
+import { DEMO_BLOCKED_CODE, demoBlockedMessage } from "../../src/lib/staff-report";
 import { createEmployee, deactivateStaff, inviteEmployee, listStaff } from "../../src/lib/services/staff";
+
+// The four `/api/staff*` routes still carry their own Polish `MSG.demoBlocked`
+// literal — the API layer gains its locale parameter in Phase 5 §4 — so the
+// expected body is pinned to the Polish half here rather than to the request
+// locale. When those routes localize, this becomes a per-locale assertion.
+// An integration request carries no locale cookie, so the middleware resolves
+// `DEFAULT_LOCALE` (`en`) — that is what these routes answer with, and asserting
+// the English arm is asserting what a fresh caller actually gets. The Polish
+// twin is held by the catalog's own key-parity test, not by re-running every
+// route here in a second language.
+const DEMO_BLOCKED_MESSAGE = demoBlockedMessage("en");
 
 // Staff account-lifecycle suite (S-08). Locks the invariants that are expensive
 // to get wrong: the create → duplicate → deactivate → reactivate lifecycle, the
@@ -700,7 +711,7 @@ describe("the demo gate on the three staff mutation routes (demo-account-gate)",
   // first draft of these cases did, passing for the wrong reason.
   let insertProbeId = "";
 
-  const UNCONFIGURED = "Zarządzanie kontami nie jest skonfigurowane.";
+  const UNCONFIGURED = "Account management isn’t configured.";
 
   /** The JSON body of a handler response, narrowed for the two fields asserted. */
   async function refusal(res: Response): Promise<{ error?: string; code?: string }> {
@@ -838,7 +849,7 @@ describe("the demo gate on the three staff mutation routes (demo-account-gate)",
 
     expect(res.status).toBe(403);
     const body = await refusal(res);
-    expect(body.error).toBe("Nieprawidłowe źródło żądania.");
+    expect(body.error).toBe("Invalid request origin.");
     expect(body.code).toBeUndefined();
   });
 

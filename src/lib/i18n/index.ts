@@ -1,0 +1,116 @@
+// ---------------------------------------------------------------------------
+// The COMPOSED translator — SERVER-ONLY, and the other half of the accessor
+// boundary described in `./types.ts`.
+//
+// This module imports every namespace, so anything that reaches it pulls the
+// whole catalog — both locales, every domain. That is free for `.astro`
+// components, which ship no JavaScript to the browser, and it is why
+// `Astro.locals.t` is the ergonomic accessor there. It is NOT free for a React
+// island, so:
+//
+//   * `.astro` components + API routes + server-only `src/lib` modules →
+//     `useTranslations(locale)` / `Astro.locals.t` (here).
+//   * React islands, and any `src/lib` module an island imports →
+//     `translator(locale, namespace)` from `./types`, importing only the one
+//     namespace they need.
+//
+// Nothing downstream catches a breach of that rule automatically until the
+// island-chunk comparison in the copy phases (baseline in
+// `context/changes/english-localization/island-baseline.md`), so the rule is
+// stated at both ends rather than in one place.
+// ---------------------------------------------------------------------------
+
+// others
+import { api } from "./api";
+import { auth } from "./auth";
+import { booking } from "./booking";
+import { config } from "./config";
+import { dashboard } from "./dashboard";
+import { email } from "./email";
+import { fleet } from "./fleet";
+import { fleetAdmin } from "./fleet-admin";
+import { footer } from "./footer";
+import { info } from "./info";
+import { landing } from "./landing";
+import { layout } from "./layout";
+import { nav } from "./nav";
+import { protocol } from "./protocol";
+import { search } from "./search";
+import { staff } from "./staff";
+import { staffAdmin } from "./staff-admin";
+import { terms } from "./terms";
+import { validation } from "./validation";
+import { vehicle } from "./vehicle";
+import { DEFAULT_LOCALE, type Dict, type Locale } from "./types";
+
+export { DEFAULT_LOCALE, LOCALES, asLocale, defineDict, isLocale, translator } from "./types";
+export type { Dict, Locale } from "./types";
+export { LOCALE_COOKIE, resolveLocale } from "./resolve";
+export type { LocaleSignals } from "./resolve";
+
+// Register every namespace here. The key becomes the `ns.` prefix of its keys.
+//
+// EXPORTED for `./parity.test.ts`, which walks this map rather than a list of
+// its own: a namespace added here is covered by the key-parity and Polish-
+// leakage gates the moment it is registered, with nothing to remember. A
+// hand-maintained list in the test could only check the namespaces someone
+// remembered to add to it — which is the failure mode the gate exists for.
+// Nothing in the app should import it; use `useTranslations` / `translator`.
+export const NAMESPACES = {
+  api,
+  auth,
+  booking,
+  config,
+  dashboard,
+  email,
+  fleet,
+  fleetAdmin,
+  footer,
+  info,
+  landing,
+  layout,
+  nav,
+  protocol,
+  search,
+  staff,
+  staffAdmin,
+  terms,
+  validation,
+  vehicle,
+};
+
+type Namespaces = typeof NAMESPACES;
+
+/**
+ * Every valid `"ns.key"` string, derived from the namespaces themselves — so a
+ * typo, or a key that only one locale has, is a compile error rather than a
+ * silent fallback at runtime.
+ */
+export type TranslationKey = {
+  [N in keyof Namespaces]: `${N}.${keyof Namespaces[N]["en"] & string}`;
+}[keyof Namespaces];
+
+/**
+ * Bind a translator to one locale. `src/middleware.ts` puts the result on
+ * `Astro.locals.t`; plain server modules call this directly, exactly as
+ * Starlight's `useTranslations(lang)` does for its non-component code.
+ *
+ * Falls back to `DEFAULT_LOCALE`, then to the key itself. Both fallbacks are
+ * production robustness only — the `Dict` type makes a missing key a type error
+ * long before either can fire.
+ */
+export function useTranslations(locale: Locale) {
+  return function t(key: TranslationKey): string {
+    const separator = key.indexOf(".");
+    const namespace = key.slice(0, separator) as keyof Namespaces;
+    const entry = key.slice(separator + 1);
+
+    // The `TranslationKey` union has already proved both halves resolve; the
+    // widening to an optional-valued map is only so the runtime fallbacks are
+    // expressible (see `translator`).
+    const dict = NAMESPACES[namespace] as Dict<Record<string, string>>;
+    const table = dict[locale] as Record<string, string | undefined>;
+    const fallback = dict[DEFAULT_LOCALE] as Record<string, string | undefined>;
+    return table[entry] ?? fallback[entry] ?? key;
+  };
+}

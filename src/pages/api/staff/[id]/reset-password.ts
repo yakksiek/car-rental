@@ -2,6 +2,8 @@
 import type { APIRoute } from "astro";
 
 // others
+import { api } from "../../../../lib/i18n/api";
+import { translator } from "../../../../lib/i18n/types";
 import { isDemoAccount, requireRole } from "../../../../lib/access";
 import { createAdminClient } from "../../../../lib/supabase";
 import { getStaffEmail, resetStaffPassword } from "../../../../lib/services/staff";
@@ -21,35 +23,25 @@ import { getStaffEmail, resetStaffPassword } from "../../../../lib/services/staf
 // `password_set_at` is set, so it can only ever mail an already-listed,
 // password-less staffer.
 
-const MSG = {
-  badOrigin: "Nieprawidłowe źródło żądania.",
-  badBody: "Nieprawidłowe zgłoszenie.",
-  unauthenticated: "Wymagane logowanie.",
-  forbidden: "Brak uprawnień.",
-  notFound: "Nie znaleziono pracownika.",
-  unconfigured: "Zarządzanie kontami nie jest skonfigurowane.",
-  // Shared verbatim with `api/staff.ts` and `deactivate.ts` — see the note on
-  // that entry there.
-  demoBlocked: "Ta akcja jest wyłączona na koncie demo.",
-} as const;
-
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 export const POST: APIRoute = async (context) => {
+  const t = translator(context.locals.locale, api);
+
   // (a) CSRF: reject anything not same-origin before doing any work.
   const origin = context.request.headers.get("origin");
   if (origin !== context.url.origin) {
-    return json(403, { error: MSG.badOrigin });
+    return json(403, { error: t("badOrigin") });
   }
 
   // (b) Auth + role gate: a signed-out caller is 401, a non-admin 403.
   if (!context.locals.user) {
-    return json(401, { error: MSG.unauthenticated });
+    return json(401, { error: t("unauthenticated") });
   }
   if (!requireRole(context.locals, "admin")) {
-    return json(403, { error: MSG.forbidden });
+    return json(403, { error: t("forbidden") });
   }
 
   // (b2) Demo gate — after the admin check, before the admin client is built, so
@@ -57,23 +49,23 @@ export const POST: APIRoute = async (context) => {
   // can leave as a result. `code` keeps the roster banner from calling this a
   // bad-origin or unconfigured failure.
   if (isDemoAccount(context.locals)) {
-    return json(403, { error: MSG.demoBlocked, code: "demo_blocked" });
+    return json(403, { error: t("demoBlocked"), code: "demo_blocked" });
   }
 
   const id = context.params.id;
   if (!id) {
-    return json(400, { error: MSG.badBody });
+    return json(400, { error: t("badBody") });
   }
 
   const admin = createAdminClient();
   if (!admin) {
-    return json(403, { error: MSG.unconfigured });
+    return json(403, { error: t("unconfigured") });
   }
 
   // (c) Resolve the real email server-side.
   const email = await getStaffEmail(admin, id);
   if (!email) {
-    return json(404, { error: MSG.notFound });
+    return json(404, { error: t("staffNotFound") });
   }
 
   // (d) Send the recovery email (no service-role needed — GoTrue issues it).

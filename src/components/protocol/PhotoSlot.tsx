@@ -4,6 +4,9 @@ import { Camera, Check, TriangleAlert } from "lucide-react";
 
 // others
 import { cn } from "../../lib/utils";
+import { protocol } from "../../lib/i18n/protocol";
+import { translator } from "../../lib/i18n/types";
+import type { Locale } from "../../lib/i18n/types";
 import type { UploadState } from "./types";
 
 // One baseline photo tile, in four states: empty / uploading / failed / done.
@@ -24,12 +27,15 @@ interface Props {
   invalid?: boolean;
   onPick: (file: File) => void;
   onRetry: () => void;
+  /** Islands cannot read `Astro.locals`; the mounting page passes it down. */
+  locale: Locale;
 }
 
 const TILE = "relative flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-[14px]";
 const LABEL = "text-[10px] font-bold tracking-[0.08em] uppercase";
 
-export function PhotoSlot({ slot, label, state, pct, preview, invalid, onPick, onRetry }: Props) {
+export function PhotoSlot({ slot, label, state, pct, preview, invalid, onPick, onRetry, locale }: Props) {
+  const t = translator(locale, protocol);
   const inputId = `photo-${slot}`;
 
   if (state === "uploading") {
@@ -53,7 +59,7 @@ export function PhotoSlot({ slot, label, state, pct, preview, invalid, onPick, o
         className={cn(TILE, "border-primary text-primary border bg-[var(--flota-danger-soft)]")}
       >
         <TriangleAlert className="size-5" />
-        <span className={LABEL}>Ponów</span>
+        <span className={LABEL}>{t("photoRetry")}</span>
         <span className="sr-only">{label}</span>
       </button>
     );
@@ -110,7 +116,8 @@ export function PhotoSlot({ slot, label, state, pct, preview, invalid, onPick, o
 }
 
 /** Desktop-only drop zone above the grid: multi-select fills the next free slots. */
-export function PhotoDropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
+export function PhotoDropZone({ onFiles, locale }: { onFiles: (files: File[]) => void; locale: Locale }) {
+  const t = translator(locale, protocol);
   const [hovering, setHovering] = React.useState(false);
 
   return (
@@ -133,8 +140,8 @@ export function PhotoDropZone({ onFiles }: { onFiles: (files: File[]) => void })
         hovering ? "border-primary bg-[var(--flota-danger-soft)]" : "bg-background border-[var(--flota-hair)]",
       )}
     >
-      <span className="text-foreground text-[13px] font-semibold">Przeciągnij zdjęcia tutaj</span>
-      <span className="text-muted-foreground text-[12px]">lub zrób je telefonem</span>
+      <span className="text-foreground text-[13px] font-semibold">{t("photoDropHere")}</span>
+      <span className="text-muted-foreground text-[12px]">{t("photoDropOrPhone")}</span>
       <input
         id="photo-multi"
         type="file"
