@@ -2061,18 +2061,18 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [ ] 12.1 Type check passes: `npx astro check`
-- [ ] 12.2 Lint passes: `npm run lint`
-- [ ] 12.3 Build succeeds: `npm run build`
-- [ ] 12.4 E2E suite green: `npm run test:e2e`
+- [x] 12.1 Type check passes: `npx astro check`
+- [x] 12.2 Lint passes: `npm run lint`
+- [x] 12.3 Build succeeds: `npm run build`
+- [x] 12.4 E2E suite green: `npm run test:e2e`
 
 #### Manual
 
 - [ ] 12.5 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
-- [ ] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised
-- [ ] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls
-- [ ] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages
-- [ ] 12.9 The chosen hover values recorded in `design-contract.md`
+- [x] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised
+- [x] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls
+- [x] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages
+- [x] 12.9 The chosen hover values recorded in `design-contract.md`
 
 ### Phase 13: Reference Doc Corrections
 

@@ -93,7 +93,19 @@ const nav: { id: NavId; label: string; href: string }[] = [
       <div class="flex shrink-0 items-center gap-3">
         <LangToggle client:idle locale={locale} redirect={redirect} />
 
-        <a href="tel:+48221002030" class="info-phone text-foreground items-center gap-2 text-[14.5px] font-bold">
+        {
+          /* `whitespace-nowrap` is the contract's value for `.info-phone`, and it is
+            load-bearing rather than cosmetic: `known-issues.md:352-354` names this
+            exact attribute as one of four causes of the old 768-790px nav-wrap bug.
+            It is harmless today only because all three children of this bar are
+            `shrink-0`, so the row overflows instead of squeezing — remove a
+            `shrink-0` and the number breaks across two lines. The CTA two rows
+            below already carries it. */
+        }
+        <a
+          href="tel:+48221002030"
+          class="info-phone text-foreground items-center gap-2 text-[14.5px] font-bold whitespace-nowrap"
+        >
           <InfoIcon name="phone" size={16} color="var(--flota-accent)" />
           +48 22 100 20 30
         </a>

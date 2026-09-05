@@ -91,9 +91,16 @@ export default function LangToggle({ locale, redirect, tone = "light" }: Props) 
         className={cn(
           "inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-full border px-2.5 transition-colors",
           "focus-visible:ring-2 focus-visible:outline-none disabled:opacity-70",
+          // Hover is authored, not inherited. The contract asks for both hover
+          // and focus-visible here and only focus-visible shipped, which left
+          // `transition-colors` above with nothing to transition. The values are
+          // the ones the neighbouring controls already use rather than a new
+          // treatment: `hover:bg-background` is `LangRow`'s and the ActionMenu
+          // panel rows'; `hover:bg-white/25` is the dark family's one step up
+          // from a translucent-white fill, matching the dark ActionMenu trigger.
           dark
-            ? "border-white/[0.22] bg-white/[0.14] text-white backdrop-blur-[6px] focus-visible:ring-white/40"
-            : "bg-card text-foreground border-[var(--flota-hair)] focus-visible:ring-[var(--flota-ink-2)]/25",
+            ? "border-white/[0.22] bg-white/[0.14] text-white backdrop-blur-[6px] hover:bg-white/25 focus-visible:ring-white/40"
+            : "bg-card text-foreground hover:bg-background border-[var(--flota-hair)] focus-visible:ring-[var(--flota-ink-2)]/25",
         )}
       >
         {submitting ? (

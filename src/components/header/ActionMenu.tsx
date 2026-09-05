@@ -91,11 +91,18 @@ export default function ActionMenu({ locale, tone = "light" }: Props) {
           type="button"
           aria-label={t("contactMenu")}
           className={cn(
-            "inline-flex h-10 shrink-0 items-center gap-[7px] rounded-full px-3.5 text-white",
+            "inline-flex h-10 shrink-0 items-center gap-[7px] rounded-full px-3.5 text-white transition-colors",
             "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+            // Same gap as `LangToggle`: the contract asks for hover AND
+            // focus-visible, only focus-visible shipped. Each tone borrows the
+            // treatment its own neighbours use — the dark pill steps its
+            // translucent-white fill up (as `LangToggle` dark now does), and the
+            // light one is a SOLID dark fill, so it follows the landing CTA's
+            // `hover:opacity-90` rather than a background swap that would have to
+            // invent a second ink.
             dark
-              ? "bg-white/15 backdrop-blur-[6px] focus-visible:ring-white/40 focus-visible:ring-offset-transparent"
-              : "bg-foreground focus-visible:ring-foreground/30 focus-visible:ring-offset-card",
+              ? "bg-white/15 backdrop-blur-[6px] hover:bg-white/25 focus-visible:ring-white/40 focus-visible:ring-offset-transparent"
+              : "bg-foreground focus-visible:ring-foreground/30 focus-visible:ring-offset-card hover:opacity-90",
           )}
         >
           <CalendarGlyph size={17} />
@@ -117,11 +124,18 @@ export default function ActionMenu({ locale, tone = "light" }: Props) {
       </PopoverTrigger>
 
       {/* `sideOffset={8}` puts the panel's top 48px below the trigger's top edge
-          (40px pill + 8px), which is the design's `top: 48`. */}
+          (40px pill + 8px), which is the design's `top: 48`.
+
+          `z-[60]` is the contract's own value (design-contract.md, ActionMenu
+          Panel, `exact`). `ui/popover.tsx` defaults to `z-50`, and that happens
+          to be enough today because the landing header wrapper is `z-40` — so
+          nothing looks wrong, and the miss would only surface behind some future
+          `z-50` sibling. Overridden HERE rather than in the shared primitive,
+          which other callers depend on. */}
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="bg-card w-max min-w-[216px] overflow-hidden rounded-[14px] border-[var(--flota-hair)] p-0 shadow-[0_16px_40px_-8px_rgba(14,21,36,0.30)]"
+        className="bg-card z-[60] w-max min-w-[216px] overflow-hidden rounded-[14px] border-[var(--flota-hair)] p-0 shadow-[0_16px_40px_-8px_rgba(14,21,36,0.30)]"
       >
         <a
           href={PHONE_HREF}
