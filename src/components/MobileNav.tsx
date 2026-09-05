@@ -86,7 +86,11 @@ export default function MobileNav({ active, locale }: Props) {
               }}
               className="flex items-center"
             >
-              <Brand className="gap-1.5" markClass="h-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+              {/* Same 34 as the mobile bar this drawer opens from, and on the same
+                  axis — see `SiteHeader.astro`. The design has no drawer (mobile nav
+                  is its `PublicDock`), so the lockup mirrors the header rather than a
+                  board of its own; a 2× mark here would jump the moment it opened. */}
+              <Brand className="gap-1.5" markClass="w-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
             </a>
             <button
               type="button"

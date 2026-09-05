@@ -55,7 +55,13 @@ const headingClass = "mb-3 text-[11px] font-bold uppercase tracking-[0.5px] text
       <!-- Brand + tagline -->
       <div class="max-w-[300px]">
         <a href="/" class="mb-3 flex items-center">
-          <Brand class="gap-1.5" markClass="h-[38px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+          {
+            /* `w-`, not `h-`: the design's `InfoFooter` is `<FlotaMark size={38} />` and
+              that 38 is a WIDTH. The mark's viewBox is 124×60, so `h-[38px]` drew it
+              2.07× too big — the same axis slip the header carried until the phase-12
+              vision-diff caught it. Source pulled 2026-09-05 (`info-pages.jsx`). */
+          }
+          <Brand class="gap-1.5" markClass="w-[38px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
         </a>
         <p class="text-[13px] leading-[1.5] text-[#5B6474]">
           {t("footer.tagline")}

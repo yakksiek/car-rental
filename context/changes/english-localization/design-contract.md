@@ -286,12 +286,62 @@ project's own embeddable-panels lesson.
 **Bar:** `display:flex`, `align-items:center`, `justify-content:space-between`, `gap: 20px`,
 `padding: 18px 48px`, `border-bottom: 1px solid rgba(15,23,42,0.05)`, `background: #FFFFFF` — `exact`.
 
-**Brand cluster:** `gap: 6px`, `flex-shrink: 0`; mark `40px`; wordmark
-`20px / 700 / letter-spacing -0.4 / #0E1524` — `exact`.
+**Brand cluster:** `gap: 6px`, `flex-shrink: 0`; mark `40px` **wide**; wordmark
+`20px / 700 / letter-spacing -0.4 / #0F172A` (`--flota-ink`) — `exact`.
 Brand text is **`Flota`** and **never translates** (frame decision 5) — `exact`.
 
-**Nav pill track:** `gap: 2px`, `padding: 5px 6px`, `background: #F1F3F7`, `border-radius: 999px`,
-`flex-shrink: 0` — `exact`.
+> **Correction, 2026-09-05 (phase 12 vision-diff).** Two errors in the line above, both found by
+> rendering the header against `header-*-pl.png` rather than by re-reading the source.
+>
+> 1. **The mark's `40px` is a WIDTH, and this line did not say so.** It was implemented as
+>    `markClass="h-10"` — 40px of _height_. The mark's viewBox is `-6 24 124 60`
+>    (aspect 2.07), so height-40 draws the van **2.07× too big**: measured ink 31.5px tall against
+>    the mockup's 16.0px. The design's own `assets/flota-mark.svg` carries the identical viewBox and
+>    geometry, so the shape was never wrong — only the axis the number was applied to. Fixed to
+>    `markClass="w-10"` desktop / `w-[34px]` mobile, after which the brand cluster's rendered ink is
+>    **90.5 × 16.0 at 1280 and 79.0 × 14.0 at 390, byte-matching the mockup at the same origin**.
+>    `LandingNav` had it right all along, expressed as the equivalent height (`h-[20px]` / `h-[18px]`).
+>
+>    Pulling `info-pages.jsx` confirmed the convention and found the same slip on two more surfaces:
+>    `InfoHeader` is `<FlotaMark size={40} />`, `InfoHeaderMobile` `size={34}`, **`InfoFooter`
+>    `size={38}`** — all widths. `SiteFooter` was `h-[38px]` (78.5px wide) and is now `w-[38px]`;
+>    `MobileNav`'s drawer lockup follows the mobile bar it opens from at `w-[34px]`. Still unaudited,
+>    because their boards were not pulled and each needs its own diff: the `variant="mark"` lockups in
+>    `AuthShell`, `auth/signin` and `StaffShell`.
+>
+> 2. **`#0E1524` stays a recorded deviation, now with both sides named.** `info-pages.jsx` really does
+>    hardcode `color: '#0E1524'` on the wordmark, the active nav item and the phone number (pulled
+>    2026-09-05), so this contract transcribed its source correctly. But the design's own `tokens.css`
+>    — its "single source of truth … drop into your Astro/Tailwind 4 app" — defines
+>    `--flota-ink: #0F172A`, and the app is built on the tokens. The two halves of the design
+>    disagree; we follow the token, at ΔE ≈ 1.5. Same for `#F1F3F7` vs `--flota-bg: #F1F3F6`
+>    (ΔE ≈ 0.3). Already carried below as `deviation(1-digit drift)` — kept, not reclassified.
+
+**Nav pill track:** `gap: 2px`, `padding: 5px 6px`, `background: #F1F3F6` (`--flota-bg`),
+`border-radius: 999px`, `flex-shrink: 0` — `exact`.
+
+> **Note, 2026-09-05.** The board really does say `#F1F3F7` (`info-pages.jsx`, pulled). `tokens.css`
+> says `--flota-bg: #F1F3F6`, which is what the app renders. ΔE ≈ 0.3, and the value above is written
+> as the token because that is what ships. Recorded deviation, same as the wordmark ink.
+
+**Nav pill horizontal position** — `deviation(consequence of the removed caret)`. The pill is centred
+between the brand's right edge and the right cluster's left edge, so narrowing `LangToggle` by 16px
+(the caret removal recorded above) moves it **+8px right of the mockup at every width** — 1280, 1180,
+980, 840 and 768 alike. Measured 2026-09-05: pill left edge 309→317, 259→267, 269→277, 224→232,
+188→196. Arithmetic, not drift; it resolves only by putting the caret back, which the owner declined.
+
+> A first pass of this measurement reported 0px at 768. That was a bug in the measuring script, not a
+> property of the layout: its scan window began at css 200, which is exactly where the 768 mockup's
+> pill starts, so both sides clamped to the scan origin and differenced to zero. Re-measured from
+> css 120.
+
+**Van mark ink** — the board strokes the mark `#162E4A`; we stroke `currentColor` resolving to
+`--flota-ink` `#0F172A`. **Already accepted** in `context/archive/2026-08-01-logo-update/design-contract.md:33`
+(`deviation(use app ink token … keeps one ink source)`), and the same cause as the wordmark row: the
+saved `assets/flota-mark.svg` hardcodes `stroke="var(--flota-ink,#162E4A)"` and the board supplies no
+`--flota-ink`, so it paints the stale literal fallback. Noted here because it is a wider gap than the
+wordmark's and it keeps the mark region lit in any raw pixel diff — geometry is exact (equal ink-pixel
+counts, 741 at 1280 and 464 at 390); only the shade differs.
 
 **Nav item:** `padding: 9px 18px`, `border-radius: 999px`, `font-size: 14.5px`,
 `white-space: nowrap` — `exact`.
@@ -467,11 +517,11 @@ geometrically but not textually:
 
 ### Values the contract maps to tokens this app does not have
 
-| Contract line                                       | Shipped                            | Mark                                                                                                                                                                                |
-| --------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokens.greySoft` → `--flota-grey-soft`             | `--flota-neutral-soft` (`#eef1f5`) | `deviation(token name)` — `--flota-grey-soft` does not exist in `global.css`; the app's token holds the identical value                                                             |
-| `#0E1524` (wordmark, active nav item, phone number) | `--foreground` (`#0F172A`)         | `deviation(1-digit drift)` — same resolution the contract already applies to the `#F1F3F7` nav-pill track, and the app's existing header already used the token                     |
-| Sidebar row `padding 9px 10px`, height 36           | `px-2.5 py-2.5` → **40px**         | `deviation(match shipped siblings)` — the contract sources this line as "matches sidebar nav rows", and the app's nav rows ship at 10px/40px, so matching them is the stated intent |
+| Contract line                                       | Shipped                            | Mark                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokens.greySoft` → `--flota-grey-soft`             | `--flota-neutral-soft` (`#eef1f5`) | `deviation(token name)` — `--flota-grey-soft` does not exist in `global.css`; the app's token holds the identical value                                                                                                                                                                                 |
+| `#0E1524` (wordmark, active nav item, phone number) | `--foreground` (`#0F172A`)         | `deviation(1-digit drift)` — **confirmed 2026-09-05** by pulling `info-pages.jsx`: the board hardcodes `#0E1524` while the design's own `tokens.css` defines `--flota-ink: #0F172A`. The design disagrees with itself; we follow the token. ΔE ≈ 1.5. Same for the `#F1F3F7` nav-pill track (ΔE ≈ 0.3). |
+| Sidebar row `padding 9px 10px`, height 36           | `px-2.5 py-2.5` → **40px**         | `deviation(match shipped siblings)` — the contract sources this line as "matches sidebar nav rows", and the app's nav rows ship at 10px/40px, so matching them is the stated intent                                                                                                                     |
 
 ### Structural deviations
 

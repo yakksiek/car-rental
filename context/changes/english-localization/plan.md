@@ -2096,7 +2096,7 @@ by hand on hosted — never `supabase config push`.
 
 #### Manual
 
-- [ ] 12.5 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
+- [x] 12.5 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
 - [x] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised — 8551197
 - [x] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls — 8551197
 - [x] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages — 8551197
@@ -2106,11 +2106,11 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 13.1 Prettier check passes on the touched markdown files only
+- [x] 13.1 Prettier check passes on the touched markdown files only — 3ab867f
 
 #### Manual
 
-- [x] 13.2 `contract-surfaces.md`'s table matches the real signatures in `services/vehicles.ts`
-- [x] 13.3 No sentence in `contract-surfaces.md` claims an export was unchanged when it was not
-- [x] 13.4 `plan.md` section 5.5 matches what shipped
-- [x] 13.5 Phase 1 §1 records that the `format.ts` split actually landed in Phase 4
+- [x] 13.2 `contract-surfaces.md`'s table matches the real signatures in `services/vehicles.ts` — 3ab867f
+- [x] 13.3 No sentence in `contract-surfaces.md` claims an export was unchanged when it was not — 3ab867f
+- [x] 13.4 `plan.md` section 5.5 matches what shipped — 3ab867f
+- [x] 13.5 Phase 1 §1 records that the `format.ts` split actually landed in Phase 4 — 3ab867f
