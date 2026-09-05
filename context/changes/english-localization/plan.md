@@ -2075,15 +2075,15 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 11.1 Integration tests pass including the three new grant cases: `npm run test:integration`
-- [x] 11.2 Unit tests pass including the new parity coverage: `npm test`
-- [x] 11.3 `npm run sweep:i18n -- --all` exits 0
+- [x] 11.1 Integration tests pass including the three new grant cases: `npm run test:integration` — 7e2c5d2
+- [x] 11.2 Unit tests pass including the new parity coverage: `npm test` — 7e2c5d2
+- [x] 11.3 `npm run sweep:i18n -- --all` exits 0 — 7e2c5d2
 - [ ] 11.4 CI passes on a pushed branch with the sweep step visible in the job log
 
 #### Manual
 
-- [x] 11.5 Removing a `revoke` line from one of the three functions makes the new test fail (then reverted)
-- [x] 11.6 Adding a Polish word to an `en` value makes the sweep fail CI (then reverted)
+- [x] 11.5 Removing a `revoke` line from one of the three functions makes the new test fail (then reverted) — 7e2c5d2
+- [x] 11.6 Adding a Polish word to an `en` value makes the sweep fail CI (then reverted) — 7e2c5d2
 
 ### Phase 12: Header Design Contract Close-Out
 
