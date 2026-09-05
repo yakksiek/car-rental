@@ -522,6 +522,13 @@ describe("the same tables, in English", () => {
   // pins that: identical structure, different sentences. A resolver that fell
   // back to the default locale for one arm would show up here as an English
   // sentence in the Polish column, or vice versa.
+  //
+  // These are the SENTENCES this module composes. The TABLES behind them are
+  // gated separately: `STAFF_REPORT_DICTS` registers both of them with
+  // `src/lib/i18n/parity.test.ts`, which is what catches a key present in one
+  // locale and not the other, or an `en` value still holding the Polish it was
+  // pasted from — neither of which a hand-written case here would notice unless
+  // someone remembered to add one for that key (impl-review F7).
   it("resolves every arm to the same surface, with English copy", () => {
     const duplicate = { kind: "http", httpStatus: 409 } as const;
 

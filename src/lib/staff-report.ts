@@ -190,6 +190,35 @@ const COPY: Record<Locale, StaffCopy> = {
 };
 
 /**
+ * EXPORTED FOR `src/lib/i18n/parity.test.ts` ONLY. Nothing in the app should
+ * import it — the app reads these tables through the resolvers below.
+ *
+ * These two tables are the module's copy, and they live HERE rather than in
+ * `src/lib/i18n/staff-admin.ts` for a reason that survived a review of it
+ * (impl-review F7). Two islands import this module: `StaffList`, which does carry
+ * the `staffAdmin` namespace, and `QuickAddButton`, which does NOT — it carries
+ * only `staff` (the shell chrome) and reaches in here for `demoBlockedMessage`.
+ * Moving the words into the roster namespace would pull all ~170 of its keys,
+ * both locales, into `QuickAddButton`'s browser chunk, which is the exact cost
+ * the per-domain namespacing exists to avoid (`island-baseline.md`). The plan's
+ * own condition — "check whether an island imports this module before deciding" —
+ * resolves to keeping them.
+ *
+ * What was actually missing was the GATE, not the location. `parity.test.ts`
+ * walks `NAMESPACES`, so it could not see a missing key here, nor an `en` value
+ * still holding the Polish it was pasted from. Registering the tables closes that
+ * without moving a single string.
+ */
+export const STAFF_REPORT_DICTS: Record<string, { en: Record<string, string>; pl: Record<string, string> }> = {
+  // Widened to `Record<string, string>` deliberately: `StaffCopy` is an
+  // interface, so it carries no index signature and the gate cannot walk it as
+  // declared. The interface stays the authority for the CALL SITES; this is the
+  // shape the walk needs.
+  "staff-report/COPY": { en: { ...COPY.en }, pl: { ...COPY.pl } },
+  "staff-report/DEMO_BLOCKED": { en: { demoBlocked: DEMO_BLOCKED.en }, pl: { demoBlocked: DEMO_BLOCKED.pl } },
+};
+
+/**
  * Where a report is rendered.
  *
  * There is deliberately no `both`. Phase 9 §3 had to resolve a duplication —

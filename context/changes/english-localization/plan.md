@@ -2026,36 +2026,36 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 10.1 Migration applies cleanly against local Supabase
-- [x] 10.2 Type check passes: `npx astro check`
-- [x] 10.3 Lint passes: `npm run lint`
-- [x] 10.4 Unit tests pass: `npm test`
-- [x] 10.5 Integration tests pass: `npm run test:integration`
-- [x] 10.6 Build succeeds: `npm run build`
-- [x] 10.7 Unit test: a name containing `` $` `` `$&` `$'` `$1` renders literally in both email templates
-- [x] 10.8 Integration test: `get_reservation_status` still answers for `anon` and now returns the language
-- [x] 10.9 `get_reservation_status` revoke-before-grant pinned in `rpc-execute-grants.test.ts`
+- [x] 10.1 Migration applies cleanly against local Supabase — 633f01a
+- [x] 10.2 Type check passes: `npx astro check` — 633f01a
+- [x] 10.3 Lint passes: `npm run lint` — 633f01a
+- [x] 10.4 Unit tests pass: `npm test` — 633f01a
+- [x] 10.5 Integration tests pass: `npm run test:integration` — 633f01a
+- [x] 10.6 Build succeeds: `npm run build` — 633f01a
+- [x] 10.7 Unit test: a name containing `` $` `` `$&` `$'` `$1` renders literally in both email templates — 633f01a
+- [x] 10.8 Integration test: `get_reservation_status` still answers for `anon` and now returns the language — 633f01a
+- [x] 10.9 `get_reservation_status` revoke-before-grant pinned in `rpc-execute-grants.test.ts` — 633f01a
 
 #### Manual
 
-- [x] 10.10 A Polish reservation's status link reads Polish in a fresh cookie-less browser
-- [x] 10.11 The switcher on that page still works and returns to the same page
-- [x] 10.12 Issuing a protocol still stamps `protocols.locale` correctly, with no error
-- [x] 10.13 A customer name containing a `$` sequence renders exactly as typed in the confirmation email
+- [x] 10.10 A Polish reservation's status link reads Polish in a fresh cookie-less browser — 633f01a
+- [x] 10.11 The switcher on that page still works and returns to the same page — 633f01a
+- [x] 10.12 Issuing a protocol still stamps `protocols.locale` correctly, with no error — 633f01a
+- [x] 10.13 A customer name containing a `$` sequence renders exactly as typed in the confirmation email — 633f01a
 
 ### Phase 11: Coverage Gates
 
 #### Automated
 
-- [ ] 11.1 Integration tests pass including the three new grant cases: `npm run test:integration`
-- [ ] 11.2 Unit tests pass including the new parity coverage: `npm test`
-- [ ] 11.3 `npm run sweep:i18n -- --all` exits 0
+- [x] 11.1 Integration tests pass including the three new grant cases: `npm run test:integration`
+- [x] 11.2 Unit tests pass including the new parity coverage: `npm test`
+- [x] 11.3 `npm run sweep:i18n -- --all` exits 0
 - [ ] 11.4 CI passes on a pushed branch with the sweep step visible in the job log
 
 #### Manual
 
-- [ ] 11.5 Removing a `revoke` line from one of the three functions makes the new test fail (then reverted)
-- [ ] 11.6 Adding a Polish word to an `en` value makes the sweep fail CI (then reverted)
+- [x] 11.5 Removing a `revoke` line from one of the three functions makes the new test fail (then reverted)
+- [x] 11.6 Adding a Polish word to an `en` value makes the sweep fail CI (then reverted)
 
 ### Phase 12: Header Design Contract Close-Out
 

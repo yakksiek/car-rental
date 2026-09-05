@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 // others
+import { STAFF_REPORT_DICTS } from "../staff-report";
 import { NAMESPACES } from "./index";
 import { LOCALES } from "./types";
 
@@ -24,14 +25,34 @@ import { LOCALES } from "./types";
 // namespace added there is covered the moment it is registered. A hand-kept list
 // could only check what someone remembered to add to it, which is the failure
 // mode the gate is for.
+//
+// SATELLITE TABLES. Two locale tables live outside this directory on purpose,
+// and walking only `NAMESPACES` left both unguarded (impl-review F7). They are
+// appended to the same walk rather than moved, because the reason each sits where
+// it does is a bundle or a cohesion decision that a test should not overturn:
+//
+//   * `staff-report.ts` — the roster's banner/modal copy, beside the outcome→
+//     surface routing that places it. `QuickAddButton` imports that module for
+//     `demoBlockedMessage` WITHOUT importing the `staffAdmin` namespace, so
+//     relocating the words would pull ~170 keys into its chunk.
+//   * `auth-messages.ts` — the GoTrue error wall. It is a nested, PARTIAL table
+//     (`Record<Locale, Record<AuthSurface, …>>`), which is why it is not a
+//     `Dict`; it explains itself at `:25-30` and its own suite already asserts
+//     both languages, so it is left to that file.
+//
+// Adding a satellite here is the whole cost of bringing a new out-of-catalog
+// table under the gate.
 
-const namespaces = Object.entries(NAMESPACES);
+const namespaces = [...Object.entries(NAMESPACES), ...Object.entries(STAFF_REPORT_DICTS)];
 
 describe("catalog key parity", () => {
   it("registers every namespace under a name (the `ns.` prefix of its keys)", () => {
     // Guards the walk itself: an empty or half-built registry would make every
     // assertion below pass vacuously.
     expect(namespaces.length).toBeGreaterThan(15);
+    // ...and the satellites really are in the walk, not silently dropped by a
+    // future refactor of the line above.
+    expect(namespaces.map(([name]) => name)).toEqual(expect.arrayContaining(Object.keys(STAFF_REPORT_DICTS)));
   });
 
   it.each(namespaces)("%s — `en` and `pl` hold exactly the same keys", (_name, dict) => {

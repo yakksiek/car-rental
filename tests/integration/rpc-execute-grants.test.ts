@@ -26,6 +26,16 @@ import { queryDb } from "../helpers/db";
 // regression 20260731212650 had to fix forward on list_pending_reservations —
 // which was caught only because that RPC was in this suite and list_staff was not.
 //
+// english-localization added six more, and the story repeated exactly. Its two
+// migrations DROP and recreate eight functions between them to add a locale
+// column. Three of the eight arrived in this suite with the change
+// (`create_protocol`, `create_return_protocol`, `set_profile_locale`); the three
+// PII READS did not (`list_dispatch_today`, `get_return_baseline`,
+// `get_protocol`), and its impl-review (F4) put them here. The public
+// `get_reservation_status` gets the mirror-image treatment further down: its
+// failure mode is being silently CLOSED, plus a catalog assertion that PUBLIC was
+// revoked before the anon grant was re-stated — the half no client call can see.
+//
 // WHY THIS EXISTS: `grant execute ... to authenticated` alone is a no-op against
 // the default PUBLIC/anon grants (lessons.md -> "Revoke EXECUTE before granting
 // it"), and there is no reliable schema-level "start closed" default in Supabase
@@ -156,6 +166,30 @@ describe("RPC EXECUTE-grant hardening (rpc-execute-grant-hardening)", () => {
         p_photos: [],
         p_damages: [],
       });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    // ---------------------------------------------------------------------
+    // The three PII READ paths 20260904120000_artifact_locale_reads.sql also
+    // drops and recreates (impl-review F4). The migration re-applies their
+    // permissions correctly at :376, :464 and :589, so nothing is open — the gap
+    // was that nothing would NOTICE if a future rewrite dropped one. All three
+    // return customer personal data: names, e-mail addresses, signature paths
+    // and damage notes.
+    // ---------------------------------------------------------------------
+
+    it("list_dispatch_today -> permission denied", async () => {
+      const res = await anonClient().rpc("list_dispatch_today");
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("get_return_baseline -> permission denied", async () => {
+      const res = await anonClient().rpc("get_return_baseline", { p_reservation_id: MISSING_VEHICLE });
+      expect(isPermissionDenied(res.error)).toBe(true);
+    });
+
+    it("get_protocol -> permission denied", async () => {
+      const res = await anonClient().rpc("get_protocol", { p_id: MISSING_VEHICLE });
       expect(isPermissionDenied(res.error)).toBe(true);
     });
 
