@@ -2010,38 +2010,38 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 9.1 Type check passes: `npx astro check`
-- [x] 9.2 Lint passes: `npm run lint`
-- [x] 9.3 Unit tests pass: `npm test`
-- [x] 9.4 `safeRedirectPath("/\t/evil.com")` returns `/dashboard`; `safeInternalPath("/\t/evil.com")` returns `/`
-- [x] 9.5 Tab, LF and CR cases pinned for BOTH exported guards in `safe-redirect.test.ts`
+- [x] 9.1 Type check passes: `npx astro check` — d5a56a9
+- [x] 9.2 Lint passes: `npm run lint` — d5a56a9
+- [x] 9.3 Unit tests pass: `npm test` — d5a56a9
+- [x] 9.4 `safeRedirectPath("/\t/evil.com")` returns `/dashboard`; `safeInternalPath("/\t/evil.com")` returns `/` — d5a56a9
+- [x] 9.5 Tab, LF and CR cases pinned for BOTH exported guards in `safe-redirect.test.ts` — d5a56a9
 
 #### Manual
 
-- [x] 9.6 `?from=/%09/evil.com` on a pickup page yields a back link to `/dashboard/pickups`, not evil.com
-- [x] 9.7 A normal `?from=/dashboard` back link is unchanged in label and target
-- [x] 9.8 Switching language on `/auth/signin` still returns to `/auth/signin`
+- [x] 9.6 `?from=/%09/evil.com` on a pickup page yields a back link to `/dashboard/pickups`, not evil.com — d5a56a9
+- [x] 9.7 A normal `?from=/dashboard` back link is unchanged in label and target — d5a56a9
+- [x] 9.8 Switching language on `/auth/signin` still returns to `/auth/signin` — d5a56a9
 
 ### Phase 10: Customer-Language Correctness
 
 #### Automated
 
-- [ ] 10.1 Migration applies cleanly against local Supabase
-- [ ] 10.2 Type check passes: `npx astro check`
-- [ ] 10.3 Lint passes: `npm run lint`
-- [ ] 10.4 Unit tests pass: `npm test`
-- [ ] 10.5 Integration tests pass: `npm run test:integration`
-- [ ] 10.6 Build succeeds: `npm run build`
-- [ ] 10.7 Unit test: a name containing `` $` `` `$&` `$'` `$1` renders literally in both email templates
-- [ ] 10.8 Integration test: `get_reservation_status` still answers for `anon` and now returns the language
-- [ ] 10.9 `get_reservation_status` revoke-before-grant pinned in `rpc-execute-grants.test.ts`
+- [x] 10.1 Migration applies cleanly against local Supabase
+- [x] 10.2 Type check passes: `npx astro check`
+- [x] 10.3 Lint passes: `npm run lint`
+- [x] 10.4 Unit tests pass: `npm test`
+- [x] 10.5 Integration tests pass: `npm run test:integration`
+- [x] 10.6 Build succeeds: `npm run build`
+- [x] 10.7 Unit test: a name containing `` $` `` `$&` `$'` `$1` renders literally in both email templates
+- [x] 10.8 Integration test: `get_reservation_status` still answers for `anon` and now returns the language
+- [x] 10.9 `get_reservation_status` revoke-before-grant pinned in `rpc-execute-grants.test.ts`
 
 #### Manual
 
-- [ ] 10.10 A Polish reservation's status link reads Polish in a fresh cookie-less browser
-- [ ] 10.11 The switcher on that page still works and returns to the same page
-- [ ] 10.12 Issuing a protocol still stamps `protocols.locale` correctly, with no error
-- [ ] 10.13 A customer name containing a `$` sequence renders exactly as typed in the confirmation email
+- [x] 10.10 A Polish reservation's status link reads Polish in a fresh cookie-less browser
+- [x] 10.11 The switcher on that page still works and returns to the same page
+- [x] 10.12 Issuing a protocol still stamps `protocols.locale` correctly, with no error
+- [x] 10.13 A customer name containing a `$` sequence renders exactly as typed in the confirmation email
 
 ### Phase 11: Coverage Gates
 

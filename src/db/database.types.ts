@@ -619,6 +619,7 @@ export type Database = {
           created_at: string
           customer_email: string
           customer_name: string
+          locale: string
           pickup_date: string
           reference: string
           return_date: string

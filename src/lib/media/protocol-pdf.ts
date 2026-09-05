@@ -358,9 +358,9 @@ async function drawPhotoGrid(w: Writer, doc: PDFDocument, data: ProtocolPdfData)
     ...data.damages.flatMap((damage, index) =>
       damage.photos.map((jpeg, n) => ({
         label: t("pdfDamageTile")
-          .replace("{n}", String(index + 1))
-          .replace("{type}", damageTypeLabel(damage.type, locale))
-          .replace("{i}", String(n + 1)),
+          .replace("{n}", () => String(index + 1))
+          .replace("{type}", () => damageTypeLabel(damage.type, locale))
+          .replace("{i}", () => String(n + 1)),
         jpeg,
       })),
     ),
@@ -522,7 +522,9 @@ class Writer {
   finish(): void {
     const pageOf = copy(this.locale)("pdfPageOf");
     this.pages.forEach((page, index) => {
-      const counter = pageOf.replace("{n}", String(index + 1)).replace("{total}", String(this.pages.length));
+      const counter = pageOf
+        .replace("{n}", () => String(index + 1))
+        .replace("{total}", () => String(this.pages.length));
       page.drawText(`${BRAND} · ${this.docLabel} · ${counter}`, {
         x: MARGIN,
         y: MARGIN - 14,

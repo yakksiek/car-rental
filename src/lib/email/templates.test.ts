@@ -286,3 +286,88 @@ describe("protocolReturnedEmail", () => {
     expect(text).not.toContain("http");
   });
 });
+
+// ---------------------------------------------------------------------------
+// The `$`-sequence trap in `String.prototype.replace` (impl-review F6).
+//
+// A STRING replacement re-reads `$&`, "$`", `$'` and `$1` as substitution
+// patterns, so a value containing one is re-interpreted rather than inserted.
+// The customer types their own name into the public booking form and nothing
+// filters those characters — measured before the fix, a customer called
+// "Firma $` SA" received `Dzień dobry Firma Dzień dobry  SA,`, the mail's own
+// opening words spliced into their name.
+//
+// `{name}` is the only placeholder taking free text, and it appears in exactly
+// these two templates. The fix is a FUNCTION replacer, which inserts literally.
+// ---------------------------------------------------------------------------
+describe("$-sequences in a customer name", () => {
+  // All four specials in one string. Under a string replacement each expands to
+  // something different, so a single assertion catches any of them regressing:
+  //   $`  -> everything before the match ("Hello " / "Dzień dobry, ")
+  //   $&  -> the match itself ("{name}")
+  //   $'  -> everything after the match ("!")
+  //   $1  -> left literal here (a string pattern has no capture groups)
+  const HOSTILE_NAME = "Firma $` i $& oraz $' spółka $1 SA";
+
+  const issuedParams = {
+    reference: "R-2401",
+    vehicle: "Ford Transit",
+    plate: "WX 5519M",
+    odometerKm: 128450,
+    fuelEighths: 6,
+    damageCount: 2,
+  } as const;
+
+  const returnedParams = {
+    reference: "R-2401",
+    vehicle: "Ford Transit",
+    plate: "WX 5519M",
+    pickup: "2026-07-01",
+    return: "2026-07-10",
+    odometerKm: 42850,
+    fuelEighths: 4,
+    kmDriven: 850,
+    fuelDelta: -4,
+    newDamageCount: 1,
+  } as const;
+
+  it.each(["pl", "en"] as const)("protocolIssuedEmail inserts it literally (%s)", (locale) => {
+    const { text, html } = protocolIssuedEmail({ ...issuedParams, customerName: HOSTILE_NAME, locale });
+    expect(text).toContain(HOSTILE_NAME);
+    expect(html).toContain(HOSTILE_NAME);
+    // The sharpest negative: `$&` expanding would leave the placeholder itself
+    // in the delivered copy.
+    expect(text).not.toContain("{name}");
+    expect(html).not.toContain("{name}");
+  });
+
+  it.each(["pl", "en"] as const)("protocolReturnedEmail inserts it literally (%s)", (locale) => {
+    const { text, html } = protocolReturnedEmail({ ...returnedParams, customerName: HOSTILE_NAME, locale });
+    expect(text).toContain(HOSTILE_NAME);
+    expect(html).toContain(HOSTILE_NAME);
+    expect(text).not.toContain("{name}");
+    expect(html).not.toContain("{name}");
+  });
+
+  it("a reference carrying a $-sequence survives every template", () => {
+    // Not reachable today — references are generated, not typed — but the
+    // conversion covers `{ref}` too, and this is what proves it rather than
+    // leaving the next reader to assume it.
+    const reference = "R-$&-$`-24";
+    const booking = {
+      statusUrl: "https://flota.test/r/abc",
+      vehicle: "Mercedes-Benz Sprinter (2022)",
+      pickup: "2026-04-02",
+      return: "2026-04-09",
+      dailyRate: 340,
+    } as const;
+
+    expect(reservationReceivedEmail({ ...booking, reference, locale: "en" }).subject).toContain(reference);
+    expect(reservationConfirmedEmail({ ...booking, deposit: 2500, reference, locale: "en" }).subject).toContain(
+      reference,
+    );
+    expect(protocolIssuedEmail({ ...issuedParams, reference, customerName: "A", locale: "en" }).subject).toContain(
+      reference,
+    );
+  });
+});

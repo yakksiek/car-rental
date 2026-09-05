@@ -7,6 +7,8 @@ import ReservationStatusCard from "../../components/reservation/ReservationStatu
 import StatusStepper from "../../components/reservation/StatusStepper.astro";
 
 // others
+import { useTranslations } from "../../lib/i18n";
+import { asLocale } from "../../lib/i18n/types";
 import { getReservationStatus } from "../../lib/services/reservations";
 
 // Tokenized reservation status route (design screens 06 / mobile-4 / desktop-3).
@@ -26,7 +28,31 @@ if (!view) {
   Astro.response.status = 404;
 }
 
-const title = view ? `${t("booking.statusTitlePrefix")} ${view.reference}` : t("booking.statusNotFoundTitle");
+// *** Two locales on one page, deliberately. ***
+//
+// `t` above is the SESSION's — it renders <SiteHeader> and <SiteFooter>, which
+// belong to the visitor: the switcher in the header has to keep working, and
+// pressing it must change something.
+//
+// `bt` is the BOOKING's, off `reservations.locale`, and it renders everything
+// between them. A Polish customer books in Polish, gets a Polish confirmation
+// e-mail, and clicks the status link inside it. They arrive with no cookie, so
+// the session resolves to the default (English) and the page they were sent to
+// would greet them in a language they did not choose.
+//
+// `asLocale`'s default IS right here, unlike on the two protocol pages (Phase 10
+// §2): this is a page, re-rendered on every visit, so a value that somehow went
+// missing costs one English render rather than a permanently mis-stamped PDF.
+const bookingLocale = asLocale(view?.locale);
+const bt = view ? useTranslations(bookingLocale) : t;
+
+// `<main>` below carries `lang={bookingLocale}`. `<html lang>` is the SESSION's,
+// and when the two differ a screen reader would otherwise announce a Polish
+// booking in an English voice. Marking the region is HTML's own mechanism for a
+// language change inside a document; the 404 branch needs none, since it is the
+// session's language all the way down.
+
+const title = view ? `${bt("booking.statusTitlePrefix")} ${view.reference}` : t("booking.statusNotFoundTitle");
 ---
 
 <Layout title={`${title} — Flota`}>
@@ -34,9 +60,9 @@ const title = view ? `${t("booking.statusTitlePrefix")} ${view.reference}` : t("
   <SiteHeader />
   {
     view ? (
-      <main class="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
-        <ReservationStatusCard view={view} />
-        <StatusStepper status={view.status} class="mt-8" />
+      <main lang={bookingLocale} class="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-14">
+        <ReservationStatusCard view={view} locale={bookingLocale} />
+        <StatusStepper status={view.status} locale={bookingLocale} class="mt-8" />
         {/* Single action — both old buttons went to /fleet, so one CTA suffices.
             Full-width on mobile, auto-width centered on desktop. */}
         <div class="mt-8 flex justify-center">
@@ -44,7 +70,7 @@ const title = view ? `${t("booking.statusTitlePrefix")} ${view.reference}` : t("
             href="/fleet"
             class="bg-foreground text-background rounded-button inline-flex h-12 w-full items-center justify-center gap-1.5 px-6 text-sm font-semibold sm:w-auto sm:px-8"
           >
-            {t("fleet.backToFleet")}
+            {bt("fleet.backToFleet")}
             <svg
               class="size-3.5"
               viewBox="0 0 24 24"

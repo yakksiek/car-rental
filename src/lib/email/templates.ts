@@ -23,6 +23,19 @@ import type { EmailContent } from "./index";
 //
 // Free text is NEVER translated, only framed: `rejection_note` below renders
 // verbatim inside a localized `Details:` line, per the plan's frame decision 2.
+//
+// *** Every `{placeholder}` below is filled with a FUNCTION replacer, never a
+// string. *** `String.prototype.replace` reads `$&`, "$`", `$'` and `$1` as
+// substitution patterns inside a string replacement, so a value carrying one of
+// them gets re-interpreted instead of inserted. The customer types their own name
+// into the public booking form and nothing filters those characters: measured, a
+// customer called "Firma $` SA" received `Dzień dobry Firma Dzień dobry  SA,` —
+// the mail's own opening words spliced into their name. A function replacement
+// inserts the value literally, with no pattern syntax at all.
+//
+// Only `{name}` takes free text today; the reference numbers and counts are ours.
+// They are all converted anyway, so the next substitution added here inherits the
+// safe form rather than the trap.
 
 /** Bind the email copy to one artifact locale. */
 function copy(locale: Locale) {
@@ -52,10 +65,10 @@ export function reservationReceivedEmail(params: ReservationReceivedParams): Ema
   const total = formatPln(estimatedTotal(params.dailyRate, days), locale);
   const duration = formatDuration(days, locale);
 
-  const subject = t("receivedSubject").replace("{ref}", params.reference);
+  const subject = t("receivedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    t("receivedLead").replace("{ref}", params.reference),
+    t("receivedLead").replace("{ref}", () => params.reference),
     "",
     `${t("vehicle")}: ${params.vehicle}`,
     `${t("pickup")}: ${params.pickup} ${t("pickupFrom")}`,
@@ -71,7 +84,7 @@ export function reservationReceivedEmail(params: ReservationReceivedParams): Ema
   ].join("\n");
 
   const html = [
-    `<p>${t("receivedLead").replace("{ref}", `<strong>${params.reference}</strong>`)}</p>`,
+    `<p>${t("receivedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
     `<li>${t("vehicle")}: ${params.vehicle}</li>`,
     `<li>${t("pickup")}: ${params.pickup} ${t("pickupFrom")}</li>`,
@@ -115,10 +128,10 @@ export function reservationConfirmedEmail(params: ReservationConfirmedParams): E
   const duration = formatDuration(days, locale);
   const deposit = formatPln(params.deposit, locale);
 
-  const subject = t("confirmedSubject").replace("{ref}", params.reference);
+  const subject = t("confirmedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    t("confirmedLead").replace("{ref}", params.reference),
+    t("confirmedLead").replace("{ref}", () => params.reference),
     "",
     `${t("vehicle")}: ${params.vehicle}`,
     `${t("pickup")}: ${params.pickup} ${t("pickupFrom")}`,
@@ -134,7 +147,7 @@ export function reservationConfirmedEmail(params: ReservationConfirmedParams): E
   ].join("\n");
 
   const html = [
-    `<p>${t("confirmedLead").replace("{ref}", `<strong>${params.reference}</strong>`)}</p>`,
+    `<p>${t("confirmedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
     `<li>${t("vehicle")}: ${params.vehicle}</li>`,
     `<li>${t("pickup")}: ${params.pickup} ${t("pickupFrom")}</li>`,
@@ -173,10 +186,10 @@ export function reservationRejectedEmail(params: ReservationRejectedParams): Ema
   // (frame decision 2) — only the `Details:` label around it localizes.
   const noteLine = params.note ? `${t("details")}: ${params.note}` : null;
 
-  const subject = t("rejectedSubject").replace("{ref}", params.reference);
+  const subject = t("rejectedSubject").replace("{ref}", () => params.reference);
 
   const text = [
-    t("rejectedLead").replace("{ref}", params.reference),
+    t("rejectedLead").replace("{ref}", () => params.reference),
     "",
     `${t("vehicle")}: ${params.vehicle}`,
     `${t("reason")}: ${reasonLabel}`,
@@ -189,7 +202,7 @@ export function reservationRejectedEmail(params: ReservationRejectedParams): Ema
   ].join("\n");
 
   const html = [
-    `<p>${t("rejectedLead").replace("{ref}", `<strong>${params.reference}</strong>`)}</p>`,
+    `<p>${t("rejectedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
     `<li>${t("vehicle")}: ${params.vehicle}</li>`,
     `<li>${t("reason")}: ${reasonLabel}</li>`,
@@ -277,10 +290,10 @@ export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent 
   const odometer = `${formatInteger(params.odometerKm, locale)} km`;
   const fuel = fuelLabel(params.fuelEighths, locale);
   const damages = damageLabel(params.damageCount, locale);
-  const greeting = t("greeting").replace("{name}", params.customerName);
-  const lead = t("issuedLead").replace("{ref}", params.reference);
+  const greeting = t("greeting").replace("{name}", () => params.customerName);
+  const lead = t("issuedLead").replace("{ref}", () => params.reference);
 
-  const subject = t("issuedSubject").replace("{ref}", params.reference);
+  const subject = t("issuedSubject").replace("{ref}", () => params.reference);
 
   const text = [
     greeting,
@@ -300,7 +313,7 @@ export function protocolIssuedEmail(params: ProtocolIssuedParams): EmailContent 
 
   const html = [
     `<p>${greeting}</p>`,
-    `<p>${t("issuedLead").replace("{ref}", `<strong>${params.reference}</strong>`)}</p>`,
+    `<p>${t("issuedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
     `<li>${t("vehicle")}: ${params.vehicle}</li>`,
     `<li>${t("plate")}: ${params.plate}</li>`,
@@ -371,14 +384,14 @@ export function protocolReturnedEmail(params: ProtocolReturnedParams): EmailCont
   const kmDriven = kmDrivenLabel(params.kmDriven, locale);
   const fuelChange = fuelDeltaLabel(params.fuelDelta, locale);
   const newDamages = damageLabel(params.newDamageCount, locale);
-  const greeting = t("greeting").replace("{name}", params.customerName);
+  const greeting = t("greeting").replace("{name}", () => params.customerName);
 
-  const subject = t("returnedSubject").replace("{ref}", params.reference);
+  const subject = t("returnedSubject").replace("{ref}", () => params.reference);
 
   const text = [
     greeting,
     "",
-    t("returnedLead").replace("{ref}", params.reference),
+    t("returnedLead").replace("{ref}", () => params.reference),
     "",
     `${t("vehicle")}: ${params.vehicle}`,
     `${t("plate")}: ${params.plate}`,
@@ -397,7 +410,7 @@ export function protocolReturnedEmail(params: ProtocolReturnedParams): EmailCont
 
   const html = [
     `<p>${greeting}</p>`,
-    `<p>${t("returnedLead").replace("{ref}", `<strong>${params.reference}</strong>`)}</p>`,
+    `<p>${t("returnedLead").replace("{ref}", () => `<strong>${params.reference}</strong>`)}</p>`,
     "<ul>",
     `<li>${t("vehicle")}: ${params.vehicle}</li>`,
     `<li>${t("plate")}: ${params.plate}</li>`,

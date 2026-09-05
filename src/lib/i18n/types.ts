@@ -82,6 +82,35 @@ export function asLocale(value: string | null | undefined): Locale {
 }
 
 /**
+ * `asLocale`'s strict sibling, for the paths where a DEFAULT IS THE WRONG ANSWER.
+ *
+ * Use this wherever the value decides the permanent content of a document. An
+ * issued protocol PDF is never regenerated, and `protocols.locale` stamps what
+ * language its bytes were written in — so a value that silently fell back to
+ * English is not a cosmetic slip, it is a wrong record that nothing later
+ * corrects.
+ *
+ * The window this exists for is a deploy: merging to main deploys the Worker but
+ * pushes no migrations, so new code runs against an old database for a while. In
+ * that window the RPC returns no language column at all. With `asLocale` every
+ * issue and return PDF in that window renders in English and stamps `'en'`,
+ * permanently, and nothing anywhere says so. Failing loudly turns that into one
+ * visible 500 that names the cause.
+ *
+ * Keep using `asLocale` for a cookie or a stored preference — there, a default is
+ * exactly right, and there is a user in front of it to switch.
+ */
+export function requireDocumentLocale(value: string | null | undefined, source: string): Locale {
+  if (!isLocale(value)) {
+    throw new Error(
+      `${source}: expected a document locale (${LOCALES.join(" | ")}), got ${JSON.stringify(value)}. ` +
+        "Most likely the Worker is deployed ahead of its migrations — check `supabase migration list --linked`.",
+    );
+  }
+  return value;
+}
+
+/**
  * A translator bound to ONE namespace — the accessor anything an island can
  * reach must use. The island imports its own namespace module and takes
  * `locale` as a prop (it cannot read `Astro.locals`), so only that namespace

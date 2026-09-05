@@ -6,7 +6,9 @@ import VehicleSilhouette from "../vehicle/VehicleSilhouette.astro";
 import { cn } from "../../lib/utils";
 import { fromIsoDate } from "../../lib/date-iso";
 import { estimatedTotal, formatDuration, formatPln, rentalDays } from "../../lib/format";
+import { useTranslations } from "../../lib/i18n";
 import { reservationStatusLabel } from "../../lib/i18n/reservation";
+import type { Locale } from "../../lib/i18n/types";
 import { dayMonthShort } from "../../lib/format-date";
 import type { ReservationStatus, ReservationStatusView } from "../../types";
 
@@ -20,10 +22,19 @@ import type { ReservationStatus, ReservationStatusView } from "../../types";
 
 interface Props {
   view: ReservationStatusView;
+  /**
+   * The BOOKING's language (`reservations.locale`), not the session's. The
+   * customer who reads this card is the one who filled the form, and they
+   * arrive here from a link in an e-mail already written in that language —
+   * usually with no cookie at all. Passed in rather than read off
+   * `Astro.locals` so the page keeps the two apart: the chrome around this card
+   * stays on the session locale so the switcher still works.
+   */
+  locale: Locale;
 }
 
-const { view } = Astro.props;
-const { locale, t } = Astro.locals;
+const { view, locale } = Astro.props;
+const t = useTranslations(locale);
 
 // Status pill using the soft-tint + dot idiom. `pending` is the only status S-02
 // produces; confirmed/rejected/cancelled arrive with S-03. The WORDING now comes

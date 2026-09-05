@@ -61,9 +61,12 @@ export interface ScheduleGroups {
 }
 
 function progressLabel(doneCount: number, total: number, locale: Locale): string {
-  return translator(locale, staff)("scheduleProgress")
-    .replace("{done}", String(doneCount))
-    .replace("{total}", String(total));
+  return translator(
+    locale,
+    staff,
+  )("scheduleProgress")
+    .replace("{done}", () => String(doneCount))
+    .replace("{total}", () => String(total));
 }
 
 /**

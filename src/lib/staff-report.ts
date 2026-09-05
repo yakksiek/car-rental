@@ -500,5 +500,5 @@ export function inviteActionLabel(status: StaffStatus, locale: Locale): string {
  * Copy is `design-contract.md` §9.2, verbatim. Do not reword here.
  */
 export function repairedMailFailedMessage(status: StaffStatus, locale: Locale): string {
-  return COPY[locale].repairedMailFailed.replace("{action}", inviteActionLabel(status, locale));
+  return COPY[locale].repairedMailFailed.replace("{action}", () => inviteActionLabel(status, locale));
 }

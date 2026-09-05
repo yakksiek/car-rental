@@ -7,7 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ProtocolForm from "../../../components/protocol/ProtocolForm";
 
 // others
-import { asLocale } from "../../../lib/i18n/types";
+import { requireDocumentLocale } from "../../../lib/i18n/types";
 import { listDispatchToday } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -66,9 +66,14 @@ const ctx = row
       pickupTime: "14:00",
       lastOdometerKm: row.last_odometer_km,
       // The CUSTOMER's language, off `reservations.locale` — deliberately NOT
-      // `locale` below, which is the employee's session and only decides what
+      // `locale` above, which is the employee's session and only decides what
       // language the form's chrome is in.
-      documentLocale: asLocale(row.locale),
+      //
+      // `requireDocumentLocale`, NOT `asLocale`: this value decides the permanent
+      // content of a PDF that is never regenerated, and the `protocols.locale`
+      // stamp that goes with it. A silent English default here is a wrong record,
+      // so a lagging migration must show up as a visible 500 instead.
+      documentLocale: requireDocumentLocale(row.locale, "pickups/[reservationId] documentLocale"),
     }
   : null;
 ---

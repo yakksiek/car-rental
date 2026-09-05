@@ -7,7 +7,7 @@ import Layout from "../../../layouts/Layout.astro";
 import ReturnProtocolForm from "../../../components/protocol/ReturnProtocolForm";
 
 // others
-import { asLocale } from "../../../lib/i18n/types";
+import { requireDocumentLocale } from "../../../lib/i18n/types";
 import { getReturnBaseline } from "../../../lib/services/protocols";
 import { resolveBackTarget } from "../../../lib/back-target";
 
@@ -67,7 +67,12 @@ const ctx = baseline
       baselineDamages: baseline.baseline_damages,
       // The CUSTOMER's language — see the pickup page: independent of `locale`,
       // which is the employee's session.
-      documentLocale: asLocale(baseline.locale),
+      //
+      // `requireDocumentLocale`, NOT `asLocale`, for the same reason as there: the
+      // value decides the permanent content of a PDF that is never regenerated,
+      // plus its `protocols.locale` stamp. A default would hide a lagging
+      // migration behind permanently mis-stamped documents.
+      documentLocale: requireDocumentLocale(baseline.locale, "returns/[reservationId] documentLocale"),
     }
   : null;
 ---
