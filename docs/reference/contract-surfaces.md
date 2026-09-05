@@ -90,10 +90,19 @@ locale's worth of prose to a browser anyway (measured once, in Phase 4).
 | `overdueDaysLabel`                                                                                                                                      | `(row, today, locale)` (since Phase 2)                                                                                                 |
 | `deliveryBadge`                                                                                                                                         | `(pdfPath, deliveryStatus, locale)`                                                                                                    |
 | `AVAILABILITY_COPY` (const) → `availabilityCopy(locale)`                                                                                                | the panel and the picker still resolve ONE pair of keys, so they cannot drift                                                          |
+| `reduceCategoryPricing`                                                                                                                                 | `(vehicles, locale)` — it resolves each row's `label` through `categoryLabel(category, locale)`; the amounts stay numeric              |
+| `getCategoryPricing`                                                                                                                                    | `(client, locale)` — passes the locale straight through to `reduceCategoryPricing`                                                     |
 
 **Unchanged, despite reading like they would change**: `listVehicles` /
-`searchAvailableVehicles` / `getVehicleById` return raw rows and format nothing
-(`getCategoryPricing` already took a locale); `readPendingToken` /
-`serializePendingToken` / `selectResetPasswordBranch` carry no copy at all. Both
-modules were on the plan's watch list and are recorded here so the next reader
-does not go looking for a parameter that was never needed.
+`searchAvailableVehicles` / `getVehicleById` return raw rows and format nothing;
+`readPendingToken` / `serializePendingToken` / `selectResetPasswordBranch` carry
+no copy at all. Both modules were on the plan's watch list and are recorded here
+so the next reader does not go looking for a parameter that was never needed.
+
+> **Correction, 2026-09-05 (impl-review F5).** The first sentence above used to
+> end with a parenthetical saying `getCategoryPricing` already took a locale.
+> That was false. On `main` its signature takes the client alone. Both it and
+> `reduceCategoryPricing` gained the parameter on this branch, in `d146e49`, and
+> the false parenthetical was covering for their two missing rows in the table.
+> The commit did not touch this file — the plan's same-commit rule, missed. Every
+> other claim in the sentence was re-verified true when this was written.

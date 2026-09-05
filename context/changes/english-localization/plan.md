@@ -260,6 +260,17 @@ After the split `format.ts` has no reason to reach the catalog at all — the le
 rather than being governed by a rule 157 files must remember, and `format.ts` stays a pure numeric
 module, which is what makes `format.test.ts` the straightforward unit suite it is today.
 
+> **Record, 2026-09-05 (impl-review F10).** The split described above is written as a Phase 1
+> deliverable and as the precondition for the island-bundle rule. **It actually landed in Phase 4.**
+> Phase 1's commit never touched `format.ts`; both new files (`i18n/vehicle.ts`, `i18n/reservation.ts`)
+> were created in `d146e49`, which is Phase 4.
+>
+> No harm came of it: nothing imported the combined catalog in between, and the guardrail was
+> verified afterwards by the island-chunk comparison against `island-baseline.md` (criterion 5.13,
+> no material growth). Recorded anyway, because a plan that says "this must land first" and then
+> does not is worth one line — the next slice should not read the ordering here as evidence that
+> the ordering was enforced.
+
 #### 2. Middleware resolution
 
 **File**: `src/middleware.ts`
@@ -947,6 +958,14 @@ trigger is **editing `slug.ts` itself**, not the Phase 4 seed rename (plan-revie
 lowercase `DIACRITICS` map exists for user-entered vehicles, and no spec, fixture or stored column
 holds a slug value. Leave the transliteration behaviour alone.
 
+> **Correction, 2026-09-05 (impl-review F10).** `protocol-labels.ts` did NOT gain a locale
+> parameter — the file was **deleted**, and its labels moved into `src/lib/i18n/protocol.ts`
+> (`:28`, `:53`, `:82`). That is the better outcome, and the original premise was wrong for a
+> structural reason worth keeping: a module that is nothing BUT a label map has no business
+> existing beside the catalog once the catalog can hold it. "Gains a parameter" was the right
+> instruction for the twelve modules that also carry logic; for this one the right move was to
+> stop having it. The file list above is left as written so the reasoning stays readable.
+
 **Four of these modules are named contract surfaces** (plan-review F9). "Gains a locale parameter" is
 a shape change to load-bearing exports, so state the new signature per export and update
 `docs/reference/contract-surfaces.md` in the same commit:
@@ -958,6 +977,15 @@ a shape change to load-bearing exports, so state the new signature per export an
 
 **`src/components/hooks/` was previously unowned.** Most of its Polish is comments, but
 `useProtocolMedia.ts:228` throws a user-reachable `` `Brak pliku w pamięci: ${path}` ``.
+
+> **Correction, 2026-09-05 (impl-review F10).** That string was **not** user-reachable. The throw
+> (now `useProtocolMedia.ts:231`) is reached from `ProtocolForm.tsx:256`, inside a callback that
+> `useProtocolSubmit.ts:65` wraps in a bare `catch` — which swallows it and paints the translated
+> `pdf` overlay instead. So it never reaches a user; it reaches a developer's console. The premise
+> was wrong because it read the `throw` without following the call chain that catches it. What
+> shipped is the correct treatment for a diagnostic: rewritten in English as
+> `` `No cached blob for ${path}` ``, deliberately NOT localized, with a comment at the site saying
+> why. Localizing it would have been the mistake this note exists to stop being repeated.
 
 **`config-status.ts` moved to Phase 1 §4** — it is not a label map. `configStatuses` and
 `missingConfigs` are module-level const arrays consumed as _values_ by `Layout.astro:45`, so making
@@ -2061,28 +2089,28 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [x] 12.1 Type check passes: `npx astro check`
-- [x] 12.2 Lint passes: `npm run lint`
-- [x] 12.3 Build succeeds: `npm run build`
-- [x] 12.4 E2E suite green: `npm run test:e2e`
+- [x] 12.1 Type check passes: `npx astro check` — 8551197
+- [x] 12.2 Lint passes: `npm run lint` — 8551197
+- [x] 12.3 Build succeeds: `npm run build` — 8551197
+- [x] 12.4 E2E suite green: `npm run test:e2e` — 8551197
 
 #### Manual
 
 - [ ] 12.5 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
-- [x] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised
-- [x] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls
-- [x] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages
-- [x] 12.9 The chosen hover values recorded in `design-contract.md`
+- [x] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised — 8551197
+- [x] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls — 8551197
+- [x] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages — 8551197
+- [x] 12.9 The chosen hover values recorded in `design-contract.md` — 8551197
 
 ### Phase 13: Reference Doc Corrections
 
 #### Automated
 
-- [ ] 13.1 Prettier check passes on the touched markdown files only
+- [x] 13.1 Prettier check passes on the touched markdown files only
 
 #### Manual
 
-- [ ] 13.2 `contract-surfaces.md`'s table matches the real signatures in `services/vehicles.ts`
-- [ ] 13.3 No sentence in `contract-surfaces.md` claims an export was unchanged when it was not
-- [ ] 13.4 `plan.md` section 5.5 matches what shipped
-- [ ] 13.5 Phase 1 §1 records that the `format.ts` split actually landed in Phase 4
+- [x] 13.2 `contract-surfaces.md`'s table matches the real signatures in `services/vehicles.ts`
+- [x] 13.3 No sentence in `contract-surfaces.md` claims an export was unchanged when it was not
+- [x] 13.4 `plan.md` section 5.5 matches what shipped
+- [x] 13.5 Phase 1 §1 records that the `format.ts` split actually landed in Phase 4
