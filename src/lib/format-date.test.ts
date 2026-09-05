@@ -126,6 +126,29 @@ describe("dayMonthYearRange (the calendar's week caption)", () => {
   it("words the same span in English", () => {
     expect(dayMonthYearRange(new Date(2026, 6, 25), new Date(2026, 6, 31), "en")).toBe("25–31 July 2026");
   });
+
+  // The spacing around the dash is OURS, not the runtime's. Node 24 emits a bare
+  // `25–31 July 2026`; Node 22 — what CI runs — emits `25<U+2009>–<U+2009>31 July
+  // 2026`, and production is workerd, a third ICU. Before this was normalized, the
+  // caption's spacing was whatever the host's CLDR happened to say, and the suite
+  // pinned only the one spelling the author's laptop produced.
+  //
+  // These assert the SHAPE rather than a literal, so they hold on any ICU build.
+  it.each(["pl", "en"] as const)("pads the dash the same way on any ICU build (%s)", (locale) => {
+    const sameMonth = dayMonthYearRange(new Date(2026, 6, 25), new Date(2026, 6, 31), locale);
+    const crossMonth = dayMonthYearRange(new Date(2026, 5, 28), new Date(2026, 6, 4), locale);
+
+    // No CLDR padding survives: no thin (U+2009), narrow-no-break (U+202F) or
+    // non-breaking (U+00A0) space anywhere in the caption.
+    for (const caption of [sameMonth, crossMonth]) {
+      expect(caption, `${locale}: stray CLDR space in ${JSON.stringify(caption)}`).not.toMatch(/[\u2009\u202f\u00a0]/);
+    }
+
+    // Month elided -> tight. Both months present -> one plain space either side.
+    expect(sameMonth).toMatch(/\d\u2013\d/);
+    expect(sameMonth).not.toMatch(/\s\u2013|\u2013\s/);
+    expect(crossMonth).toContain(" \u2013 ");
+  });
 });
 
 describe("company-zone timestamps", () => {

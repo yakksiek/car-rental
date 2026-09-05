@@ -183,11 +183,25 @@ export function dayMonthRange(
  */
 export function dayMonthYearRange(from: Date, to: Date, locale: Locale): string {
   const range = formatter(locale, { ...LONG, year: "numeric" }).formatRange(calendarUtc(from), calendarUtc(to));
-  // CLDR pads the cross-month dash with U+2009 THIN SPACE; the caption this
-  // replaced composed a plain U+0020, and the calendar header is a design surface
-  // where that reads as a tightened gap. Same-month output has no spaces around
-  // the dash in either spelling, so this only touches the cross-month arm.
-  return range.replace(/\u2009/g, " ");
+  // *** How the dash is padded is OURS to decide, not CLDR's. ***
+  //
+  // This used to strip U+2009 THIN SPACE and say "same-month output has no spaces
+  // around the dash in either spelling, so this only touches the cross-month arm".
+  // That was true of one ICU build and false of the next: Node 24 gives
+  // `25–31 July 2026`, Node 22 (what CI runs) gives `25<U+2009>–<U+2009>31 July
+  // 2026`, and production is workerd — a third ICU nobody here is testing. So the
+  // caption's spacing was silently a property of the runtime.
+  //
+  // `sameMonth` is computed from the dates, exactly as `dayMonthRange` above does,
+  // and whatever CLDR padded the range dash with is normalized to the design's
+  // spacing: tight when the month is elided (`25–31 lipca 2026`), spaced when both
+  // ends carry their own month (`28 czerwca – 4 lipca 2026`). `\s` already covers
+  // the thin, narrow-no-break and non-breaking spaces CLDR picks between builds.
+  //
+  // Non-global on purpose: a formatted range holds exactly one U+2013, and an
+  // identical from/to collapses to a single date with none, which this leaves alone.
+  const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
+  return range.replace(/\s*\u2013\s*/, sameMonth ? "\u2013" : " \u2013 ");
 }
 
 const MINUTE = 60_000;
