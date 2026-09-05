@@ -1,9 +1,9 @@
 ---
 change_id: english-localization
 title: English localization — a full second locale across app, artifacts, and grammar
-status: implemented
+status: impl_reviewed
 created: 2026-09-01
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 ## Notes
@@ -17,3 +17,7 @@ whole-app scope (staff cockpit included) correct. Requirement as stated by the u
 literally everything should be english when the english is switched on."
 
 Framed in `frame.md` — 6 dimensions investigated, 7 product decisions settled 2026-09-01.
+
+Implementation review 2026-09-05: 8 warnings, 2 observations, no critical. All ten findings are
+carried into the plan as Phases 9–13 (`reviews/impl-review.md`). Phases 1–8 remain complete and
+SHA-stamped; 9–13 are pending.

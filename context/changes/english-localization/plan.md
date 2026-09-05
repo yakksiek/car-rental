@@ -1294,6 +1294,435 @@ contradiction disappears once §1 puts the real reason next to the field that ow
 
 ---
 
+## Phase 9: Redirect Guard Hardening
+
+> Source: implementation review 2026-09-05, finding F1. See `reviews/impl-review.md`.
+
+### Overview
+
+Both open-redirect guards let control characters through. A tab, line feed or carriage return in
+position 1 passes every check they make.
+
+Browsers delete those three characters before they parse a URL. That is in the URL spec. So
+`/<tab>/evil.com` becomes `//evil.com`, which means `http://evil.com/`.
+
+Confirmed against the running app. A signed-in employee who opens
+`/dashboard/pickups/<id>?from=/%09/evil.com` gets a back link the browser resolves to
+`http://evil.com/`.
+
+The live path runs through `safeRedirectPath`, which this change never touched. `safeInternalPath` is
+new in Phase 1 §5 and carries the identical gap. It is not exploitable today, because the locale
+endpoint checks the request origin and fills the field on the server. The gap came from the plan:
+Phase 1 §5 wrote the rules as "leading `/`, reject `//` and `/\`", and that list is incomplete.
+
+### Changes Required:
+
+#### 1. Reject control characters in both guards
+
+**File**: `src/lib/safe-redirect.ts`
+
+**Intent**: Close the whole class in both functions at once, rather than patching the one call site
+that currently reaches the browser.
+
+**Contract**: Add a control-character test before the existing checks in both `safeRedirectPath`
+(`:19`) and `safeInternalPath` (`:57`). Reject anything matching `/[\x00-\x1F\x7F]/`.
+
+Each function returns its own fallback: `DEFAULT_POST_LOGIN` for the first, `/` for the second.
+
+Change nothing else. `safeRedirectPath`'s `/auth` refusal stays — it is load-bearing for sign-in, and
+`safeInternalPath` must keep allowing `/auth/*` so the recruiter path and the mid-invite pages keep
+working.
+
+Note in a comment why the three characters matter, so the next reader does not "simplify" the check
+away. The reason is not obvious from the code.
+
+#### 2. Pin the cases in the unit suite
+
+**File**: `src/lib/safe-redirect.test.ts`
+
+**Intent**: The suite is why this shipped. It covers absolute URLs, `//host` and the backslash form,
+and has no control-character case at all.
+
+**Contract**: Add tab, line feed and carriage return cases for **both** exported functions, beside
+the existing rejection cases at `:70-81`. Assert the exact fallback each function returns, not just
+that the output differs from the input.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type check passes: `npx astro check`
+- Lint passes: `npm run lint`
+- Unit tests pass: `npm test`
+- `safeRedirectPath("/\t/evil.com")` returns `/dashboard`, and `safeInternalPath("/\t/evil.com")`
+  returns `/`
+
+#### Manual Verification:
+
+- `/dashboard/pickups/<id>?from=/%09/evil.com` renders a back link pointing at `/dashboard/pickups`,
+  not at evil.com
+- A normal back link still works: open a pickup from the cockpit with `?from=/dashboard` and confirm
+  the label and the target are unchanged
+- Switching language on `/auth/signin` still returns to `/auth/signin`
+
+---
+
+## Phase 10: Customer-Language Correctness
+
+> Source: implementation review 2026-09-05, findings F2, F3, F6. See `reviews/impl-review.md`.
+
+### Overview
+
+Three places where the language a customer sees is wrong, or could quietly go wrong.
+
+They sit in one phase because they answer the same question: which record owns the language of a
+customer-facing artifact. The answer this change already settled is the reservation, or the protocol
+for a document that has already been issued. These three places do not follow it.
+
+### Changes Required:
+
+#### 1. The status page must read the reservation's language
+
+**File**: `supabase/migrations/<timestamp>_status_page_locale.sql`, `src/pages/r/[token].astro`,
+`src/lib/services/reservations.ts`, `src/db/database.types.ts`
+
+**Intent**: A Polish customer books in Polish. They get a Polish email. They click the status link in
+it. They arrive with no cookie. The page shows English.
+
+Before this change the page was always Polish, so this is a step backwards for Polish customers.
+
+**Contract**: Add `r.locale` to `get_reservation_status`. That function was created in
+`20260611171737_public_reservation_request.sql:149` and was not one of the five the Phase 6 migration
+opened.
+
+Follow the shape `20260904120000_artifact_locale_reads.sql` already established. DROP and CREATE, not
+`create or replace` — adding an OUT column changes the return type. Keep the body verbatim apart from
+the added column.
+
+Carry the standing RPC rule: `revoke execute on function … from public, anon;` first, then grant. This
+RPC is **deliberately public** and must stay callable by `anon` — the whole point is a customer with
+no account opening a tokenized link. Re-state `grant execute … to anon, authenticated;` and say in a
+comment that the anon grant is intentional.
+
+Render the page's own copy from the reservation's language. Leave `SiteHeader` and `SiteFooter` on
+the session language: the switcher has to keep working, and the chrome belongs to the visitor rather
+than to the booking.
+
+Regenerate types: `npx supabase gen types typescript --local`.
+
+#### 2. A missing language must fail loudly, not default to English
+
+**File**: `src/pages/dashboard/pickups/[reservationId].astro`,
+`src/pages/dashboard/returns/[reservationId].astro`
+
+**Intent**: Both pages do `documentLocale: asLocale(row.locale)`. `asLocale` returns the default
+(English) whenever the value is missing. It does not complain.
+
+That matters during a deploy. Merging to main deploys the Worker but pushes no migrations. So there
+is a window where new code runs against an old database.
+
+In that window the RPC returns no language column. Every issue and return PDF renders in English. The
+protocol row is stamped `'en'`. Issued PDFs are never regenerated, so the wrong stamp is permanent.
+
+**Contract**: Do not call `asLocale` on this value. Treat an absent or unrecognised `row.locale` as a
+failure: throw, or render the page's error branch, so a lagging migration shows up as a visible 500.
+
+`asLocale` stays as it is — it is the right helper for a cookie or a stored preference, where a
+default is the correct answer. It is only wrong here, where the value decides the permanent content
+of a document. Say that in a comment at both sites.
+
+#### 3. A customer's name must not be re-interpreted by `replace`
+
+**File**: `src/lib/email/templates.ts`, and the other `.replace("{…}", value)` sites in
+`src/lib/media/protocol-pdf.ts` and `src/lib/dispatch-board.ts`
+
+**Intent**: The greeting is built with `t("greeting").replace("{name}", params.customerName)`.
+JavaScript treats `$&`, `` $` ``, `$'` and `$1` as special inside a string replacement. The customer
+types their own name into the public booking form, and nothing filters those characters.
+
+Measured: a customer called ``Firma $` SA`` receives
+`"Dzień dobry Firma Dzień dobry  SA,"` — the email's own opening words end up inside their name.
+
+**Contract**: Pass a function replacer instead of a string: `.replace("{name}", () => name)`. A
+function replacement inserts the value literally.
+
+The two exposed sites are `templates.ts:280` and `:374`, which take free text. The other sites take
+controlled values — reference numbers, counts, enum labels — so they are safe today. Convert all of
+them anyway. It costs nothing and removes the trap for whoever adds the next substitution.
+
+**Not in scope**: the unescaped HTML interpolation of `customerName` in the same templates. That is
+older than this branch (`f8e4a8e:244,336`) and the mail only ever goes to the person who typed the
+name. Fix it on its own schedule.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Migration applies cleanly against local Supabase
+- Type check passes: `npx astro check`
+- Lint passes: `npm run lint`
+- Unit tests pass: `npm test`
+- Integration tests pass: `npm run test:integration`
+- Build succeeds: `npm run build`
+- A unit test asserts a customer name containing `` $` ``, `$&`, `$'` and `$1` renders literally in
+  both email templates
+- An integration test asserts `get_reservation_status` still answers for `anon` and now returns the
+  language
+- `get_reservation_status` carries `revoke execute … from public, anon` before its grant, pinned in
+  `tests/integration/rpc-execute-grants.test.ts`
+
+#### Manual Verification:
+
+- Submit a reservation in Polish, then open its status link in a fresh browser with no cookie. The
+  page reads Polish.
+- The language switcher on that page still works and still returns to the same page.
+- Issue a protocol normally. `protocols.locale` is stamped correctly and no error is raised.
+- Book as a customer whose name contains a `$` sequence. The confirmation email renders the name
+  exactly as typed.
+
+---
+
+## Phase 11: Coverage Gates
+
+> Source: implementation review 2026-09-05, findings F4, F7, F9. See `reviews/impl-review.md`.
+
+### Overview
+
+Three gates that exist but do not cover what they claim to cover. None of them is a live hole today.
+All three would fail to notice the next regression.
+
+### Changes Required:
+
+#### 1. Add the three rebuilt PII functions to the grant suite
+
+**File**: `tests/integration/rpc-execute-grants.test.ts`
+
+**Intent**: `20260904120000_artifact_locale_reads.sql` drops and recreates five functions. A DROP
+throws away the function's permissions.
+
+This change added three of them to the suite whose whole job is to catch that: `create_protocol`,
+`create_return_protocol`, `set_profile_locale`. Three were left out: `list_dispatch_today`,
+`get_return_baseline`, `get_protocol`. All three return customer personal data — names, emails,
+signatures, damage notes.
+
+The migration does re-apply the permissions correctly, at `:376`, `:464` and `:589`. So nothing is
+open. The gap is that nothing would notice if a future rewrite dropped one.
+
+**Contract**: Add the three to the "anon is refused" block, next to the ones already there. Same
+shape as the existing cases: call through `anonClient()` and assert a permission error.
+
+#### 2. Bring the staff-report copy table under the parity gate
+
+**File**: `src/lib/staff-report.ts`, `src/lib/staff-report.test.ts`, or `src/lib/i18n/staff.ts`
+
+**Intent**: `staff-report.ts:162` holds an 11-key table with English and Polish text. It sits outside
+`src/lib/i18n/`.
+
+`parity.test.ts` walks the `NAMESPACES` map only. So it cannot check this table for a missing key or
+for Polish text left in the English half. The file's own test pins Polish only
+(`staff-report.test.ts:28`).
+
+`auth-messages.ts:88` breaks the same rule, but it explains why at `:25-30` and tests both languages.
+This file does neither.
+
+**Contract**: Prefer moving the table into a catalog namespace, so the parity test covers it for
+free. If it has to stay where it is — check whether an island imports this module before deciding —
+then add a comment saying why, and add a both-languages case to its test, matching what
+`auth-messages.test.ts:28` does.
+
+#### 3. Wire the Polish sweep into CI
+
+**File**: `.github/workflows/ci.yml`
+
+**Intent**: `scripts/i18n-sweep.mjs` says in its own header that it exits 1 on any hit so it can gate
+CI. It is in neither the workflow nor the pre-commit hook. Only the npm script exists. So plan
+criteria 5.6 and 6.15 are checks nobody has to run.
+
+**Contract**: Add `npm run sweep:i18n -- --all` to the lint job. Confirm it passes on a clean tree
+first — it did when this review ran, in both modes.
+
+Pre-commit is the wrong place for it. The hook runs on staged files, and this sweep reads the whole
+tree.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Integration tests pass, including the three new grant cases: `npm run test:integration`
+- Unit tests pass, including the parity coverage: `npm test`
+- `npm run sweep:i18n -- --all` exits 0
+- CI passes on a pushed branch, with the sweep step visible in the job log
+
+#### Manual Verification:
+
+- Temporarily drop a `revoke` line from one of the three functions in a scratch migration and confirm
+  the new test fails. Revert.
+- Temporarily add a Polish word to an `en` value and confirm the sweep fails CI. Revert.
+
+---
+
+## Phase 12: Header Design Contract Close-Out
+
+> Source: implementation review 2026-09-05, finding F8. See `reviews/impl-review.md`.
+
+### Overview
+
+Three misses against `design-contract.md`. The header geometry is otherwise exact — no guessed pixel
+values, no invented dimensions, no raw colours where a token exists.
+
+### Changes Required:
+
+#### 1. The ActionMenu panel sits at the wrong stacking level
+
+**File**: `src/components/header/ActionMenu.tsx`
+
+**Intent**: `design-contract.md:229` marks the panel's `z-index: 60` as `exact`. The shipped
+`PopoverContent` (`:121-124`) sets no `z-` class, so it inherits `z-50` from
+`src/components/ui/popover.tsx:27`.
+
+Nothing looks wrong today. The landing header wrapper is `z-40`, so the panel still sits above it.
+
+**Contract**: Add `z-[60]` to the `PopoverContent` className. Leave `ui/popover.tsx` alone — it is
+the shared primitive and other callers depend on its default.
+
+#### 2. The phone link can wrap
+
+**File**: `src/components/SiteHeader.astro`
+
+**Intent**: The contract marks `white-space: nowrap` on `.info-phone` as `exact`. The shipped class
+list at `:96` has `gap-2` but no `whitespace-nowrap`. The CTA two lines below does have it.
+
+This matters more than it looks. `context/foundation/known-issues.md:352-354` names that exact
+attribute as one of four causes of the old nav-wrap bug at 768 to 790 pixels. It is harmless right
+now only because all three children of the bar are `shrink-0`, so the row overflows instead of
+squeezing.
+
+**Contract**: Add `whitespace-nowrap` to the phone anchor.
+
+#### 3. Two controls have no hover state
+
+**File**: `src/components/header/LangToggle.tsx`, `src/components/header/ActionMenu.tsx`
+
+**Intent**: The contract, section 2 item 5, says we author both hover and focus-visible for
+`LangToggle` and `ActionMenu`. Only focus-visible shipped. `LangToggle` even carries
+`transition-colors` with nothing to transition.
+
+Every other interactive element in the header has a hover state: both panel rows, `LangRow`, and the
+landing CTA.
+
+**Contract**: Add a hover state to both, using the values the neighbouring controls already use —
+`hover:bg-background` on the toggle, and something in the same family on the dark trigger. Match the
+existing controls rather than inventing a new treatment, and record the chosen values in
+`design-contract.md` since the contract left them unspecified.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Type check passes: `npx astro check`
+- Lint passes: `npm run lint`
+- Build succeeds: `npm run build`
+- E2E suite green: `npm run test:e2e`
+
+#### Manual Verification:
+
+- Rendered vision-diff of `SiteHeader` against the canonical mockup at 1280 / 1180 / 980 / 840 / 768
+  / 390px. Punch-list empty apart from recorded deviations.
+- No header state wraps the nav or changes the bar's height at 768–790px or 840px. Exercise the
+  controls, do not just load the page.
+- Hover over `LangToggle` and the `ActionMenu` trigger. Both respond, and the response matches the
+  neighbouring controls.
+- The `ActionMenu` panel still sits above everything it needs to on both the landing page and the
+  info pages.
+
+---
+
+## Phase 13: Reference Doc Corrections
+
+> Source: implementation review 2026-09-05, findings F5 and F10. See `reviews/impl-review.md`.
+
+### Overview
+
+Three documents record something that is no longer true. One of them states the opposite of the
+truth, which is the only one that can actively mislead.
+
+No code changes.
+
+### Changes Required:
+
+#### 1. `contract-surfaces.md` states something false
+
+**File**: `docs/reference/contract-surfaces.md`
+
+**Intent**: Two exports in `src/lib/services/vehicles.ts` gained a language parameter on this branch:
+
+```ts
+export function reduceCategoryPricing(vehicles, locale: Locale); // :157
+export async function getCategoryPricing(client, locale: Locale); // :197
+```
+
+Neither is in the doc's table of exports that gained one. The doc then says the opposite at `:94-99`:
+_"`getCategoryPricing` already took a locale"_.
+
+That is wrong. On `main` the signature is `getCategoryPricing(client: CatalogClient | null)`. So the
+doc holds a false statement, and the statement is covering for the missing rows.
+
+Both functions changed in `d146e49`, whose commit message does not mention the doc. The plan's
+same-commit rule was missed there.
+
+**Contract**: Add both exports to the "Exports that gained a `locale` parameter" table with their
+real signatures. Delete the false parenthetical. Leave the rest of the "Unchanged" paragraph — the
+claims about `listVehicles`, `searchAvailableVehicles`, `getVehicleById` and the `auth-session.ts`
+exports were verified true during the review.
+
+#### 2. `plan.md` section 5.5 describes two things that did not happen
+
+**File**: `context/changes/english-localization/plan.md`
+
+**Intent**: Section 5.5 still says `protocol-labels.ts` gains a locale parameter. The file was
+deleted instead, and its labels moved into `src/lib/i18n/protocol.ts:28,53,82`. That was the better
+outcome.
+
+The same section says `useProtocolMedia.ts:228` throws a message a user can see. It does not.
+`ProtocolForm.tsx:256` calls it inside a callback that `useProtocolSubmit.ts:65` wraps in a bare
+`catch`, which paints a translated overlay. The string was correctly rewritten as an English
+diagnostic.
+
+**Contract**: Amend both sentences to describe what shipped, and say in one line why the original
+premise was wrong. Do not rewrite history — mark them as corrections, so the reasoning stays
+readable.
+
+#### 3. Record the Phase 1 to Phase 4 sequencing slip
+
+**File**: `context/changes/english-localization/plan.md`
+
+**Intent**: Phase 1 §1 put the five vocabulary functions moving out of `src/lib/format.ts` in Phase
+
+1. That move was the precondition for the island-bundle rule. Both new files (`i18n/vehicle.ts`,
+   `i18n/reservation.ts`) were created in `d146e49`, which is Phase 4. Phase 1's commit never touched
+   `format.ts`.
+
+No harm came of it. Nothing imported the combined catalog in between, and the bundle measurements
+prove the guardrail works now. But a plan that says "this must land first" and does not is worth one
+line of record.
+
+**Contract**: Add a note to Phase 1 §1 saying the split actually landed in Phase 4, and that the
+guardrail was verified afterwards by the `island-baseline.md` comparison.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Lint passes on the changed markdown: `npx prettier --check` on the touched files only
+
+#### Manual Verification:
+
+- `contract-surfaces.md`'s table matches the real signatures in `src/lib/services/vehicles.ts`
+- No sentence in `contract-surfaces.md` claims an export was unchanged when it was not
+- `plan.md` section 5.5 matches what shipped
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -1576,3 +2005,84 @@ by hand on hosted — never `supabase config push`.
 - [x] 8.6 Correcting it clears the message and enables the button — e90709f
 - [x] 8.7 Both locales — e90709f
 - [x] 8.8 No field reds before it has been touched — e90709f
+
+### Phase 9: Redirect Guard Hardening
+
+#### Automated
+
+- [ ] 9.1 Type check passes: `npx astro check`
+- [ ] 9.2 Lint passes: `npm run lint`
+- [ ] 9.3 Unit tests pass: `npm test`
+- [ ] 9.4 `safeRedirectPath("/\t/evil.com")` returns `/dashboard`; `safeInternalPath("/\t/evil.com")` returns `/`
+- [ ] 9.5 Tab, LF and CR cases pinned for BOTH exported guards in `safe-redirect.test.ts`
+
+#### Manual
+
+- [ ] 9.6 `?from=/%09/evil.com` on a pickup page yields a back link to `/dashboard/pickups`, not evil.com
+- [ ] 9.7 A normal `?from=/dashboard` back link is unchanged in label and target
+- [ ] 9.8 Switching language on `/auth/signin` still returns to `/auth/signin`
+
+### Phase 10: Customer-Language Correctness
+
+#### Automated
+
+- [ ] 10.1 Migration applies cleanly against local Supabase
+- [ ] 10.2 Type check passes: `npx astro check`
+- [ ] 10.3 Lint passes: `npm run lint`
+- [ ] 10.4 Unit tests pass: `npm test`
+- [ ] 10.5 Integration tests pass: `npm run test:integration`
+- [ ] 10.6 Build succeeds: `npm run build`
+- [ ] 10.7 Unit test: a name containing `` $` `` `$&` `$'` `$1` renders literally in both email templates
+- [ ] 10.8 Integration test: `get_reservation_status` still answers for `anon` and now returns the language
+- [ ] 10.9 `get_reservation_status` revoke-before-grant pinned in `rpc-execute-grants.test.ts`
+
+#### Manual
+
+- [ ] 10.10 A Polish reservation's status link reads Polish in a fresh cookie-less browser
+- [ ] 10.11 The switcher on that page still works and returns to the same page
+- [ ] 10.12 Issuing a protocol still stamps `protocols.locale` correctly, with no error
+- [ ] 10.13 A customer name containing a `$` sequence renders exactly as typed in the confirmation email
+
+### Phase 11: Coverage Gates
+
+#### Automated
+
+- [ ] 11.1 Integration tests pass including the three new grant cases: `npm run test:integration`
+- [ ] 11.2 Unit tests pass including the new parity coverage: `npm test`
+- [ ] 11.3 `npm run sweep:i18n -- --all` exits 0
+- [ ] 11.4 CI passes on a pushed branch with the sweep step visible in the job log
+
+#### Manual
+
+- [ ] 11.5 Removing a `revoke` line from one of the three functions makes the new test fail (then reverted)
+- [ ] 11.6 Adding a Polish word to an `en` value makes the sweep fail CI (then reverted)
+
+### Phase 12: Header Design Contract Close-Out
+
+#### Automated
+
+- [ ] 12.1 Type check passes: `npx astro check`
+- [ ] 12.2 Lint passes: `npm run lint`
+- [ ] 12.3 Build succeeds: `npm run build`
+- [ ] 12.4 E2E suite green: `npm run test:e2e`
+
+#### Manual
+
+- [ ] 12.5 Vision-diff of `SiteHeader` vs canonical mockup at 6 widths — punch-list empty
+- [ ] 12.6 No nav wrap or height change at 768–790px or 840px, interaction exercised
+- [ ] 12.7 `LangToggle` and the `ActionMenu` trigger both respond to hover, matching neighbouring controls
+- [ ] 12.8 The `ActionMenu` panel still stacks correctly on the landing page and the info pages
+- [ ] 12.9 The chosen hover values recorded in `design-contract.md`
+
+### Phase 13: Reference Doc Corrections
+
+#### Automated
+
+- [ ] 13.1 Prettier check passes on the touched markdown files only
+
+#### Manual
+
+- [ ] 13.2 `contract-surfaces.md`'s table matches the real signatures in `services/vehicles.ts`
+- [ ] 13.3 No sentence in `contract-surfaces.md` claims an export was unchanged when it was not
+- [ ] 13.4 `plan.md` section 5.5 matches what shipped
+- [ ] 13.5 Phase 1 §1 records that the `format.ts` split actually landed in Phase 4
