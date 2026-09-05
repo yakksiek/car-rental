@@ -1,9 +1,10 @@
 ---
 change_id: english-localization
 title: English localization — a full second locale across app, artifacts, and grammar
-status: implemented
+status: archived
 created: 2026-09-01
 updated: 2026-09-05
+archived_at: 2026-09-05T10:45:27Z
 ---
 
 ## Notes
