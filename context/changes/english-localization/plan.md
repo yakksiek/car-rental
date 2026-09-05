@@ -2010,17 +2010,17 @@ by hand on hosted — never `supabase config push`.
 
 #### Automated
 
-- [ ] 9.1 Type check passes: `npx astro check`
-- [ ] 9.2 Lint passes: `npm run lint`
-- [ ] 9.3 Unit tests pass: `npm test`
-- [ ] 9.4 `safeRedirectPath("/\t/evil.com")` returns `/dashboard`; `safeInternalPath("/\t/evil.com")` returns `/`
-- [ ] 9.5 Tab, LF and CR cases pinned for BOTH exported guards in `safe-redirect.test.ts`
+- [x] 9.1 Type check passes: `npx astro check`
+- [x] 9.2 Lint passes: `npm run lint`
+- [x] 9.3 Unit tests pass: `npm test`
+- [x] 9.4 `safeRedirectPath("/\t/evil.com")` returns `/dashboard`; `safeInternalPath("/\t/evil.com")` returns `/`
+- [x] 9.5 Tab, LF and CR cases pinned for BOTH exported guards in `safe-redirect.test.ts`
 
 #### Manual
 
-- [ ] 9.6 `?from=/%09/evil.com` on a pickup page yields a back link to `/dashboard/pickups`, not evil.com
-- [ ] 9.7 A normal `?from=/dashboard` back link is unchanged in label and target
-- [ ] 9.8 Switching language on `/auth/signin` still returns to `/auth/signin`
+- [x] 9.6 `?from=/%09/evil.com` on a pickup page yields a back link to `/dashboard/pickups`, not evil.com
+- [x] 9.7 A normal `?from=/dashboard` back link is unchanged in label and target
+- [x] 9.8 Switching language on `/auth/signin` still returns to `/auth/signin`
 
 ### Phase 10: Customer-Language Correctness
 

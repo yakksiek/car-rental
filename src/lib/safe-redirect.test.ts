@@ -31,6 +31,18 @@ describe("safeRedirectPath", () => {
     expect(safeRedirectPath("dashboard")).toBe(DEFAULT_POST_LOGIN);
   });
 
+  it("rejects control characters the browser strips before parsing", () => {
+    // Tab, LF and CR are removed from a URL by the browser. Left in, each of
+    // these reaches the network stack as "//evil.test" — an absolute URL.
+    expect(safeRedirectPath("/\t/evil.test")).toBe(DEFAULT_POST_LOGIN);
+    expect(safeRedirectPath("/\n/evil.test")).toBe(DEFAULT_POST_LOGIN);
+    expect(safeRedirectPath("/\r/evil.test")).toBe(DEFAULT_POST_LOGIN);
+    // Not only in position 1 — anywhere in the string.
+    expect(safeRedirectPath("/dash\tboard")).toBe(DEFAULT_POST_LOGIN);
+    // And the same trick used to sneak past the /auth refusal.
+    expect(safeRedirectPath("/\tauth/signin")).toBe(DEFAULT_POST_LOGIN);
+  });
+
   it("never bounces back into the auth pages", () => {
     expect(safeRedirectPath("/auth")).toBe(DEFAULT_POST_LOGIN);
     expect(safeRedirectPath("/auth/signin")).toBe(DEFAULT_POST_LOGIN);
@@ -79,5 +91,13 @@ describe("safeInternalPath", () => {
   it("rejects a path that is not root-relative", () => {
     expect(safeInternalPath("dashboard")).toBe("/");
     expect(safeInternalPath("../etc")).toBe("/");
+  });
+
+  it("rejects control characters the browser strips before parsing", () => {
+    // Same class as safeRedirectPath, different fallback: the site root.
+    expect(safeInternalPath("/\t/evil.test")).toBe("/");
+    expect(safeInternalPath("/\n/evil.test")).toBe("/");
+    expect(safeInternalPath("/\r/evil.test")).toBe("/");
+    expect(safeInternalPath("/fleet\tx")).toBe("/");
   });
 });
