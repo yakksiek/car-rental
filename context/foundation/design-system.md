@@ -98,7 +98,14 @@ Rows **27–29** are the S-09 public info pages (`info-pages.jsx`); that slice a
 redesigned the shared public shell — `SiteHeader` / `SiteFooter` / `MobileNav` →
 `InfoHeader` / `InfoFooter` / mobile (5-link pill nav, phone-reveal, 3-column contact
 footer), superseding their earlier Start/Flota 2-link form. `LandingNav` keeps its own
-immersive fork.
+immersive fork on **desktop and tablet only** — since `public-mobile-nav-alignment`
+(2026-09-06) the landing shares the phone menu with every other public page, mounting
+the same `MobileNav` overlay in dark tone. See that change's `design-contract.md`.
+
+The **opened** mobile menu has boards in both tones: `nav-overlay.jsx` in the Claude
+Design project, rendered to `context/changes/public-mobile-nav-alignment/design-review/`
+(`mock-landing-*` dark, `mock-info-*` light). They were authored for that change — the
+design itself navigates mobile through a `PublicDock` pill the app does not ship.
 
 ### S-02 reservation flow — high-fidelity pass
 

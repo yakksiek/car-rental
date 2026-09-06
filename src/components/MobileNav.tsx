@@ -16,6 +16,22 @@ import { cn } from "../lib/utils";
 // after a navigation (it remounts on each view-transition swap). Renders only below
 // `md`; from there up <SiteHeader> shows the centered pill nav.
 //
+// *** Two tones, one island. *** <SiteHeader> mounts it light on the eight info
+// pages. <LandingNav> mounts it `tone="dark"` so it can sit on the landing's dark
+// hero. Same `tone` contract as <ActionMenu> and <LangToggle>: optional prop,
+// default light, one `dark` boolean, surface classes swap and nothing else does.
+//
+// Each tone's header row mirrors THE BAR IT OPENS FROM, on purpose. Light is
+// 14/18px padding with a 34px-wide mark (<SiteHeader>'s mobile bar); dark is 16px
+// padding with the landing's 18px-tall mark (`LandingNav.astro`). Sharing one set
+// of numbers would move the brand on one of the two headers the moment the menu
+// opened. See `context/changes/public-mobile-nav-alignment/design-contract.md`.
+//
+// The overlay is a modal dialog: `role="dialog"`, `aria-modal`, and an accessible
+// name. It closes on Escape and on the close chip. There is no focus trap — the
+// shared popover primitive is not used here. Recorded as a deviation in the
+// contract above.
+//
 // *** The crimson phone-reveal chip that used to sit beside the hamburger is GONE. ***
 // The design's `InfoHeaderMobile` right cluster is <LangToggle> + <ActionMenu>, and
 // <ActionMenu>'s first row IS the phone — keeping the chip would have shipped the
@@ -28,6 +44,8 @@ interface Props {
   active?: NavId;
   /** Islands cannot read `Astro.locals`, so <SiteHeader> passes the request locale in. */
   locale: Locale;
+  /** `dark` for the landing's over-hero glass chrome. */
+  tone?: "light" | "dark";
 }
 
 // Same nav model as <SiteHeader>, keyed rather than literal: the `fleet` NAV
@@ -40,9 +58,20 @@ const NAV: { id: NavId; key: "home" | "fleet" | "pricing" | "faq" | "about"; hre
   { id: "about", key: "about", href: "/about", Icon: Info },
 ];
 
-export default function MobileNav({ active, locale }: Props) {
+export default function MobileNav({ active, locale, tone = "light" }: Props) {
   const t = translator(locale, navCopy);
   const [open, setOpen] = React.useState(false);
+  const dark = tone === "dark";
+
+  // The hamburger and the close chip are the same 40px control in two tones. The
+  // dark one borrows the glass treatment its neighbours already use (<ActionMenu>,
+  // <LangToggle>); the light one is unchanged from what the eight info pages ship.
+  const chipClass = cn(
+    "inline-flex size-10 shrink-0 items-center justify-center rounded-[12px]",
+    dark
+      ? "bg-white/15 text-white backdrop-blur-[6px] transition-colors hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-transparent focus-visible:outline-none"
+      : "text-foreground bg-background",
+  );
 
   React.useEffect(() => {
     if (!open) {
@@ -71,14 +100,19 @@ export default function MobileNav({ active, locale }: Props) {
         onClick={() => {
           setOpen(true);
         }}
-        className="text-foreground bg-background inline-flex size-10 shrink-0 items-center justify-center rounded-[12px]"
+        className={chipClass}
       >
         <Menu className="size-[18px]" strokeWidth={2} />
       </button>
 
       {open && (
-        <div className="bg-card fixed inset-0 z-[60] flex flex-col">
-          <div className="flex items-center justify-between px-[18px] py-[14px]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("menu")}
+          className={cn("fixed inset-0 z-[60] flex flex-col", dark ? "bg-[#0A0D14]" : "bg-card")}
+        >
+          <div className={cn("flex items-center justify-between", dark ? "px-4 py-4" : "px-[18px] py-[14px]")}>
             <a
               href="/"
               onClick={() => {
@@ -86,11 +120,16 @@ export default function MobileNav({ active, locale }: Props) {
               }}
               className="flex items-center"
             >
-              {/* Same 34 as the mobile bar this drawer opens from, and on the same
-                  axis — see `SiteHeader.astro`. The design has no drawer (mobile nav
-                  is its `PublicDock`), so the lockup mirrors the header rather than a
-                  board of its own; a 2× mark here would jump the moment it opened. */}
-              <Brand className="gap-1.5" markClass="w-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+              {/* Same lockup as the mobile bar this drawer opens from, and on the
+                  same axis — see `SiteHeader.astro` and `LandingNav.astro`. The
+                  design has no drawer (mobile nav is its `PublicDock`), so the
+                  lockup mirrors the header rather than a board of its own; a 2x
+                  mark here would jump the moment it opened. */}
+              {dark ? (
+                <Brand tone="inverse" markClass="h-[18px]" wordmarkClass="text-[19px]" />
+              ) : (
+                <Brand className="gap-[5px]" markClass="w-[34px]" wordmarkClass="text-[18px] tracking-[-0.4px]" />
+              )}
             </a>
             <button
               type="button"
@@ -98,7 +137,7 @@ export default function MobileNav({ active, locale }: Props) {
               onClick={() => {
                 setOpen(false);
               }}
-              className="text-foreground bg-background inline-flex size-10 items-center justify-center rounded-[12px]"
+              className={chipClass}
             >
               <X className="size-[18px]" strokeWidth={2} />
             </button>
@@ -114,7 +153,11 @@ export default function MobileNav({ active, locale }: Props) {
                 }}
                 className={cn(
                   "flex items-center gap-3 text-3xl font-bold tracking-tight transition-colors",
-                  active === item.id ? "text-primary" : "text-foreground hover:text-primary",
+                  active === item.id
+                    ? "text-primary"
+                    : dark
+                      ? "hover:text-primary text-white"
+                      : "text-foreground hover:text-primary",
                 )}
               >
                 <item.Icon className="size-7" />

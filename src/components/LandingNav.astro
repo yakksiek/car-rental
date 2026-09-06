@@ -2,17 +2,19 @@
 // components
 import ActionMenu from "./header/ActionMenu.tsx";
 import LangToggle from "./header/LangToggle.tsx";
+import MobileNav from "./MobileNav.tsx";
 import Brand from "./brand/Brand.astro";
 
 // others
 import { cn } from "../lib/utils";
 
-// Landing-scoped floating navigation (S1) — a FORK, not the shared <SiteHeader>.
+// Landing-scoped floating navigation (S1) — a PARTIAL fork of the shared <SiteHeader>.
 // SiteHeader backs 5 public pages; the landing needs a different chrome that sits
-// OVER the dark hero: a floating white pill on desktop, a glass bar on tablet, and
-// a logo + glass controls on mobile. The mobile menu is a landing-local <details>
-// dropdown (dark surface, 5 links + phone) — the shared <MobileNav.tsx> is
-// deliberately untouched, so /fleet + the other public pages keep their own overlay.
+// OVER the dark hero: a floating white pill on desktop and a glass bar on tablet.
+// The fork ends there. The phone menu is the SHARED <MobileNav.tsx>, mounted in
+// dark tone, so the landing and the other public pages open the same full-screen
+// overlay. It used to be a landing-local `details` dropdown; that was replaced in
+// `context/changes/public-mobile-nav-alignment/`.
 //
 // *** The design's ActionMenu collapse is ported here, not just to <SiteHeader>. ***
 // Without it, adding <LangToggle> would have WIDENED a live bug. Measured 2026-09-01:
@@ -192,9 +194,9 @@ const nav: { id: NavId; label: string; href: string }[] = [
   </div>
 
   <!-- Mobile: logo + glass switcher/action pair + hamburger over the photo (<md).
-       Mirrors <SiteHeader>'s mobile cluster so the two public headers behave
-       identically; the CSS-only phone-reveal chip it replaces is now ActionMenu's
-       first row. -->
+       This IS <SiteHeader>'s mobile cluster, in dark tone — same three controls,
+       same shared <MobileNav> overlay behind the hamburger. The CSS-only
+       phone-reveal chip it replaces is now ActionMenu's first row. -->
   <div class="pointer-events-auto absolute inset-x-4 top-4 flex items-center justify-between md:hidden">
     <a href="/" class="flex items-center">
       <Brand tone="inverse" markClass="h-[18px]" wordmarkClass="text-[19px]" />
@@ -204,63 +206,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
       <LangToggle client:idle locale={locale} redirect={redirect} tone="dark" />
       <ActionMenu client:idle locale={locale} tone="dark" />
 
-      <details class="group relative">
-        <summary
-          aria-label={t("nav.menu")}
-          class="flex size-10 list-none items-center justify-center rounded-[12px] bg-white/15 backdrop-blur-[6px] select-none [&::-webkit-details-marker]:hidden"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            class="text-white"
-            aria-hidden="true"
-          >
-            <path d="M4 7h16M4 12h16M4 17h16"></path>
-          </svg>
-        </summary>
-        <div
-          class="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0A0D14]/95 p-2 [box-shadow:0_18px_40px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md"
-        >
-          {
-            nav.map((item) => (
-              <a
-                href={item.href}
-                class:list={cn(
-                  "block rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors",
-                  active === item.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white",
-                )}
-              >
-                {item.label}
-              </a>
-            ))
-          }
-          <a
-            href={PHONE_HREF}
-            class="mt-1 flex items-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold text-white/70 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <svg
-              class="text-primary size-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.9"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path
-                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"
-              ></path>
-            </svg>
-            {PHONE_LABEL}
-          </a>
-        </div>
-      </details>
+      <MobileNav active={active} locale={locale} tone="dark" client:idle />
     </div>
   </div>
 </div>
