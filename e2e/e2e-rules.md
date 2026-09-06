@@ -80,6 +80,21 @@ These are not generic advice — each one cost us a red test or a false green.
   dead). If a test needs a signed-out browser, open a fresh context with
   `browser.newContext({ storageState: { cookies: [], origins: [] } })` instead.
 
+- **The landing page has a first-visit modal — an anonymous spec that visits `/`
+  must expect it.** Since `staff-panel-discovery`, `/` server-renders the
+  orientation overlay over the hero for any request that is neither signed in nor
+  carrying the `orientation=seen` cookie (`shouldAutoShowOrientation` in
+  `src/lib/orientation.ts`). It is a real Radix dialog: it traps focus and locks
+  scrolling, so a spec that ignores it will fail trying to click the page behind
+  it. Two ways to suppress it, both fine:
+  - run under a storage state that carries a session — the default `employee`
+    identity already does, which is why `locale-pl.spec.ts` never sees it;
+  - seed the cookie, the way `orientation.spec.ts` does not but a spec whose
+    subject is elsewhere should:
+    `await context.addCookies([{ name: ORIENTATION_COOKIE, value: "seen", url: baseURL }])`.
+
+  `orientation.spec.ts` is the one spec that deliberately does neither.
+
 - **`/dashboard`'s `<h1>` is `md:hidden`.** Do not assert on it — it passes or
   fails by viewport. The "Wyloguj" button renders at every breakpoint.
 

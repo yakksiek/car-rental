@@ -34,6 +34,7 @@ import { info } from "./info";
 import { landing } from "./landing";
 import { layout } from "./layout";
 import { nav } from "./nav";
+import { orientation } from "./orientation";
 import { protocol } from "./protocol";
 import { search } from "./search";
 import { staff } from "./staff";
@@ -70,6 +71,7 @@ export const NAMESPACES = {
   landing,
   layout,
   nav,
+  orientation,
   protocol,
   search,
   staff,

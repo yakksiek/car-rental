@@ -1,0 +1,64 @@
+---
+// others
+import { cn } from "../../lib/utils";
+
+// The landing header's orientation pill (design `shared.jsx` `InfoButton`,
+// `design-contract.md` §5). A 38px circle matching <LangToggle>'s geometry so the
+// pair reads as one group, carrying the design's info glyph.
+//
+// *** NO CLIENT DIRECTIVE, and deliberately so. *** It ships zero JavaScript: the
+// only thing it does is carry `data-orientation-open`, which <OrientationOverlay>
+// picks up through one delegated `click` listener on `document`. That is the same
+// Astro-to-island seam <GlobalSearch> uses, and it is what keeps <LandingNav> plain
+// markup. Delegation also means there is nothing bound to this node to go stale
+// across a view transition, so no `astro:page-load` re-binding guard is needed.
+//
+// LANDING CLUSTERS ONLY. The owner scoped the overlay and this control to the
+// landing page; <SiteHeader>'s two clusters are untouched. The design's two
+// `info-pages.jsx` headers drew it as well — Phase 1 removed them there, so the
+// design and the app now agree rather than carrying a permanent five-way
+// deviation (`design-contract.md` §8 item 1).
+//
+// Tone treatment, hover and focus-visible are <LangToggle>'s own values, not a new
+// treatment — the design specifies no states (§8 item 5), and the two controls sit
+// side by side, so anything else would read as a mismatch.
+
+interface Props {
+  /** `dark` for the landing's over-hero glass chrome (tablet + mobile clusters). */
+  tone?: "light" | "dark";
+  label: string;
+}
+
+const { tone = "light", label } = Astro.props;
+const dark = tone === "dark";
+---
+
+<button
+  type="button"
+  data-orientation-open
+  aria-label={label}
+  title={label}
+  class:list={cn(
+    "inline-flex size-[38px] shrink-0 items-center justify-center rounded-full border p-0 transition-colors",
+    "focus-visible:ring-2 focus-visible:outline-none",
+    dark
+      ? "border-white/[0.22] bg-white/[0.14] text-white backdrop-blur-[6px] hover:bg-white/25 focus-visible:ring-white/40"
+      : "bg-card text-foreground hover:bg-background border-[var(--flota-hair)] focus-visible:ring-[var(--flota-ink-2)]/25",
+  )}
+>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="9"></circle>
+    <path d="M12 11v5.5"></path>
+    <circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"></circle>
+  </svg>
+</button>

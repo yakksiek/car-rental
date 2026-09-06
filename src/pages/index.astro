@@ -11,12 +11,14 @@ import TrustCard from "../components/landing/TrustCard.astro";
 import ProcessSteps from "../components/landing/ProcessSteps.astro";
 import TypeSelector from "../components/landing/TypeSelector.astro";
 import LandingVehicleCard from "../components/vehicle/LandingVehicleCard.astro";
+import OrientationOverlay from "../components/orientation/OrientationOverlay.tsx";
 
 // others
 import type { VehicleFilters } from "../types";
 import { plural } from "../lib/format";
 import { AVAILABLE_TODAY_FORMS } from "../lib/i18n/landing";
 import { listVehicles } from "../lib/services/vehicles";
+import { ORIENTATION_COOKIE, shouldAutoShowOrientation } from "../lib/orientation";
 import heroImg from "../assets/hero-airfield.jpg";
 import vanImg from "../assets/van-cutout.png";
 
@@ -49,6 +51,19 @@ const featured = vehicles.slice(0, 3);
 const availableToday = `${vehicles.length} ${plural(vehicles.length, locale, AVAILABLE_TODAY_FORMS[locale])}`;
 
 // The default <Layout> title is already `Flota — <tagline>`, brand untranslated.
+
+// The orientation overlay's auto-show answer is decided HERE, on the server, and
+// handed to the island as a prop — the same shape as locale resolution, and the
+// reason there is no hydration mismatch and no client cookie write. The cookie
+// itself is written only by `POST /api/orientation`.
+const orientationOpen = shouldAutoShowOrientation({
+  cookie: Astro.cookies.get(ORIENTATION_COOKIE)?.value,
+  signedIn: Boolean(Astro.locals.user),
+});
+
+// Where the overlay's two dismiss controls post back to — the page the visitor is
+// on. Re-validated server-side by `safeInternalPath`, exactly as <LangToggle>'s is.
+const orientationRedirect = Astro.url.pathname + Astro.url.search;
 ---
 
 <Layout>
@@ -274,5 +289,21 @@ const availableToday = `${vehicles.length} ${plural(vehicles.length, locale, AVA
     }
 
     <SiteFooter />
+
+    {
+      /* `client:load`, NOT `client:idle`: the modal must be in the server-rendered
+         HTML. An idle island would paint the hero first and pop the modal in
+         afterwards, which reads as a defect on the one page whose job is a first
+         impression. Mounted here — a direct child of <Layout>, outside the hero's
+         `overflow-hidden` section — so its `position: fixed` resolves against the
+         viewport. */
+    }
+    <OrientationOverlay
+      client:load
+      locale={locale}
+      initialOpen={orientationOpen}
+      redirect={orientationRedirect}
+      staffPillLabel={t("footer.staffZone")}
+    />
   </div>
 </Layout>

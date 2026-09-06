@@ -2,6 +2,7 @@
 import { test, expect } from "@playwright/test";
 
 // others
+import { ORIENTATION_COOKIE } from "../src/lib/orientation";
 import { waitForIslands } from "./support/hydration";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +52,21 @@ import { waitForIslands } from "./support/hydration";
 test.use({
   storageState: { cookies: [], origins: [] },
   viewport: { width: 390, height: 844 },
+});
+
+// Suppress the landing page's first-visit orientation overlay (see
+// `e2e/e2e-rules.md`). Since `staff-panel-discovery`, `/` server-renders a Radix
+// dialog over the hero for any request that is neither signed in nor carrying
+// this cookie. It traps focus and locks scrolling, so without the seed the
+// landing test below fails on the hamburger click — the overlay is in front of
+// it. The two suppressions are a session or this cookie; these tests are
+// deliberately anonymous, so the cookie is the one available here.
+//
+// Seeded for the whole file rather than the landing test alone: `/fleet` does
+// not render the overlay today, but the seed costs nothing and keeps the two
+// tests differing only in the header they drive, which is the point of the pair.
+test.beforeEach(async ({ context, baseURL }) => {
+  await context.addCookies([{ name: ORIENTATION_COOKIE, value: "seen", url: baseURL ?? "http://localhost:4321" }]);
 });
 
 test("a phone visitor can open the landing menu, close it with Escape, and reach another public page", async ({

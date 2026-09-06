@@ -13,12 +13,21 @@ import Brand from "./brand/Brand.astro";
 // *** `footer.staffZone` → /auth/signin is the highest-leverage string in the repo. ***
 // S-09 P8 deliberately left the link out ("staff reach /auth/signin directly"), which
 // is right for a real rental business but wrong here: this deployment is a portfolio,
-// and the staff cockpit is the half worth showing. It is the ONLY route from the
-// public site into the demo, so an English reader who cannot parse "Strefa
-// pracownika" never reaches the cockpit at all. It sits last in INFORMATION —
-// discoverable, never competing with the customer funnel. The route is public and
+// and the staff cockpit is the half worth showing. The route is public and
 // self-gating (middleware bounces anyone without a profile), so linking it exposes
 // nothing a typed URL didn't already.
+//
+// *** IT MOVED OUT OF THE INFORMATION COLUMN (staff-panel-discovery Phase 5). ***
+// It used to sit last among five byte-identical rows there, which is precisely why
+// visitors never found it: nothing distinguished the one door into the cockpit from
+// "FAQ" and "Kontakt", and all five sat below 250–320 lines of body. The design puts
+// it in the COPYRIGHT BAR as a bordered pill with a lock glyph and a filled arrow
+// dot — the only element in this footer that is not a plain text link, and the only
+// one a visitor's eye can pick out. Values are `design-contract.md` §6.
+//
+// The label itself is UNCHANGED — still "Strefa pracownika" / "Employee zone". The
+// frame's decision: the label stays put, and the orientation overlay on the landing
+// page carries the invitation.
 //
 // The <Brand> wordmark and the `© 2026 Flota` prefix are the BRAND and stay
 // untranslated; the identically-spelled nav item does not live here (see `i18n/nav.ts`).
@@ -37,7 +46,6 @@ const information: { label: string; href: string }[] = [
   { label: t("footer.pricing"), href: "/pricing" },
   { label: t("footer.faq"), href: "/faq" },
   { label: t("footer.contact"), href: "/about#kontakt" },
-  { label: t("footer.staffZone"), href: "/auth/signin" },
 ];
 
 const columns: { heading: string; items: { label: string; href: string }[] }[] = [
@@ -97,8 +105,62 @@ const headingClass = "mb-3 text-[11px] font-bold uppercase tracking-[0.5px] text
       </div>
     </div>
 
-    <div class="mt-[26px] border-t border-[#EEF1F5] pt-[18px] text-[12px] text-[#99A2B2]">
-      © 2026 Flota. {t("footer.rights")}
+    {
+      /* `leading-[normal]` is the design's own line-height. `InfoFooter` declares
+         none on this bar, so its two text nodes inherit the UA `normal`, while
+         this app inherits 1.5 from `body` — which sat both the copyright string
+         and the pill's label 1px high against the pill, the lock and the arrow
+         dot. Same slip the orientation overlay and `LandingNav`'s pill items
+         each record. */
+    }
+    <div
+      class="mt-[26px] flex flex-wrap items-center justify-between gap-[14px] border-t border-[#EEF1F5] pt-[18px] leading-[normal]"
+    >
+      <div class="text-[12px] text-[#99A2B2]">© 2026 Flota. {t("footer.rights")}</div>
+
+      {
+        /* An `<a>`, not the design's `role="button"` + `tabIndex` — this navigates,
+           so an anchor is the correct element, its visible label is its accessible
+           name, and `e2e/locale-pl.spec.ts` keeps working unchanged. Recorded as
+           `deviation(anchor navigates; role="button" would mis-announce it)` and
+           `deviation(accessible name = visible label)` in `design-contract.md` §8.
+           Both glyphs are decorative, so the name stays exactly the label. */
+      }
+      <a
+        href="/auth/signin"
+        class="flex h-[36px] shrink-0 items-center gap-[8px] rounded-full border border-[#D8DEE8] bg-white pr-[8px] pl-[14px] transition-colors hover:border-[#B9C2D0] focus-visible:ring-2 focus-visible:ring-[var(--flota-ink-2)]/25 focus-visible:outline-none"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#5B6474"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="4" y="11" width="16" height="10" rx="2"></rect>
+          <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+        </svg>
+        <span class="text-[12.5px] font-bold tracking-[-0.1px] text-[#141922]">{t("footer.staffZone")}</span>
+        <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-[#141922]">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14M13 6l6 6-6 6"></path>
+          </svg>
+        </span>
+      </a>
     </div>
   </div>
 </footer>

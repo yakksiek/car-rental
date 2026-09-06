@@ -2,6 +2,7 @@
 // components
 import ActionMenu from "./header/ActionMenu.tsx";
 import LangToggle from "./header/LangToggle.tsx";
+import InfoButton from "./header/InfoButton.astro";
 import MobileNav from "./MobileNav.tsx";
 import Brand from "./brand/Brand.astro";
 
@@ -19,7 +20,7 @@ import { cn } from "../lib/utils";
 // *** The design's ActionMenu collapse is ported here, not just to <SiteHeader>. ***
 // Without it, adding <LangToggle> would have WIDENED a live bug. Measured 2026-09-01:
 // the desktop pill is `grid-cols-[1fr_auto_1fr]`, so each side column is
-// (pill − 36 padding − 393 nav) / 2 and the WIDER of the two ends sets the threshold.
+// (pill − 36 padding − nav) / 2 and the WIDER of the two ends sets the threshold.
 // The right cluster needed 322px (CTA 154 + phone 148 + gap 20), reached only at
 // vw ≥ 1136 — yet the phone was deferred to `xl` (1280), leaving 1024–1279 with NO
 // phone affordance at all. Adding the toggle takes the cluster past 400px, which
@@ -94,24 +95,39 @@ const nav: { id: NavId; label: string; href: string }[] = [
     </nav>
 
     <div class="flex items-center gap-5 justify-self-end">
+      <InfoButton label={t("nav.aboutProject")} />
       <LangToggle client:idle locale={locale} redirect={redirect} />
 
       {
         /* The threshold, derived from measurement rather than guessed. A container
            query resolves against the container's CONTENT box, which here is the
-           grid's `1fr auto 1fr` track space: it must hold the 393px nav plus TWICE
-           the right cluster, because `1fr` side columns are symmetric and the wider
-           end sets the width. Expanded the cluster measures 402px
-           (LangToggle 61 + 20 + phone 149 + 20 + CTA 152), so 393 + 2×402 = 1197;
-           rounded to 1208 for font-rendering slack, since a `1fr` column cannot
-           shrink below its nowrap min-content and would push the grid out of the
-           pill instead of clipping. Below it the phone and the CTA fold into
+           grid's `1fr auto 1fr` track space: it must hold the nav plus TWICE the
+           right cluster, because `1fr` side columns are symmetric and the wider end
+           sets the width.
+
+           *** RE-DERIVED for <InfoButton> (staff-panel-discovery Phase 4). *** The
+           previous figure was 1208, from a 402px cluster. Adding the 38px pill and
+           its 20px gap makes it 464.61 in ENGLISH — measured 2026-09-06 at vw 1700,
+           fonts loaded: pill 38 + 20 + LangToggle 60.73 + 20 + phone 147.94 + 20 +
+           CTA 157.94. English is the WIDER locale here and therefore the one that
+           governs (Polish measures 458.31 against a 392.53 nav). So
+           401.66 + 2×464.61 = 1330.88, rounded up to 1344 for font-rendering slack
+           at the same ~0.9% margin the old 1197→1208 used. A `1fr` column cannot
+           shrink below its nowrap min-content, so an under-tight number pushes the
+           grid out of the pill rather than clipping. 1344 content ≈ 1444 viewport
+           (+36 pill padding, +64 for the `left-8 right-8` insets).
+
+           The consequence is deliberate: between roughly 1280 and 1444 the phone
+           number and "Przeglądaj flotę" now live in <ActionMenu> rather than the
+           bar. The hero carries its own primary search CTA, and the number stays
+           one tap away at every width — the same trade the 1208 threshold already
+           made, just starting higher. Below it the phone and the CTA fold into
            <ActionMenu> together, exactly as the design's
            `@container (max-width:980px)` rule does for <SiteHeader>. */
       }
       <a
         href={PHONE_HREF}
-        class="text-foreground hidden items-center gap-2 text-[14.5px] font-bold whitespace-nowrap @min-[1208px]:flex"
+        class="text-foreground hidden items-center gap-2 text-[14.5px] font-bold whitespace-nowrap @min-[1344px]:flex"
       >
         <svg
           class="text-primary size-[15px]"
@@ -131,11 +147,11 @@ const nav: { id: NavId; label: string; href: string }[] = [
       </a>
       <a
         href="/fleet"
-        class="text-background hidden rounded-full bg-[var(--flota-ink-deep)] px-[22px] py-[13px] text-[14.5px] font-semibold whitespace-nowrap transition hover:opacity-90 @min-[1208px]:block"
+        class="text-background hidden rounded-full bg-[var(--flota-ink-deep)] px-[22px] py-[13px] text-[14.5px] font-semibold whitespace-nowrap transition hover:opacity-90 @min-[1344px]:block"
       >
         {t("nav.browseFleet")}
       </a>
-      <div class="@min-[1208px]:hidden">
+      <div class="@min-[1344px]:hidden">
         <ActionMenu client:idle locale={locale} />
       </div>
     </div>
@@ -188,6 +204,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
     </nav>
 
     <div class="flex shrink-0 items-center gap-2 justify-self-end">
+      <InfoButton tone="dark" label={t("nav.aboutProject")} />
       <LangToggle client:idle locale={locale} redirect={redirect} tone="dark" />
       <ActionMenu client:idle locale={locale} tone="dark" />
     </div>
@@ -203,6 +220,7 @@ const nav: { id: NavId; label: string; href: string }[] = [
     </a>
 
     <div class="flex items-center gap-2">
+      <InfoButton tone="dark" label={t("nav.aboutProject")} />
       <LangToggle client:idle locale={locale} redirect={redirect} tone="dark" />
       <ActionMenu client:idle locale={locale} tone="dark" />
 

@@ -2,6 +2,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // others
+import { POST as orientationPOST } from "../../src/pages/api/orientation";
 import { POST as protocolCreatePOST } from "../../src/pages/api/protocols";
 import { POST as protocolPdfPOST } from "../../src/pages/api/protocols/[id]/pdf";
 import { POST as protocolResendPOST } from "../../src/pages/api/protocols/[id]/resend-email";
@@ -15,7 +16,7 @@ import { GET as vehicleListGET, POST as vehicleCreatePOST } from "../../src/page
 import { PATCH as vehicleUpdatePATCH } from "../../src/pages/api/vehicles/[id]";
 import { POST as vehicleActivePOST } from "../../src/pages/api/vehicles/[id]/active";
 import { serviceClient } from "../helpers/clients";
-import { anonContext, asContext } from "../helpers/context";
+import { anonContext, asContext, cookieOptions } from "../helpers/context";
 
 // API authz matrix (Risk #4). Proves each protected `/api` route enforces its
 // OWN guard, because middleware does not gate `/api` at all (`ROUTE_ROLES`
@@ -511,6 +512,64 @@ describe("API authz matrix (#4)", () => {
     it("CSRF: foreign Origin → 403 (before auth, runnable as anon)", async () => {
       const res = await handler(anonContext({ method: "POST", path, params, body, origin: FOREIGN_ORIGIN }));
       expect(res.status).toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /api/orientation — the overlay's dismiss write. Anon allowed BY DESIGN
+  // (CSRF only); an anonymous first-time visitor is its only caller. What it can
+  // do is bounded to setting one cookie to one constant value, so the gate that
+  // matters is the same-origin check — without it any page on the web could
+  // silently burn a visitor's one and only orientation view.
+  // -------------------------------------------------------------------------
+  describe("POST /api/orientation (public dismiss — anon allowed by design)", () => {
+    const path = "/api/orientation";
+
+    it("CSRF: foreign Origin → 403 and writes NO cookie", async () => {
+      const context = anonContext({ method: "POST", path, origin: FOREIGN_ORIGIN, formBody: { redirect: "/" } });
+
+      const res = await orientationPOST(context);
+
+      expect(res.status).toBe(403);
+      expect(context.cookies.get("orientation")).toBeUndefined();
+    });
+
+    it("anon same-origin with a redirect → 303 and the seen cookie (by design)", async () => {
+      const context = anonContext({ method: "POST", path, formBody: { redirect: "/auth/signin" } });
+
+      const res = await orientationPOST(context);
+
+      // `/auth/signin` is exactly where the staff button goes — `safeRedirectPath`
+      // would have rewritten it to /dashboard, which is why the route uses
+      // `safeInternalPath` instead.
+      expect(res.status).toBe(303);
+      expect(res.headers.get("location")).toBe("/auth/signin");
+      expect(context.cookies.get("orientation")?.value).toBe("seen");
+
+      const options = cookieOptions(context, "orientation");
+      expect(options?.path).toBe("/");
+      expect(options?.sameSite).toBe("lax");
+      expect(options?.httpOnly).toBe(true);
+      expect(options?.maxAge).toBe(60 * 60 * 24 * 365);
+    });
+
+    it("no redirect field → 204 and the seen cookie (the island's background dismiss)", async () => {
+      const context = anonContext({ method: "POST", path, formBody: {} });
+
+      const res = await orientationPOST(context);
+
+      expect(res.status).toBe(204);
+      expect(context.cookies.get("orientation")?.value).toBe("seen");
+    });
+
+    it("sanitizes an external redirect target to an internal path", async () => {
+      for (const hostile of ["https://evil.test", "//evil.test", "/\\evil.test"]) {
+        const context = anonContext({ method: "POST", path, formBody: { redirect: hostile } });
+
+        const res = await orientationPOST(context);
+        expect(res.status).toBe(303);
+        expect(res.headers.get("location")).toBe("/");
+      }
     });
   });
 });

@@ -37,6 +37,13 @@ export const nav = defineDict({
     // design gap as the untranslated staff nav (design-contract.md §2 item 9),
     // so the Polish half is authored here.
     changeLanguage: "Change language",
+    // The landing header's info pill, which REOPENS the orientation overlay.
+    // `about` above is the "O nas" nav DESTINATION and must not be reused: they
+    // read alike in English and mean different things. The design keeps this
+    // string in its `guide` block; it lives in `nav` here because the header is
+    // plain Astro markup that reaches the composed catalog for free, and the
+    // island next door must keep importing the smallest namespace that covers it.
+    aboutProject: "About this project",
   },
   pl: {
     home: "Start",
@@ -51,5 +58,6 @@ export const nav = defineDict({
     menu: "Menu",
     closeMenu: "Zamknij menu",
     changeLanguage: "Zmień język",
+    aboutProject: "O tym projekcie",
   },
 });
