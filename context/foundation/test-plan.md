@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-07-09 (§7 e2e exclusion narrowed — Playwright wired; one browser spec covers risk #6's rendered calendar; §4/§5 stack + gate rows updated to match)
+> Last updated: 2026-09-07 (§5 e2e gate promoted — the suite now runs in CI as the `e2e` job; the earlier "e2e stays optional/local" note is superseded)
 
 ## 1. Strategy
 
@@ -113,15 +113,15 @@ The full set of gates that must pass before a change reaches production.
 "Required after §3 Phase <N>" means the gate is enforced once that rollout
 phase lands; before that, the gate is planned.
 
-| Gate                              | Where                    | Required?                                          | Catches                                              |
-| --------------------------------- | ------------------------ | -------------------------------------------------- | ---------------------------------------------------- |
-| lint + typecheck                  | local + CI               | required (wired today)                             | syntactic / type drift                               |
-| unit                              | local + CI               | required — CI-wired §3 Phase 5 (`ci` job)          | logic regressions in pure helpers                    |
-| integration (RLS + overlap + API) | local + CI               | required — CI-wired §3 Phase 5 (`integration` job) | PII leaks, double-bookings, authz/validation bypass  |
-| post-edit hook                    | local (agent loop)       | recommended after §3 Phase 5                       | regressions at edit time                             |
-| e2e on critical flows             | local (CI deferred — §7) | optional — green locally, not enforced             | phantom availability; broken booking/auth user paths |
-| visual diff / multimodal review   | CI on PR                 | optional                                           | rendering regressions classic tests miss             |
-| pre-prod smoke                    | between merge + prod     | optional                                           | environment-specific failures                        |
+| Gate                              | Where                | Required?                                          | Catches                                              |
+| --------------------------------- | -------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| lint + typecheck                  | local + CI           | required (wired today)                             | syntactic / type drift                               |
+| unit                              | local + CI           | required — CI-wired §3 Phase 5 (`ci` job)          | logic regressions in pure helpers                    |
+| integration (RLS + overlap + API) | local + CI           | required — CI-wired §3 Phase 5 (`integration` job) | PII leaks, double-bookings, authz/validation bypass  |
+| post-edit hook                    | local (agent loop)   | recommended after §3 Phase 5                       | regressions at edit time                             |
+| e2e on critical flows             | local + CI           | required — CI-wired 2026-09-07 (`e2e` job)         | phantom availability; broken booking/auth user paths |
+| visual diff / multimodal review   | CI on PR             | optional                                           | rendering regressions classic tests miss             |
+| pre-prod smoke                    | between merge + prod | optional                                           | environment-specific failures                        |
 
 CI (`.github/workflows/ci.yml`) now runs both gates on every push/PR to `main`
 (wired by §3 Phase 5): the `ci` job runs `astro sync` + lint + **unit** + build
@@ -132,8 +132,22 @@ keys come from the runner's local stack) and runs `npm run test:integration`
 (commit `8fbfcb6`). Making both **required status checks** on `main` — check
 names `ci` and `integration` — is the out-of-tree repo-admin step; the exact
 enablement runbook lives in the §3 Phase 5 change folder
-(`context/changes/testing-quality-gates-wiring/required-checks.md`). **e2e stays
-optional/local and is not wired into the required gate** (§7).
+(`context/changes/testing-quality-gates-wiring/required-checks.md`).
+
+**e2e is now CI-wired too** (2026-09-07), as a third job on the same triggers.
+It boots the same slimmed Supabase stack as `integration`, writes its own
+`.dev.vars`, and lets Playwright's `webServer` start `npm run dev` on :4321 —
+the port `supabase/config.toml` pins as GoTrue's redirect allow-list, which the
+invite and recovery specs depend on. The whole suite runs; no smoke subset. At
+35 tests and ~15s parallel locally it stays inside the PR-tier budget even with
+CI's `workers: 1`, so sharding would only pay the Supabase boot several times
+over. Its check name is `e2e`; adding it to the **required status checks** is
+the same out-of-tree repo-admin step as the other two.
+
+The earlier note here read "e2e stays optional/local and is not wired into the
+required gate (§7)". That is superseded. §7's e2e exclusion was already amended
+on 2026-07-09 and only ever covered _which risks_ get a browser test, never
+whether the suite runs in CI.
 
 ## 6. Cookbook Patterns
 

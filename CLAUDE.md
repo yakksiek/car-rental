@@ -78,4 +78,8 @@ Supabase auth is optional — the app runs without credentials (auth features ar
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`): runs `astro sync` + lint + build on push/PR to `main`. Requires `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets.
+GitHub Actions (`.github/workflows/ci.yml`) runs three jobs in parallel on push/PR to `main`:
+
+- **`ci`** — `astro sync`, lint, the `--all` i18n sweep, unit tests, build. Needs `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets (the build step only).
+- **`integration`** — boots a slimmed local Supabase on the runner, then `npm run test:integration`. No repo secrets; the keys come from that stack.
+- **`e2e`** — the same Supabase stack plus Chromium, writes its own `.dev.vars`, then `npm run test:e2e`. Playwright starts the dev server itself on :4321. On any outcome the HTML report uploads as the `playwright-report` artifact, kept 7 days, with traces for tests that failed a retry.

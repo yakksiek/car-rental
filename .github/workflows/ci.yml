@@ -80,3 +80,109 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: npx supabase stop
+
+  # Browser-level gate (test-plan §5, "e2e on critical flows"). Runs the whole
+  # suite rather than a smoke subset, because it is small enough to afford:
+  # 35 tests, ~15s locally in parallel and ~23s under CI's `workers: 1`
+  # (measured 2026-09-07). The runner's setup — npm ci, browsers, Supabase boot —
+  # dominates the job. That is also why there is no sharding: it would pay that
+  # setup once per shard to split a minute of tests.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Cache the browser binaries, not the OS libraries. The key is the resolved
+      # Playwright version rather than a lockfile hash: a hash re-downloads ~130MB
+      # on every unrelated dependency bump, and the browsers only ever change with
+      # Playwright itself. `--with-deps` still runs on a hit — it installs the apt
+      # packages, which are not in this path — but it skips the download.
+      - name: Resolve Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}
+      # Chromium only: `playwright.config.ts` defines exactly one browser project.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      # Same slimmed stack as the `integration` job, for the same reasons, and
+      # Mailpit is load-bearing here too: staff-auth.spec.ts and staff-admin.spec.ts
+      # read real GoTrue invite and recovery mail out of it.
+      #
+      # The emailed links only work on :4321. `supabase/config.toml` pins
+      # `site_url = "http://localhost:4321"` and GoTrue drops any redirect that is
+      # not on that allow-list, so the dev server must keep the default port.
+      - name: Start Supabase (slimmed stack)
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime
+      # Identical remap to the `integration` job — the e2e fixtures
+      # (e2e/fixtures/*.ts) read the same three names to seed rows through the
+      # service-role client.
+      - name: Export Supabase credentials
+        run: |
+          npx supabase status -o env \
+            | sed -e 's/^API_URL=/SUPABASE_URL=/' \
+                  -e 's/^ANON_KEY=/SUPABASE_ANON_KEY=/' \
+                  -e 's/^SERVICE_ROLE_KEY=/SUPABASE_SERVICE_ROLE_KEY=/' \
+            | grep -E '^SUPABASE_(URL|ANON_KEY|SERVICE_ROLE_KEY)=' \
+            | sed -e 's/="/=/' -e 's/"$//' \
+            >> "$GITHUB_ENV"
+      # Two consumers, two channels. Playwright's own process reads `process.env`
+      # (locally that comes from `.env.test`, which CI does not have). The app under
+      # test reads `.dev.vars` — see the header comment in playwright.config.ts.
+      # DEMO_PASSWORD has to be in BOTH: unset in the app, the demo card does not
+      # render; unset in Playwright, staff-auth.spec.ts SKIPS rather than fails.
+      #
+      # It is derived from tests/helpers/clients.ts, not hardcoded here, because that
+      # file is where the seeded credentials live. A hardcoded copy would go stale the
+      # day the seed password rotates, and red this spec for a config drift rather than
+      # a product fault. The `throw` matters for a different reason: without it a failed
+      # match would export an EMPTY password, and empty is the one value that makes the
+      # spec skip — a green run that tested nothing.
+      #
+      # RESEND_API_KEY / EMAIL_FROM are set to deliberately unusable values rather
+      # than left blank. Blank picks the safe dev-log adapter, but it also renders
+      # the "Resend not configured" banner at the top of <body> on every page — a
+      # layout difference from a configured dev machine, and two staff-admin specs
+      # assert a banner is readable without scrolling. Set-but-invalid keeps the DOM
+      # identical to local. Nothing in e2e/ sends mail today: the only senders are
+      # /api/reservations/manual and /api/reservations/[id], which no spec touches.
+      # If one ever does, it fails loudly against api.resend.com and no mail leaves.
+      - name: Configure the app and the test runner
+        run: |
+          DEMO_PASSWORD=$(node -e 'const s = require("fs").readFileSync("tests/helpers/clients.ts", "utf8"); const m = s.match(/demo:\s*\{\s*email:\s*"[^"]*",\s*password:\s*"([^"]+)"/); if (!m) throw new Error("demo password not found in tests/helpers/clients.ts"); console.log(m[1]);')
+          echo "DEMO_PASSWORD=$DEMO_PASSWORD" >> "$GITHUB_ENV"
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_KEY=$SUPABASE_ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
+            echo "DEMO_PASSWORD=$DEMO_PASSWORD"
+            echo "RESEND_API_KEY=re_ci_placeholder_never_used"
+            echo 'EMAIL_FROM="CI <ci@example.invalid>"'
+          } > .dev.vars
+      # `webServer` in playwright.config.ts starts `npm run dev` itself, and
+      # `reuseExistingServer: !process.env.CI` makes CI always boot its own.
+      - run: npm run test:e2e
+      # Upload after a FAILURE too — that is the only run whose report anyone wants,
+      # and a bare `uses:` would be skipped by the failed step above. The HTML
+      # reporter copies attachments into the report directory, so this one artifact
+      # carries everything: any test that lost its first attempt has a trace of the
+      # retry (`trace: "on-first-retry"`), openable with `npx playwright show-trace`.
+      # That covers the flaky ones too, not just the ones that stayed red.
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop
