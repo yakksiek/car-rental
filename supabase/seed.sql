@@ -278,7 +278,7 @@ insert into auth.identities (
 insert into profiles (user_id, role, full_name, password_set_at, is_demo) values
   ('a0000000-0000-0000-0000-0000000000ad', 'admin', 'Tomasz Wójcik', now() - interval '2 hours', false),
   ('e0000000-0000-0000-0000-0000000000e0', 'employee', 'Karolina Mazur', now() - interval '2 hours', false),
-  ('d0000000-0000-0000-0000-0000000000de', 'admin', 'Konto Demo', now() - interval '2 hours', true);
+  ('d0000000-0000-0000-0000-0000000000de', 'admin', 'Demo Account', now() - interval '2 hours', true);
 
 -- ---------------------------------------------------------------------------
 -- staff roster (S-08) — extra employees so /dashboard/staff renders both the

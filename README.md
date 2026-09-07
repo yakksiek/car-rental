@@ -38,7 +38,7 @@ with match highlighting and full keyboard navigation. Desktop dropdown, mobile f
 ![Global search](docs/screenshots/search-global.jpg)
 
 **Team** — the admin roster: invite, re-send an invite, reset a password, deactivate.
-`AKTYWNY` vs `ZAPROSZONY` is derived from whether a password was ever set through one of
+`ACTIVE` vs `INVITED` is derived from whether a password was ever set through one of
 our own routes.
 
 ![Team roster](docs/screenshots/staff-roster.jpg)
@@ -98,17 +98,15 @@ Browse and reserve on mobile:
 
 ### Protocols — handover & return
 
-> _The two images below are design references. Every other screenshot in this README is a
-> live capture of the running app._
-
 **Return comparison** — the return protocol auto-diffs against the pickup baseline:
 distance driven, fuel change, and new vs. existing damage, rolled up into a
-_wydanie → zwrot_ summary.
+_pickup → return_ summary.
 
 ![Return protocol comparison](docs/screenshots/return-comparison.jpg)
 
 **Handover capture** happens on mobile, on the lot — odometer, fuel, six photo slots, and
-damage notes.
+damage notes. The image below is a design reference; every other screenshot in this README
+is a live capture of the running app.
 
 <p align="center"><img src="docs/screenshots/pickup-protocol.jpg" alt="Handover protocol (mobile)" width="360"></p>
 
@@ -133,8 +131,9 @@ server, and is **e-mailed** to the customer with delivery status tracked. The re
 protocol is compared against the pickup baseline, so the record of _new_ damage is
 unambiguous.
 
-The product is Polish-language (`pl-PL`), with timestamps pinned to `Europe/Warsaw` for
-SSR-stable rendering.
+The product ships in two languages, English and Polish. English is the default; the choice
+is a cookie, and a signed-in staffer also gets it stored on their profile. Timestamps stay
+pinned to `Europe/Warsaw` — the company's own zone — for SSR-stable rendering.
 
 ## Feature map
 
@@ -144,7 +143,8 @@ SSR-stable rendering.
 | **Account provisioning** | Admin invites by e-mail, idempotent tokenized links, invite re-send, owned password-set signal, link-conflict handling              |
 | **Search**               | Header ⌘K omnisearch across reservations / returns / vehicles; grouped results, keyboard nav, trigram-indexed                       |
 | **Reservations**         | Public request → staff approve/reject → e-mail; **manual** staff-created confirmed bookings; atomic overlap protection              |
-| **Dispatch**             | Pulpit cockpit (KPIs, today's schedule, decision rail), pickups & returns worklists, overdue flagging, fleet calendar               |
+| **Dispatch**             | Dashboard cockpit (KPIs, today's schedule, decision rail), pickups & returns worklists, overdue flagging, fleet calendar            |
+| **Localization**         | English + Polish across the UI, transactional e-mails and protocol PDFs; locale resolved server-side (cookie → profile → default)   |
 | **Protocols**            | Handover + return capture, photos (client-side HEIC decode), damage records, server-rendered PDF, tracked e-mail delivery           |
 | **Fleet**                | Vehicle CRUD, activation, pricing fields feeding both the public catalog and the pricing page                                       |
 | **Public site**          | Landing, catalog, vehicle detail with availability, tokenized status page, About / FAQ / Pricing                                    |
@@ -185,8 +185,11 @@ SSR-stable rendering.
 - **The protocol pipeline.** Pickup / return capture → photos (client-side HEIC decode) +
   damage records persisted in Supabase → PDF rendered with `pdf-lib` → delivered by Resend →
   outcome recorded in `email_deliveries`. Return protocols diff against the pickup baseline.
-- **Single locale, on purpose.** `pl-PL` copy and `Europe/Warsaw` timestamps are pinned so
-  SSR output and client hydration agree.
+- **Two locales, resolved on the server.** The locale comes from a cookie, then
+  `profiles.locale`, then the `en` default — decided by a pure function, so every page is
+  rendered in one language before it leaves the Worker. The switch is a form POST, not a
+  `document.cookie` write, so markup and hydration can never disagree. `Europe/Warsaw`
+  timestamps are pinned for the same reason.
 
 ### A closer look: the invite journey
 
