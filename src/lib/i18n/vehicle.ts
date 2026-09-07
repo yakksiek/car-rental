@@ -138,6 +138,9 @@ export const vehicle = defineDict({
     // The single fixed depot. The city translates; the district is a proper noun.
     searchBranchValue: "Warsaw · Mokotów",
     searchSubmit: "Search",
+    // Closes the mobile date sheet. Deliberately NOT "Search": the sheet only
+    // confirms the range, the card's own CTA runs the search.
+    searchDatesDone: "Done",
   },
   pl: {
     from: "od",
@@ -151,5 +154,6 @@ export const vehicle = defineDict({
     searchBranch: "Oddział",
     searchBranchValue: "Warszawa · Mokotów",
     searchSubmit: "Szukaj",
+    searchDatesDone: "Gotowe",
   },
 });

@@ -7,10 +7,12 @@ import type { DateRange } from "react-day-picker";
 // components
 import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
+import DateRangeSheet from "./DateRangeSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 // others
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "../../lib/utils";
 import type { CatalogSort, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
@@ -84,6 +86,11 @@ export default function FilterBar({ initial, locale }: Props) {
   // never needs resetting — the non-persisted island remounts on the new page.
   const [submitting, setSubmitting] = React.useState(false);
 
+  // Popover under the trigger on desktop, its own layer over the page on mobile
+  // — two places in the tree, so the breakpoint is read in JS. See the matching
+  // note in `HeroSearch.tsx` for why an SSR'd island can do this safely.
+  const isMobile = !useMediaQuery("(min-width: 48rem)");
+
   const hasDate = Boolean(range?.from);
   const dateLabel =
     range?.from && range.to
@@ -91,6 +98,34 @@ export default function FilterBar({ initial, locale }: Props) {
       : range?.from
         ? `${dayMonthShort(range.from, locale)} – …`
         : t("pickDates");
+
+  const selectRange = (next: DateRange | undefined) => {
+    setRange(next);
+    setError(null);
+  };
+
+  // Shared by the popover and the sheet branch — see the call site.
+  const dateTrigger = (onClick?: () => void) => (
+    <button type="button" onClick={onClick} className={fieldShell}>
+      <span className="text-muted-foreground sm:bg-accent sm:text-primary flex shrink-0 items-center justify-center sm:size-9 sm:rounded-full">
+        <CalendarIcon className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+        <span className={cn(fieldLabel, "hidden font-bold sm:block")}>{t("dates")}</span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className={cn("text-[14.5px] sm:text-[14px]", hasDate ? "font-[650]" : "text-muted-foreground font-medium")}
+          >
+            {dateLabel}
+          </span>
+          {/* Desktop: chevron hugs the value so it never floats to the pill's far edge. */}
+          <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
+        </span>
+      </span>
+      {/* Mobile: chevron trails at the full-width row's right edge. */}
+      <ChevronDownIcon className="text-muted-foreground size-[15px] shrink-0 opacity-60 sm:hidden" />
+    </button>
+  );
 
   function handleApply() {
     const pickup = range?.from ? toIsoDate(range.from) : null;
@@ -129,47 +164,45 @@ export default function FilterBar({ initial, locale }: Props) {
           <span className="text-[12px] font-bold tracking-[0.4px]">{t("filters")}</span>
         </div>
 
-        {/* Date range (Popover + Calendar). Icon stays on mobile. */}
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <PopoverTrigger asChild>
-            <button type="button" className={fieldShell}>
-              <span className="text-muted-foreground sm:bg-accent sm:text-primary flex shrink-0 items-center justify-center sm:size-9 sm:rounded-full">
-                <CalendarIcon className="size-4" />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                <span className={cn(fieldLabel, "hidden font-bold sm:block")}>{t("dates")}</span>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      "text-[14.5px] sm:text-[14px]",
-                      hasDate ? "font-[650]" : "text-muted-foreground font-medium",
-                    )}
-                  >
-                    {dateLabel}
-                  </span>
-                  {/* Desktop: chevron hugs the value so it never floats to the pill's far edge. */}
-                  <ChevronDownIcon className="text-muted-foreground hidden size-[15px] shrink-0 opacity-60 sm:block" />
-                </span>
-              </span>
-              {/* Mobile: chevron trails at the full-width row's right edge. */}
-              <ChevronDownIcon className="text-muted-foreground size-[15px] shrink-0 opacity-60 sm:hidden" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={range}
-              onSelect={(next) => {
-                setRange(next);
-                setError(null);
+        {/* Date range. One trigger, two surfaces: a popover under the field on
+            desktop, a bottom sheet on mobile. The button comes from the same
+            function in both branches so the field cannot drift between them. It
+            takes its own `onClick` on mobile only — under `PopoverTrigger asChild`
+            Radix supplies one, and a second there would reopen the popover on the
+            very click that closed it. */}
+        {isMobile ? (
+          <>
+            {dateTrigger(() => {
+              setCalendarOpen(true);
+            })}
+            <DateRangeSheet
+              open={calendarOpen}
+              onClose={() => {
+                setCalendarOpen(false);
               }}
-              numberOfMonths={1}
-              disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-              appLocale={locale}
-              autoFocus
+              title={t("dates")}
+              doneLabel={t("datesDone")}
+              selected={range}
+              onSelect={selectRange}
+              locale={locale}
             />
-          </PopoverContent>
-        </Popover>
+          </>
+        ) : (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>{dateTrigger()}</PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={range}
+                onSelect={selectRange}
+                numberOfMonths={1}
+                disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                appLocale={locale}
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* Minimum payload. No icon on mobile; label-left / value-right. */}
         <Select value={minPayload} onValueChange={setMinPayload}>

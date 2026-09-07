@@ -1,7 +1,7 @@
 // core
 import * as React from "react";
 import { navigate } from "astro:transitions/client";
-import { type DateRange, type Matcher } from "react-day-picker";
+import { type DateRange, type DayButton, type Matcher } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
@@ -56,6 +56,83 @@ const arrow = (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
+
+/** `"Marzec 2026"` — the design's caption: sentence case, NOT uppercased. */
+function formatCaption(date: Date, locale: Locale): string {
+  const month = monthYearLong(date, locale);
+  return month.charAt(0).toUpperCase() + month.slice(1);
+}
+
+/**
+ * One day cell, re-authored rather than restyled through `classNames`. The
+ * design's `DayCell` is a fixed-height, full-width, `overflow: hidden` box whose
+ * radius and fill both depend on where in the range it sits; shadcn's stock day
+ * button is a square icon-button, and `aspect-square` is exactly what stops the
+ * grid filling the widget. Overriding the component is the same escape hatch
+ * `ManualReservationCalendar`'s `MrDayCell` already uses — the shared
+ * `ui/calendar.tsx` is not touched, so the other three consumers cannot regress.
+ *
+ * Precedence follows the design source: selected and in-range paint over a
+ * blocked day, which paints over a plain one.
+ */
+function BookingDayCell({ className, day, modifiers, ...props }: React.ComponentProps<typeof DayButton>) {
+  const inRange = modifiers.range_middle;
+  const selected = modifiers.selected && !inRange;
+
+  // Carried over verbatim from `CalendarDayButton` (`ui/calendar.tsx:174-177`).
+  // react-day-picker moves focus by state only — the single `.focus()` call in
+  // the whole library lives in its default `DayButton`. Overriding the component
+  // makes it ours to re-supply, or arrow keys repaint the highlight while DOM
+  // focus stays on the first cell.
+  const ref = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => {
+    if (modifiers.focused) ref.current?.focus();
+  }, [modifiers.focused]);
+
+  return (
+    <button
+      ref={ref}
+      data-day={day.date.toLocaleDateString("en-CA")}
+      className={cn(
+        "relative flex h-[32px] w-full items-center justify-center overflow-hidden text-[12.5px] transition-[background-color] duration-[120ms]",
+        // Radius 9 on the range endpoints, 0 on the days between, so a selected
+        // span reads as one continuous bar.
+        inRange ? "rounded-none" : "rounded-[9px]",
+        selected
+          ? "bg-primary text-primary-foreground font-bold"
+          : inRange
+            ? "bg-accent text-accent-foreground font-medium"
+            : modifiers.blocked
+              ? // The design fades the LABEL only (`opacity: full ? 0.75 : 1` on
+                // its `<span>`), keeping the `--flota-busy` fill solid. Carrying
+                // the fade on the button would fade the fill too — #E1E5EA over
+                // card instead of the contract's #D7DCE3 — so it rides the text
+                // colour's own alpha. It must also NOT take the disabled fade: a
+                // booked day reads as solidly unavailable, not as a faded past day.
+                "cell-busy-full text-muted-foreground/75 font-medium"
+              : modifiers.pickupOnly
+                ? "cell-busy-am text-foreground font-medium"
+                : modifiers.returnOnly
+                  ? "cell-busy-pm text-foreground font-medium"
+                  : modifiers.today
+                    ? // D-03: the design draws no today marker; the app keeps one
+                      // and paints it the same pink as an in-range day. Ranked
+                      // below the busy fills, so a booked today still reads busy.
+                      "bg-accent text-accent-foreground font-medium"
+                    : modifiers.disabled
+                      ? "text-muted-foreground font-medium opacity-50"
+                      : modifiers.outside
+                        ? // D-02: the design renders no outside-month days; the
+                          // app keeps them muted. Owner decision.
+                          "text-muted-foreground font-medium"
+                        : "text-foreground font-medium",
+        modifiers.disabled && "cursor-not-allowed",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 export default function BookingWidget({
   vehicleId,
@@ -194,10 +271,11 @@ export default function BookingWidget({
       </div>
 
       {/* Calendar — range picker; past dates AND the vehicle's taken dates greyed
-          (Phase 6). Capped to a centered max-width so the desktop column can't
-          stretch it into loose wide cells, and on a transparent ground so it
-          reads as part of the card rather than a grey block. */}
-      <div className="mx-auto mt-3 w-full max-w-[300px]">
+          (Phase 6). The design frames the month in a hairline box that fills the
+          widget's inner content box, so the grid lines up with the date-field row
+          and the CTA above and below it. Transparent ground, so it reads as part
+          of the card rather than a grey block. */}
+      <div className="mt-4 rounded-[16px] border border-[var(--flota-hair-2)] p-4">
         <Calendar
           mode="range"
           selected={range}
@@ -223,21 +301,19 @@ export default function BookingWidget({
           }}
           numberOfMonths={1}
           disabled={disabledDays}
+          // D14: the busy treatment is painted by `BookingDayCell`, not through
+          // `modifiersClassNames`. The gridcell is square and unclipped, so a
+          // gradient laid there escapes the 9px cell radius; the button carries
+          // `overflow-hidden` and the radius, which is the shape the design's
+          // `DayCell` draws. It is also the target `global.css` documents for
+          // `cell-busy-*`, and it is where the selected-range background can
+          // paint over the fill. `modifiers` still rides the props below — it
+          // drives both the cell branches and the aria-labels.
           modifiers={dayModifiers}
-          modifiersClassNames={{
-            // Diagonal half-grey per changeover state (utilities in global.css);
-            // `blocked` is a solid grey fill matching the legend swatch. Applied
-            // to the day gridcell, behind the selected-range background. The
-            // `opacity-100!` overrides the shared `disabled` fade so a booked day
-            // reads as solidly unavailable rather than like a faded past day.
-            pickupOnly: "cell-pickup-only",
-            returnOnly: "cell-return-only",
-            blocked: "rounded-md bg-[var(--muted)] opacity-100!",
-          }}
           excludeDisabled
           appLocale={locale}
           formatters={{
-            formatCaption: (date) => monthYearLong(date, locale).toUpperCase(),
+            formatCaption: (date) => formatCaption(date, locale),
           }}
           labels={{
             // Append the start-only/end-only rule to each changeover day's
@@ -254,34 +330,67 @@ export default function BookingWidget({
               return base;
             },
           }}
-          className="w-full bg-transparent p-0 [--cell-size:--spacing(9)]"
+          components={{ DayButton: BookingDayCell }}
+          // 26px: the design's nav-button square, which sets the caption row's
+          // height. Every other consumer of `--cell-size` in this grid is
+          // overridden below.
+          className="w-full bg-transparent p-0 [--cell-size:--spacing(6.5)]"
+          // Each slot supplied here REPLACES the shared default wholesale
+          // (`ui/calendar.tsx` spreads `...classNames` last), so anything from
+          // the default that is still wanted has to be restated. That is also
+          // what lets the grid escape the default `day` slot's `aspect-square`.
           classNames={{
             root: "relative w-full",
-            month_caption: "flex h-(--cell-size) items-center justify-center text-sm font-semibold tracking-wide",
+            months: "relative flex w-full flex-col",
+            // 12px between the caption row and the grid.
+            month: "flex w-full flex-col gap-3",
+            month_caption:
+              "flex h-(--cell-size) w-full items-center justify-start p-0 text-[13.5px] font-bold tracking-[-0.2px] text-foreground",
+            caption_label: "select-none",
+            nav: "absolute inset-x-0 top-0 flex h-(--cell-size) w-full items-center justify-end gap-1.5",
+            button_previous:
+              "flex size-[26px] items-center justify-center rounded-[8px] border border-[var(--flota-hair)] p-0 text-[var(--flota-ink-2)] select-none aria-disabled:opacity-50 [&_svg]:size-[13px]",
+            button_next:
+              "flex size-[26px] items-center justify-center rounded-[8px] border border-[var(--flota-hair)] p-0 text-[var(--flota-ink-2)] select-none aria-disabled:opacity-50 [&_svg]:size-[13px]",
+            month_grid: "w-full border-collapse",
+            weekdays: "flex w-full gap-1",
+            weekday: "flex-1 pb-1 text-center text-[10.5px] font-semibold text-muted-foreground select-none",
+            week: "mt-1 flex w-full gap-1",
+            day: "relative h-[32px] w-full p-0 text-center select-none",
+            // Blanked: fill, radius and text colour for every one of these states
+            // are decided in `BookingDayCell`, so a second painter on the gridcell
+            // would only show through at the corners.
+            range_start: "",
+            range_middle: "",
+            range_end: "",
+            today: "",
+            outside: "",
+            disabled: "",
           }}
         />
-      </div>
 
-      {/* Legend — decodes the grey treatments. Only shown when the vehicle has
-          changeover/blocked days to explain (an empty map ⇒ nothing to decode).
-          The half-cell swatches reuse the same gradient utilities as the cells. */}
-      {availability.size > 0 && (
-        <ul className="text-muted-foreground mx-auto mt-3 flex max-w-[300px] flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] font-medium">
-          {[
-            { label: t("legendBlocked"), swatch: "bg-[var(--muted)]" },
-            { label: t("legendPickupOnly"), swatch: "cell-pickup-only" },
-            { label: t("legendReturnOnly"), swatch: "cell-return-only" },
-          ].map((item) => (
-            <li key={item.label} className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className={cn("size-3 rounded-[3px] border border-[var(--flota-hair-2)]", item.swatch)}
-              />
-              {item.label}
-            </li>
-          ))}
-        </ul>
-      )}
+        {/* Legend — decodes the busy treatments, and sits inside the month frame
+            because its separator is the design's own rule across that frame.
+            Only shown when the vehicle has changeover/blocked days to explain
+            (an empty map ⇒ nothing to decode) — D-05. */}
+        {availability.size > 0 && (
+          <ul className="text-muted-foreground mt-3.5 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--flota-hair-2)] pt-3 text-[11px]">
+            {[
+              { label: t("legendBlocked"), swatch: "bg-[var(--flota-busy)]" },
+              // D-15/D-04: one lower-right half-swatch stands for both changeover
+              // directions. The design clips a plain `--flota-busy` fill and draws
+              // NO divider, so this cannot reuse `cell-busy-am` / `cell-busy-pm`.
+              { label: t("legendPickupOnly"), swatch: "bg-card legend-busy-half border border-[var(--flota-hair)]" },
+              { label: t("legendReturnOnly"), swatch: "bg-card legend-busy-half border border-[var(--flota-hair)]" },
+            ].map((item) => (
+              <li key={item.label} className="flex items-center gap-1.5">
+                <span aria-hidden="true" className={cn("size-3 shrink-0 rounded-[4px]", item.swatch)} />
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="mt-2 border-t border-[var(--flota-hair-2)]">{breakdownRows}</div>
 

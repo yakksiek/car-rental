@@ -6,10 +6,12 @@ import type { DateRange } from "react-day-picker";
 
 // components
 import { Calendar } from "../ui/calendar";
+import DateRangeSheet from "./DateRangeSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 // others
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "../../lib/utils";
 import type { VehicleCategory, VehicleFilters } from "../../types";
 import { serializeFilters, validateDateRange } from "../../lib/catalog-filters";
@@ -55,12 +57,42 @@ export default function HeroSearch({ category = null, locale }: Props) {
   const [error, setError] = React.useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
 
+  // The picker is a popover under the trigger on desktop and its own layer over
+  // the page on mobile — two different places in the tree, so the breakpoint has
+  // to be read in JS. `md` = Tailwind's 48rem, the same boundary the staff modal
+  // branches on. Unlike that modal this island IS server-rendered, which is safe:
+  // `useSyncExternalStore` uses the server snapshot for the hydration render too,
+  // so the first client render matches the SSR output and React re-renders once
+  // after. Nothing is open at that point, and the trigger is the same element in
+  // both branches, so the swap is invisible.
+  const isMobile = !useMediaQuery("(min-width: 48rem)");
+
   const dateLabel =
     range?.from && range.to
       ? `${dayMonthShort(range.from, locale)} – ${dayMonthShort(range.to, locale)}`
       : range?.from
         ? `${dayMonthShort(range.from, locale)} – …`
         : t("searchDatesAny");
+
+  const selectRange = (next: DateRange | undefined) => {
+    setRange(next);
+    setError(null);
+  };
+
+  // Shared by the popover and the sheet branch — see the call site.
+  const dateTrigger = (onClick?: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "mt-1 flex w-full min-w-0 items-center gap-2 text-[15px] font-bold xl:text-[14.5px]",
+        range?.from ? "text-foreground" : "text-foreground/55",
+      )}
+    >
+      <CalendarIcon className="size-4 shrink-0" />
+      <span className="truncate">{dateLabel}</span>
+    </button>
+  );
 
   function handleSearch() {
     const pickup = range?.from ? toIsoDate(range.from) : null;
@@ -117,34 +149,45 @@ export default function HeroSearch({ category = null, locale }: Props) {
           <div className="text-muted-foreground text-[10px] font-bold tracking-[0.8px] uppercase">
             {t("searchDates")}
           </div>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "mt-1 flex w-full min-w-0 items-center gap-2 text-[15px] font-bold xl:text-[14.5px]",
-                  range?.from ? "text-foreground" : "text-foreground/55",
-                )}
-              >
-                <CalendarIcon className="size-4 shrink-0" />
-                <span className="truncate">{dateLabel}</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={range}
-                onSelect={(next) => {
-                  setRange(next);
-                  setError(null);
+          {/* One trigger, two surfaces. The button is rendered from the same
+              function in both branches so the field itself cannot drift between
+              them — only what it opens changes. It takes its own `onClick` on
+              mobile; under `PopoverTrigger asChild` Radix supplies one, and a
+              second handler there would reopen the popover on the click that
+              closed it. */}
+          {isMobile ? (
+            <>
+              {dateTrigger(() => {
+                setCalendarOpen(true);
+              })}
+              <DateRangeSheet
+                open={calendarOpen}
+                onClose={() => {
+                  setCalendarOpen(false);
                 }}
-                numberOfMonths={1}
-                disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                appLocale={locale}
-                autoFocus
+                title={t("searchDates")}
+                doneLabel={t("searchDatesDone")}
+                selected={range}
+                onSelect={selectRange}
+                locale={locale}
               />
-            </PopoverContent>
-          </Popover>
+            </>
+          ) : (
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>{dateTrigger()}</PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={range}
+                  onSelect={selectRange}
+                  numberOfMonths={1}
+                  disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                  appLocale={locale}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
 
         {/* Branch — single fixed location (no location data model yet). The place

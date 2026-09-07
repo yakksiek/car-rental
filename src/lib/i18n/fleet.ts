@@ -43,6 +43,10 @@ export const fleet = defineDict({
     sortPriceDesc: "Price: high to low",
     apply: "Apply",
     applying: "Searching…",
+    // Closes the mobile date sheet. Deliberately NOT `apply` — that word is
+    // already on the filter card's own button, and the sheet does not commit
+    // the filters, it only confirms the range.
+    datesDone: "Done",
 
     // ── /fleet/[id] detail page ────────────────────────────────────────────
     notFoundEyebrow: "Error 404",
@@ -105,6 +109,7 @@ export const fleet = defineDict({
     sortPriceDesc: "Cena: malejąco",
     apply: "Zastosuj",
     applying: "Szukam…",
+    datesDone: "Gotowe",
 
     notFoundEyebrow: "Błąd 404",
     notFoundTitle: "Nie znaleziono pojazdu",

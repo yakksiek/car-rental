@@ -20,7 +20,7 @@ whole `design/` folder into context; this index exists so you don't have to.
 | **Live tokens**     | `src/styles/global.css`                                                                                                                                         | ✅ applied — the source of truth that ships. Tailwind 4 `@theme` + shadcn vars.                                                                                                                                                                                                                                                                           |
 | Token source        | `context/foundation/design/tokens.css`                                                                                                                          | Reference copy of the export (3-layer: primitives → shadcn → `@theme`).                                                                                                                                                                                                                                                                                   |
 | Screenshots         | `context/foundation/design/screenshots/*.png`                                                                                                                   | Rendered screens — the cheap visual reference. **Prefer these.**                                                                                                                                                                                                                                                                                          |
-| S-02 flow set       | `context/foundation/design/screenshots/s-02-reservation-flow/*.png`                                                                                             | High-fidelity reservation-funnel pass (mobile + desktop). Screenshot-only — see catalog below.                                                                                                                                                                                                                                                            |
+| S-02 flow set       | `context/foundation/design/screenshots/s-02-reservation-flow/*.png`                                                                                             | High-fidelity reservation-funnel pass (mobile + desktop). **Vehicle-detail rows are stale (2026-09-06)** — see the correction below the catalog.                                                                                                                                                                                                          |
 | Screen source (JSX) | **Live** — Claude Design project `Rental car company` (`352d78a6-84fd-49a2-8b38-2fe289691fc3`, https://claude.ai/design/p/352d78a6-84fd-49a2-8b38-2fe289691fc3) | The prototype JSX (`*-screens.jsx`, `staff-desktop.jsx`, `admin-mobile.jsx`, `shared.jsx`) was **removed from the repo** (2026-06-18) in favour of the live project. Pull on demand with the `DesignSync` tool (`get_file --project 352d78a6-… --path <file>`) or `/design-sync`. Reference for spacing/structure only — **not** app code; do not import. |
 
 > The composed HTML exports (`Flota Rental.html`, `Design tokens.html`) and the
@@ -113,8 +113,24 @@ A dedicated, higher-fidelity design pass for the **S-02 public-reservation-reque
 slice (the roadmap north star). Lives in its own subfolder so it stays a coherent
 mobile→desktop set without renumbering the flat catalog above. These **refine** mobile
 rows 04–06 and **add the desktop reservation flow** (no desktop reservation screens exist
-in the flat catalog). **Screenshot-only** — exported as a Claude Design bundle whose
-component code isn't recoverable as JSX, so there is no `*-screens.jsx` source for these.
+in the flat catalog).
+
+> **Correction (2026-09-06).** This block previously read "Screenshot-only — exported as a
+> Claude Design bundle whose component code isn't recoverable as JSX". That is **wrong**.
+> The source exists in the live project: `customer-desktop-reserve.jsx` holds
+> `ScreenDesktopDetail` (desktop vehicle detail + booking widget), `ScreenDesktopReserve`
+> and `ScreenDesktopConfirm`; `customer-screens.jsx` holds the mobile `ScreenDetail` and
+> `ScreenReserve`. All five are registered as boards in the project's `export-shot.html`
+> (`d-detail`, `d-reserve`, `d-confirm`, `m-detail`, `m-reserve`), so they can be rendered
+> on demand. Pull the JSX and render it rather than trusting the PNGs below.
+>
+> **The four vehicle-detail PNGs in this folder are stale.** Every one still draws a green
+> `AVAILABLE` status pill that the design source no longer contains (the app removed its
+> equivalent at `0597270`), and three are in English. Current renders live at
+> `context/changes/fleet-page-layout-parity/design-review/`. Do not diff against
+> `03-customer-mobile-vehicle-detail.png`, `s-02-reservation-flow/desktop-1-vehicle-detail-dates.png`,
+> `s-02-reservation-flow/mobile-1-vehicle-detail.png` or
+> `s-02-reservation-flow/mobile-2-reservation-form.png` until they are re-exported.
 
 Folder: `screenshots/s-02-reservation-flow/`
 
