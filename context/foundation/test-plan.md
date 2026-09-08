@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-09-07 (§5 e2e gate promoted — the suite now runs in CI as the `e2e` job; the earlier "e2e stays optional/local" note is superseded)
+> Last updated: 2026-09-07 (§5 e2e gate promoted — the suite runs in CI as the `e2e` job, and all three checks are now enforced on `main`; the earlier "e2e stays optional/local" note is superseded)
 
 ## 1. Strategy
 
@@ -64,13 +64,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status       | Change folder                                            |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ------------ | -------------------------------------------------------- |
-| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | complete     | context/archive/2026-06-27-testing-data-layer-integrity/ |
-| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | complete     | context/changes/testing-api-boundary-authz/              |
-| 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started  | —                                                        |
-| 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | complete     | context/changes/issue-protocol/                          |
-| 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate (CI is lint+build only today); recommend a local post-edit hook                                                                                | cross-cutting | gates                 | implementing | context/changes/testing-quality-gates-wiring/            |
+| #   | Phase name                                 | Goal (one line)                                                                                                                                                                                   | Risks covered | Test types            | Status      | Change folder                                            |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ----------- | -------------------------------------------------------- |
+| 1   | Data-layer integrity harness + RLS/overlap | Stand up the integration harness vs local Supabase (anon/employee/admin clients); prove no role reads PII it shouldn't and the overlap constraint rejects double-bookings incl. same-day turnover | #1, #2        | integration           | complete    | context/archive/2026-06-27-testing-data-layer-integrity/ |
+| 2   | API boundary: authz + input parity         | Prove API routes deny wrong-role/anon/IDOR access and reject server-side when the client is bypassed                                                                                              | #4, #5        | integration, contract | complete    | context/archive/2026-06-30-testing-api-boundary-authz/   |
+| 3   | Dashboard & availability state             | Prove the calendar/queue derive correct day-states and availability (no phantom availability, overdue flagged)                                                                                    | #6            | unit + thin component | not started | —                                                        |
+| 4   | Protocol email & photo integrity           | Prove the handover email sends, fails loudly, and carries the correct photos                                                                                                                      | #3            | integration, contract | complete    | context/archive/2026-07-09-issue-protocol/               |
+| 5   | Quality-gates wiring                       | Wire unit + integration into CI as a required gate; recommend a local post-edit hook                                                                                                              | cross-cutting | gates                 | complete    | context/archive/2026-08-01-testing-quality-gates-wiring/ |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened` → `researched` → `planned` → `implementing` → `complete`.
 
@@ -129,10 +129,10 @@ under a workflow-level `concurrency` group that cancels superseded runs (commit
 `21b2f88`), and a separate `integration` job boots a slimmed local Supabase
 (`supabase start -x …`, migrations + seed auto-applied, **no repo secrets** —
 keys come from the runner's local stack) and runs `npm run test:integration`
-(commit `8fbfcb6`). Making both **required status checks** on `main` — check
-names `ci` and `integration` — is the out-of-tree repo-admin step; the exact
-enablement runbook lives in the §3 Phase 5 change folder
-(`context/changes/testing-quality-gates-wiring/required-checks.md`).
+(commit `8fbfcb6`). Both are **enforced** on `main` as of 2026-09-07 — see the
+enforcement note below. The enablement runbook lives in the §3 Phase 5 change
+folder, archived at
+`context/archive/2026-08-01-testing-quality-gates-wiring/required-checks.md`.
 
 **e2e is now CI-wired too** (2026-09-07), as a third job on the same triggers.
 It boots the same slimmed Supabase stack as `integration`, writes its own
@@ -141,8 +141,18 @@ the port `supabase/config.toml` pins as GoTrue's redirect allow-list, which the
 invite and recovery specs depend on. The whole suite runs; no smoke subset. At
 35 tests and ~15s parallel locally it stays inside the PR-tier budget even with
 CI's `workers: 1`, so sharding would only pay the Supabase boot several times
-over. Its check name is `e2e`; adding it to the **required status checks** is
-the same out-of-tree repo-admin step as the other two.
+over. Its check name is `e2e`.
+
+**Enforcement (2026-09-07).** All three checks — `ci`, `integration`, `e2e` —
+now block a merge to `main`. The mechanism is a repository **ruleset** named
+`main gates` (active, targeting the default branch), not the classic branch
+protection the archived runbook's Option C describes. Read or edit it under
+Settings → Rules → Rulesets, or via
+`gh api repos/<owner>/<repo>/rulesets`. `e2e` was added only after it was
+observed green on a real PR, which is the sequencing that runbook insists on: a
+job promoted before its first green run can block the very PR that would fix it.
+One option is deliberately left off — `strict_required_status_checks_policy` is
+`false`, so a PR may merge green against a stale base.
 
 The earlier note here read "e2e stays optional/local and is not wired into the
 required gate (§7)". That is superseded. §7's e2e exclusion was already amended
