@@ -105,8 +105,7 @@ _pickup → return_ summary.
 ![Return protocol comparison](docs/screenshots/return-comparison.jpg)
 
 **Handover capture** happens on mobile, on the lot — odometer, fuel, six photo slots, and
-damage notes. The image below is a design reference; every other screenshot in this README
-is a live capture of the running app.
+damage notes, then the customer signs on the phone.
 
 <p align="center"><img src="docs/screenshots/pickup-protocol.jpg" alt="Handover protocol (mobile)" width="360"></p>
 
