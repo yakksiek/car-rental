@@ -5,11 +5,32 @@ import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import cloudflare from "@astrojs/cloudflare";
+import sentry from "@sentry/astro";
 
 // https://astro.build/config
 export default defineConfig({
   output: "server",
-  integrations: [react(), sitemap()],
+  integrations: [
+    react(),
+    sitemap(),
+    // Build-time half of Sentry: source-map upload only. The runtime wrap lives in
+    // `sentry.server.config.ts`, which wrangler loads as the Worker entrypoint.
+    sentry({
+      org: "marcin-kulbicki",
+      project: "fleet-rent",
+      // EU data residency. The DSN ingests via `ingest.de.sentry.io`. sentry-cli
+      // defaults to the US instance, where upload against this org fails.
+      sentryUrl: "https://de.sentry.io",
+      // No `authToken` here on purpose: the plugin reads SENTRY_AUTH_TOKEN from the
+      // environment. Set it as a build secret in Cloudflare Workers Builds, which is
+      // what builds production. Absent locally and in GitHub CI, where the upload is
+      // skipped with a warning.
+      // Server-only. With no `sentry.client.config.ts` present the integration would
+      // otherwise inject a DSN-less browser SDK into every page. That is bundle
+      // weight for no telemetry.
+      enabled: { client: false, server: true },
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
   },
