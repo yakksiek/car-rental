@@ -1,0 +1,42 @@
+{
+  "interior": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Fiat_Ducato_interior_%281%29.jpg/1280px-Fiat_Ducato_interior_%281%29.jpg",
+      "file_page": "https://commons.wikimedia.org/wiki/File:Fiat_Ducato_interior_(1).jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Cjp24"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/2015_Vauxhall_Vivaro%2C_rear_interior.jpg/1280px-2015_Vauxhall_Vivaro%2C_rear_interior.jpg",
+      "file_page": "https://commons.wikimedia.org/wiki/File:2015_Vauxhall_Vivaro,_rear_interior.jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Rwendland"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Mercedes-Benz_Vito_Kastenwagen_Innen_%28447%29.JPG/1280px-Mercedes-Benz_Vito_Kastenwagen_Innen_%28447%29.JPG",
+      "file_page": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_Vito_Kastenwagen_Innen_(447).JPG",
+      "license": "CC BY-SA 3.0",
+      "author": "Thomas doerfer"
+    }
+  ],
+  "dashboard": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Dashboard_new_Volkswagen_Crafter.jpg/1280px-Dashboard_new_Volkswagen_Crafter.jpg",
+      "file_page": "https://commons.wikimedia.org/wiki/File:Dashboard_new_Volkswagen_Crafter.jpg",
+      "license": "CC0",
+      "author": "Spielvogel"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Fiat_Ducato_instrument_cluster.jpg/1280px-Fiat_Ducato_instrument_cluster.jpg",
+      "file_page": "https://commons.wikimedia.org/wiki/File:Fiat_Ducato_instrument_cluster.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Christian Giersing"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/2010_Actros_3_Instrument_Cluster.jpg/1280px-2010_Actros_3_Instrument_Cluster.jpg",
+      "file_page": "https://commons.wikimedia.org/wiki/File:2010_Actros_3_Instrument_Cluster.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Paulactros"
+    }
+  ]
+}

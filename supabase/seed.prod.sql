@@ -2,6 +2,8 @@
 -- Contains ONLY the public fleet + demo reservations.
 -- The dev-only staff/auth credentials block is intentionally EXCLUDED.
 -- Apply once to an EMPTY prod DB (fixed UUIDs -> re-running conflicts on PK).
+-- SUPERSEDED 2026-09-14 by demo.load() (migration 20260914120000_demo_dataset.sql),
+-- which deletes these rows by id and replaces them. See context/changes/demo-dataset/.
 -- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
